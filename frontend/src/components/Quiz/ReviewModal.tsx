@@ -5,7 +5,7 @@ export default function ReviewModal({ answers, onClose }:{ answers:UA[]; onClose
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-stone-950 border border-stone-900 rounded-2xl p-6 max-w-2xl w-full">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-white">Review Answers</h2>
+          <h2 className="text-xl font-semibold text-white">Revoir les réponses</h2>
           <button onClick={onClose} className="p-2 hover:bg-stone-900 rounded-xl transition-all duration-300">
             <svg xmlns="http://www.w3.org/2000/svg" className="size-6 text-stone-400 hover:text-white" fill="none" viewBox="0 0 24 24" strokeWidth="1.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/>
@@ -32,21 +32,21 @@ export default function ReviewModal({ answers, onClose }:{ answers:UA[]; onClose
                     <h3 className="text-white font-medium mb-2">Question {i + 1}</h3>
                     <p className="text-stone-300 text-sm mb-3">{a.question}</p>
                     <div className="space-y-1 text-sm">
-                      <p className={ok ? "text-green-400" : "text-red-400"}>Your answer: {a.selectedOption}</p>
-                      {!ok && <p className="text-green-400">Correct answer: {a.correctOption}</p>}
-                      {a.explanation && <p className="text-stone-400">Explanation: {a.explanation}</p>}
+                      <p className={ok ? "text-green-400" : "text-red-400"}>Ta réponse : {a.selectedOption}</p>
+                      {!ok && <p className="text-green-400">Bonne réponse : {a.correctOption}</p>}
+                      {a.explanation && <p className="text-stone-400">Explication : {a.explanation}</p>}
                     </div>
                   </div>
                 </div>
               </div>
             );
           })}
-          {!answers.length && <div className="text-stone-400">No answers yet.</div>}
+          {!answers.length && <div className="text-stone-400">Aucune réponse pour le moment.</div>}
         </div>
 
         <div className="mt-6 flex justify-end">
           <button onClick={onClose} className="px-5 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-200 transition-colors">
-            Close
+            Fermer
           </button>
         </div>
       </div>

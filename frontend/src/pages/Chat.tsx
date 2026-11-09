@@ -1,18 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { env } from "../config/env";
-import { chatJSON, getChatDetail, type FlashCard, createFlashcard, listFlashcards, deleteFlashcard, getChats, type ChatMessage, type SavedFlashcard, podcastStart } from "../lib/api";
+import { chatJSON, getChatDetail, type FlashCard, revisionAPI, type RevisionProfile, type ChatMessage, podcastStart } from "../lib/api";
 import MarkdownView from "../components/Chat/MarkdownView";
 import ActionRow from "../components/Chat/ActionRow";
 import FlashCards from "../components/Chat/FlashCards";
 import SelectionPopup from "../components/Chat/SelectionPopup";
 import Composer from "../components/Chat/Composer";
-import BagFab from "../components/Chat/BagFab";
-import BagDrawer from "../components/Chat/BagDrawer";
 import LoadingIndicator from "../components/Chat/LoadingIndicator";
 import { useCompanion } from "../components/Companion/CompanionProvider";
-
-type BagItem = { id: string; kind: "flashcard" | "note"; title: string; content: string };
 
 function extractFirstJsonObject(s: string): string {
   let depth = 0, start = -1;
@@ -57,6 +53,8 @@ export default function Chat() {
     q?: string;
     answer?: string | { html?: string; answer?: string; flashcards?: FlashCard[]; topic?: string };
     flashcards?: FlashCard[];
+    revisionSubject?: string;
+    revisionTitle?: string;
   };
 
   const initialChatId = search.get("chatId") || state.chatId || "";
@@ -65,8 +63,11 @@ export default function Chat() {
   const [chatId, setChatId] = useState(initialChatId);
   const [messages, setMessages] = useState<ChatMessage[] | undefined>([]);
   const [cards, setCards] = useState<FlashCard[]>([]);
-  const [bagOpen, setBagOpen] = useState(false);
-  const [bag, setBag] = useState<BagItem[]>([]);
+  const [profile, setProfile] = useState<RevisionProfile | null>(null);
+  const [subject, setSubject] = useState(state.revisionSubject ?? "");
+  const [noteTitle, setNoteTitle] = useState(state.revisionTitle ?? "");
+  const [saveMessage, setSaveMessage] = useState("");
+  const [error, setError] = useState("");
   const [selected, setSelected] = useState<{ text: string; x: number; y: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [connecting, setConnecting] = useState<boolean>(!!(initialChatId || initialQuestion));
@@ -79,32 +80,18 @@ export default function Chat() {
   const wsRef = useRef<WebSocket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const seenRef = useRef<Set<string>>(new Set());
-  const keyFor = (kind: BagItem["kind"], title: string, content: string) =>
-    `${kind}:${title.trim().toLowerCase()}|${content.trim().toLowerCase()}`;
+  useEffect(() => {
+    let active = true;
+    revisionAPI.profile().then(value => {
+      if (!active) return;
+      setProfile(value);
+      setSubject(current => current || value?.subjects[0] || "");
+    }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "Impossible de charger le profil."); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
-    if (!initialChatId && !initialQuestion) {
-      (async () => {
-        try {
-          setConnecting(true);
-          const res = await getChats();
-          const list = Array.isArray(res?.chats) ? res.chats : [];
-          if (list.length) {
-            const latest = [...list].sort((a: any, b: any) => (b.at || 0) - (a.at || 0))[0];
-            if (latest?.id) {
-              setChatId(latest.id);
-              navigate(`/chat?chatId=${encodeURIComponent(latest.id)}`, { replace: true, state: { chatId: latest.id } });
-            } else {
-              navigate("/", { replace: true });
-            }
-          } else {
-            navigate("/", { replace: true });
-          }
-        } catch {
-          navigate("/", { replace: true });
-        }
-      })();
-    }
+    if (!initialChatId && !initialQuestion) navigate("/tutor", { replace: true });
   }, [initialChatId, initialQuestion, navigate]);
 
   useEffect(() => {
@@ -201,54 +188,21 @@ export default function Chat() {
     setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 0);
   }, [Array.isArray(messages) ? messages.length : 0]);
 
-  const addToBag = async (kind: BagItem["kind"], title: string, content: string) => {
-    const k = keyFor(kind, title, content);
-    if (seenRef.current.has(k)) return;
+  const saveNote = async (kind: "flashcard" | "note", title: string, content: string) => {
+    const chapterTitle = (noteTitle || topic || "Notes du Tuteur").trim().slice(0, 200);
+    const key = `${subject}:${chapterTitle}:${title}:${content}`;
+    if (seenRef.current.has(key)) { setSaveMessage("Cette carte est déjà enregistrée."); return; }
+    seenRef.current.add(key);
+    setSaveMessage("");
+    setError("");
     try {
-      const { flashcard } = await createFlashcard({
-        question: title,
-        answer: content,
-        tag: kind === "note" ? "note" : "core",
-      });
-      setBag((b) => [
-        { id: flashcard.id, kind, title: flashcard.question, content: flashcard.answer },
-        ...b,
-      ]);
-      seenRef.current.add(k);
-    } catch {
-      const local = { id: `${Date.now()}-${Math.random()}`, kind, title, content };
-      setBag((b) => [local, ...b]);
-      seenRef.current.add(k);
+      await revisionAPI.saveTutorNote({ subject, title: chapterTitle, question: title, answer: content });
+      setSaveMessage(`${kind === "note" ? "Note enregistrée" : "Carte enregistrée"} dans Cours. Elle rejoindra tes révisions.`);
+    } catch (cause) {
+      seenRef.current.delete(key);
+      setError(cause instanceof Error ? cause.message : "Impossible d’enregistrer cette carte. Réessaie.");
     }
   };
-
-  const clearBag = async () => {
-    try {
-      const res = await listFlashcards();
-      const items = res.flashcards || [];
-      await Promise.all(items.map((c) => deleteFlashcard(c.id).catch(() => { })));
-    } catch { }
-    setBag([]);
-    seenRef.current.clear();
-  };
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await listFlashcards();
-        const items = (res.flashcards || []).map<BagItem>((c) => ({
-          id: c.id,
-          kind: c.tag === "note" ? "note" : "flashcard",
-          title: c.question,
-          content: c.answer,
-        }));
-        setBag(items.sort((a, b) => (a.id > b.id ? -1 : 1)));
-        const s = new Set<string>();
-        for (const it of items) s.add(keyFor(it.kind, it.title, it.content));
-        seenRef.current = s;
-      } catch { }
-    })();
-  }, []);
 
   const sendFollowup = async (q: string) => {
     const text = q.trim();
@@ -257,8 +211,12 @@ export default function Chat() {
     setAwaitingAnswer(true);
     setBusy(true);
     try {
+      setError("");
       const r = await chatJSON({ q: text, chatId: chatId || undefined });
       if (r?.chatId && r.chatId !== chatId) setChatId(r.chatId);
+    } catch (cause) {
+      setAwaitingAnswer(false);
+      setError(cause instanceof Error ? cause.message : "Impossible de joindre le Tuteur. Réessaie.");
     } finally {
       setBusy(false);
       setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 0);
@@ -275,7 +233,7 @@ export default function Chat() {
 
   useEffect(() => {
     if (latestAssistantContent) {
-      const docTitle = topic || deriveTopicFromMarkdown(latestAssistantContent) || "Study Topic";
+      const docTitle = topic || deriveTopicFromMarkdown(latestAssistantContent) || "Sujet étudié";
       const docId = chatId ? `chat:${chatId}` : "chat:current";
       setDocument({
         id: docId,
@@ -294,26 +252,37 @@ export default function Chat() {
   const list = Array.isArray(messages) ? messages : [];
 
   return (
-    <div className="flex flex-col min-h-screen w-full px-4 lg:pl-28 lg:pr-4">
+    <div className="flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
+      <div className="mx-auto mt-6 w-full max-w-4xl space-y-3">
+        <Link to="/tutor" className="text-sky-300 underline">Tuteur · Nouvelle discussion et historique</Link>
+        <Link to="/revision" className="ml-4 underline">Reprendre ma session</Link>
+        {profile ? <fieldset className="flex flex-wrap gap-3 rounded-xl border border-stone-800 p-3">
+          <legend className="px-2 text-sm">Enregistrer les cartes dans mes révisions</legend>
+          <label className="min-w-40 flex-1">Matière<select className="mt-1 w-full rounded-lg bg-stone-900 p-2" value={subject} onChange={event => setSubject(event.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
+          <label className="min-w-40 flex-1">Chapitre<input className="mt-1 w-full rounded-lg bg-stone-900 p-2" maxLength={200} value={noteTitle} placeholder={(topic || 'Notes du Tuteur').slice(0, 200)} onChange={event => setNoteTitle(event.target.value)} /></label>
+        </fieldset> : <Link to="/" className="block underline">Créer mon profil pour enregistrer des cartes</Link>}
+        {saveMessage && <p role="status" className="text-green-300">{saveMessage} <Link to="/courses" className="underline">Voir mes cours</Link></p>}
+        {error && <p role="alert" className="text-red-300">{error}</p>}
+      </div>
       {!showTopics && (
         <button
           onClick={() => setShowTopics(true)}
-          className="fixed top-5 right-6 z-20 hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-950/90 border border-zinc-800 text-stone-400 hover:text-stone-100 hover:bg-stone-900 text-xs font-medium shadow-lg backdrop-blur transition-colors"
-          title="Show Important Topics"
-          aria-label="Show Important Topics"
+          className="fixed top-5 right-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-950/90 border border-zinc-800 text-stone-400 hover:text-stone-100 hover:bg-stone-900 text-xs font-medium shadow-lg backdrop-blur transition-colors"
+          title="Afficher les cartes"
+          aria-label="Afficher les cartes"
         >
           <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect width="18" height="18" x="3" y="3" rx="2" />
             <path d="M15 3v18" />
           </svg>
-          <span>Topics ({cards.length})</span>
+          <span>Cartes ({cards.length})</span>
         </button>
       )}
 
       <div
         className={`grid grid-cols-1 ${
           showTopics ? "xl:grid-cols-[1fr_320px] lg:grid-cols-[1fr_280px]" : ""
-        } gap-6 mt-20 lg:mt-6 mb-16`}
+        } gap-6 mt-6 mb-36`}
       >
         <div className="flex-1 min-w-0 pr-0 lg:pr-2">
           <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 pt-2 pb-28">
@@ -341,7 +310,7 @@ export default function Chat() {
               })}
               {(connecting || awaitingAnswer) && (
                 <div className="w-full flex justify-start">
-                  <LoadingIndicator label={connecting ? "Connecting…" : "Thinking…"} />
+                  <LoadingIndicator label={connecting ? "Connexion…" : "Réflexion…"} />
                 </div>
               )}
               <div ref={scrollRef} />
@@ -350,15 +319,15 @@ export default function Chat() {
             {latestAssistantContent && !awaitingAnswer && (
               <ActionRow
                 disabled={busy}
-                onSummarize={() => sendFollowup("Summarize the previous answer into 5–7 concise bullet points with bolded keywords.")}
-                onLearnMore={() => sendFollowup("Go deeper into this topic with advanced details, real-world examples, and a short analogy.")}
+                onSummarize={() => sendFollowup("Résume la réponse précédente en français en 5 à 7 points avec les mots-clés en gras.")}
+                onLearnMore={() => sendFollowup("Approfondis ce sujet en français avec des exemples concrets et une courte analogie.")}
                 onStartQuiz={() => {
-                  const t = topic || deriveTopicFromMarkdown(latestAssistantContent) || "General";
+                  const t = topic || deriveTopicFromMarkdown(latestAssistantContent) || "Général";
                   navigate(`/quiz?topic=${encodeURIComponent(t)}`, { state: { topic: t } });
                 }}
                 onCreatePodcast={async () => {
                   try {
-                    const topicContent = latestAssistantContent || topic || "Generated from chat";
+                    const topicContent = latestAssistantContent || topic || "Créé depuis le Tuteur";
                     const response = await podcastStart({ topic: topicContent });
                     navigate("/tools", { state: { podcastPid: response.pid, podcastTopic: topicContent } });
                   } catch (error) {
@@ -373,7 +342,8 @@ export default function Chat() {
         {showTopics && (
           <FlashCards
             items={cards}
-            onAdd={({ kind, title, content }) => addToBag(kind, title, content)}
+            onAdd={({ kind, title, content }) => void saveNote(kind, title, content)}
+            disabled={!profile}
             onToggleCollapse={() => setShowTopics(false)}
           />
         )}
@@ -382,13 +352,11 @@ export default function Chat() {
       <SelectionPopup
         selected={selected}
         popupRef={selPopupRef}
-        addNote={(text) => { addToBag("note", `Note: ${text.slice(0, 30)}${text.length > 30 ? "..." : ""}`, text); setSelected(null); }}
+        addNote={(text) => { void saveNote("note", `Note : ${text.slice(0, 30)}${text.length > 30 ? "..." : ""}`, text); setSelected(null); }}
         askDoubt={(text) => { const v = text.trim(); if (v) sendFollowup(v); setSelected(null); }}
       />
 
       <Composer disabled={busy} onSend={sendFollowup} />
-      <BagFab count={bag.length} onClick={() => setBagOpen(true)} />
-      <BagDrawer open={bagOpen} items={bag} onClose={() => setBagOpen(false)} onClear={clearBag} />
     </div>
   );
 }

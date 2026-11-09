@@ -1,12 +1,12 @@
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import App from "./App";
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import Chat from "./pages/Chat";
 import Quiz from "./pages/Quiz";
 import Tools from "./pages/Tools"
-import FlashCards from './pages/FlashCards'
+import Profile from './pages/Profile'
 import ExamLabs from "./pages/examlab.tsx";
 import NotFound from './pages/404.tsx'
 import PlannerPage from './pages/Planner'
@@ -28,7 +28,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path="tools" element={<Tools />} />
         <Route path="planner" element={<PlannerPage />} />
         <Route path="debate" element={<Debate />} />
-        <Route path="cards" element={<FlashCards />} />
+        <Route path="cards" element={<Navigate to="/courses" replace />} />
+        <Route path="me" element={<Profile />} />
         <Route path="revision" element={<Revision />} />
         <Route path="courses" element={<Courses />} />
         <Route path="import" element={<ImportCourse />} />

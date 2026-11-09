@@ -84,10 +84,10 @@ export default function Debate() {
                 setSession(data.session);
                 setMessages(data.session.messages);
             } else {
-                setError(data.error || "Failed to load debate session");
+                setError(data.error || "Impossible de charger le débat");
             }
         } catch (err: any) {
-            setError(err.message || "Failed to load debate session");
+            setError(err.message || "Impossible de charger le débat");
         }
     };
 
@@ -153,7 +153,7 @@ export default function Debate() {
 
         ws.onerror = (error) => {
             console.error("WebSocket error:", error);
-            setError("Connection error");
+            setError("Erreur de connexion");
         };
 
         ws.onclose = () => {
@@ -180,10 +180,10 @@ export default function Debate() {
                 setMessages([]);
                 navigate(`/debate?debateId=${data.debateId}`);
             } else {
-                setError(data.error || "Failed to start debate");
+                setError(data.error || "Impossible de démarrer le débat");
             }
         } catch (err: any) {
-            setError(err.message || "Failed to start debate");
+            setError(err.message || "Impossible de démarrer le débat");
         }
     };
 
@@ -209,10 +209,10 @@ export default function Debate() {
 
             const data = await response.json();
             if (!data.ok) {
-                setError(data.error || "Failed to submit argument");
+                setError(data.error || "Impossible d’envoyer ton argument");
             }
         } catch (err: any) {
-            setError(err.message || "Failed to submit argument");
+            setError(err.message || "Impossible d’envoyer ton argument");
         }
     };
 
@@ -232,7 +232,7 @@ export default function Debate() {
     const handleSurrender = async () => {
         if (!debateId || isDebateEnded) return;
 
-        if (!confirm("Are you sure you want to surrender this debate?")) return;
+        if (!confirm("Veux-tu terminer ce débat ?")) return;
 
         try {
             const response = await fetch(
@@ -248,10 +248,10 @@ export default function Debate() {
                 setIsDebateEnded(true);
                 fetchAnalysis();
             } else {
-                setError(data.error || "Failed to surrender");
+                setError(data.error || "Impossible de terminer le débat");
             }
         } catch (err: any) {
-            setError(err.message || "Failed to surrender");
+            setError(err.message || "Impossible de terminer le débat");
         }
     };
 
@@ -259,7 +259,7 @@ export default function Debate() {
         if (!debateId) return;
 
         setIsAnalyzing(true);
-        setAnalysisPhase("Starting analysis...");
+        setAnalysisPhase("Début de l’analyse…");
 
         // Connect to analysis WebSocket first
         const analysisWs = new WebSocket(`ws://localhost:5000/ws/debate/analyze?debateId=${debateId}`);
@@ -277,7 +277,7 @@ export default function Debate() {
                     break;
 
                 case "phase":
-                    setAnalysisPhase(data.value);
+                    setAnalysisPhase("Préparation du bilan…");
                     break;
 
                 case "complete":
@@ -299,7 +299,7 @@ export default function Debate() {
 
         analysisWs.onerror = (error) => {
             console.error("Analysis WebSocket error:", error);
-            setError("Analysis connection error");
+            setError("Erreur de connexion à l’analyse");
             setIsAnalyzing(false);
             setAnalysisPhase("");
         };
@@ -328,7 +328,7 @@ export default function Debate() {
                 analysisWs.close();
             }
         } catch (err: any) {
-            setError(err.message || "Failed to start analysis");
+            setError(err.message || "Impossible de lancer l’analyse");
             setIsAnalyzing(false);
             setAnalysisPhase("");
             analysisWs.close();
@@ -337,27 +337,27 @@ export default function Debate() {
 
     if (!debateId) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen w-full px-4 lg:pl-28 lg:pr-4 bg-black">
+            <div className="flex flex-col items-center justify-center min-h-screen w-full px-4 md:pl-28 lg:pr-4 bg-black">
                 <div className="max-w-2xl w-full space-y-8">
                     <div className="text-center space-y-4">
                         <h1 className="text-4xl lg:text-5xl font-bold text-white">
-                            Start a Debate
+                            Commencer un débat
                         </h1>
                         <p className="text-lg text-stone-400">
-                            Challenge AI in a structured debate on any topic
+                            Défends ton point de vue dans un débat avec l’IA
                         </p>
                     </div>
 
                     <div className="bg-stone-950/90 backdrop-blur-sm border border-stone-900 rounded-2xl p-8 space-y-6">
                         <div>
                             <label className="block text-sm font-medium text-stone-300 mb-2">
-                                Debate Topic
+                                Sujet du débat
                             </label>
                             <input
                                 type="text"
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}
-                                placeholder="e.g., boons and banes of AI in education"
+                                placeholder="Ex. : les avantages et les limites de l’IA à l’école"
                                 className="w-full px-4 py-3 bg-stone-900/70 border border-zinc-800 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                                 onKeyDown={(e) => e.key === "Enter" && startDebate()}
                             />
@@ -365,7 +365,7 @@ export default function Debate() {
 
                         <div>
                             <label className="block text-sm font-medium text-stone-300 mb-3">
-                                Your Position
+                                Ton point de vue
                             </label>
                             <div className="flex gap-4">
                                 <button
@@ -376,8 +376,8 @@ export default function Debate() {
                                         }`}
                                 >
                                     <div className="text-2xl mb-1">👍</div>
-                                    <div>For</div>
-                                    <div className="text-xs mt-1 opacity-80">Support the topic</div>
+                                    <div>Pour</div>
+                                    <div className="text-xs mt-1 opacity-80">Défendre cette idée</div>
                                 </button>
                                 <button
                                     onClick={() => setPosition("against")}
@@ -387,8 +387,8 @@ export default function Debate() {
                                         }`}
                                 >
                                     <div className="text-2xl mb-1">👎</div>
-                                    <div>Against</div>
-                                    <div className="text-xs mt-1 opacity-80">Oppose the topic</div>
+                                    <div>Contre</div>
+                                    <div className="text-xs mt-1 opacity-80">Contester cette idée</div>
                                 </button>
                             </div>
                         </div>
@@ -398,7 +398,7 @@ export default function Debate() {
                             disabled={!topic.trim()}
                             className="w-full py-4 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 disabled:from-stone-800 disabled:to-stone-800 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg"
                         >
-                            Begin Debate
+                            Commencer le débat
                         </button>
                     </div>
 
@@ -413,7 +413,7 @@ export default function Debate() {
     }
 
     return (
-        <div className="flex flex-col h-screen w-full lg:pl-28 bg-black">
+        <div className="flex flex-col h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] md:h-screen w-full md:pl-28 bg-black">
             <div className="flex-shrink-0 border-b border-zinc-900 bg-stone-950/90 backdrop-blur-sm">
                 <div className="px-6 py-4">
                     <div className="flex items-center justify-between">
@@ -428,11 +428,11 @@ export default function Debate() {
                                         : "bg-red-600/20 text-red-400 border border-red-600/30"
                                         }`}
                                 >
-                                    You: {session?.position === "for" ? "For" : "Against"}
+                                    Toi : {session?.position === "for" ? "Pour" : "Contre"}
                                 </span>
-                                <span className="text-stone-500">vs</span>
+                                <span className="text-stone-500">contre</span>
                                 <span className="px-3 py-1 rounded-full font-semibold bg-purple-600/20 text-purple-400 border border-purple-600/30">
-                                    AI: {session?.position === "for" ? "Against" : "For"}
+                                    IA : {session?.position === "for" ? "Contre" : "Pour"}
                                 </span>
                             </div>
                         </div>
@@ -445,7 +445,7 @@ export default function Debate() {
                             }}
                             className="px-4 py-2 bg-stone-900/70 border border-zinc-800 hover:bg-stone-800 text-stone-300 rounded-lg transition-colors"
                         >
-                            New Debate
+                            Nouveau débat
                         </button>
                     </div>
                 </div>
@@ -457,11 +457,11 @@ export default function Debate() {
                         <div className="text-center space-y-4 max-w-md">
                             <div className="text-6xl animate-[fadeIn_0.5s_ease-in-out]">⚖️</div>
                             <h2 className="text-2xl font-bold text-white animate-[fadeIn_0.6s_ease-in-out]">
-                                Ready to debate!
+                                Prêt à débattre !
                             </h2>
                             <p className="text-stone-400 animate-[fadeIn_0.7s_ease-in-out]">
-                                Present your opening argument below. The AI will respond with a
-                                counterargument.
+                                Présente ton premier argument. L’IA proposera un
+                                contre-argument.
                             </p>
                         </div>
                     </div>
@@ -479,11 +479,11 @@ export default function Debate() {
                             <div className="flex items-center gap-2">
                                 {msg.role === "assistant" && (
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center text-white font-bold shadow-lg">
-                                        AI
+                                        IA
                                     </div>
                                 )}
                                 <span className="text-sm font-semibold text-stone-400">
-                                    {msg.role === "user" ? "You" : "AI Opponent"}
+                                    {msg.role === "user" ? "Toi" : "Adversaire IA"}
                                 </span>
                                 {msg.role === "user" && (
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold shadow-lg ${session?.position === "for"
@@ -513,10 +513,10 @@ export default function Debate() {
                         <div className="max-w-3xl items-start flex flex-col gap-2">
                             <div className="flex items-center gap-2">
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center text-white font-bold shadow-lg">
-                                    AI
+                                    IA
                                 </div>
                                 <span className="text-sm font-semibold text-stone-400">
-                                    AI Opponent
+                                    Adversaire IA
                                 </span>
                             </div>
                             <div className="px-6 py-4 rounded-2xl shadow-lg bg-stone-950/90 border border-zinc-900 shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-black/10 backdrop-blur text-white">
@@ -542,10 +542,10 @@ export default function Debate() {
                             onKeyDown={handleKeyDown}
                             placeholder={
                                 isDebateEnded
-                                    ? "Debate has ended"
+                                    ? "Le débat est terminé"
                                     : isStreaming
-                                        ? "AI is responding..."
-                                        : "Type your argument... (Shift+Enter for new line)"
+                                        ? "L’IA prépare sa réponse…"
+                                        : "Écris ton argument… (Maj+Entrée pour une nouvelle ligne)"
                             }
                             disabled={isStreaming || isDebateEnded}
                             className="flex-1 px-4 py-3 bg-stone-900/70 border border-zinc-800 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed custom-scroll"
@@ -563,10 +563,10 @@ export default function Debate() {
                             {isStreaming ? (
                                 <div className="flex items-center gap-2">
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    <span>Waiting...</span>
+                                    <span>Patiente…</span>
                                 </div>
                             ) : (
-                                "Argue"
+                                "Argumenter"
                             )}
                         </button>
                     </div>
@@ -576,7 +576,7 @@ export default function Debate() {
                             disabled={isStreaming || messages.length === 0 || isDebateEnded}
                             className="px-4 py-2 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-600/40 hover:border-orange-600/60 text-orange-400 hover:text-orange-300 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
                         >
-                            🏳️ Surrender
+                            🏳️ Terminer le débat
                         </button>
                     </div>
                 </div>
@@ -593,17 +593,17 @@ export default function Debate() {
                                 </div>
                                 <h2 className="text-3xl font-bold text-white">
                                     {analysis.winner === "user"
-                                        ? "You Won!"
+                                        ? "Tu as gagné !"
                                         : analysis.winner === "ai"
-                                            ? "AI Won!"
-                                            : "It's a Draw!"}
+                                            ? "L’IA a gagné !"
+                                            : "Égalité !"}
                                 </h2>
                                 <p className="text-lg text-stone-400">{analysis.reason}</p>
                             </div>
 
                             {/* Overall Assessment */}
                             <div className="bg-stone-900/50 border border-zinc-800 rounded-xl p-6">
-                                <h3 className="text-xl font-bold text-white mb-3">📊 Overall Assessment</h3>
+                                <h3 className="text-xl font-bold text-white mb-3">📊 Bilan général</h3>
                                 <p className="text-stone-300 leading-relaxed">{analysis.overallAssessment}</p>
                             </div>
 
@@ -612,7 +612,7 @@ export default function Debate() {
                                 {/* User Performance */}
                                 <div className="space-y-4">
                                     <div className="bg-green-900/20 border border-green-800/30 rounded-xl p-5">
-                                        <h3 className="text-lg font-bold text-green-400 mb-3">💪 Your Strengths</h3>
+                                        <h3 className="text-lg font-bold text-green-400 mb-3">💪 Tes points forts</h3>
                                         <ul className="space-y-2">
                                             {analysis.userStrengths.map((strength, idx) => (
                                                 <li key={idx} className="text-stone-300 text-sm flex items-start gap-2">
@@ -624,7 +624,7 @@ export default function Debate() {
                                     </div>
                                     {analysis.userWeaknesses.length > 0 && (
                                         <div className="bg-red-900/20 border border-red-800/30 rounded-xl p-5">
-                                            <h3 className="text-lg font-bold text-red-400 mb-3">📉 Areas to Improve</h3>
+                                            <h3 className="text-lg font-bold text-red-400 mb-3">📉 Points à améliorer</h3>
                                             <ul className="space-y-2">
                                                 {analysis.userWeaknesses.map((weakness, idx) => (
                                                     <li key={idx} className="text-stone-300 text-sm flex items-start gap-2">
@@ -640,7 +640,7 @@ export default function Debate() {
                                 {/* AI Performance */}
                                 <div className="space-y-4">
                                     <div className="bg-purple-900/20 border border-purple-800/30 rounded-xl p-5">
-                                        <h3 className="text-lg font-bold text-purple-400 mb-3">🤖 AI Strengths</h3>
+                                        <h3 className="text-lg font-bold text-purple-400 mb-3">🤖 Points forts de l’IA</h3>
                                         <ul className="space-y-2">
                                             {analysis.aiStrengths.map((strength, idx) => (
                                                 <li key={idx} className="text-stone-300 text-sm flex items-start gap-2">
@@ -652,7 +652,7 @@ export default function Debate() {
                                     </div>
                                     {analysis.aiWeaknesses.length > 0 && (
                                         <div className="bg-red-900/20 border border-red-800/30 rounded-xl p-5">
-                                            <h3 className="text-lg font-bold text-red-400 mb-3">📉 AI Weaknesses</h3>
+                                            <h3 className="text-lg font-bold text-red-400 mb-3">📉 Points faibles de l’IA</h3>
                                             <ul className="space-y-2">
                                                 {analysis.aiWeaknesses.map((weakness, idx) => (
                                                     <li key={idx} className="text-stone-300 text-sm flex items-start gap-2">
@@ -669,7 +669,7 @@ export default function Debate() {
                             {/* Key Moments */}
                             {analysis.keyMoments.length > 0 && (
                                 <div className="bg-stone-900/50 border border-zinc-800 rounded-xl p-6">
-                                    <h3 className="text-xl font-bold text-white mb-4">⚡ Key Moments</h3>
+                                    <h3 className="text-xl font-bold text-white mb-4">⚡ Moments clés</h3>
                                     <ul className="space-y-3">
                                         {analysis.keyMoments.map((moment, idx) => (
                                             <li key={idx} className="text-stone-300 flex items-start gap-3">
@@ -694,7 +694,7 @@ export default function Debate() {
                                     }}
                                     className="flex-1 py-3 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all shadow-lg"
                                 >
-                                    New Debate
+                                    Nouveau débat
                                 </button>
                                 <button
                                     onClick={() => {
@@ -703,7 +703,7 @@ export default function Debate() {
                                     }}
                                     className="px-6 py-3 bg-stone-900/70 border border-zinc-800 hover:bg-stone-800 text-stone-300 font-semibold rounded-xl transition-colors"
                                 >
-                                    Review Debate
+                                    Relire le débat
                                 </button>
                             </div>
                         </div>
@@ -715,7 +715,7 @@ export default function Debate() {
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-stone-950 border border-zinc-900 rounded-2xl p-8 text-center space-y-4 min-w-[300px]">
                         <div className="w-16 h-16 border-4 border-sky-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                        <p className="text-white font-semibold">Analyzing debate...</p>
+                        <p className="text-white font-semibold">Analyse du débat…</p>
                         {analysisPhase && (
                             <p className="text-sky-400 text-sm animate-pulse">{analysisPhase}</p>
                         )}

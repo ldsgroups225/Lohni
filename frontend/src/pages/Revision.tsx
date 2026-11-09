@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, Navigate } from 'react-router-dom'
-import { revisionAPI, type RevisionProfile, type RevisionSession, type RevisionProgress } from '../lib/api'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { chatJSON, revisionAPI, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress } from '../lib/api'
 
 export default function Revision() {
+  const navigate = useNavigate()
   const [profile, setProfile] = useState<RevisionProfile | null>(null)
   const [session, setSession] = useState<RevisionSession | null>(null)
   const [progress, setProgress] = useState<RevisionProgress | null>(null)
@@ -12,6 +13,7 @@ export default function Revision() {
   const [choice, setChoice] = useState<number>()
   const [subject, setSubject] = useState('')
   const [title, setTitle] = useState('')
+  const [missed, setMissed] = useState<RevisionCard | null>(null)
   const startedAt = useRef(Date.now())
   const card = session?.cards[session.position]
   const button = 'rounded-xl bg-stone-800 px-4 py-3 text-white hover:bg-stone-700 disabled:opacity-50 disabled:cursor-wait'
@@ -66,10 +68,24 @@ export default function Revision() {
   }
   function answer(knew: boolean) {
     if (!session || !card) return
-    void run(async () => display(await revisionAPI.answer({
-      sessionId: session.id, cardId: card.id, position: session.position, knew, choice,
-      durationMs: Math.max(0, Date.now() - startedAt.current),
-    })))
+    void run(async () => {
+      const next = await revisionAPI.answer({
+        sessionId: session.id, cardId: card.id, position: session.position, knew, choice,
+        durationMs: Math.max(0, Date.now() - startedAt.current),
+      })
+      setMissed(!knew || (card.kind === 'mcq' && choice !== card.correct) ? card : null)
+      display(next)
+    })
+  }
+  function explain() {
+    if (!missed || !profile) return
+    void run(async () => {
+      const chapter = (await revisionAPI.chapters()).find(value => value.id === missed.chapterId)
+      if (!chapter) throw new Error('Ce chapitre n’est plus disponible.')
+      const q = `Explique-moi cette carte que je n’ai pas comprise, en français et à mon niveau.\nClasse : ${profile.schoolClass}${profile.series ? `, série ${profile.series}` : ''}.\nMatière : ${chapter.subject}.\nChapitre : ${chapter.title}.\nQuestion : ${missed.question}\n${missed.options ? `Choix : ${missed.options.join(' ; ')}\n` : ''}Réponse : ${missed.answer}`
+      const result = await chatJSON({ q })
+      navigate(`/chat?chatId=${encodeURIComponent(result.chatId)}`, { state: { q, revisionSubject: chapter.subject, revisionTitle: chapter.title } })
+    })
   }
 
   if (!busy && !error && !profile) return <Navigate to="/" replace />
@@ -91,6 +107,10 @@ export default function Revision() {
           })}>Réessayer</button>
         </div>}
         {busy && <p role="status">Chargement…</p>}
+        {missed && <aside className="space-y-3 rounded-2xl border border-orange-900 p-4" aria-live="polite">
+          <p>À retravailler : {missed.question}</p>
+          <button className={button} disabled={busy} onClick={explain}>Explique-moi</button>
+        </aside>}
         {session && !session.complete && card ? (
           <section className="space-y-6" aria-busy={busy}>
             <div>

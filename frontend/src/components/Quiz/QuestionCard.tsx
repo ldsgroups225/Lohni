@@ -43,11 +43,11 @@ export default function QuestionCard({
 
         <div className="mt-6 flex flex-col md:flex-row justify-between items-center">
           <button onClick={onHint} className="bg-stone-900 hover:bg-stone-800 border border-stone-900 hover:border-stone-800 text-stone-200 hover:text-white rounded-xl px-4 py-2 font-medium transition-all duration-300 flex items-center gap-2">
-            <span className="text-lg">💡</span> Show Hint
+            <span className="text-lg">💡</span> Afficher un indice
           </button>
           <button onClick={onNext} disabled={selected == null}
             className="bg-stone-900 hover:bg-stone-800 border border-stone-900 hover:border-stone-800 text-stone-200 hover:text-white rounded-xl px-6 py-3 font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-            {isLast ? "Finish Quiz" : "Next Question"}
+            {isLast ? "Terminer le quiz" : "Question suivante"}
             <svg xmlns="http://www.w3.org/2000/svg" className="size-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
             </svg>
@@ -55,11 +55,11 @@ export default function QuestionCard({
         </div>
 
         <div className={`${showHint ? "" : "hidden"} mt-4 p-4 bg-yellow-900/20 border border-yellow-700 rounded-xl`}>
-          <p className="text-yellow-200 text-sm"><strong>💡 Hint:</strong> {q.hint}</p>
+          <p className="text-yellow-200 text-sm"><strong>💡 Indice :</strong> {q.hint}</p>
         </div>
 
         <div className={`${showExp ? "" : "hidden"} mt-4 p-4 bg-stone-900/50 border border-stone-800 rounded-xl`}>
-          <h3 className="text-white font-medium mb-2">Explanation:</h3>
+          <h3 className="text-white font-medium mb-2">Explication :</h3>
           <p className="text-stone-300 text-sm">{q.explanation}</p>
         </div>
       </div>

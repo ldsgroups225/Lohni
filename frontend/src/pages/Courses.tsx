@@ -83,11 +83,10 @@ export default function Courses() {
         <p>Prépare ton premier chapitre pour commencer à réviser.</p>
         <Link to="/revision" className="inline-block underline">Commencer ma révision</Link>
       </section>}
-      {progress?.subjects.map(subject => {
-        const own = chapters.filter(chapter => chapter.subjectId === subject.subjectId)
-        if (!own.length) return null
-        return <section key={subject.subjectId} className="space-y-4" aria-busy={busy}>
-          <h2 className="text-xl font-semibold text-white">{subject.name}</h2>
+      {[...new Set(chapters.map(chapter => chapter.subject))].map(subject => {
+        const own = chapters.filter(chapter => chapter.subject === subject)
+        return <section key={subject} className="space-y-4" aria-busy={busy}>
+          <h2 className="text-xl font-semibold text-white">{subject}</h2>
           {own.map(chapter => <article key={chapter.id} className="space-y-4 rounded-2xl border border-stone-800 bg-stone-950 p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <h3 className="text-lg font-semibold text-white">{chapter.title}</h3>

@@ -44,7 +44,7 @@ export default function Quiz() {
   const q = qs[idx];
 
   const percentage = useMemo(() => (total ? Math.round((score / total) * 100) : 0), [score, total]);
-  const resultVisual = useMemo(() => { if (percentage >= 90) return { msg: "Excellent! You have mastered this topic!", cls: "bg-green-900/20 border border-green-700 text-green-200", icon: "🏆" }; if (percentage >= 70) return { msg: "Great job! You have a solid understanding.", cls: "bg-blue-900/20 border border-blue-700 text-blue-200", icon: "🎉" }; if (percentage >= 50) return { msg: "Good effort! Review the concepts and try again.", cls: "bg-yellow-900/20 border border-yellow-700 text-yellow-200", icon: "📚" }; return { msg: "Keep studying! Practice makes perfect.", cls: "bg-red-900/20 border border-red-700 text-red-200", icon: "💪" }; }, [percentage]);
+  const resultVisual = useMemo(() => { if (percentage >= 90) return { msg: "Excellent ! Tu maîtrises ce sujet !", cls: "bg-green-900/20 border border-green-700 text-green-200", icon: "🏆" }; if (percentage >= 70) return { msg: "Bravo ! Tu as bien compris.", cls: "bg-blue-900/20 border border-blue-700 text-blue-200", icon: "🎉" }; if (percentage >= 50) return { msg: "Bon travail ! Relis les notions puis réessaie.", cls: "bg-yellow-900/20 border border-yellow-700 text-yellow-200", icon: "📚" }; return { msg: "Continue à réviser pour progresser.", cls: "bg-red-900/20 border border-red-700 text-red-200", icon: "💪" }; }, [percentage]);
 
   useEffect(() => () => { if (closeRef.current) closeRef.current(); }, []);
   useEffect(() => { if (!initialTopic) return; start(initialTopic); }, [initialTopic]);
@@ -128,14 +128,14 @@ export default function Quiz() {
   const newTopic = () => { setDone(false); setQs([]); setTopic(""); setAnswers([]); resetQuestionState(); setScore(0); };
 
   return (
-    <div className="flex flex-col min-h-screen w-full px-4 lg:pl-28 lg:pr-4">
+    <div className="flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
       <div className="w-full max-w-4xl mx-auto p-4 pt-8 pb-24 my-auto">
 
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Link to='/'
               className="p-2 rounded-xl bg-stone-950 border border-zinc-800 hover:bg-stone-900 transition-colors"
-              aria-label="Back">
+              aria-label="Retour">
               <svg viewBox="0 0 24 24" className="size-5 text-stone-300" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
               </svg>
@@ -143,7 +143,7 @@ export default function Quiz() {
             <h1 className="text-2xl font-semibold text-white flex items-center gap-3">Quiz</h1>
           </div>
           <div className="px-3 py-1 rounded-full bg-gradient-to-r from-sky-500/20 to-blue-500/20 border border-sky-500/30 text-sky-300 text-xs font-medium">
-            BETA
+            BÊTA
           </div>
         </div>
 
@@ -156,7 +156,7 @@ export default function Quiz() {
         )}
 
         {connecting && (
-          <div className="mt-10"><LoadingIndicator label="Building a quiz for you…" /></div>
+          <div className="mt-10"><LoadingIndicator label="Préparation de ton quiz…" /></div>
         )}
 
         {qs.length > 0 && !done && q && (

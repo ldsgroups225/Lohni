@@ -1,15 +1,21 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AdaptiveErrorBoundary, adaptiveToast } from '@cognicatch/react'
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PromptRail from "../components/Landing/PromptRail";
 import PromptBox from "../components/Landing/PromptBox";
 import ExploreTopics from "../components/Landing/ExploreTopics";
-import { chatMultipart, chatJSON } from "../lib/api";
+import { chatMultipart, chatJSON, getChats, type ChatInfo } from "../lib/api";
 
 export default function Landing() {
+  const [chats, setChats] = useState<ChatInfo[]>([]);
+  useEffect(() => {
+    let active = true;
+    getChats().then(result => { if (active) setChats(result.chats); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
   const [prompt, setPrompt] = useState("");
-  const [mode, setMode] = useState<"Chat" | "Quiz">("Chat");
-  const [responseLength, setResponseLength] = useState<"Short" | "Medium" | "Long">("Medium");
+  const [mode, setMode] = useState<"Discussion" | "Quiz">("Discussion");
+  const [responseLength, setResponseLength] = useState<"Courte" | "Moyenne" | "Longue">("Moyenne");
   const [showMode, setShowMode] = useState(false);
   const [showLength, setShowLength] = useState(false);
   const [stagedFile, setStagedFile] = useState<File | null>(null);
@@ -52,24 +58,24 @@ export default function Landing() {
       const r = await chatJSON({ q });
       navigate(`/chat?chatId=${encodeURIComponent(r.chatId)}&q=${encodeURIComponent(q)}`);
     } catch {
-      adaptiveToast.error("Failed to start chat", "There was a problem reaching the AI. Please try sending your prompt again.");
+      adaptiveToast.error("Impossible de démarrer la discussion", "Impossible de joindre le Tuteur. Réessaie d’envoyer ta question.");
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full px-4 pb-28 md:pb-4 lg:pl-28 lg:pr-4">
+    <div className="flex flex-col min-h-screen w-full px-4 pb-28 md:pb-4 md:pl-28 lg:pr-4">
       <div className="flex-1 flex flex-col justify-center max-w-4xl mx-auto pt-8 md:pt-0 my-4 w-full px-0 md:px-2">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl text-white font-semibold pl-3 border-l-2 border-sky-500 mb-5 md:mb-8">
-          What&apos;d you like to learn today?
+          Que veux-tu comprendre aujourd’hui ?
         </h1>
 
         <AdaptiveErrorBoundary
           mode="manual"
           severity="medium"
-          title="Input Area Unavailable"
-          description="An error occurred while loading the chat input or file uploader. Please refresh the page to continue."
+          title="La saisie est indisponible"
+          description="Impossible de charger la zone de saisie. Actualise la page pour continuer."
           theme={{
             backgroundColor: "#0c0a09",
             textColor: "#e7e5e4",
@@ -100,7 +106,7 @@ export default function Landing() {
                   className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-white/5 duration-300 transition-all cursor-pointer"
                 >
                   <div className="flex flex-col -space-y-0.5 pr-2">
-                    <span className="text-xs text-stone-300">Prompt Mode</span>
+                    <span className="text-xs text-stone-300">Mode</span>
                     <span className="text-sm font-semibold text-white">{mode}</span>
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-stone-400">
@@ -110,11 +116,11 @@ export default function Landing() {
 
                 {showMode && (
                   <div className="absolute top-full left-0 mt-1 p-1 w-36 bg-stone-950 border border-stone-800 rounded-xl shadow-lg z-20">
-                    {["Chat", "Quiz"].map((opt) => (
+                    {["Discussion", "Quiz"].map((opt) => (
                       <div
                         key={opt}
                         onClick={() => {
-                          setMode(opt as "Chat" | "Quiz");
+                          setMode(opt as "Discussion" | "Quiz");
                           setShowMode(false);
                         }}
                         className={`px-3 py-3 md:py-2 cursor-pointer hover:bg-stone-800 transition rounded-lg ${mode === opt ? "text-sky-400" : "text-white"
@@ -129,10 +135,10 @@ export default function Landing() {
 
               <div className="w-px h-8 mx-2 bg-white/10 rounded-full mt-2" />
 
-              <div className="p-1.5 rounded-xl hover:bg-white/5 duration-300 transition-all cursor-pointer min-w-fit h-fit hidden md:flex items-center space-x-4" onClick={onPickFile} title={stagedFile ? stagedFile.name : "Click or drop"}>
+              <div className="p-1.5 rounded-xl hover:bg-white/5 duration-300 transition-all cursor-pointer min-w-fit h-fit hidden md:flex items-center space-x-4" onClick={onPickFile} title={stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}>
                 <div className="flex flex-col -space-y-0.5 pr-2">
-                  <span className="text-xs text-stone-300">{stagedFile ? "File selected" : "Add files"}</span>
-                  <span className="text-sm font-semibold text-white">{stagedFile ? stagedFile.name : "Click or drop"}</span>
+                  <span className="text-xs text-stone-300">{stagedFile ? "Fichier sélectionné" : "Ajouter des fichiers"}</span>
+                  <span className="text-sm font-semibold text-white">{stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}</span>
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-6 text-stone-400">
                   <path
@@ -150,7 +156,7 @@ export default function Landing() {
                   onClick={() => setShowLength(!showLength)}
                   className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-white/5 duration-300 transition-all cursor-pointer">
                   <div className="flex flex-col -space-y-0.5 pr-2">
-                    <span className="text-xs text-stone-300">Response Length</span>
+                    <span className="text-xs text-stone-300">Longueur de réponse</span>
                     <span className="text-sm font-semibold text-white">{responseLength}</span>
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-stone-400">
@@ -160,11 +166,11 @@ export default function Landing() {
 
                 {showLength && (
                   <div className="absolute top-full right-0 md:right-auto md:left-0 mt-1 p-1 w-40 bg-stone-950 border border-stone-800 rounded-xl shadow-lg z-20">
-                    {["Short", "Medium", "Long"].map((opt) => (
+                    {["Courte", "Moyenne", "Longue"].map((opt) => (
                       <div
                         key={opt}
                         onClick={() => {
-                          setResponseLength(opt as "Short" | "Medium" | "Long");
+                          setResponseLength(opt as "Courte" | "Moyenne" | "Longue");
                           setShowLength(false);
                         }}
                         className={`px-3 py-3 md:py-2 cursor-pointer hover:bg-stone-800 transition rounded-lg ${responseLength === opt ? "text-sky-400" : "text-white"
@@ -195,6 +201,11 @@ export default function Landing() {
       </div>
 
       <ExploreTopics />
+      <details className="mx-auto mb-6 w-full max-w-4xl rounded-2xl border border-stone-800 p-5">
+        <summary className="cursor-pointer text-white">Mes discussions</summary>
+        <ul className="mt-4 space-y-3">{chats.map(chat => <li key={chat.id}><Link to={`/chat?chatId=${encodeURIComponent(chat.id)}`} className="block truncate text-sky-300 underline">{chat.title || 'Discussion sans titre'}</Link></li>)}</ul>
+        {!chats.length && <p className="mt-3 text-sm text-stone-400">Aucune discussion pour le moment.</p>}
+      </details>
 
       <input ref={fileRef} type="file" className="hidden" onChange={onFileChange} />
     </div>

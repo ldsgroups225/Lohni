@@ -49,43 +49,43 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
         const isReading = /(read|chapter|book|article)/.test(title)
         const isProblem = /(hw|pset|problem|assignment|calc|algebra|math|physics|chem|bio)/.test(title)
         if (isEssay) return [
-            { label: 'Research', w: 2 },
-            { label: 'Outline', w: 1 },
-            { label: 'Draft', w: 3 },
-            { label: 'Revise', w: 2 },
-            { label: 'Proofread', w: 1 },
-            { label: 'Submit', w: 1 },
+            { label: "Rechercher", w: 2 },
+            { label: "Faire le plan", w: 1 },
+            { label: "Rédiger", w: 3 },
+            { label: "Revoir", w: 2 },
+            { label: "Relire", w: 1 },
+            { label: "Rendre", w: 1 },
         ]
         if (isExam) return [
-            { label: 'Topics Map', w: 1 },
-            { label: 'Flashcards', w: 2 },
-            { label: 'Practice', w: 3 },
-            { label: 'Weak Spots', w: 2 },
-            { label: 'Mock Test', w: 2 },
-            { label: 'Review', w: 1 },
+            { label: "Carte des sujets", w: 1 },
+            { label: "Cartes", w: 2 },
+            { label: "S’exercer", w: 3 },
+            { label: "Points fragiles", w: 2 },
+            { label: "Examen blanc", w: 2 },
+            { label: "Réviser", w: 1 },
         ]
         if (isReading) return [
-            { label: 'Skim', w: 1 },
-            { label: 'Read', w: 3 },
-            { label: 'Notes', w: 2 },
-            { label: 'Summary', w: 1 },
-            { label: 'Discuss/Qs', w: 1 },
+            { label: "Parcourir", w: 1 },
+            { label: "Lire", w: 3 },
+            { label: "Notes", w: 2 },
+            { label: "Résumé", w: 1 },
+            { label: 'Discuter et questionner', w: 1 },
         ]
         if (isProblem) return [
-            { label: 'Review Notes', w: 1 },
-            { label: 'Examples', w: 2 },
-            { label: 'Solve Set', w: 3 },
-            { label: 'Check/Verify', w: 2 },
-            { label: 'Write-up', w: 1 },
-            { label: 'Submit', w: 1 },
+            { label: "Relire les notes", w: 1 },
+            { label: "Exemples", w: 2 },
+            { label: "Résoudre les exercices", w: 3 },
+            { label: 'Vérifier', w: 2 },
+            { label: "Rédiger", w: 1 },
+            { label: "Rendre", w: 1 },
         ]
         return [
-            { label: 'Plan', w: 1 },
-            { label: 'Research', w: 2 },
-            { label: 'Make', w: 3 },
-            { label: 'Review', w: 2 },
-            { label: 'Polish', w: 1 },
-            { label: 'Submit', w: 1 },
+            { label: "Planifier", w: 1 },
+            { label: "Rechercher", w: 2 },
+            { label: "Réaliser", w: 3 },
+            { label: "Réviser", w: 2 },
+            { label: "Améliorer", w: 1 },
+            { label: "Rendre", w: 1 },
         ]
     }
 
@@ -407,7 +407,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                 ].join(', ')
             }} />
             <div className="absolute top-3 left-3 z-20 text-[11px] text-stone-400 bg-stone-900/60 border border-zinc-800 rounded px-2 py-1 backdrop-blur">
-                Drag to pan, scroll to zoom, drag nodes to arrange. Double-click a node to focus.
+                Fais glisser pour déplacer la carte, défile pour zoomer. Double-clique sur une bulle pour la centrer.
             </div>
             <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
                 {tasks.map(t => {
@@ -477,15 +477,15 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                             </g>
                             <g fontFamily="Inter, ui-sans-serif" fontSize="12" fill="#e4e4e7" textAnchor="middle">
                                 <rect x="325" y="172" width="54" height="24" rx="7" fill="#18181b" stroke="#27272a" />
-                                <text x="352" y="189">Focus</text>
+                                <text x="352" y="189">Se concentrer</text>
                                 <rect x="495" y="104" width="54" height="22" rx="7" fill="#111827" stroke="#1f2937" />
-                                <text x="522" y="119">Recall</text>
+                                <text x="522" y="119">Se rappeler</text>
                                 <rect x="185" y="74" width="54" height="22" rx="7" fill="#0f172a" stroke="#1f2937" />
-                                <text x="212" y="89">Outline</text>
+                                <text x="212" y="89">Faire le plan</text>
                                 <rect x="115" y="234" width="54" height="22" rx="7" fill="#111827" stroke="#1f2937" />
-                                <text x="142" y="249">Review</text>
+                                <text x="142" y="249">Réviser</text>
                                 <rect x="555" y="234" width="54" height="22" rx="7" fill="#0f172a" stroke="#1f2937" />
-                                <text x="582" y="249">Refine</text>
+                                <text x="582" y="249">Améliorer</text>
                             </g>
                             <g opacity="0.35">
                                 <circle cx="350" cy="190" r="28" fill="url(#pulse1)" />
@@ -554,21 +554,21 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                 </div>
                                 {menuOpen === t.id && (
                                     <div className="absolute left-0 top-[120%] z-30 bg-stone-900/95 border border-zinc-800 rounded-md shadow-lg min-w-[160px] p-1">
-                                        <button onClick={() => { setMenuOpen(null); onUpdateStatus(t.id, 'doing'); onPlan(t.id); }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Start now</button>
-                                        <button onClick={() => { setMenuOpen(null); onPlan(t.id) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Plan</button>
+                                        <button onClick={() => { setMenuOpen(null); onUpdateStatus(t.id, 'doing'); onPlan(t.id); }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Commencer</button>
+                                        <button onClick={() => { setMenuOpen(null); onPlan(t.id) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Planifier</button>
                                         <div className="border-t border-zinc-800 my-1" />
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'summary') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Assist: Summary</button>
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'studyGuide') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Assist: Study Guide</button>
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'flashcards') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Assist: Flashcards</button>
+                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'summary') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Aide : résumé</button>
+                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'studyGuide') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Aide : guide de révision</button>
+                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'flashcards') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Aide : cartes</button>
                                         <div className="border-t border-zinc-800 my-1" />
                                         <label className="block text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800 cursor-pointer">
-                                            Upload file
+                                            Ajouter un fichier
                                             <input type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(t.id, f); setMenuOpen(null) }} />
                                         </label>
-                                        <button onClick={() => { const val = window.prompt('Add note'); if (val != null) { onUpdateNotes?.(t.id, val) } setMenuOpen(null) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Add note…</button>
-                                        <button onClick={() => { recenterSteps(t.id); setMenuOpen(null) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Recenter steps</button>
+                                        <button onClick={() => { const val = window.prompt("Ajouter une note"); if (val != null) { onUpdateNotes?.(t.id, val) } setMenuOpen(null) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Ajouter une note…</button>
+                                        <button onClick={() => { recenterSteps(t.id); setMenuOpen(null) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Recentrer les étapes</button>
                                         <div className="border-t border-zinc-800 my-1" />
-                                        <button onClick={() => { setMenuOpen(null); onDelete(t.id) }} className="w-full text-left text-[12px] text-red-400 px-2 py-1 rounded hover:bg-red-950/40">Delete task</button>
+                                        <button onClick={() => { setMenuOpen(null); onDelete(t.id) }} className="w-full text-left text-[12px] text-red-400 px-2 py-1 rounded hover:bg-red-950/40">Supprimer la tâche</button>
                                     </div>
                                 )}
                             </div>
@@ -614,7 +614,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                                 })
                                             }}
                                             className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-stone-800 text-stone-100 hover:bg-red-600 hover:text-white flex items-center justify-center z-20"
-                                            aria-label="Delete bubble"
+                                            aria-label="Supprimer la bulle"
                                         >×</button>
                                         <span className="relative px-2">{label}{cnt ? ` (${cnt})` : ''}</span>
                                     </div>
@@ -661,9 +661,9 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     const colors = ['#22d3ee', '#a78bfa', '#4ade80', '#f472b6', '#f59e0b']
                     const color = colors[Math.floor(Math.random() * colors.length)]
                     const id = Math.random().toString(36).slice(2, 9)
-                    setCustomNodes(list => [...list, { id, x: worldX, y: worldY, label: 'Idea', color }])
+                    setCustomNodes(list => [...list, { id, x: worldX, y: worldY, label: "Idée", color }])
                     setEditingId(id)
-                }} className="px-2 py-1 bg-stone-800 rounded">Add bubble</button>
+                }} className="px-2 py-1 bg-stone-800 rounded">Ajouter une bulle</button>
                 <button onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
                     const cx = rect ? rect.width / 2 : 0
@@ -685,7 +685,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     setPan({ x: cx - worldX * newZoom, y: cy - worldY * newZoom })
                     setZoom(newZoom)
                 }} className="px-2 py-1 bg-stone-800 rounded">+</button>
-                <button onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1.25) }} className="px-2 py-1 bg-stone-800 rounded">Reset</button>
+                <button onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1.25) }} className="px-2 py-1 bg-stone-800 rounded">Réinitialiser</button>
             </div>
         </div>
     )

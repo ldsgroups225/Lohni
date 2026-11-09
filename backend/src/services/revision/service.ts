@@ -25,7 +25,7 @@ export type RevisionChapter = {
   cards: RevisionCard[]; seenCards: number; mastery: number | null; status: MasteryStatus
 }
 export type RevisionProgress = {
-  streak: number; xp: number;
+  streak: number; xp: number; learnedCards: number;
   subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[]
 }
 export type RevisionHome = { profile: ProfileInput; daysUntilExam: number | null; totalCards: number; cardCount: number; estimatedMinutes: number; state: 'ready' | 'done' | 'empty' }
@@ -56,6 +56,9 @@ export class RevisionService {
         `CREATE INDEX IF NOT EXISTS revision_cards_due ON revision_cards(device_id, due)`,
         `CREATE TABLE IF NOT EXISTS revision_journal (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, card_id TEXT NOT NULL, session_id TEXT NOT NULL, position INTEGER NOT NULL, reviewed_at TEXT NOT NULL, local_date TEXT NOT NULL, knew INTEGER NOT NULL, duration_ms INTEGER NOT NULL, scheduling TEXT NOT NULL, session_complete INTEGER NOT NULL DEFAULT 0, UNIQUE(session_id, position))`,
       ]) await dependencies.db.run(sql)
+      if (!(await dependencies.db.all('PRAGMA table_info(revision_subjects)')).some(column => column.name === 'selected')) {
+        await dependencies.db.run('ALTER TABLE revision_subjects ADD COLUMN selected INTEGER NOT NULL DEFAULT 1')
+      }
       if (!(await dependencies.db.all('PRAGMA table_info(revision_journal)')).some(column => column.name === 'session_complete')) {
         await dependencies.db.run('ALTER TABLE revision_journal ADD COLUMN session_complete INTEGER NOT NULL DEFAULT 0')
         await dependencies.db.run(`UPDATE revision_journal SET session_complete = 1 WHERE EXISTS
@@ -75,7 +78,7 @@ export class RevisionService {
   }
   async getProgress(context: RevisionContext): Promise<RevisionProgress> {
     return this.execute(context, async () => {
-      const rows = await this.dependencies.db.all('SELECT knew, session_complete, local_date FROM revision_journal WHERE device_id = ?', [context.deviceId])
+      const rows = await this.dependencies.db.all('SELECT card_id, knew, session_complete, local_date FROM revision_journal WHERE device_id = ?', [context.deviceId])
       const xp = journalXP(rows)
       const days = new Set(rows.filter(row => row.session_complete).map(row => row.local_date))
       let date = Date.parse(context.localDate)
@@ -86,14 +89,14 @@ export class RevisionService {
         date -= 86400000
       }
       const chapters = await this.readChapters(context.deviceId)
-      const subjects = (await this.dependencies.db.all('SELECT id, name FROM revision_subjects WHERE device_id = ? ORDER BY rowid', [context.deviceId])).map(subject => {
+      const subjects = (await this.dependencies.db.all('SELECT id, name FROM revision_subjects WHERE device_id = ? AND selected = 1 ORDER BY rowid', [context.deviceId])).map(subject => {
         const own = chapters.filter(chapter => chapter.subjectId === subject.id)
         const seen = own.filter(chapter => chapter.mastery !== null)
         const mastery = seen.length ? seen.reduce((sum, chapter) => sum + chapter.mastery!, 0) / seen.length : null
         return { subjectId: subject.id, name: subject.name, mastery,
           status: this.masteryStatus(mastery, own.reduce((sum, chapter) => sum + chapter.seenCards, 0), own.reduce((sum, chapter) => sum + chapter.cards.length, 0)) }
       })
-      return { xp, streak, subjects }
+      return { xp, streak, learnedCards: new Set(rows.filter(row => row.knew).map(row => row.card_id)).size, subjects }
     })
   }
   async listChapters(context: RevisionContext): Promise<RevisionChapter[]> {
@@ -124,7 +127,9 @@ export class RevisionService {
     if (!profile) return null
     const session = await this.getSession(context)
     return this.execute(context, async () => {
-      const total = await this.dependencies.db.get('SELECT COUNT(*) AS count FROM revision_cards WHERE device_id = ?', [context.deviceId])
+      const total = await this.dependencies.db.get(`SELECT COUNT(*) AS count FROM revision_cards c
+        JOIN revision_chapters ch ON ch.id = c.chapter_id JOIN revision_subjects s ON s.id = ch.subject_id
+        WHERE c.device_id = ? AND s.selected = 1`, [context.deviceId])
       const completed = await this.dependencies.db.get(`SELECT id FROM revision_journal WHERE device_id = ? AND local_date = ?
         AND session_complete = 1 LIMIT 1`, [context.deviceId, context.localDate])
       const cardCount = session.complete ? 0 : session.cards.length - session.position
@@ -141,7 +146,7 @@ export class RevisionService {
     const profile = await db.get('SELECT * FROM revision_profiles WHERE device_id = ?', [deviceId])
     if (!profile) return null
     return { schoolClass: profile.school_class, series: profile.series ?? undefined, examDate: profile.exam_date ?? undefined,
-      subjects: (await db.all('SELECT name FROM revision_subjects WHERE device_id = ? ORDER BY rowid', [deviceId])).map(s => s.name) }
+      subjects: (await db.all('SELECT name FROM revision_subjects WHERE device_id = ? AND selected = 1 ORDER BY rowid', [deviceId])).map(s => s.name) }
   }
   async saveProfile(context: RevisionContext, input: ProfileInput): Promise<ProfileInput> {
     return this.execute(context, async () => {
@@ -152,7 +157,10 @@ export class RevisionService {
       await db.run(`INSERT INTO revision_profiles(device_id, school_class, series, exam_date) VALUES (?, ?, ?, ?)
         ON CONFLICT(device_id) DO UPDATE SET school_class=excluded.school_class, series=excluded.series, exam_date=excluded.exam_date`,
         [context.deviceId, input.schoolClass.trim(), input.series ?? null, input.examDate ?? null])
-      for (const subject of input.subjects) await db.run('INSERT OR IGNORE INTO revision_subjects(id, device_id, name) VALUES (?, ?, ?)', [randomUUID(), context.deviceId, subject.trim()])
+      await db.run('UPDATE revision_subjects SET selected = 0 WHERE device_id = ?', [context.deviceId])
+      for (const subject of input.subjects) await db.run(`INSERT INTO revision_subjects(id, device_id, name) VALUES (?, ?, ?)
+        ON CONFLICT(device_id, name) DO UPDATE SET selected = 1`, [randomUUID(), context.deviceId, subject.trim()])
+      await this.refreshSessions(context.deviceId)
       return (await this.readProfile(context.deviceId))!
     })
   }
@@ -162,6 +170,28 @@ export class RevisionService {
     if (!input || typeof input.title !== 'string' || !input.title.trim() || !profile.subjects.includes(input.subject)) throw new RevisionError('Matière ou chapitre invalide.')
     const generated = await this.dependencies.generateCards({ title: input.title.trim(), subject: input.subject, schoolClass: profile.schoolClass, series: profile.series })
     return this.storeChapter(context, input, generated, 'ai')
+  }
+  async saveTutorNote(context: RevisionContext, input: { subject: string; title: string; question: string; answer: string }) {
+    return this.execute(context, async () => {
+      const profile = await this.readProfile(context.deviceId)
+      if (!profile) throw new RevisionError('Crée ton profil pour commencer.')
+      if (!input || !profile.subjects.includes(input.subject) || !nonempty(input.title) || input.title.length > 200
+        || !nonempty(input.question) || !nonempty(input.answer) || input.question.length > 10000 || input.answer.length > 100000) {
+        throw new RevisionError('Choisis une matière, un chapitre et une carte avec question et réponse.')
+      }
+      const db = this.dependencies.db
+      const subject = await db.get('SELECT id FROM revision_subjects WHERE device_id = ? AND name = ?', [context.deviceId, input.subject])
+      const existing = await db.get('SELECT id FROM revision_chapters WHERE device_id = ? AND subject_id = ? AND title = ?', [context.deviceId, subject.id, input.title.trim()])
+      const chapterId = existing?.id ?? randomUUID()
+      if (!existing) await db.run('INSERT INTO revision_chapters VALUES (?, ?, ?, ?, ?, ?)', [chapterId, context.deviceId, subject.id, input.title.trim(), 'Notes enregistrées depuis le Tuteur.', 'ai'])
+      const noteId = randomUUID()
+      const id = randomUUID()
+      const card: GeneratedCard = { kind: 'basic', question: input.question.trim(), answer: input.answer.trim() }
+      await db.run('INSERT INTO revision_notes VALUES (?, ?, ?, ?)', [noteId, context.deviceId, chapterId, card.answer])
+      await db.run('INSERT INTO revision_cards(id, device_id, chapter_id, note_id, content, due) VALUES (?, ?, ?, ?, ?, ?)',
+        [id, context.deviceId, chapterId, noteId, JSON.stringify(card), this.dependencies.now().toISOString()])
+      return { id }
+    })
   }
   async importChapter(context: RevisionContext, input: { title: string; subject: string; text?: string; file?: UpFile }) {
     const profile = await this.getProfile(context)
@@ -232,7 +262,8 @@ export class RevisionService {
       if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return this.sessionResult(JSON.parse(saved.state))
       const profile = await this.readProfile(context.deviceId)
       if (!profile) throw new RevisionError('Crée ton profil pour commencer.')
-      const rows = await db.all(`SELECT c.*, ch.origin FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id WHERE c.device_id = ? ORDER BY c.rowid`, [context.deviceId])
+      const rows = await db.all(`SELECT c.*, ch.origin FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id
+        JOIN revision_subjects s ON s.id = ch.subject_id WHERE c.device_id = ? AND s.selected = 1 ORDER BY c.rowid`, [context.deviceId])
       const introduced = await db.get(`SELECT COUNT(DISTINCT card_id) AS count FROM revision_journal
         WHERE device_id = ? AND local_date = ? AND json_extract(scheduling, '$.log.state') = 0`, [context.deviceId, context.localDate])
       const reviewed = new Set((await db.all('SELECT card_id FROM revision_journal WHERE device_id = ? AND local_date = ?', [context.deviceId, context.localDate])).map(r => r.card_id))
@@ -310,7 +341,8 @@ export class RevisionService {
   }
   private async refreshSessions(deviceId: string): Promise<void> {
     const db = this.dependencies.db
-    const cards = new Map((await db.all('SELECT * FROM revision_cards WHERE device_id = ?', [deviceId])).map(row => [row.id, row]))
+    const cards = new Map((await db.all(`SELECT c.* FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id
+      JOIN revision_subjects s ON s.id = ch.subject_id WHERE c.device_id = ? AND s.selected = 1`, [deviceId])).map(row => [row.id, row]))
     for (const row of await db.all('SELECT id, state FROM revision_sessions WHERE device_id = ?', [deviceId])) {
       const session: RevisionSession = JSON.parse(row.state)
       session.cards = [...session.cards.slice(0, session.position), ...session.cards.slice(session.position).flatMap(card => {

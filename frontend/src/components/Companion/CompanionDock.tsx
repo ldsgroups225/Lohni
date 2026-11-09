@@ -13,9 +13,9 @@ type CompanionMessage = {
 }
 
 const defaultSuggestions = [
-  "Summarize the key ideas",
-  "Make a quick quiz",
-  "Explain this like I'm new"
+  "Résume les idées principales",
+  "Crée un petit quiz",
+  "Explique-moi les bases"
 ]
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -56,7 +56,7 @@ export default function CompanionDock() {
   const headerTitle = useMemo(() => {
     if (document?.title) return document.title
     if (document?.filePath) return document.filePath.split(/[\\/]/).pop() || "Document"
-    return "Study Companion"
+    return "Assistant de cours"
   }, [document?.filePath, document?.title])
 
   const send = async (prompt?: string) => {
@@ -87,7 +87,7 @@ export default function CompanionDock() {
         history
       })
       const payload = response?.companion
-      const assistantContent = payload?.answer || "I couldn't generate a response from the provided context."
+      const assistantContent = payload?.answer || "Impossible de répondre à partir de ce document."
       const assistantMessage: CompanionMessage = {
         id: makeId(),
         role: "assistant",
@@ -98,7 +98,7 @@ export default function CompanionDock() {
       }
       setMessages(prev => [...prev, assistantMessage])
     } catch (err: any) {
-      const msg = err?.message || "Failed to contact companion"
+      const msg = err?.message || "Impossible de joindre l’assistant"
       setError(msg)
       setMessages(prev => prev.slice(0, -1))
     } finally {
@@ -114,38 +114,38 @@ export default function CompanionDock() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-40 px-4 py-3 rounded-2xl bg-sky-500/90 hover:bg-sky-500 text-white font-medium shadow-lg shadow-sky-500/30 transition-colors"
+          className="fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 px-4 py-3 rounded-2xl bg-sky-500/90 hover:bg-sky-500 text-white font-medium shadow-lg shadow-sky-500/30 transition-colors"
         >
-          Study Companion
+          Assistant de cours
         </button>
       )}
 
       <div
         className={cx(
-          "fixed bottom-24 right-4 md:bottom-6 md:right-6 z-40 w-[min(360px,calc(100vw-2rem))] max-h-[min(85vh,640px)] rounded-3xl border border-slate-800 bg-stone-950/95 backdrop-blur-xl shadow-2xl shadow-black/40 transition-all duration-300",
+          "fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 w-[min(360px,calc(100vw-2rem))] max-h-[min(85vh,640px)] rounded-3xl border border-slate-800 bg-stone-950/95 backdrop-blur-xl shadow-2xl shadow-black/40 transition-all duration-300",
           open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
         )}
       >
         <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-white/5">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-sky-300/80 mb-1">AI Companion</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-sky-300/80 mb-1">Assistant IA</div>
             <div className="text-white text-base font-medium leading-snug">{headerTitle}</div>
             {document?.filePath && (
               <div className="text-[11px] text-stone-400 mt-1 truncate" title={document.filePath}>
-                Context: {document.filePath}
+                Contexte : {document.filePath}
               </div>
             )}
           </div>
           <div className="flex items-center gap-2">
             <span className={cx("inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px]", hasDocument ? "bg-emerald-500/10 text-emerald-300" : "bg-stone-800 text-stone-400")}>
               <span className="w-2 h-2 rounded-full bg-current" />
-              {hasDocument ? "Context linked" : "No document"}
+              {hasDocument ? "Document associé" : "Aucun document"}
             </span>
             <button
               type="button"
               onClick={() => setOpen(false)}
               className="p-2 rounded-full hover:bg-white/10 text-stone-300 transition-colors"
-              aria-label="Close companion"
+              aria-label="Fermer l’assistant"
             >
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-4">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7l6 6m0-6-6 6" />
@@ -157,14 +157,14 @@ export default function CompanionDock() {
         <div ref={bodyRef} className="px-5 py-4 space-y-4 overflow-y-auto custom-scroll">
           {!hasDocument && (
             <div className="text-sm text-stone-400">
-              Open a note or topic to unlock the companion. It will only use the content of that document for answers.
+              Ouvre une note ou un sujet pour utiliser l’assistant. Ses réponses s’appuieront sur ce document.
             </div>
           )}
 
           {hasDocument && !messages.length && (
             <div className="space-y-3">
               <div className="text-sm text-stone-300 leading-relaxed">
-                Need a quick summary, quiz, or explanation? Ask anything about the current document and I&apos;ll stick to that context.
+                Besoin d’un résumé, d’un quiz ou d’une explication ? Pose ta question sur ce document.
               </div>
               <div className="flex flex-wrap gap-2">
                 {defaultSuggestions.map(suggestion => (
@@ -197,7 +197,7 @@ export default function CompanionDock() {
                     <MarkdownView md={msg.content} />
                     {msg.flashcards && msg.flashcards.length > 0 && (
                       <div className="rounded-xl border border-sky-500/40 bg-sky-500/5 px-3 py-2">
-                        <div className="text-xs uppercase tracking-wide text-sky-300 mb-2">Flashcards</div>
+                        <div className="text-xs uppercase tracking-wide text-sky-300 mb-2">Cartes</div>
                         <ul className="space-y-2 text-sm text-sky-100">
                           {msg.flashcards.slice(0, 4).map((card, idx) => (
                             <li key={`${msg.id}-card-${idx}`}>
@@ -207,7 +207,7 @@ export default function CompanionDock() {
                           ))}
                           {msg.flashcards.length > 4 && (
                             <li className="text-xs text-sky-200/80">
-                              +{msg.flashcards.length - 4} more flashcards generated in this answer.
+                              +{msg.flashcards.length - 4} autres cartes créées dans cette réponse.
                             </li>
                           )}
                         </ul>
@@ -224,7 +224,7 @@ export default function CompanionDock() {
           {busy && (
             <div className="flex justify-start">
               <div className="px-4 py-2 rounded-2xl bg-stone-900/80 border border-stone-700 text-xs text-stone-300 animate-pulse">
-                Thinking�?�
+                Réflexion…
               </div>
             </div>
           )}
@@ -247,7 +247,7 @@ export default function CompanionDock() {
                   send()
                 }
               }}
-              placeholder={hasDocument ? "Ask about this document..." : "Open a document to start"}
+              placeholder={hasDocument ? "Pose une question sur ce document…" : "Ouvre un document pour commencer"}
               disabled={disabled && !hasDocument}
               className="flex-1 px-4 py-2.5 rounded-2xl bg-stone-900/80 border border-stone-700 text-sm text-white placeholder-stone-500 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 disabled:opacity-50"
             />
@@ -257,7 +257,7 @@ export default function CompanionDock() {
               disabled={disabled || !input.trim()}
               className="px-4 py-2.5 rounded-2xl bg-sky-500 hover:bg-sky-400 text-white text-sm font-medium transition-colors disabled:opacity-50"
             >
-              Send
+              Envoyer
             </button>
           </div>
         </div>

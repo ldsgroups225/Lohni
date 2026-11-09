@@ -613,7 +613,7 @@ export type RevisionSession = {
 };
 export type MasteryStatus = 'Fragile' | 'En cours' | 'Solide';
 export type RevisionProgress = {
-  streak: number; xp: number;
+  streak: number; xp: number; learnedCards: number;
   subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[];
 };
 export type RevisionChapter = {
@@ -663,6 +663,7 @@ export const revisionAPI = {
   deleteChapter: (id: string) => revisionRequest<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),
   updateCard: (id: string, card: RevisionCardInput) => revisionRequest<null>(`/cards/${encodeURIComponent(id)}`, 'PUT', card),
   saveProfile: (profile: RevisionProfile) => revisionRequest<RevisionProfile>('/profile', 'PUT', profile),
+  saveTutorNote: (note: { subject: string; title: string; question: string; answer: string }) => revisionRequest<{ id: string }>('/notes', 'POST', note),
   generateChapter: (input: { subject: string; title: string }) => revisionRequest<{ id: string }>('/chapters', 'POST', input),
   importQuota: () => revisionRequest<RevisionImportQuota>('/import/quota'),
   importChapter: (input: { subject: string; title: string; text?: string; file?: File }) => {

@@ -218,7 +218,7 @@ test('les XP récompensent les réponses et une seule fin de session, même apr�
   expect((await service.getSession(context())).earnedXP).toBe(72)
   await service.getSession(context(), true)
   expect(await service.getProgress(context())).toMatchObject({ xp: 72, streak: 1 })
-  expect(await service.getProgress({ ...context(), deviceId: randomUUID() })).toEqual({ xp: 0, streak: 0, subjects: [] })
+  expect(await service.getProgress({ ...context(), deviceId: randomUUID() })).toEqual({ xp: 0, streak: 0, learnedCards: 0, subjects: [] })
 })
 
 test('la série suit les jours locaux terminés, sans doubler le même jour, et casse après un jour sauté', async () => {
