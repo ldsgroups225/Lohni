@@ -611,6 +611,14 @@ export type RevisionCard = {
 export type RevisionSession = {
   id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; elapsedMs: number;
 };
+export type RevisionHome = {
+  profile: RevisionProfile; daysUntilExam: number | null; totalCards: number;
+  cardCount: number; estimatedMinutes: number; state: 'ready' | 'done' | 'empty';
+};
+export type RevisionProgress = {
+  streak: number; xp: number;
+  subjects: { subjectId: string; name: string; mastery: number | null; status: 'Fragile' | 'En cours' | 'Solide' }[];
+};
 
 async function revisionRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   let deviceId = localStorage.getItem('lohni-device-id');
@@ -636,6 +644,8 @@ async function revisionRequest<T>(path: string, method = 'GET', body?: unknown):
 }
 
 export const revisionAPI = {
+  home: () => revisionRequest<RevisionHome | null>('/home'),
+  progress: () => revisionRequest<RevisionProgress>('/progress'),
   profile: () => revisionRequest<RevisionProfile | null>('/profile'),
   saveProfile: (profile: RevisionProfile) => revisionRequest<RevisionProfile>('/profile', 'PUT', profile),
   generateChapter: (input: { subject: string; title: string }) => revisionRequest<{ id: string }>('/chapters', 'POST', input),

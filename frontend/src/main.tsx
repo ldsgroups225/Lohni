@@ -2,6 +2,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import App from "./App";
 import Landing from "./pages/Landing";
+import Home from "./pages/Home";
 import Chat from "./pages/Chat";
 import Quiz from "./pages/Quiz";
 import Tools from "./pages/Tools"
@@ -18,7 +19,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <Routes>
       <Route path="/" element={<App />}>
         <Route path="*" element={<NotFound />} />
-        <Route index element={<Landing />} />
+        <Route index element={<Home />} />
+        <Route path="tutor" element={<Landing />} />
         <Route path="chat" element={<Chat />} />
         <Route path="quiz" element={<Quiz />} />
         <Route path="tools" element={<Tools />} />

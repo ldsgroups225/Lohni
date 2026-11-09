@@ -15,7 +15,8 @@ export type ProfileInput = { schoolClass: string; series?: string; subjects: str
 export type RevisionCard = GeneratedCard & { id: string; chapterId: string; origin: 'ai'; due: string; reviews: number }
 export type RevisionSession = { id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number }
 export type RevisionAnswer = { sessionId: string; cardId: string; position: number; knew: boolean; choice?: number; durationMs: number }
-type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string }) => Promise<GeneratedChapter> }
+export type RevisionHome = { profile: ProfileInput; daysUntilExam: number | null; totalCards: number; cardCount: number; estimatedMinutes: number; state: 'ready' | 'done' | 'empty' }
+type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; series?: string }) => Promise<GeneratedChapter> }
 const validDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0
@@ -46,6 +47,23 @@ export class RevisionService {
   async getProfile(context: RevisionContext): Promise<ProfileInput | null> {
     return this.execute(context, () => this.readProfile(context.deviceId))
   }
+  async getHome(context: RevisionContext): Promise<RevisionHome | null> {
+    const profile = await this.getProfile(context)
+    if (!profile) return null
+    const session = await this.getSession(context)
+    return this.execute(context, async () => {
+      const total = await this.dependencies.db.get('SELECT COUNT(*) AS count FROM revision_cards WHERE device_id = ?', [context.deviceId])
+      const completed = await this.dependencies.db.get(`SELECT id FROM revision_sessions WHERE device_id = ? AND local_date = ?
+        AND json_extract(state, '$.complete') = 1 AND json_extract(state, '$.position') > 0 LIMIT 1`, [context.deviceId, context.localDate])
+      const cardCount = session.complete ? 0 : session.cards.length - session.position
+      return {
+        profile, totalCards: total.count, cardCount,
+        daysUntilExam: profile.examDate ? Math.max(0, (Date.parse(profile.examDate) - Date.parse(context.localDate)) / 86400000) : null,
+        estimatedMinutes: Math.ceil(cardCount * policy.sessionMinutes / policy.sessionCards),
+        state: session.complete ? (completed ? 'done' : 'empty') : 'ready',
+      }
+    })
+  }
   private async readProfile(deviceId: string): Promise<ProfileInput | null> {
     const db = this.dependencies.db
     const profile = await db.get('SELECT * FROM revision_profiles WHERE device_id = ?', [deviceId])
@@ -70,7 +88,7 @@ export class RevisionService {
     const profile = await this.getProfile(context)
     if (!profile) throw new RevisionError('Crée ton profil pour commencer.')
     if (!input || typeof input.title !== 'string' || !input.title.trim() || !profile.subjects.includes(input.subject)) throw new RevisionError('Matière ou chapitre invalide.')
-    const generated = await this.dependencies.generateCards({ ...input, schoolClass: profile.schoolClass })
+    const generated = await this.dependencies.generateCards({ title: input.title.trim(), subject: input.subject, schoolClass: profile.schoolClass, series: profile.series })
     if (!generated || !nonempty(generated.summary) || !Array.isArray(generated.notes) || !generated.notes.length || generated.notes.some(note =>
       !note || !nonempty(note.content) || !Array.isArray(note.cards) || !note.cards.length || note.cards.some(card =>
         !card || !nonempty(card.question) || !nonempty(card.answer) || (card.kind !== 'basic' && (card.kind !== 'mcq'

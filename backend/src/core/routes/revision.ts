@@ -18,6 +18,7 @@ export function revisionRoutes(app: any) {
     })
   }
   route('get', '/revision/profile', context => revision.getProfile(context))
+  route('get', '/revision/home', context => revision.getHome(context))
   route('put', '/revision/profile', (context, req) => revision.saveProfile(context, req.body))
   route('post', '/revision/chapters', (context, req) => revision.generateChapter(context, req.body))
   route('get', '/revision/session', context => revision.getSession(context))
