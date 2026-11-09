@@ -86,6 +86,16 @@ const timeoutCtl = (ms: number) => {
   return { signal: c.signal, done: () => clearTimeout(t) };
 };
 
+class APIError extends Error {
+  readonly status: number;
+  readonly code?: string;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
+
 async function req<T = unknown>(
   url: string,
   init: RequestInit & { timeout?: number } = {}
@@ -96,10 +106,10 @@ async function req<T = unknown>(
     const r = await fetch(url, { signal, ...rest });
     if (!r.ok) {
       const txt = await r.text().catch(() => "");
-      let detail: unknown;
-      try { detail = JSON.parse(txt)?.error; } catch { /* Non-JSON responses keep their HTTP status. */ }
-      if (typeof detail === "string") throw new Error(detail);
-      throw new Error(`http ${r.status}: ${txt || r.statusText}`);
+      let detail: { error?: unknown; code?: unknown } | undefined;
+      try { detail = JSON.parse(txt); } catch { /* Non-JSON responses keep their HTTP status. */ }
+      throw new APIError(typeof detail?.error === "string" ? detail.error : `http ${r.status}: ${txt || r.statusText}`,
+        r.status, typeof detail?.code === 'string' ? detail.code : undefined);
     }
     const ct = r.headers.get("content-type") || "";
     if (ct.includes("application/json")) return (await r.json()) as T;
@@ -702,10 +712,14 @@ export function syncRevisionAnswers(): Promise<void> {
       while (navigator.onLine) {
         const queued = readOffline().pending[0];
         if (!queued) break;
-        const session = await revisionRequest<RevisionSession>('/session/answer', 'POST', queued.answer, queued.localDate, 8000);
+        let session: RevisionSession | undefined;
+        try { session = await revisionRequest<RevisionSession>('/session/answer', 'POST', queued.answer, queued.localDate, 8000); }
+        catch (error) {
+          if (!(error instanceof APIError && error.status === 400 && error.code === 'REVISION_LOCAL_DATE_OUT_OF_RANGE')) throw error;
+        }
         await updateOffline(state => {
           state.pending = state.pending.filter(item => item.answer.answerId !== queued.answer.answerId);
-          if (!state.pending.length && (!state.session || state.session.id !== session.id || state.session.position <= session.position)) state.session = session;
+          if (session && !state.pending.length && (!state.session || state.session.id !== session.id || state.session.position <= session.position)) state.session = session;
         });
       }
     } catch (error) {

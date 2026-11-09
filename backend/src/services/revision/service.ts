@@ -9,7 +9,9 @@ import { advanceSession, answerXP } from './session'
 import { createEmptyCard, fsrs, Rating } from 'ts-fsrs'
 import { validItem } from '../quiz/validation'
 
-export class RevisionError extends Error {}
+export class RevisionError extends Error {
+  constructor(message: string, readonly code?: string) { super(message) }
+}
 
 export type RevisionContext = { deviceId: string; localDate: string }
 export type GeneratedCard = { kind: 'basic'; question: string; answer: string } | {
@@ -82,7 +84,7 @@ export class RevisionService {
     if (!context || !validUUID(context.deviceId)) throw new RevisionError('Identifiant appareil invalide.')
     if (!validDate(context.localDate)) throw new RevisionError('Date locale invalide.')
     const serverDate = this.dependencies.now().toISOString().slice(0, 10)
-    if (Math.abs(Date.parse(context.localDate) - Date.parse(serverDate)) > 86400000) throw new RevisionError('Date locale trop éloignée. Règle la date de ton appareil à un jour au plus de la date UTC du serveur.')
+    if (Math.abs(Date.parse(context.localDate) - Date.parse(serverDate)) > 86400000) throw new RevisionError('Date locale trop éloignée. Règle la date de ton appareil à un jour au plus de la date UTC du serveur.', 'REVISION_LOCAL_DATE_OUT_OF_RANGE')
     await this.ready
     return this.dependencies.db.transaction(operation)
   }

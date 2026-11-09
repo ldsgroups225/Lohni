@@ -255,7 +255,9 @@ test('les entrées invalides ne créent pas de profil et un autre appareil ne pe
 
 test.each(['2026-11-07', '2026-11-11', '2025-11-09', '2027-11-09'])('refuse le jour local %s éloigné de plus d’un jour du serveur sans accorder de XP', async localDate => {
   await setup(1)
-  await expect(service.getSession({ deviceId, localDate })).rejects.toThrow('Date locale trop éloignée')
+  await expect(service.getSession({ deviceId, localDate })).rejects.toMatchObject({
+    message: expect.stringContaining('Date locale trop éloignée'), code: 'REVISION_LOCAL_DATE_OUT_OF_RANGE',
+  })
   expect(await service.getProgress(context())).toMatchObject({ xp: 0, streak: 0 })
 })
 

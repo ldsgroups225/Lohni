@@ -16,7 +16,7 @@ export function revisionRoutes(app: any) {
         const data = await handle({ deviceId: req.headers['x-device-id'], localDate: req.headers['x-local-date'] }, req)
         res.send({ ok: true, data: data ?? null })
       } catch (error) {
-        if (error instanceof RevisionError) return res.status(400).send({ ok: false, error: error.message })
+        if (error instanceof RevisionError) return res.status(400).send({ ok: false, error: error.message, code: error.code })
         console.error('[revision]', error)
         res.status(500).send({ ok: false, error: 'La révision est indisponible. Réessaie dans un instant.' })
       }

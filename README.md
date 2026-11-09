@@ -24,7 +24,7 @@
 
 ## API de révision Lohni
 
-Les routes `/revision/*` attendent `X-Device-Id` (UUID anonyme conservé sur l’appareil) et `X-Local-Date` (jour local au format `YYYY-MM-DD`). Le jour local doit rester à un jour au plus de la date UTC du serveur, sinon la réponse est HTTP 400 ; cette règle s’applique aussi aux réponses hors ligne envoyées plus tard. Les réponses JSON ont la forme `{ ok: true, data }` ou `{ ok: false, error }`.
+Les routes `/revision/*` attendent `X-Device-Id` (UUID anonyme conservé sur l’appareil) et `X-Local-Date` (jour local au format `YYYY-MM-DD`). Le jour local doit rester à un jour au plus de la date UTC du serveur, sinon la réponse est HTTP 400 avec le code JSON `REVISION_LOCAL_DATE_OUT_OF_RANGE` ; cette règle s’applique aussi aux réponses hors ligne envoyées plus tard. La synchronisation retire une réponse de la file si elle reçoit ce code en HTTP 400 et poursuit avec la suivante : cette réponse ne compte plus dans la progression. Toute autre erreur conserve la file pour un nouvel essai. Les réponses JSON ont la forme `{ ok: true, data }` ou `{ ok: false, error, code? }`.
 
 | Méthode | Route | Usage |
 | --- | --- | --- |
