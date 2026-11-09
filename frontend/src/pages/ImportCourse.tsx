@@ -57,7 +57,7 @@ export default function ImportCourse() {
         {quota.remaining === 0 ? 'Tu as atteint tes trois imports du jour.' : `${quota.remaining} import${quota.remaining > 1 ? 's' : ''} restant${quota.remaining > 1 ? 's' : ''} aujourd’hui.`}
         {' '}Recharge le {new Date(quota.resetsAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} (heure de ton appareil).
       </p>}
-      {!busy && !profile && quota && <p>Crée d’abord ton profil pour ranger ton cours dans une matière. <Link to="/revision" className="underline">Commencer</Link></p>}
+      {!busy && !profile && quota && <p>Crée d’abord ton profil pour ranger ton cours dans une matière. <Link to="/" className="underline">Commencer</Link></p>}
       {imported ? <section className="space-y-4 rounded-2xl border border-stone-800 p-6" aria-live="polite">
         <h2 className="text-xl text-white">{imported.title} : chapitre prêt !</h2>
         <p>Le résumé, les cartes et les QCM sont enregistrés. Les cartes rejoignent tes prochaines sessions.</p>
