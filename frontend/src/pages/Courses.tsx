@@ -69,7 +69,7 @@ export default function Courses() {
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-white">Cours</h1>
-        <Link to="/revision" className={button}>Session du jour</Link>
+        <div className="flex flex-wrap gap-3"><Link to="/import" className={button}>Importer mon cours</Link><Link to="/revision" className={button}>Session du jour</Link></div>
       </header>
       {progress && <p className="rounded-2xl border border-stone-800 p-4" aria-live="polite">
         <strong className="text-white">{progress.xp} XP</strong> · Série : {progress.streak} jour{progress.streak > 1 ? 's' : ''}

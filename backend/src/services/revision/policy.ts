@@ -1,4 +1,5 @@
 export const REVISION_POLICY = {
+  dailyImports: 3,
   sessionCards: 20,
   sessionMinutes: 15,
   minNewCards: 3,

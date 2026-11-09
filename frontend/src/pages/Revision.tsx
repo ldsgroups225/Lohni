@@ -130,7 +130,7 @@ export default function Revision() {
             {session.position > 0 && <p className="text-lg text-green-300">{session.earnedXP} XP gagnés pendant cette session</p>}
             {progress && <p>{progress.xp} XP au total · Série : {progress.streak} jour{progress.streak > 1 ? 's' : ''}</p>}
             <p className="text-sm text-stone-400">10 XP par carte sue, 2 XP par oubli et 50 XP à la fin d’une session.</p>
-            {session.position > 0 && <p>Pour réviser ton vrai cours, <Link to="/courses" className="text-sky-300 underline">importe ton cours</Link> : il deviendra un chapitre avec tes propres cartes.</p>}
+            {session.position > 0 && <p>Pour réviser ton vrai cours, <Link to="/import" className="text-sky-300 underline">importe ton cours</Link> : il deviendra un chapitre avec tes propres cartes.</p>}
             <button className={button} disabled={busy} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer</button>
           </section>}
           {profile && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-stone-800 p-6">
@@ -140,6 +140,7 @@ export default function Revision() {
             <button className={button} disabled={busy}>Générer mes cartes</button>
           </form>}
         </>}
+        {profile && <Link to="/import" className="block rounded-xl border border-stone-700 p-4 text-center text-white">Importer mon cours</Link>}
         <footer className="text-xs text-stone-500">Lohni, basé sur <a href="https://github.com/CaviraOSS/PageLM" className="underline">PageLM</a></footer>
       </div>
     </main>

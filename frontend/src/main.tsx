@@ -13,6 +13,7 @@ import PlannerPage from './pages/Planner'
 import Debate from './pages/Debate'
 import Revision from './pages/Revision'
 import Courses from './pages/Courses'
+import ImportCourse from './pages/ImportCourse'
 import "./index.css"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -30,6 +31,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path="cards" element={<FlashCards />} />
         <Route path="revision" element={<Revision />} />
         <Route path="courses" element={<Courses />} />
+        <Route path="import" element={<ImportCourse />} />
         <Route path="exam" element={<ExamLabs />} />
       </Route>
     </Routes>

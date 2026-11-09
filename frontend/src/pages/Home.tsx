@@ -53,7 +53,7 @@ export default function Home() {
             <Link to="/revision" className="block underline">Continuer les cartes restantes</Link>
           </> : <p>{home.totalCards === 0 ? 'Importe ton cours pour créer tes cartes ou prépare un premier chapitre.' : 'Tes prochaines cartes arriveront demain. Tu peux importer un autre cours en attendant.'}</p>}
           {home.totalCards === 0 && <Link className={button} to="/revision">Préparer un chapitre</Link>}
-          <Link to="/courses" className="block text-sky-300 underline">Importer mon cours</Link>
+          <Link to="/import" className="block text-sky-300 underline">Importer mon cours</Link>
         </section>
         {progress && <section className="space-y-4" aria-label="Maîtrise par matière"><h2 className="text-xl font-semibold text-white">Tes matières</h2>{progress.subjects.map(subject => <article key={subject.subjectId} className="rounded-xl border border-stone-800 p-4">
           <div className="mb-3 flex justify-between gap-3"><h3>{subject.name}</h3><span>{subject.mastery === null ? 'Pas encore révisée' : `${subject.status} · ${Math.round(subject.mastery)} %`}</span></div>
