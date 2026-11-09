@@ -1,3 +1,4 @@
+import { validQuiz } from "./validation"
 import llm from "../../utils/llm/llm"
 import { normalizeTopic } from "../../utils/text/normalize"
 
@@ -96,13 +97,6 @@ function coerce(items: any): QuizItem[] {
   }
   return out
 }
-function validItem(x: any) {
-  return x && typeof x.id === "number" && typeof x.question === "string"
-    && Array.isArray(x.options) && x.options.length === 4 && x.options.every((o: any) => typeof o === "string")
-    && typeof x.correct === "number" && x.correct >= 1 && x.correct <= 4
-    && typeof x.hint === "string" && typeof x.explanation === "string"
-}
-function validQuiz(a: any): a is QuizItem[] { return Array.isArray(a) && a.length === 5 && a.every(validItem) }
 
 async function ask(topicIn: any, sys: string) {
   const topic = normalizeTopic(topicIn)
@@ -116,13 +110,14 @@ async function ask(topicIn: any, sys: string) {
   return tryParse<any>(txt)
 }
 
-export async function handleQuiz(topic: string): Promise<QuizItem[]> {
-  const parsed = await ask(topic, SYS)
+export async function handleQuiz(topic: string, language: "en" | "fr" = "en"): Promise<QuizItem[]> {
+  const french = (prompt: string) => language === "fr" ? prompt.replace("plain English", "français").replace("ASCII.", "Accents autorisés.") + "\nToutes les questions, options et explications doivent être en français." : prompt
+  const parsed = await ask(topic, french(SYS))
   if (parsed) {
     const out = coerce(parsed)
     if (validQuiz(out)) return out
   }
-  const parsed2 = await ask(topic, SYS_STRICT)
+  const parsed2 = await ask(topic, french(SYS_STRICT))
   const out2 = coerce(parsed2)
   if (!validQuiz(out2)) throw new Error("Invalid quiz JSON from model")
   return out2

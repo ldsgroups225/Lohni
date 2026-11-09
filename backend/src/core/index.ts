@@ -12,7 +12,7 @@ app.use(loggerMiddleware)
 app.use(cors({
   origin: "*",
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Id', 'X-Local-Date'],
   credentials: true,
 }));
 app.options('*', cors());

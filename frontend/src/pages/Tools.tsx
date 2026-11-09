@@ -27,6 +27,7 @@ export default function Tools() {
         </div>
 
         <div className="grid gap-6 mb-12">
+          <Link to="/revision" className="rounded-2xl border border-stone-700 bg-stone-950 p-6 text-lg text-white hover:bg-stone-900">Session de révision →</Link>
           <SmartNotes />
           <PodcastGenerator />
           <Transcriber />

@@ -94,6 +94,9 @@ async function req<T = unknown>(
     const r = await fetch(url, { signal, ...rest });
     if (!r.ok) {
       const txt = await r.text().catch(() => "");
+      let detail: unknown;
+      try { detail = JSON.parse(txt)?.error; } catch { /* Non-JSON responses keep their HTTP status. */ }
+      if (typeof detail === "string") throw new Error(detail);
       throw new Error(`http ${r.status}: ${txt || r.statusText}`);
     }
     const ct = r.headers.get("content-type") || "";
@@ -599,3 +602,45 @@ export async function analyzeDebate(debateId: string) {
 export function err(e: unknown) {
   return e instanceof Error ? e.message : String(e);
 }
+
+export type RevisionProfile = { schoolClass: string; series?: string; subjects: string[]; examDate?: string };
+export type RevisionCard = {
+  id: string; chapterId: string; kind: 'basic' | 'mcq'; question: string; answer: string;
+  options?: string[]; correct?: number; origin: 'ai'; due: string; reviews: number;
+};
+export type RevisionSession = {
+  id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; elapsedMs: number;
+};
+
+async function revisionRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  let deviceId = localStorage.getItem('lohni-device-id');
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem('lohni-device-id', deviceId);
+  }
+  const today = new Date();
+  const localDate = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+  try {
+    const result = await req<{ data: T }>(`${env.backend}/revision${path}`, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId, 'X-Local-Date': localDate },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      timeout: Math.max(env.timeout, 120000),
+    });
+    return result.data;
+  } catch (error) {
+    if (error instanceof TypeError) throw new Error('Connexion impossible. Vérifie ton réseau et réessaie.');
+    if (error instanceof Error && error.name === 'AbortError') throw new Error('Le chargement prend trop de temps. Réessaie.');
+    throw error;
+  }
+}
+
+export const revisionAPI = {
+  profile: () => revisionRequest<RevisionProfile | null>('/profile'),
+  saveProfile: (profile: RevisionProfile) => revisionRequest<RevisionProfile>('/profile', 'PUT', profile),
+  generateChapter: (input: { subject: string; title: string }) => revisionRequest<{ id: string }>('/chapters', 'POST', input),
+  session: () => revisionRequest<RevisionSession>('/session'),
+  continue: () => revisionRequest<RevisionSession>('/session/continue', 'POST'),
+  answer: (answer: { sessionId: string; cardId: string; position: number; knew: boolean; choice?: number; durationMs: number }) => revisionRequest<RevisionSession>('/session/answer', 'POST', answer),
+  deleteCard: (id: string) => revisionRequest<null>(`/cards/${encodeURIComponent(id)}`, 'DELETE'),
+};

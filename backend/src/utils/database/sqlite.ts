@@ -1,8 +1,10 @@
 import sqlite3 from 'sqlite3'
 import path from 'path'
+import { mkdirSync } from 'fs'
 
-class SQLiteDatabase {
+export class SQLiteDatabase {
     private db: sqlite3.Database
+    private pending: Promise<unknown> = Promise.resolve()
 
     constructor(dbPath: string) {
         this.db = new sqlite3.Database(dbPath)
@@ -43,7 +45,24 @@ class SQLiteDatabase {
             })
         })
     }
+
+    transaction<T>(operation: () => Promise<T>): Promise<T> {
+        const result = this.pending.then(async () => {
+            await this.run('BEGIN IMMEDIATE')
+            try {
+                const value = await operation()
+                await this.run('COMMIT')
+                return value
+            } catch (error) {
+                await this.run('ROLLBACK')
+                throw error
+            }
+        })
+        this.pending = result.catch(() => {})
+        return result
+    }
 }
 
 const dbPath = path.join(process.cwd(), 'storage', 'database.sqlite')
+mkdirSync(path.dirname(dbPath), { recursive: true })
 export const sqlite = new SQLiteDatabase(dbPath)
