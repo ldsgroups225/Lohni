@@ -683,8 +683,8 @@ async function updateOffline(update: (state: OfflineRevision) => void): Promise<
     window.dispatchEvent(new Event('revision-sync'));
   };
   // Le verrou protège la file quand deux onglets répondent ou synchronisent en même temps.
-  if (navigator.locks) await navigator.locks.request('lohni-revision-offline', save);
-  else save();
+  if (!navigator.locks) throw new Error('Ouvre Lohni en HTTPS dans un navigateur à jour pour sauvegarder tes réponses hors ligne.');
+  await navigator.locks.request('lohni-revision-offline', save);
 }
 export function revisionSyncStatus() {
   return { pending: readOffline().pending.length, error: syncError, online: navigator.onLine };

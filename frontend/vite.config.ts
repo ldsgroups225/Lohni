@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), {
       name: 'lohni-offline-shell',
       apply: 'build',
+      enforce: 'post',
       generateBundle(_options, bundle) {
         const assets = ['/', '/app.css', '/logo.png', '/fonts/schibsted_grotesk.woff2', '/manifest.webmanifest',
           '/icons/lohni-180.png', '/icons/lohni-192.png', '/icons/lohni-512.png',
