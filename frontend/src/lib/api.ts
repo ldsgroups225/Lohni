@@ -606,7 +606,7 @@ export function err(e: unknown) {
 export type RevisionProfile = { schoolClass: string; series?: string; subjects: string[]; examDate?: string };
 export type RevisionCard = {
   id: string; chapterId: string; kind: 'basic' | 'mcq'; question: string; answer: string;
-  options?: string[]; correct?: number; origin: 'ai'; due: string; reviews: number;
+  options?: string[]; correct?: number; origin: 'ai' | 'import'; due: string; reviews: number;
 };
 export type RevisionSession = {
   id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; elapsedMs: number;
@@ -620,11 +620,12 @@ async function revisionRequest<T>(path: string, method = 'GET', body?: unknown):
   }
   const today = new Date();
   const localDate = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+  const multipart = body instanceof FormData;
   try {
     const result = await req<{ data: T }>(`${env.backend}/revision${path}`, {
       method,
-      headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId, 'X-Local-Date': localDate },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: { ...(!multipart && { 'Content-Type': 'application/json' }), 'X-Device-Id': deviceId, 'X-Local-Date': localDate },
+      body: multipart ? body : body === undefined ? undefined : JSON.stringify(body),
       timeout: Math.max(env.timeout, 120000),
     });
     return result.data;
@@ -635,10 +636,22 @@ async function revisionRequest<T>(path: string, method = 'GET', body?: unknown):
   }
 }
 
+export type RevisionImportedChapter = { id: string; title: string; summary: string; origin: 'import' };
+export type RevisionImportQuota = { remaining: number; resetsAt: string };
+
 export const revisionAPI = {
   profile: () => revisionRequest<RevisionProfile | null>('/profile'),
   saveProfile: (profile: RevisionProfile) => revisionRequest<RevisionProfile>('/profile', 'PUT', profile),
   generateChapter: (input: { subject: string; title: string }) => revisionRequest<{ id: string }>('/chapters', 'POST', input),
+  importQuota: () => revisionRequest<RevisionImportQuota>('/import/quota'),
+  importChapter: (input: { subject: string; title: string; text?: string; file?: File }) => {
+    if (!input.file) return revisionRequest<RevisionImportedChapter>('/import', 'POST', input);
+    const form = new FormData();
+    form.append('q', JSON.stringify({ title: input.title, subject: input.subject }));
+    form.append('file', input.file);
+    return revisionRequest<RevisionImportedChapter>('/import', 'POST', form);
+  },
+  deleteChapter: (id: string) => revisionRequest<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),
   session: () => revisionRequest<RevisionSession>('/session'),
   continue: () => revisionRequest<RevisionSession>('/session/continue', 'POST'),
   answer: (answer: { sessionId: string; cardId: string; position: number; knew: boolean; choice?: number; durationMs: number }) => revisionRequest<RevisionSession>('/session/answer', 'POST', answer),

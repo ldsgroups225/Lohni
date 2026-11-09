@@ -1,9 +1,8 @@
 import fs from 'fs'
+import { randomUUID } from 'node:crypto'
 import path from 'path'
-import mammoth from 'mammoth'
-import pdf from 'pdf-parse'
 import Busboy from 'busboy'
-import { marked } from 'marked'
+import { extractText } from './extract'
 import { embedTextFromFile } from '../ai/embed'
 import { OllamaEmbeddings } from '@langchain/ollama'
 import { OpenAIEmbeddings } from '@langchain/openai'
@@ -13,9 +12,9 @@ if (!fs.existsSync(str)) fs.mkdirSync(str, { recursive: true })
 
 export type UpFile = { path: string; filename: string; mimeType: string }
 
-export function parseMultipart(req: any): Promise<{ q: string; chatId?: string; files: UpFile[] }> {
+export function parseMultipart(req: any, options?: { directory: string; limits: { files: number; fileSize: number; fields: number; fieldSize: number } }): Promise<{ q: string; chatId?: string; files: UpFile[] }> {
   return new Promise((resolve, reject) => {
-    const bb = Busboy({ headers: req.headers })
+    const bb = Busboy({ headers: req.headers, limits: options?.limits })
     let q = ''
     let chatId = ''
     const files: UpFile[] = []
@@ -24,13 +23,20 @@ export function parseMultipart(req: any): Promise<{ q: string; chatId?: string; 
     let failed = false
     const done = () => { if (!failed && ended && pending === 0) resolve({ q, chatId: chatId || undefined, files }) }
 
-    bb.on('field', (n, v) => { if (n === 'q') q = v; if (n === 'chatId') chatId = v })
+    bb.on('field', (n, v, info) => {
+      if (info.valueTruncated) { failed = true; reject(new Error('Les informations du fichier sont trop longues.')) }
+      if (n === 'q') q = v
+      if (n === 'chatId') chatId = v
+    })
+    bb.on('filesLimit', () => { failed = true; reject(new Error('Choisis un seul fichier par import.')) })
+    bb.on('fieldsLimit', () => { failed = true; reject(new Error('Trop de champs dans cet import.')) })
     bb.on('file', (_n, file, info: any) => {
       pending++
       const filename = info?.filename || 'file'
       const mimeType = info?.mimeType || info?.mime || 'application/octet-stream'
-      const fp = path.join(str, `${Date.now()}-${filename}`)
+      const fp = path.join(options?.directory ?? str, `${randomUUID()}-${path.basename(filename)}`)
       const ws = fs.createWriteStream(fp)
+      file.on('limit', () => { failed = true; reject(new Error('Le fichier dépasse la limite de 10 Mo.')) })
       file.on('error', e => { failed = true; reject(e) })
       ws.on('error', e => { failed = true; reject(e) })
       ws.on('finish', () => { files.push({ path: fp, filename, mimeType }); pending--; done() })
@@ -38,6 +44,7 @@ export function parseMultipart(req: any): Promise<{ q: string; chatId?: string; 
     })
     bb.on('error', e => { failed = true; reject(e) })
     bb.on('finish', () => { ended = true; done() })
+    req.on('aborted', () => { failed = true; reject(new Error('Import interrompu. Réessaie.')) })
     req.pipe(bb)
   })
 }
@@ -56,23 +63,4 @@ export async function handleUpload(a: { filePath: string; filename?: string; con
     : new OpenAIEmbeddings({ model: 'text-embedding-3-small', openAIApiKey: process.env.OPENROUTER_API_KEY, configuration: { baseURL: 'https://openrouter.ai/api/v1' } })
   await embedTextFromFile(out, ns)
   return { stored: out }
-}
-
-async function extractText(filePath: string, mime: string) {
-  const raw = fs.readFileSync(filePath)
-  if (mime.includes('pdf')) {
-    const data = await pdf(raw)
-    return data.text
-  }
-  if (mime.includes('markdown')) {
-    return marked.parse(raw.toString())
-  }
-  if (mime.includes('plain')) {
-    return raw.toString()
-  }
-  if (mime.includes('wordprocessingml') || mime.includes('msword') || mime.includes('vnd.oasis.opendocument.text')) {
-    const r = await mammoth.extractRawText({ buffer: raw })
-    return r.value
-  }
-  throw new Error('unsupported file type')
 }

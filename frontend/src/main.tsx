@@ -11,6 +11,7 @@ import NotFound from './pages/404.tsx'
 import PlannerPage from './pages/Planner'
 import Debate from './pages/Debate'
 import Revision from './pages/Revision'
+import ImportCourse from './pages/ImportCourse'
 import "./index.css"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -26,6 +27,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path="debate" element={<Debate />} />
         <Route path="cards" element={<FlashCards />} />
         <Route path="revision" element={<Revision />} />
+        <Route path="import" element={<ImportCourse />} />
         <Route path="exam" element={<ExamLabs />} />
       </Route>
     </Routes>

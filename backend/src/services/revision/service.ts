@@ -1,4 +1,8 @@
 import { randomUUID } from 'node:crypto'
+import { extname } from 'node:path'
+import { stat } from 'node:fs/promises'
+import { extractText } from '../../lib/parser/extract'
+import type { UpFile } from '../../lib/parser/upload'
 import type { SQLiteDatabase } from '../../utils/database/sqlite'
 import { REVISION_POLICY as policy } from './policy'
 import { createEmptyCard, fsrs, Rating } from 'ts-fsrs'
@@ -12,10 +16,10 @@ export type GeneratedCard = { kind: 'basic'; question: string; answer: string } 
 }
 export type GeneratedChapter = { summary: string; notes: { content: string; cards: GeneratedCard[] }[] }
 export type ProfileInput = { schoolClass: string; series?: string; subjects: string[]; examDate?: string }
-export type RevisionCard = GeneratedCard & { id: string; chapterId: string; origin: 'ai'; due: string; reviews: number }
+export type RevisionCard = GeneratedCard & { id: string; chapterId: string; origin: 'ai' | 'import'; due: string; reviews: number }
 export type RevisionSession = { id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number }
 export type RevisionAnswer = { sessionId: string; cardId: string; position: number; knew: boolean; choice?: number; durationMs: number }
-type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string }) => Promise<GeneratedChapter> }
+type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; text?: string }) => Promise<GeneratedChapter> }
 const validDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0
@@ -26,6 +30,8 @@ export class RevisionService {
   constructor(private dependencies: Dependencies) {
     this.ready = dependencies.db.transaction(async () => {
       for (const sql of [
+        `CREATE TABLE IF NOT EXISTS revision_imports (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, server_date TEXT NOT NULL)`,
+        `CREATE INDEX IF NOT EXISTS revision_imports_daily ON revision_imports(device_id, server_date)`,
         `CREATE TABLE IF NOT EXISTS revision_profiles (device_id TEXT PRIMARY KEY, school_class TEXT NOT NULL, series TEXT, exam_date TEXT, xp INTEGER NOT NULL DEFAULT 0)`,
         `CREATE TABLE IF NOT EXISTS revision_subjects (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, name TEXT NOT NULL, UNIQUE(device_id, name))`,
         `CREATE TABLE IF NOT EXISTS revision_chapters (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, subject_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL, origin TEXT NOT NULL)`,
@@ -71,23 +77,71 @@ export class RevisionService {
     if (!profile) throw new RevisionError('Crée ton profil pour commencer.')
     if (!input || typeof input.title !== 'string' || !input.title.trim() || !profile.subjects.includes(input.subject)) throw new RevisionError('Matière ou chapitre invalide.')
     const generated = await this.dependencies.generateCards({ ...input, schoolClass: profile.schoolClass })
+    return this.storeChapter(context, input, generated, 'ai')
+  }
+  async importChapter(context: RevisionContext, input: { title: string; subject: string; text?: string; file?: UpFile }) {
+    const profile = await this.getProfile(context)
+    if (!profile) throw new RevisionError('Crée ton profil pour commencer.')
+    if (!input || !nonempty(input.title) || input.title.length > 200 || !profile.subjects.includes(input.subject)) throw new RevisionError('Matière ou chapitre invalide.')
+    if (input.file && input.text !== undefined) throw new RevisionError('Choisis un fichier ou du texte, pas les deux.')
+    let text = input.text
+    if (input.file) {
+      const mime = { '.txt': 'text/plain', '.md': 'text/markdown', '.markdown': 'text/markdown', '.pdf': 'application/pdf', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }[extname(input.file.filename ?? '').toLowerCase()]
+      if (!mime) throw new RevisionError('Format non pris en charge. Choisis un fichier texte, PDF, Word (.docx) ou Markdown.')
+      try {
+        if ((await stat(input.file.path)).size > 10 * 1024 * 1024) throw new RevisionError('Le fichier dépasse la limite de 10 Mo.')
+        text = await extractText(input.file.path, mime)
+      } catch (error) {
+        if (error instanceof RevisionError) throw error
+        throw new RevisionError('Fichier illisible. Essaie un autre fichier ou colle le texte du cours.')
+      }
+    }
+    if (!nonempty(text)) throw new RevisionError('Le cours est vide. Ajoute du texte ou un fichier lisible.')
+    if (text.length > 100000) throw new RevisionError('Le cours est trop long. Importe un chapitre de moins de 100 000 caractères.')
+    const importId = randomUUID()
+    await this.execute(context, async () => {
+      const quota = await this.readImportQuota(context.deviceId)
+      if (!quota.remaining) throw new RevisionError(`Tu as atteint tes trois imports du jour. Recharge le ${quota.resetsAt.slice(0, 10)} à 00:00 UTC.`)
+      // shortcut: un arrêt serveur consomme cette place jusqu’à minuit ; réconcilier si les arrêts deviennent fréquents.
+      await this.dependencies.db.run('INSERT INTO revision_imports VALUES (?, ?, ?)', [importId, context.deviceId, this.dependencies.now().toISOString().slice(0, 10)])
+    })
+    try {
+      const generated = await this.dependencies.generateCards({ title: input.title, subject: input.subject, text, schoolClass: profile.schoolClass })
+      return await this.storeChapter(context, input, generated, 'import')
+    } catch (error) {
+      await this.execute(context, () => this.dependencies.db.run('DELETE FROM revision_imports WHERE id = ? AND device_id = ?', [importId, context.deviceId]))
+      if (error instanceof RevisionError) throw error
+      throw new RevisionError('Impossible de préparer ce cours. Réessaie dans un instant.')
+    }
+  }
+  async getImportQuota(context: RevisionContext) {
+    return this.execute(context, () => this.readImportQuota(context.deviceId))
+  }
+  private async readImportQuota(deviceId: string) {
+    const date = this.dependencies.now().toISOString().slice(0, 10)
+    const row = await this.dependencies.db.get('SELECT COUNT(*) AS count FROM revision_imports WHERE device_id = ? AND server_date = ?', [deviceId, date])
+    return { remaining: Math.max(0, policy.dailyImports - row.count), resetsAt: new Date(Date.parse(date) + 86400000).toISOString() }
+  }
+  private async storeChapter(context: RevisionContext, input: { title: string; subject: string }, generated: GeneratedChapter, origin: 'ai' | 'import') {
     if (!generated || !nonempty(generated.summary) || !Array.isArray(generated.notes) || !generated.notes.length || generated.notes.some(note =>
       !note || !nonempty(note.content) || !Array.isArray(note.cards) || !note.cards.length || note.cards.some(card =>
         !card || !nonempty(card.question) || !nonempty(card.answer) || (card.kind !== 'basic' && (card.kind !== 'mcq'
           || !validItem({ ...card, id: 1, hint: '', explanation: card.answer }) || !Number.isInteger(card.correct)
           || card.options.some(option => !nonempty(option)) || new Set(card.options).size !== card.options.length))))) throw new RevisionError('Génération invalide. Réessaie avec un autre chapitre.')
+    if (origin === 'import' && (!generated.notes.some(note => note.cards.some(card => card.kind === 'basic'))
+      || !generated.notes.some(note => note.cards.some(card => card.kind === 'mcq')))) throw new RevisionError('Génération invalide. Le cours doit contenir un résumé, des cartes et des QCM. Réessaie.')
     return this.execute(context, async () => {
       const db = this.dependencies.db
       const subject = await db.get('SELECT id FROM revision_subjects WHERE device_id = ? AND name = ?', [context.deviceId, input.subject])
       const chapterId = randomUUID()
-      await db.run('INSERT INTO revision_chapters VALUES (?, ?, ?, ?, ?, ?)', [chapterId, context.deviceId, subject.id, input.title.trim(), generated.summary, 'ai'])
+      await db.run('INSERT INTO revision_chapters VALUES (?, ?, ?, ?, ?, ?)', [chapterId, context.deviceId, subject.id, input.title.trim(), generated.summary, origin])
       for (const note of generated.notes) {
         const noteId = randomUUID()
         await db.run('INSERT INTO revision_notes VALUES (?, ?, ?, ?)', [noteId, context.deviceId, chapterId, note.content])
         for (const card of note.cards) await db.run('INSERT INTO revision_cards(id, device_id, chapter_id, note_id, content, due) VALUES (?, ?, ?, ?, ?, ?)',
           [randomUUID(), context.deviceId, chapterId, noteId, JSON.stringify(card), this.dependencies.now().toISOString()])
       }
-      return { id: chapterId, title: input.title, summary: generated.summary, origin: 'ai' as const }
+      return { id: chapterId, title: input.title, summary: generated.summary, origin }
     })
   }
   async getSession(context: RevisionContext, continueSession = false): Promise<RevisionSession> {
@@ -97,7 +151,7 @@ export class RevisionService {
       if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return JSON.parse(saved.state)
       const profile = await this.readProfile(context.deviceId)
       if (!profile) throw new RevisionError('Crée ton profil pour commencer.')
-      const rows = await db.all(`SELECT * FROM revision_cards WHERE device_id = ? ORDER BY rowid`, [context.deviceId])
+      const rows = await db.all(`SELECT c.*, ch.origin FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id WHERE c.device_id = ? ORDER BY c.rowid`, [context.deviceId])
       const introduced = await db.get(`SELECT COUNT(DISTINCT card_id) AS count FROM revision_journal
         WHERE device_id = ? AND local_date = ? AND json_extract(scheduling, '$.log.state') = 0`, [context.deviceId, context.localDate])
       const reviewed = new Set((await db.all('SELECT card_id FROM revision_journal WHERE device_id = ? AND local_date = ?', [context.deviceId, context.localDate])).map(r => r.card_id))
@@ -110,7 +164,7 @@ export class RevisionService {
         ? this.scheduler.get_retrievability(JSON.parse(a.scheduling), this.dependencies.now(), false) - this.scheduler.get_retrievability(JSON.parse(b.scheduling), this.dependencies.now(), false) : 0))
       let newCount = 0
       const selected = eligible.filter(row => row.reviews > 0 || ++newCount <= quota).slice(0, policy.sessionCards)
-      const cards: RevisionCard[] = selected.map(row => ({ ...JSON.parse(row.content), id: row.id, chapterId: row.chapter_id, origin: 'ai', due: row.due, reviews: row.reviews }))
+      const cards: RevisionCard[] = selected.map(row => ({ ...JSON.parse(row.content), id: row.id, chapterId: row.chapter_id, origin: row.origin, due: row.due, reviews: row.reviews }))
       const session: RevisionSession = { id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: cards.length === 0, repeated: [], elapsedMs: 0 }
       await db.run('INSERT INTO revision_sessions VALUES (?, ?, ?, ?)', [session.id, context.deviceId, context.localDate, JSON.stringify(session)])
       return session
@@ -165,12 +219,26 @@ export class RevisionService {
       if (!deleted.changes) throw new RevisionError('Carte introuvable.')
       await db.run(`DELETE FROM revision_notes WHERE device_id = ? AND NOT EXISTS
         (SELECT 1 FROM revision_cards WHERE note_id = revision_notes.id)`, [context.deviceId])
-      for (const row of await db.all('SELECT id, state FROM revision_sessions WHERE device_id = ?', [context.deviceId])) {
-        const session: RevisionSession = JSON.parse(row.state)
-        session.cards = [...session.cards.slice(0, session.position), ...session.cards.slice(session.position).filter(card => card.id !== cardId)]
-        session.complete = session.complete || session.position >= session.cards.length
-        await db.run('UPDATE revision_sessions SET state = ? WHERE id = ?', [JSON.stringify(session), row.id])
-      }
+      await this.removeFromSessions(context.deviceId, card => card.id === cardId)
     })
+  }
+  async deleteChapter(context: RevisionContext, chapterId: string): Promise<void> {
+    return this.execute(context, async () => {
+      const db = this.dependencies.db
+      const deleted = await db.run('DELETE FROM revision_chapters WHERE id = ? AND device_id = ?', [chapterId, context.deviceId])
+      if (!deleted.changes) throw new RevisionError('Chapitre introuvable.')
+      await db.run('DELETE FROM revision_cards WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId])
+      await db.run('DELETE FROM revision_notes WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId])
+      await this.removeFromSessions(context.deviceId, card => card.chapterId === chapterId)
+    })
+  }
+  private async removeFromSessions(deviceId: string, removed: (card: RevisionCard) => boolean) {
+    const db = this.dependencies.db
+    for (const row of await db.all('SELECT id, state FROM revision_sessions WHERE device_id = ?', [deviceId])) {
+      const session: RevisionSession = JSON.parse(row.state)
+      session.cards = [...session.cards.slice(0, session.position), ...session.cards.slice(session.position).filter(card => !removed(card))]
+      session.complete = session.complete || session.position >= session.cards.length
+      await db.run('UPDATE revision_sessions SET state = ? WHERE id = ?', [JSON.stringify(session), row.id])
+    }
   }
 }

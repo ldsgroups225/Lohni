@@ -129,6 +129,7 @@ export default function Revision() {
             <button className={button} disabled={busy}>Générer mes cartes</button>
           </form>
         </>}
+        {profile && <Link to="/import" className="block rounded-xl border border-stone-700 p-4 text-center text-white">Importer mon cours</Link>}
         <footer className="text-xs text-stone-500">Lohni, basé sur <a href="https://github.com/CaviraOSS/PageLM" className="underline">PageLM</a></footer>
       </div>
     </main>
