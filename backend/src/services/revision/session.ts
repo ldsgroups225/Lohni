@@ -1,5 +1,9 @@
 import { REVISION_POLICY as policy } from './policy'
 
+export function answerXP(knew: boolean, complete: boolean): number {
+  return (knew ? policy.knownXP : policy.missedXP) + (complete ? policy.sessionXP : 0)
+}
+
 // Même avancement pour la session locale hors ligne et la session persistée côté serveur.
 export function advanceSession<Card extends { id: string }>(session: {
   cards: Card[]; position: number; repeated: string[]; elapsedMs: number; complete: boolean; earnedXP: number
@@ -21,5 +25,5 @@ export function advanceSession<Card extends { id: string }>(session: {
   session.position++
   session.elapsedMs += Math.min(durationMs, policy.sessionMinutes * 60000)
   session.complete = session.position >= session.cards.length || session.elapsedMs >= policy.sessionMinutes * 60000
-  session.earnedXP += (knew ? policy.knownXP : policy.missedXP) + (session.complete ? policy.sessionXP : 0)
+  session.earnedXP += answerXP(knew, session.complete)
 }

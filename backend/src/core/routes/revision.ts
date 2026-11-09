@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { parseMultipart } from '../../lib/parser/upload'
 import { RevisionError, RevisionService, type RevisionContext } from '../../services/revision/service'
 import { generateCards, transcribePhoto } from '../../services/revision/generator'
+import { REVISION_POLICY as policy } from '../../services/revision/policy'
 import { sqlite } from '../../utils/database/sqlite'
 
 const revision = new RevisionService({ db: sqlite, now: () => new Date(), generateCards, transcribePhoto })
@@ -38,9 +39,9 @@ export function revisionRoutes(app: any) {
     try {
       let upload
       try {
-        upload = await parseMultipart(req, { directory, limits: { files: 1, fileSize: 10 * 1024 * 1024, fields: 1, fieldSize: 4096 } })
+        upload = await parseMultipart(req, { directory, limits: { files: 1, fileSize: policy.maxUploadMB * 1024 * 1024, fields: 1, fieldSize: 4096 } })
       } catch {
-        throw new RevisionError('Import illisible ou trop volumineux. Choisis un seul fichier de 10 Mo maximum.')
+        throw new RevisionError(`Import illisible ou trop volumineux. Choisis un seul fichier de ${policy.maxUploadMB} Mo maximum.`)
       }
       let metadata
       try { metadata = JSON.parse(upload.q) } catch { throw new RevisionError('Matière et titre du chapitre requis.') }

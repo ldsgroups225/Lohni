@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { chatJSON, revisionAPI, revisionSyncStatus, syncRevisionAnswers, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress } from '../lib/api'
+import { chatJSON, revisionAPI, revisionPolicy, revisionSyncStatus, syncRevisionAnswers, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress } from '../lib/api'
 
 export default function Revision() {
   const navigate = useNavigate()
@@ -136,7 +136,7 @@ export default function Revision() {
               <progress className="w-full" value={session.position} max={session.cards.length} aria-label="Progression de la session" />
             </div>
             <article className="space-y-5 rounded-2xl border border-stone-800 bg-stone-950 p-6">
-              <p className="text-xs text-stone-400">Générée par IA · Peut contenir des erreurs</p>
+              {card.origin === 'ai' && <p className="text-xs text-stone-400">Générée par IA · Peut contenir des erreurs</p>}
               <h2 className="whitespace-pre-wrap text-xl text-white">{card.question}</h2>
               {card.kind === 'mcq' && <fieldset disabled={busy || revealed} className="space-y-3">
                 <legend className="mb-3">Choisis ta réponse</legend>
@@ -167,14 +167,14 @@ export default function Revision() {
             <p>{session.position > 0 ? `${session.position} réponses enregistrées${sync.pending ? " sur cet appareil" : ""}. Tu peux revenir demain ou continuer les cartes restantes.` : 'Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.'}</p>
             {session.position > 0 && <p className="text-lg text-green-300">{session.earnedXP} XP gagnés pendant cette session</p>}
             {!sync.pending && progress && <p>{progress.xp} XP au total · Série : {progress.streak} jour{progress.streak > 1 ? 's' : ''}</p>}
-            <p className="text-sm text-stone-400">10 XP par carte sue, 2 XP par oubli et 50 XP à la fin d’une session.</p>
+            <p className="text-sm text-stone-400">{revisionPolicy.knownXP} XP par carte sue, {revisionPolicy.missedXP} XP par oubli et {revisionPolicy.sessionXP} XP à la fin d’une session.</p>
             {session.position > 0 && <p>Pour réviser ton vrai cours, <Link to="/import" className="text-sky-300 underline">importe ton cours</Link> : il deviendra un chapitre avec tes propres cartes.</p>}
             <button className={button} disabled={busy || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer</button>
           </section>}
           {profile && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-stone-800 p-6">
             <h2 className="text-xl text-white">Préparer un chapitre</h2>
             <label className="block space-y-2"><span>Matière</span><select className={input} required value={subject} onChange={e => setSubject(e.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
-            <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex. : Les fractions" /></label>
+            <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex. : Les fractions" /></label>
             <button className={button} disabled={busy || !sync.online || sync.pending > 0}>Générer mes cartes</button>
           </form>}
         </>}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { env } from "../config/env";
-import { chatJSON, getChatDetail, type FlashCard, revisionAPI, type RevisionProfile, type ChatMessage, podcastStart } from "../lib/api";
+import { chatJSON, getChatDetail, type FlashCard, revisionAPI, revisionPolicy, type RevisionProfile, type ChatMessage, podcastStart } from "../lib/api";
 import MarkdownView from "../components/Chat/MarkdownView";
 import ActionRow from "../components/Chat/ActionRow";
 import FlashCards from "../components/Chat/FlashCards";
@@ -189,7 +189,7 @@ export default function Chat() {
   }, [Array.isArray(messages) ? messages.length : 0]);
 
   const saveNote = async (kind: "flashcard" | "note", title: string, content: string) => {
-    const chapterTitle = (noteTitle || topic || "Notes du Tuteur").trim().slice(0, 200);
+    const chapterTitle = (noteTitle || topic || "Notes du Tuteur").trim().slice(0, revisionPolicy.maxTitleChars);
     const key = `${subject}:${chapterTitle}:${title}:${content}`;
     if (seenRef.current.has(key)) { setSaveMessage("Cette carte est déjà enregistrée."); return; }
     seenRef.current.add(key);
@@ -259,7 +259,7 @@ export default function Chat() {
         {profile ? <fieldset className="flex flex-wrap gap-3 rounded-xl border border-stone-800 p-3">
           <legend className="px-2 text-sm">Enregistrer les cartes dans mes révisions</legend>
           <label className="min-w-40 flex-1">Matière<select className="mt-1 w-full rounded-lg bg-stone-900 p-2" value={subject} onChange={event => setSubject(event.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
-          <label className="min-w-40 flex-1">Chapitre<input className="mt-1 w-full rounded-lg bg-stone-900 p-2" maxLength={200} value={noteTitle} placeholder={(topic || 'Notes du Tuteur').slice(0, 200)} onChange={event => setNoteTitle(event.target.value)} /></label>
+          <label className="min-w-40 flex-1">Chapitre<input className="mt-1 w-full rounded-lg bg-stone-900 p-2" maxLength={revisionPolicy.maxTitleChars} value={noteTitle} placeholder={(topic || 'Notes du Tuteur').slice(0, revisionPolicy.maxTitleChars)} onChange={event => setNoteTitle(event.target.value)} /></label>
         </fieldset> : <Link to="/" className="block underline">Créer mon profil pour enregistrer des cartes</Link>}
         {saveMessage && <p role="status" className="text-green-300">{saveMessage} <Link to="/courses" className="underline">Voir mes cours</Link></p>}
         {error && <p role="alert" className="text-red-300">{error}</p>}

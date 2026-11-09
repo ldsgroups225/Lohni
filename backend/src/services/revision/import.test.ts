@@ -98,8 +98,8 @@ test('une photo réserve la dernière place avant la transcription et partage la
   try {
     expect((await service.getImportQuota(context())).remaining).toBe(0)
     expect((await service.getSession(context())).cards).toHaveLength(4)
-    await expect(service.importChapter(context(), photo)).rejects.toThrow('trois imports')
-    await expect(service.importChapter(context(), input)).rejects.toThrow('trois imports')
+    await expect(service.importChapter(context(), photo)).rejects.toThrow('3 imports')
+    await expect(service.importChapter(context(), input)).rejects.toThrow('3 imports')
   } finally { release(); await pending }
 })
 
@@ -123,7 +123,7 @@ test('la limite persiste après redémarrage, résiste à une fausse date locale
   db = new SQLiteDatabase(join(directory, 'test.sqlite'))
   service = new RevisionService({ db, now: () => now, generateCards: async () => generated })
   expect(await service.getImportQuota(context())).toEqual({ remaining: 0, resetsAt: '2026-11-10T00:00:00.000Z' })
-  await expect(service.importChapter({ ...context(), localDate: '2026-11-10' }, input)).rejects.toThrow('trois imports')
+  await expect(service.importChapter({ ...context(), localDate: '2026-11-10' }, input)).rejects.toThrow('3 imports')
   const other = { ...context(), deviceId: randomUUID() }
   await service.saveProfile(other, { schoolClass: '6e', subjects: ['Mathématiques'] })
   await expect(service.importChapter(other, input)).resolves.toMatchObject({ origin: 'import' })
@@ -197,7 +197,7 @@ test('un import en cours réserve la dernière place sans bloquer les sessions e
   try {
     expect((await service.getImportQuota(context())).remaining).toBe(0)
     expect((await service.getSession(context())).cards).toHaveLength(4)
-    await expect(service.importChapter(context(), input)).rejects.toThrow('trois imports')
+    await expect(service.importChapter(context(), input)).rejects.toThrow('3 imports')
   } finally { release(); await pending }
 })
 

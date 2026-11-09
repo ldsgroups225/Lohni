@@ -1,5 +1,11 @@
 export const REVISION_POLICY = {
   dailyImports: 3,
+  maxUploadMB: 10,
+  maxTextChars: 100000,
+  maxTitleChars: 200,
+  maxQuestionChars: 10000,
+  generatedBasicCards: 5,
+  generatedMCQCards: 5,
   sessionCards: 20,
   sessionMinutes: 15,
   minNewCards: 3,

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
-import { revisionAPI, type RevisionProfile, type RevisionImportedChapter, type RevisionImportQuota } from '../lib/api'
+import { revisionAPI, revisionPolicy, type RevisionProfile, type RevisionImportedChapter, type RevisionImportQuota } from '../lib/api'
 
 export default function ImportCourse() {
   const navigate = useNavigate()
@@ -36,7 +36,7 @@ export default function ImportCourse() {
   function submit(event: FormEvent) {
     event.preventDefault()
     void run(async () => {
-      if (mode !== 'text' && (!file || file.size > 10 * 1024 * 1024)) throw new Error('Choisis un fichier de moins de 10 Mo.')
+      if (mode !== 'text' && (!file || file.size > revisionPolicy.maxUploadMB * 1024 * 1024)) throw new Error(`Choisis un fichier de ${revisionPolicy.maxUploadMB} Mo maximum.`)
       const chapter = await revisionAPI.importChapter({ title, subject, ...(mode !== 'text' ? { file } : { text }) })
       setImported(chapter)
       setQuota(await revisionAPI.importQuota())
@@ -54,7 +54,7 @@ export default function ImportCourse() {
       </div>}
       {busy && <p role="status">{profile ? 'Préparation du chapitre… Cela peut prendre un moment.' : 'Chargement…'}</p>}
       {quota && <p className="text-sm text-stone-400" aria-live="polite">
-        {quota.remaining === 0 ? 'Tu as atteint tes trois imports du jour.' : `${quota.remaining} import${quota.remaining > 1 ? 's' : ''} restant${quota.remaining > 1 ? 's' : ''} aujourd’hui.`}
+        {quota.remaining === 0 ? `Tu as atteint tes ${revisionPolicy.dailyImports} imports du jour.` : `${quota.remaining} import${quota.remaining > 1 ? 's' : ''} restant${quota.remaining > 1 ? 's' : ''} aujourd’hui.`}
         {' '}Recharge le {new Date(quota.resetsAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} (heure de ton appareil).
       </p>}
       {!busy && !profile && quota && <p>Crée d’abord ton profil pour ranger ton cours dans une matière. <Link to="/" className="underline">Commencer</Link></p>}
@@ -70,11 +70,11 @@ export default function ImportCourse() {
         <fieldset disabled={busy || quota?.remaining === 0} className="space-y-4 rounded-2xl border border-stone-800 p-6 disabled:opacity-60">
           <legend className="px-2 text-lg text-white">Un cours, un chapitre prêt à réviser</legend>
           <label className="block space-y-2"><span>Matière</span><select className={field} required value={subject} onChange={event => setSubject(event.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
-          <label className="block space-y-2"><span>Titre du chapitre</span><input className={field} required maxLength={200} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. : Les fractions" /></label>
+          <label className="block space-y-2"><span>Titre du chapitre</span><input className={field} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. : Les fractions" /></label>
           <label className="block space-y-2"><span>Source du cours</span><select className={field} value={mode} onChange={event => { setMode(event.target.value); setFile(undefined) }}><option value="text">Coller du texte</option><option value="file">Choisir un fichier</option><option value="photo">Photo de mon cahier</option></select></label>
           {mode === 'text'
-            ? <label className="block space-y-2"><span>Texte du cours</span><textarea className={field} rows={10} required maxLength={100000} value={text} onChange={event => setText(event.target.value)} /></label>
-            : <label className="block space-y-2"><span>{mode === 'photo' ? 'Photo nette et bien éclairée (JPEG, PNG, WebP) · 10 Mo maximum' : 'Fichier texte, PDF, Word (.docx) ou Markdown · 10 Mo maximum'}</span><input key={mode} className={field} type="file" required accept={mode === 'photo' ? 'image/jpeg,image/png,image/webp' : '.txt,.pdf,.docx,.md,.markdown'} onChange={event => setFile(event.target.files?.[0])} /></label>}
+            ? <label className="block space-y-2"><span>Texte du cours</span><textarea className={field} rows={10} required maxLength={revisionPolicy.maxTextChars} value={text} onChange={event => setText(event.target.value)} /></label>
+            : <label className="block space-y-2"><span>{mode === 'photo' ? `Photo nette et bien éclairée (JPEG, PNG, WebP) · ${revisionPolicy.maxUploadMB} Mo maximum` : `Fichier texte, PDF, Word (.docx) ou Markdown · ${revisionPolicy.maxUploadMB} Mo maximum`}</span><input key={mode} className={field} type="file" required accept={mode === 'photo' ? 'image/jpeg,image/png,image/webp' : '.txt,.pdf,.docx,.md,.markdown'} onChange={event => setFile(event.target.files?.[0])} /></label>}
           <p className="text-sm text-stone-400">Le résumé, les cartes et les QCM sont créés automatiquement.</p>
           <button className={button}>Importer et créer mon chapitre</button>
         </fieldset>

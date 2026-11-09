@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import curriculum from '../../data/curriculum-ci.json'
-import { revisionAPI } from '../../lib/api'
+import { revisionAPI, revisionPolicy } from '../../lib/api'
 
 export default function Onboarding() {
   const navigate = useNavigate()
@@ -70,11 +70,11 @@ export default function Onboarding() {
     {step === 4 && <>
       <h2 className="text-2xl font-semibold text-white">Tu étudies quoi en ce moment ?</h2>
       <label className="block space-y-2"><span>Matière</span><select className={input} value={subject} onChange={event => setSubject(event.target.value)}>{subjects.map(name => <option key={name}>{name}</option>)}</select></label>
-      <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={200} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. : Les fractions" /></label>
-      <p className="text-sm text-stone-400">10 cartes générées par IA pour démarrer, puis quelques cartes par jour. Elles peuvent contenir des erreurs : tu peux les supprimer pendant ta session.</p>
+      <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. : Les fractions" /></label>
+      <p className="text-sm text-stone-400">{revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes générées par IA pour démarrer, puis quelques cartes par jour. Elles peuvent contenir des erreurs : tu peux les supprimer pendant ta session.</p>
     </>}
     {error && <p role="alert" className="text-red-300">{error}</p>}
-    {busy && <p role="status">Préparation de tes dix cartes… Cela peut prendre un instant.</p>}
+    {busy && <p role="status">Préparation de tes {revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes… Cela peut prendre un instant.</p>}
     <div className="flex flex-wrap items-center gap-4">
       {step > 1 && <button type="button" disabled={busy} className="rounded-xl border border-stone-700 px-4 py-3" onClick={() => setStep(step - 1)}>Retour</button>}
       <button className={button} disabled={busy || (step === 2 && !subjects.length) || (step === 4 && !title.trim())}>{step === 4 ? 'Créer mes cartes et commencer' : 'Continuer'}</button>

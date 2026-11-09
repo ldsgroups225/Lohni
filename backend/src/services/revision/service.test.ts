@@ -111,6 +111,60 @@ test('les dues précèdent les nouvelles puis les QCM ; continuer ne dépasse pa
   expect(session.cards.slice(5).every(c => c.reviews === 0)).toBe(true)
 })
 
+test('quinze recto-verso et cinq QCM dus gardent leur place avant un quota de cinq nouvelles cartes', async () => {
+  await setup(15, '2026-11-10')
+  generated = { summary: 'QCM', notes: Array.from({ length: 5 }, (_, i) => ({ content: `QCM ${i}`, cards: [{
+    kind: 'mcq' as const, question: `QCM ${i}`, answer: 'A', options: ['A', 'B', 'C', 'D'], correct: 1,
+  }] })) }
+  await service.generateChapter(context(), { subject: 'Mathématiques', title: 'QCM' })
+  await finish(await service.getSession(context()))
+  now = new Date('2026-11-10T12:00:00Z')
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'], examDate: '2026-11-11' })
+  await finish(await service.getSession(context()))
+  now = new Date('2026-12-10T12:00:00Z')
+  generated = cards(5)
+  await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Nouvelles' })
+
+  const session = await service.getSession(context())
+  expect(session.cards).toHaveLength(20)
+  expect(session.cards.every(card => card.reviews > 0)).toBe(true)
+  expect(session.cards.filter(card => card.kind === 'basic')).toHaveLength(15)
+  expect(session.cards.filter(card => card.kind === 'mcq')).toHaveLength(5)
+})
+
+test.each<[string | undefined, number, number]>([[undefined, 5, 15], ['2026-11-13', 3, 17]])('dose seulement les nouveaux recto-verso puis remplit le plafond avec les QCM : %s', async (examDate, basics, mcqs) => {
+  await setup(12, examDate)
+  generated = { summary: 'QCM', notes: Array.from({ length: 25 }, (_, i) => ({ content: `QCM ${i}`, cards: [{
+    kind: 'mcq' as const, question: `QCM ${i}`, answer: 'A', options: ['A', 'B', 'C', 'D'], correct: 1,
+  }] })) }
+  await service.generateChapter(context(), { subject: 'Mathématiques', title: 'QCM' })
+
+  const session = await service.getSession(context())
+  expect(session.cards.map(card => card.kind)).toEqual([
+    ...Array(basics).fill('basic'), ...Array(mcqs).fill('mcq'),
+  ])
+  await finish(session)
+  const continued = await service.getSession(context(), true)
+  expect(continued.cards.every(card => card.kind === 'mcq')).toBe(true)
+  expect(continued.cards).toHaveLength(25 - mcqs)
+})
+
+test('les QCM déjà découverts ne réduisent pas le quota recalculé après un nouveau chapitre', async () => {
+  await setup(8, '2026-11-13')
+  generated = { summary: 'QCM', notes: Array.from({ length: 5 }, (_, i) => ({ content: `QCM ${i}`, cards: [{
+    kind: 'mcq' as const, question: `QCM ${i}`, answer: 'A', options: ['A', 'B', 'C', 'D'], correct: 1,
+  }] })) }
+  await service.generateChapter(context(), { subject: 'Mathématiques', title: 'QCM' })
+  await finish(await service.getSession(context()))
+  generated = cards(12)
+  await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Nouveau chapitre' })
+
+  const continued = await service.getSession(context(), true)
+  expect(continued.cards.map(card => card.kind)).toEqual(['basic', 'basic'])
+  await finish(continued)
+  expect((await service.getSession(context(), true)).cards).toEqual([])
+})
+
 test('après un long retard, la session reste plafonnée et continuer propose le reste', async () => {
   await setup(30, '2026-11-10')
   await finish(await service.getSession(context()))
@@ -131,14 +185,37 @@ test('après un long retard, la session reste plafonnée et continuer propose le
 
 test('les cartes les plus fragiles passent en premier après plusieurs jours sans révision', async () => {
   await setup(3)
+  const last = (await service.listChapters(context()))[0].cards[2]
+  await service.updateCard(context(), last.id, { kind: 'mcq', question: 'Quelle fraction ?', answer: 'A', options: ['A', 'B', 'C', 'D'], correct: 1 })
   let session = await service.getSession(context())
   const fragile = session.cards[2].id
   session = await respond(session, true)
   session = await respond(session, true)
-  session = await respond(session, false)
-  await respond(session, true)
+  session = await respond(session, false, 1)
+  await respond(session, true, 1)
   now = new Date('2026-12-09T12:00:00Z')
   expect((await service.getSession(context())).cards[0].id).toBe(fragile)
+})
+
+test('un QCM fragile reste prioritaire quand les cartes dues dépassent le plafond', async () => {
+  await setup(20, '2026-11-10')
+  generated = { summary: 'QCM', notes: [{ content: 'QCM', cards: [{
+    kind: 'mcq', question: 'Quelle fraction ?', answer: 'A', options: ['A', 'B', 'C', 'D'], correct: 1,
+  }] }] }
+  const chapter = await service.generateChapter(context(), { subject: 'Mathématiques', title: 'QCM fragile' })
+  const fragile = (await service.listChapters(context())).find(value => value.id === chapter.id)!.cards[0].id
+  for (const date of ['2026-11-09', '2026-11-10']) {
+    now = new Date(`${date}T12:00:00Z`)
+    await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'], examDate: new Date(now.getTime() + 86400000).toISOString().slice(0, 10) })
+    let session = await service.getSession(context())
+    while (!session.complete) session = await respond(session, session.cards[session.position].kind === 'basic', 1)
+    await finish(await service.getSession(context(), true))
+  }
+  now = new Date('2026-12-10T12:00:00Z')
+  const session = await service.getSession(context())
+  expect(session.cards).toHaveLength(20)
+  expect(session.cards.every(card => card.reviews > 0)).toBe(true)
+  expect(session.cards[0].id).toBe(fragile)
 })
 
 test('la suppression retire une carte de la session et de toutes les révisions futures, sans toucher un autre appareil', async () => {
@@ -161,6 +238,12 @@ test('un générateur invalide échoue clairement sans laisser de chapitre ou de
   expect((await service.getSession(context())).cards).toHaveLength(1)
 })
 
+test('la génération refuse un titre trop long comme l’import et les notes du Tuteur', async () => {
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'] })
+  await expect(service.generateChapter(context(), { subject: 'Mathématiques', title: 'a'.repeat(201) })).rejects.toThrow('Matière ou chapitre invalide')
+  expect(await service.listChapters(context())).toEqual([])
+})
+
 test('les entrées invalides ne créent pas de profil et un autre appareil ne peut pas répondre à une session', async () => {
   await expect(service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'], examDate: '2026-02-30' })).rejects.toThrow('Date')
   expect(await service.getProfile(context())).toBeNull()
@@ -168,6 +251,17 @@ test('les entrées invalides ne créent pas de profil et un autre appareil ne pe
   const session = await service.getSession(context())
   await expect(service.answer({ ...context(), deviceId: randomUUID() }, { sessionId: session.id, cardId: session.cards[0].id, position: 0, knew: true, durationMs: 1 })).rejects.toThrow('Session introuvable')
   expect((await service.getSession(context())).position).toBe(0)
+})
+
+test.each(['2026-11-07', '2026-11-11', '2025-11-09', '2027-11-09'])('refuse le jour local %s éloigné de plus d’un jour du serveur sans accorder de XP', async localDate => {
+  await setup(1)
+  await expect(service.getSession({ deviceId, localDate })).rejects.toThrow('Date locale trop éloignée')
+  expect(await service.getProgress(context())).toMatchObject({ xp: 0, streak: 0 })
+})
+
+test.each(['2026-11-08', '2026-11-09', '2026-11-10'])('accepte le jour local %s à un jour au plus de la date UTC du serveur', async localDate => {
+  await setup(1)
+  expect((await service.getSession({ deviceId, localDate })).localDate).toBe(localDate)
 })
 
 test('les oublis ne font pas grossir une session de retard au-delà d’une vingtaine de réponses', async () => {
@@ -232,9 +326,10 @@ test('la série suit les jours locaux terminés, sans doubler le même jour, et 
   await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Encore' })
   await finish(await service.getSession(context(), true))
   expect((await service.getProgress(context())).streak).toBe(2)
-  expect((await service.getProgress({ ...context(), localDate: '2026-11-11' })).streak).toBe(2)
-  expect((await service.getProgress({ ...context(), localDate: '2026-11-12' })).streak).toBe(0)
+  now = new Date('2026-11-11T12:00:00Z')
+  expect((await service.getProgress(context())).streak).toBe(2)
   now = new Date('2026-11-12T12:00:00Z')
+  expect((await service.getProgress(context())).streak).toBe(0)
   await finish(await service.getSession(context()))
   expect((await service.getProgress(context())).streak).toBe(1)
 })

@@ -605,6 +605,8 @@ export function err(e: unknown) {
   return e instanceof Error ? e.message : String(e);
 }
 
+export { revisionPolicy };
+
 export type RevisionProfile = { schoolClass: string; series?: string; subjects: string[]; examDate?: string };
 export type RevisionCard = {
   id: string; chapterId: string; kind: 'basic' | 'mcq'; question: string; answer: string;
@@ -671,8 +673,11 @@ let syncError = '';
 let syncing: Promise<void> | undefined;
 const offlineKey = () => `lohni-revision-offline:${revisionDeviceId()}`;
 function readOffline(): OfflineRevision {
-  const value = localStorage.getItem(offlineKey());
-  return value ? JSON.parse(value) : { pending: [], cache: {} };
+  const key = offlineKey();
+  const value = localStorage.getItem(key);
+  try { if (value) return JSON.parse(value); }
+  catch { localStorage.removeItem(key); }
+  return { pending: [], cache: {} };
 }
 async function updateOffline(update: (state: OfflineRevision) => void): Promise<void> {
   const save = () => {
