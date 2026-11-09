@@ -20,7 +20,7 @@ export type RevisionCard = GeneratedCard & { id: string; chapterId: string; orig
 export type RevisionSession = { id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number }
 export type RevisionAnswer = { sessionId: string; cardId: string; position: number; knew: boolean; choice?: number; durationMs: number }
 export type RevisionHome = { profile: ProfileInput; daysUntilExam: number | null; totalCards: number; cardCount: number; estimatedMinutes: number; state: 'ready' | 'done' | 'empty' }
-type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; series?: string; text?: string }) => Promise<GeneratedChapter> }
+type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; series?: string; text?: string }) => Promise<GeneratedChapter>; transcribePhoto?: (file: UpFile) => Promise<string> }
 const validDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0
@@ -102,20 +102,11 @@ export class RevisionService {
     if (!profile) throw new RevisionError('Crée ton profil pour commencer.')
     if (!input || !nonempty(input.title) || input.title.length > 200 || !profile.subjects.includes(input.subject)) throw new RevisionError('Matière ou chapitre invalide.')
     if (input.file && input.text !== undefined) throw new RevisionError('Choisis un fichier ou du texte, pas les deux.')
-    let text = input.text
+    let mime: string | undefined
     if (input.file) {
-      const mime = { '.txt': 'text/plain', '.md': 'text/markdown', '.markdown': 'text/markdown', '.pdf': 'application/pdf', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }[extname(input.file.filename ?? '').toLowerCase()]
-      if (!mime) throw new RevisionError('Format non pris en charge. Choisis un fichier texte, PDF, Word (.docx) ou Markdown.')
-      try {
-        if ((await stat(input.file.path)).size > 10 * 1024 * 1024) throw new RevisionError('Le fichier dépasse la limite de 10 Mo.')
-        text = await extractText(input.file.path, mime)
-      } catch (error) {
-        if (error instanceof RevisionError) throw error
-        throw new RevisionError('Fichier illisible. Essaie un autre fichier ou colle le texte du cours.')
-      }
+      mime = { '.txt': 'text/plain', '.md': 'text/markdown', '.markdown': 'text/markdown', '.pdf': 'application/pdf', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' }[extname(input.file.filename ?? '').toLowerCase()]
+      if (!mime) throw new RevisionError('Format non pris en charge. Choisis un fichier texte, PDF, Word (.docx), Markdown ou une photo (JPEG, PNG, WebP).')
     }
-    if (!nonempty(text)) throw new RevisionError('Le cours est vide. Ajoute du texte ou un fichier lisible.')
-    if (text.length > 100000) throw new RevisionError('Le cours est trop long. Importe un chapitre de moins de 100 000 caractères.')
     const importId = randomUUID()
     await this.execute(context, async () => {
       const quota = await this.readImportQuota(context.deviceId)
@@ -124,6 +115,24 @@ export class RevisionService {
       await this.dependencies.db.run('INSERT INTO revision_imports VALUES (?, ?, ?)', [importId, context.deviceId, this.dependencies.now().toISOString().slice(0, 10)])
     })
     try {
+      let text = input.text
+      if (input.file && mime) {
+        try {
+          if ((await stat(input.file.path)).size > 10 * 1024 * 1024) throw new RevisionError('Le fichier dépasse la limite de 10 Mo.')
+          if (mime.startsWith('image/')) {
+            if (!this.dependencies.transcribePhoto) throw new RevisionError('La lecture des photos est indisponible. Colle le texte du cours ou réessaie plus tard.')
+            text = await this.dependencies.transcribePhoto({ ...input.file, mimeType: mime })
+            if (!nonempty(text)) throw new Error('empty transcription')
+          } else text = await extractText(input.file.path, mime)
+        } catch (error) {
+          if (error instanceof RevisionError) throw error
+          throw new RevisionError(mime.startsWith('image/')
+            ? 'Photo illisible. Prends une photo nette et bien éclairée ou colle le texte du cours.'
+            : 'Fichier illisible. Essaie un autre fichier ou colle le texte du cours.')
+        }
+      }
+      if (!nonempty(text)) throw new RevisionError('Le cours est vide. Ajoute du texte ou un fichier lisible.')
+      if (text.length > 100000) throw new RevisionError('Le cours est trop long. Importe un chapitre de moins de 100 000 caractères.')
       const generated = await this.dependencies.generateCards({ title: input.title, subject: input.subject, text, schoolClass: profile.schoolClass, series: profile.series })
       return await this.storeChapter(context, input, generated, 'import')
     } catch (error) {

@@ -39,6 +39,82 @@ test('un cours importé devient un chapitre complet et ses cartes rejoignent la 
   ])
 })
 
+test.each(['jpg', 'jpeg', 'png', 'webp'])('une photo %s transcrite rejoint la chaîne texte et crée un chapitre complet sans validation', async extension => {
+  const path = join(directory, `cahier.${extension}`)
+  await writeFile(path, Buffer.from('/9j/2Q==', 'base64'))
+  service = new RevisionService({ db, now: () => now,
+    transcribePhoto: async () => input.text,
+    generateCards: async ({ text }) => ({ ...generated, summary: text! }),
+  })
+  const imported = await service.importChapter(context(), { title: input.title, subject: input.subject,
+    file: { path, filename: `cahier.${extension}`, mimeType: 'application/octet-stream' },
+  })
+  expect(imported).toMatchObject({ summary: input.text, origin: 'import' })
+  expect((await service.getSession(context())).cards.map(card => [card.kind, card.chapterId])).toEqual([
+    ['basic', imported.id], ['mcq', imported.id],
+  ])
+  expect((await service.getImportQuota(context())).remaining).toBe(2)
+})
+
+test('une transcription vide explique comment reprendre la photo sans consommer un import', async () => {
+  const path = join(directory, 'cahier.png')
+  await writeFile(path, 'photo')
+  service = new RevisionService({ db, now: () => now, generateCards: async () => generated, transcribePhoto: async () => '  ' })
+  await expect(service.importChapter(context(), { title: input.title, subject: input.subject,
+    file: { path, filename: 'cahier.png', mimeType: 'image/png' },
+  })).rejects.toThrow('Prends une photo nette')
+  expect((await service.getImportQuota(context())).remaining).toBe(3)
+  expect((await service.getSession(context())).cards).toEqual([])
+})
+
+test('un échec du modèle vision reste réessayable sans créer de cartes ni consommer le quota', async () => {
+  const path = join(directory, 'cahier.jpg')
+  await writeFile(path, 'photo')
+  service = new RevisionService({ db, now: () => now, generateCards: async () => generated,
+    transcribePhoto: async () => { throw new Error('vision unavailable') },
+  })
+  await expect(service.importChapter(context(), { title: input.title, subject: input.subject,
+    file: { path, filename: 'cahier.jpg', mimeType: 'image/jpeg' },
+  })).rejects.toThrow('Photo illisible')
+  expect((await service.getSession(context())).cards).toEqual([])
+  expect((await service.getImportQuota(context())).remaining).toBe(3)
+})
+
+test('une photo réserve la dernière place avant la transcription et partage la limite avec le texte', async () => {
+  await service.importChapter(context(), input)
+  await service.importChapter(context(), input)
+  const path = join(directory, 'cahier.jpg')
+  await writeFile(path, 'photo')
+  const photo = { title: input.title, subject: input.subject, file: { path, filename: 'cahier.jpg', mimeType: 'image/jpeg' } }
+  let release!: () => void
+  let started!: () => void
+  const waiting = new Promise<void>(resolve => { release = resolve })
+  const transcribing = new Promise<void>(resolve => { started = resolve })
+  service = new RevisionService({ db, now: () => now, generateCards: async () => generated,
+    transcribePhoto: async () => { started(); await waiting; return input.text },
+  })
+  const pending = service.importChapter(context(), photo)
+  await transcribing
+  try {
+    expect((await service.getImportQuota(context())).remaining).toBe(0)
+    expect((await service.getSession(context())).cards).toHaveLength(4)
+    await expect(service.importChapter(context(), photo)).rejects.toThrow('trois imports')
+    await expect(service.importChapter(context(), input)).rejects.toThrow('trois imports')
+  } finally { release(); await pending }
+})
+
+test('une photo suit la même validation transactionnelle du chapitre que le texte', async () => {
+  const path = join(directory, 'cahier.jpg')
+  await writeFile(path, 'photo')
+  generated.notes[0].cards.pop()
+  service = new RevisionService({ db, now: () => now, generateCards: async () => generated, transcribePhoto: async () => input.text })
+  await expect(service.importChapter(context(), { title: input.title, subject: input.subject,
+    file: { path, filename: 'cahier.jpg', mimeType: 'image/jpeg' },
+  })).rejects.toThrow('Génération invalide')
+  expect((await service.getSession(context())).cards).toEqual([])
+  expect((await service.getImportQuota(context())).remaining).toBe(3)
+})
+
 test('la limite persiste après redémarrage, résiste à une fausse date locale et se recharge le lendemain côté serveur', async () => {
   await service.importChapter(context(), input)
   await service.importChapter(context(), input)
@@ -149,7 +225,7 @@ test('un cours vide, illisible, trop long ou d’un format inconnu ne consomme a
   await expect(service.importChapter(context(), { ...input, text: '  ' })).rejects.toThrow('vide')
   await expect(service.importChapter(context(), { ...input, text: 'a'.repeat(100001) })).rejects.toThrow('trop long')
   await expect(service.importChapter(context(), { title: input.title, subject: input.subject, file: { path: join(directory, 'absent.pdf'), filename: 'cours.pdf', mimeType: 'application/pdf' } })).rejects.toThrow('illisible')
-  await expect(service.importChapter(context(), { title: input.title, subject: input.subject, file: { path: join(directory, 'photo.jpg'), filename: 'photo.jpg', mimeType: 'image/jpeg' } })).rejects.toThrow('Format non pris en charge')
+  await expect(service.importChapter(context(), { title: input.title, subject: input.subject, file: { path: join(directory, 'cours.exe'), filename: 'cours.exe', mimeType: 'image/jpeg' } })).rejects.toThrow('Format non pris en charge')
   const path = join(directory, 'vide.txt')
   await writeFile(path, '')
   await expect(service.importChapter(context(), { title: input.title, subject: input.subject, file: { path, filename: 'vide.txt', mimeType: 'text/plain' } })).rejects.toThrow('vide')
@@ -157,10 +233,10 @@ test('un cours vide, illisible, trop long ou d’un format inconnu ne consomme a
 })
 
 
-test('un fichier dépassant 10 Mo est refusé sans consommer le quota', async () => {
-  const path = join(directory, 'volumineux.txt')
+test.each(['txt', 'jpg'])('un fichier %s dépassant 10 Mo est refusé sans consommer le quota', async extension => {
+  const path = join(directory, `volumineux.${extension}`)
   await writeFile(path, '')
   await truncate(path, 10 * 1024 * 1024 + 1)
-  await expect(service.importChapter(context(), { title: input.title, subject: input.subject, file: { path, filename: 'volumineux.txt', mimeType: 'text/plain' } })).rejects.toThrow('10 Mo')
+  await expect(service.importChapter(context(), { title: input.title, subject: input.subject, file: { path, filename: `volumineux.${extension}`, mimeType: 'application/octet-stream' } })).rejects.toThrow('10 Mo')
   expect((await service.getImportQuota(context())).remaining).toBe(3)
 })

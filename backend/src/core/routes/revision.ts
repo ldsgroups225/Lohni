@@ -3,10 +3,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { parseMultipart } from '../../lib/parser/upload'
 import { RevisionError, RevisionService, type RevisionContext } from '../../services/revision/service'
-import { generateCards } from '../../services/revision/generator'
+import { generateCards, transcribePhoto } from '../../services/revision/generator'
 import { sqlite } from '../../utils/database/sqlite'
 
-const revision = new RevisionService({ db: sqlite, now: () => new Date(), generateCards })
+const revision = new RevisionService({ db: sqlite, now: () => new Date(), generateCards, transcribePhoto })
 
 export function revisionRoutes(app: any) {
   const route = (method: string, path: string, handle: (context: RevisionContext, req: any) => Promise<unknown>) => {
