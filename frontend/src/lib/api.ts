@@ -623,6 +623,10 @@ export type RevisionChapter = {
 export type RevisionCardInput = { kind: 'basic'; question: string; answer: string } | {
   kind: 'mcq'; question: string; answer: string; options: string[]; correct: number;
 };
+export type RevisionHome = {
+  profile: RevisionProfile; daysUntilExam: number | null; totalCards: number;
+  cardCount: number; estimatedMinutes: number; state: 'ready' | 'done' | 'empty';
+};
 
 async function revisionRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   let deviceId = localStorage.getItem('lohni-device-id');
@@ -648,8 +652,9 @@ async function revisionRequest<T>(path: string, method = 'GET', body?: unknown):
 }
 
 export const revisionAPI = {
-  profile: () => revisionRequest<RevisionProfile | null>('/profile'),
+  home: () => revisionRequest<RevisionHome | null>('/home'),
   progress: () => revisionRequest<RevisionProgress>('/progress'),
+  profile: () => revisionRequest<RevisionProfile | null>('/profile'),
   chapters: () => revisionRequest<RevisionChapter[]>('/chapters'),
   deleteChapter: (id: string) => revisionRequest<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),
   updateCard: (id: string, card: RevisionCardInput) => revisionRequest<null>(`/cards/${encodeURIComponent(id)}`, 'PUT', card),

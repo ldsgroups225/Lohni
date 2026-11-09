@@ -294,6 +294,7 @@ test('supprimer un chapitre retire ses cartes de la session et des jours suivant
   expect(session.complete).toBe(true)
   expect(session.cards.slice(session.position)).toEqual([])
   expect(await service.getProgress(context())).toMatchObject({ xp: 10, streak: 0 })
+  expect((await service.getHome(context()))?.state).toBe('empty')
   now = new Date('2026-12-09T12:00:00Z')
   expect((await service.getSession(context())).cards).toEqual([])
   generated = cards(1)

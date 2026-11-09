@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { revisionAPI, type RevisionProfile, type RevisionSession, type RevisionProgress } from '../lib/api'
 
 export default function Revision() {
@@ -10,7 +10,6 @@ export default function Revision() {
   const [error, setError] = useState('')
   const [revealed, setRevealed] = useState(false)
   const [choice, setChoice] = useState<number>()
-  const [schoolClass, setSchoolClass] = useState('')
   const [subject, setSubject] = useState('')
   const [title, setTitle] = useState('')
   const startedAt = useRef(Date.now())
@@ -60,7 +59,6 @@ export default function Revision() {
   function generate(event: FormEvent) {
     event.preventDefault()
     void run(async () => {
-      if (!profile) setProfile(await revisionAPI.saveProfile({ schoolClass: schoolClass.trim(), subjects: [subject.trim()] }))
       setSubject(subject.trim())
       await revisionAPI.generateChapter({ subject: subject.trim(), title: title.trim() })
       display(await revisionAPI.continue())
@@ -73,6 +71,8 @@ export default function Revision() {
       durationMs: Math.max(0, Date.now() - startedAt.current),
     })))
   }
+
+  if (!busy && !error && !profile) return <Navigate to="/" replace />
 
   return (
     <main className="min-h-screen px-4 pt-8 pb-36 md:pl-28">
@@ -130,17 +130,15 @@ export default function Revision() {
             {session.position > 0 && <p className="text-lg text-green-300">{session.earnedXP} XP gagnés pendant cette session</p>}
             {progress && <p>{progress.xp} XP au total · Série : {progress.streak} jour{progress.streak > 1 ? 's' : ''}</p>}
             <p className="text-sm text-stone-400">10 XP par carte sue, 2 XP par oubli et 50 XP à la fin d’une session.</p>
+            {session.position > 0 && <p>Pour réviser ton vrai cours, <Link to="/courses" className="text-sky-300 underline">importe ton cours</Link> : il deviendra un chapitre avec tes propres cartes.</p>}
             <button className={button} disabled={busy} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer</button>
           </section>}
-          <form onSubmit={generate} className="space-y-4 rounded-2xl border border-stone-800 p-6">
-            <h2 className="text-xl text-white">{profile ? 'Préparer un chapitre' : 'Commence ta première révision'}</h2>
-            {!profile && <label className="block space-y-2"><span>Ta classe</span><input className={input} required value={schoolClass} onChange={e => setSchoolClass(e.target.value)} placeholder="Ex. : 3e" /></label>}
-            <label className="block space-y-2"><span>Matière</span>{profile
-              ? <select className={input} required value={subject} onChange={e => setSubject(e.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select>
-              : <input className={input} required value={subject} onChange={e => setSubject(e.target.value)} placeholder="Ex. : Mathématiques" />}</label>
+          {profile && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-stone-800 p-6">
+            <h2 className="text-xl text-white">Préparer un chapitre</h2>
+            <label className="block space-y-2"><span>Matière</span><select className={input} required value={subject} onChange={e => setSubject(e.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
             <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex. : Les fractions" /></label>
             <button className={button} disabled={busy}>Générer mes cartes</button>
-          </form>
+          </form>}
         </>}
         <footer className="text-xs text-stone-500">Lohni, basé sur <a href="https://github.com/CaviraOSS/PageLM" className="underline">PageLM</a></footer>
       </div>

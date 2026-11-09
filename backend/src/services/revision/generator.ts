@@ -1,9 +1,9 @@
 import { askWithContext } from '../../lib/ai/ask'
 import { handleQuiz } from '../quiz'
-import type { GeneratedChapter } from './service'
+import { RevisionError, type GeneratedChapter } from './service'
 
-export async function generateCards(input: { title: string; subject: string; schoolClass: string }): Promise<GeneratedChapter> {
-  const topic = `${input.subject} : ${input.title}, classe de ${input.schoolClass}, programme ivoirien`
+export async function generateCards(input: { title: string; subject: string; schoolClass: string; series?: string }): Promise<GeneratedChapter> {
+  const topic = `${input.subject} : ${input.title}, classe de ${input.schoolClass}${input.series ? `, série ${input.series}` : ''}, programme ivoirien`
   const lesson = await askWithContext({
     question: `Prépare un court résumé et exactement cinq cartes de révision sur ${topic}.`,
     context: 'Chapitre proposé sans cours importé. Ne présente que des connaissances établies, adaptées au niveau de cet élève.',
@@ -13,6 +13,7 @@ export async function generateCards(input: { title: string; subject: string; sch
 Produis exactement cinq cartes différentes. Les cartes sont générées par IA et peuvent être supprimées par l’élève.`,
     cacheScope: 'revision',
   })
+  if (lesson.flashcards.length !== 5) throw new RevisionError('L’IA n’a pas préparé les dix cartes attendues. Réessaie ce chapitre.')
   const quiz = await handleQuiz(topic, 'fr')
   return {
     summary: lesson.answer,
