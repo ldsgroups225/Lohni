@@ -5,6 +5,7 @@ import { extractText } from '../../lib/parser/extract'
 import type { UpFile } from '../../lib/parser/upload'
 import type { SQLiteDatabase } from '../../utils/database/sqlite'
 import { REVISION_POLICY as policy } from './policy'
+import { advanceSession } from './session'
 import { createEmptyCard, fsrs, Rating } from 'ts-fsrs'
 import { validItem } from '../quiz/validation'
 
@@ -18,7 +19,7 @@ export type GeneratedChapter = { summary: string; notes: { content: string; card
 export type ProfileInput = { schoolClass: string; series?: string; subjects: string[]; examDate?: string }
 export type RevisionCard = GeneratedCard & { id: string; chapterId: string; origin: 'ai' | 'import'; due: string; reviews: number }
 export type RevisionSession = { id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number }
-export type RevisionAnswer = { sessionId: string; cardId: string; position: number; knew: boolean; choice?: number; durationMs: number }
+export type RevisionAnswer = { answerId?: string; sessionId: string; cardId: string; position: number; knew: boolean; choice?: number; durationMs: number }
 export type MasteryStatus = 'Fragile' | 'En cours' | 'Solide'
 export type RevisionChapter = {
   id: string; subjectId: string; subject: string; title: string; summary: string; origin: 'ai' | 'import';
@@ -56,6 +57,10 @@ export class RevisionService {
         `CREATE INDEX IF NOT EXISTS revision_cards_due ON revision_cards(device_id, due)`,
         `CREATE TABLE IF NOT EXISTS revision_journal (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, card_id TEXT NOT NULL, session_id TEXT NOT NULL, position INTEGER NOT NULL, reviewed_at TEXT NOT NULL, local_date TEXT NOT NULL, knew INTEGER NOT NULL, duration_ms INTEGER NOT NULL, scheduling TEXT NOT NULL, session_complete INTEGER NOT NULL DEFAULT 0, UNIQUE(session_id, position))`,
       ]) await dependencies.db.run(sql)
+      if (!(await dependencies.db.all('PRAGMA table_info(revision_journal)')).some(column => column.name === 'client_answer_id')) {
+        await dependencies.db.run('ALTER TABLE revision_journal ADD COLUMN client_answer_id TEXT')
+      }
+      await dependencies.db.run('CREATE UNIQUE INDEX IF NOT EXISTS revision_answer_replay ON revision_journal(device_id, client_answer_id)')
       if (!(await dependencies.db.all('PRAGMA table_info(revision_subjects)')).some(column => column.name === 'selected')) {
         await dependencies.db.run('ALTER TABLE revision_subjects ADD COLUMN selected INTEGER NOT NULL DEFAULT 1')
       }
@@ -298,11 +303,19 @@ export class RevisionService {
   async answer(context: RevisionContext, input: RevisionAnswer): Promise<RevisionSession> {
     return this.execute(context, async () => {
       if (!input || !nonempty(input.sessionId) || !nonempty(input.cardId) || typeof input.knew !== 'boolean' || !Number.isInteger(input.position) || input.position < 0 || !Number.isSafeInteger(input.durationMs) || input.durationMs < 0) throw new RevisionError('Réponse invalide.')
+      if (input.answerId !== undefined && (typeof input.answerId !== 'string' || !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(input.answerId))) throw new RevisionError('Identifiant de réponse invalide.')
       const durationMs = Math.min(input.durationMs, policy.sessionMinutes * 60000)
       const db = this.dependencies.db
       const saved = await db.get('SELECT state FROM revision_sessions WHERE id = ? AND device_id = ? AND local_date = ?', [input.sessionId, context.deviceId, context.localDate])
       if (!saved) throw new RevisionError('Session introuvable.')
       const session: RevisionSession = JSON.parse(saved.state)
+      if (input.answerId) {
+        const replay = await db.get('SELECT session_id, card_id, position FROM revision_journal WHERE device_id = ? AND client_answer_id = ?', [context.deviceId, input.answerId])
+        if (replay) {
+          if (replay.session_id !== input.sessionId || replay.card_id !== input.cardId || replay.position !== input.position) throw new RevisionError('Identifiant de réponse déjà utilisé.')
+          return this.sessionResult(session)
+        }
+      }
       const previous = await db.get('SELECT card_id FROM revision_journal WHERE session_id = ? AND position = ?', [input.sessionId, input.position])
       if (previous?.card_id === input.cardId) return this.sessionResult(session)
       const card = session.cards[session.position]
@@ -316,24 +329,9 @@ export class RevisionService {
       await db.run('UPDATE revision_cards SET scheduling = ?, due = ?, reviews = reviews + 1 WHERE id = ? AND device_id = ?', [JSON.stringify(scheduled.card), scheduled.card.due.toISOString(), card.id, context.deviceId])
       card.due = scheduled.card.due.toISOString()
       card.reviews = row.reviews + 1
-      if (!knew && !session.repeated.includes(card.id)) {
-        // Une reprise remplace une carte encore à voir ; la dernière peut ajouter une 21e réponse.
-        if (session.cards.length >= policy.sessionCards) {
-          for (let i = session.cards.length - 1; i > session.position; i--) {
-            if (!session.repeated.includes(session.cards[i].id)) {
-              session.cards.splice(i, 1)
-              break
-            }
-          }
-        }
-        session.cards.push({ ...card })
-        session.repeated.push(card.id)
-      }
-      session.position++
-      session.elapsedMs += durationMs
-      session.complete = session.position >= session.cards.length || session.elapsedMs >= policy.sessionMinutes * 60000
-      await db.run(`INSERT INTO revision_journal (id, device_id, card_id, session_id, position, reviewed_at, local_date, knew, duration_ms, scheduling, session_complete)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [randomUUID(), context.deviceId, card.id, session.id, input.position, now.toISOString(), context.localDate, Number(knew), durationMs, JSON.stringify(scheduled), Number(session.complete)])
+      advanceSession(session, knew, durationMs)
+      await db.run(`INSERT INTO revision_journal (id, device_id, card_id, session_id, position, reviewed_at, local_date, knew, duration_ms, scheduling, session_complete, client_answer_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [randomUUID(), context.deviceId, card.id, session.id, input.position, now.toISOString(), context.localDate, Number(knew), durationMs, JSON.stringify(scheduled), Number(session.complete), input.answerId ?? null])
       await db.run('UPDATE revision_sessions SET state = ? WHERE id = ?', [JSON.stringify(session), session.id])
       return this.sessionResult(session)
     })

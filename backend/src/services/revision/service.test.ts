@@ -321,3 +321,44 @@ test('la modification valide aussi les QCM et ne permet pas de toucher les carte
   expect(session.complete).toBe(true)
   expect((await service.getProgress(context())).xp).toBe(60)
 })
+
+test('une réponse hors ligne rejouée après redémarrage ne compte qu’une fois et son identifiant ne peut pas servir à une autre carte', async () => {
+  await setup(2)
+  const session = await service.getSession(context())
+  const input = { answerId: randomUUID(), sessionId: session.id, cardId: session.cards[0].id, position: 0, knew: false, durationMs: 1500 }
+  await service.answer(context(), input)
+  await db.close()
+  db = new SQLiteDatabase(join(directory, 'test.sqlite'))
+  service = new RevisionService({ db, now: () => now, generateCards: async () => generated })
+  now = new Date('2026-11-10T12:00:00Z')
+  const originalDay = { deviceId, localDate: session.localDate }
+  const resumed = await service.answer(originalDay, input)
+  expect(resumed.position).toBe(1)
+  expect(resumed.cards.filter(card => card.id === input.cardId)).toHaveLength(2)
+  expect(await service.getProgress(originalDay)).toMatchObject({ xp: 2, streak: 0 })
+  await expect(service.answer(originalDay, { ...input, position: 1, cardId: resumed.cards[1].id })).rejects.toThrow('Identifiant de réponse déjà utilisé')
+  const final = await service.answer(originalDay, { ...input, answerId: randomUUID(), position: 1, cardId: resumed.cards[1].id, knew: true })
+  await service.answer(originalDay, { ...input, answerId: randomUUID(), position: 2, knew: true })
+  await service.answer(originalDay, input)
+  expect((await service.getSession(originalDay)).complete).toBe(true)
+  expect(await service.getProgress(originalDay)).toMatchObject({ xp: 72, streak: 1 })
+  expect(final.position).toBe(2)
+})
+
+test('les identifiants de réponse invalides sont refusés et les rejouages concurrents restent isolés par appareil', async () => {
+  await setup(1)
+  const session = await service.getSession(context())
+  const input = { answerId: 'invalide', sessionId: session.id, cardId: session.cards[0].id, position: 0, knew: true, durationMs: 1 }
+  await expect(service.answer(context(), input)).rejects.toThrow('Identifiant de réponse invalide')
+  expect((await service.getSession(context())).position).toBe(0)
+  input.answerId = randomUUID()
+  await Promise.all([service.answer(context(), input), service.answer(context(), input)])
+  expect(await service.getProgress(context())).toMatchObject({ xp: 60, streak: 1 })
+  expect((await service.listChapters(context()))[0].cards[0].reviews).toBe(1)
+  const other = { ...context(), deviceId: randomUUID() }
+  await service.saveProfile(other, { schoolClass: '3e', subjects: ['Mathématiques'] })
+  await service.generateChapter(other, { subject: 'Mathématiques', title: 'Fractions' })
+  const otherSession = await service.getSession(other)
+  await service.answer(other, { ...input, sessionId: otherSession.id, cardId: otherSession.cards[0].id })
+  expect(await service.getProgress(other)).toMatchObject({ xp: 60, streak: 1 })
+})
