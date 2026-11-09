@@ -36,8 +36,8 @@ export default function ImportCourse() {
   function submit(event: FormEvent) {
     event.preventDefault()
     void run(async () => {
-      if (mode === 'file' && (!file || file.size > 10 * 1024 * 1024)) throw new Error('Choisis un fichier de moins de 10 Mo.')
-      const chapter = await revisionAPI.importChapter({ title, subject, ...(mode === 'file' ? { file } : { text }) })
+      if (mode !== 'text' && (!file || file.size > 10 * 1024 * 1024)) throw new Error('Choisis un fichier de moins de 10 Mo.')
+      const chapter = await revisionAPI.importChapter({ title, subject, ...(mode !== 'text' ? { file } : { text }) })
       setImported(chapter)
       setQuota(await revisionAPI.importQuota())
     })
@@ -71,10 +71,10 @@ export default function ImportCourse() {
           <legend className="px-2 text-lg text-white">Un cours, un chapitre prêt à réviser</legend>
           <label className="block space-y-2"><span>Matière</span><select className={field} required value={subject} onChange={event => setSubject(event.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
           <label className="block space-y-2"><span>Titre du chapitre</span><input className={field} required maxLength={200} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. : Les fractions" /></label>
-          <label className="block space-y-2"><span>Source du cours</span><select className={field} value={mode} onChange={event => setMode(event.target.value)}><option value="text">Coller du texte</option><option value="file">Choisir un fichier</option></select></label>
+          <label className="block space-y-2"><span>Source du cours</span><select className={field} value={mode} onChange={event => { setMode(event.target.value); setFile(undefined) }}><option value="text">Coller du texte</option><option value="file">Choisir un fichier</option><option value="photo">Photo de mon cahier</option></select></label>
           {mode === 'text'
             ? <label className="block space-y-2"><span>Texte du cours</span><textarea className={field} rows={10} required maxLength={100000} value={text} onChange={event => setText(event.target.value)} /></label>
-            : <label className="block space-y-2"><span>Fichier texte, PDF, Word (.docx) ou Markdown · 10 Mo maximum</span><input className={field} type="file" required accept=".txt,.pdf,.docx,.md,.markdown" onChange={event => setFile(event.target.files?.[0])} /></label>}
+            : <label className="block space-y-2"><span>{mode === 'photo' ? 'Photo nette et bien éclairée (JPEG, PNG, WebP) · 10 Mo maximum' : 'Fichier texte, PDF, Word (.docx) ou Markdown · 10 Mo maximum'}</span><input key={mode} className={field} type="file" required accept={mode === 'photo' ? 'image/jpeg,image/png,image/webp' : '.txt,.pdf,.docx,.md,.markdown'} onChange={event => setFile(event.target.files?.[0])} /></label>}
           <p className="text-sm text-stone-400">Le résumé, les cartes et les QCM sont créés automatiquement.</p>
           <button className={button}>Importer et créer mon chapitre</button>
         </fieldset>

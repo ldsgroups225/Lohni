@@ -1,4 +1,6 @@
-export type Msg = { role: 'user' | 'assistant' | 'system'; content: string }
+import type { MessageContent } from '@langchain/core/messages'
+
+export type Msg = { role: 'user' | 'assistant' | 'system'; content: MessageContent }
 
 export interface LLM {
   invoke(m: Msg[]): Promise<any>
