@@ -59,9 +59,9 @@ export default function Landing() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full px-4 lg:pl-28 lg:pr-4">
-      <div className="flex-1 flex flex-col justify-center max-w-4xl mx-auto my-20 md:my-4 w-full px-2">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl text-white font-semibold pl-3 border-l-2 border-sky-500 mb-8">
+    <div className="flex flex-col min-h-screen w-full px-4 pb-28 md:pb-4 lg:pl-28 lg:pr-4">
+      <div className="flex-1 flex flex-col justify-center max-w-4xl mx-auto pt-8 md:pt-0 my-4 w-full px-0 md:px-2">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl text-white font-semibold pl-3 border-l-2 border-sky-500 mb-5 md:mb-8">
           What&apos;d you like to learn today?
         </h1>
 
@@ -93,8 +93,8 @@ export default function Landing() {
 
         <div className="w-full md:w-fit flex">
           <div className="w-full md:w-fit md:min-w-fit p-1.5 rounded-2xl rounded-t-none bg-stone-950 flex flex-col items-start sm:items-center border border-stone-900 border-t-0 border-r-0 border-b-0 sm:border-b shadow-[inset_2px_-2px_15px] shadow-stone-900/80">
-            <div className="flex items-start justify-between md:justify-start space-x-2 p-1.5 w-full">
-              <div className="relative">
+            <div className="flex items-start justify-between md:justify-start space-x-1 md:space-x-2 p-1.5 w-full">
+              <div className="relative flex-1 md:flex-none">
                 <div
                   onClick={() => setShowMode(!showMode)}
                   className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-white/5 duration-300 transition-all cursor-pointer"
@@ -117,7 +117,7 @@ export default function Landing() {
                           setMode(opt as "Chat" | "Quiz");
                           setShowMode(false);
                         }}
-                        className={`px-3 py-2 cursor-pointer hover:bg-stone-800 transition rounded-lg ${mode === opt ? "text-sky-400" : "text-white"
+                        className={`px-3 py-3 md:py-2 cursor-pointer hover:bg-stone-800 transition rounded-lg ${mode === opt ? "text-sky-400" : "text-white"
                           }`}
                       >
                         {opt}
@@ -145,7 +145,7 @@ export default function Landing() {
 
               <div className="w-px h-8 mx-2 bg-white/10 rounded-full mt-2" />
 
-              <div className="relative">
+              <div className="relative flex-1 md:flex-none">
                 <div
                   onClick={() => setShowLength(!showLength)}
                   className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-white/5 duration-300 transition-all cursor-pointer">
@@ -159,7 +159,7 @@ export default function Landing() {
                 </div>
 
                 {showLength && (
-                  <div className="absolute top-full left-0 mt-1 p-1 w-40 bg-stone-950 border border-stone-800 rounded-xl shadow-lg z-20">
+                  <div className="absolute top-full right-0 md:right-auto md:left-0 mt-1 p-1 w-40 bg-stone-950 border border-stone-800 rounded-xl shadow-lg z-20">
                     {["Short", "Medium", "Long"].map((opt) => (
                       <div
                         key={opt}
@@ -167,7 +167,7 @@ export default function Landing() {
                           setResponseLength(opt as "Short" | "Medium" | "Long");
                           setShowLength(false);
                         }}
-                        className={`px-3 py-2 cursor-pointer hover:bg-stone-800 transition rounded-lg ${responseLength === opt ? "text-sky-400" : "text-white"
+                        className={`px-3 py-3 md:py-2 cursor-pointer hover:bg-stone-800 transition rounded-lg ${responseLength === opt ? "text-sky-400" : "text-white"
                           }`}
                       >
                         {opt}
