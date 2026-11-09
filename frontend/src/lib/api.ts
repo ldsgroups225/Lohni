@@ -609,15 +609,23 @@ export type RevisionCard = {
   options?: string[]; correct?: number; origin: 'ai' | 'import'; due: string; reviews: number;
 };
 export type RevisionSession = {
-  id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; elapsedMs: number;
+  id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; elapsedMs: number; earnedXP: number;
+};
+export type MasteryStatus = 'Fragile' | 'En cours' | 'Solide';
+export type RevisionProgress = {
+  streak: number; xp: number;
+  subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[];
+};
+export type RevisionChapter = {
+  id: string; subjectId: string; subject: string; title: string; summary: string; origin: 'ai' | 'import';
+  cards: RevisionCard[]; seenCards: number; mastery: number | null; status: MasteryStatus;
+};
+export type RevisionCardInput = { kind: 'basic'; question: string; answer: string } | {
+  kind: 'mcq'; question: string; answer: string; options: string[]; correct: number;
 };
 export type RevisionHome = {
   profile: RevisionProfile; daysUntilExam: number | null; totalCards: number;
   cardCount: number; estimatedMinutes: number; state: 'ready' | 'done' | 'empty';
-};
-export type RevisionProgress = {
-  streak: number; xp: number;
-  subjects: { subjectId: string; name: string; mastery: number | null; status: 'Fragile' | 'En cours' | 'Solide' }[];
 };
 
 async function revisionRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
@@ -651,6 +659,9 @@ export const revisionAPI = {
   home: () => revisionRequest<RevisionHome | null>('/home'),
   progress: () => revisionRequest<RevisionProgress>('/progress'),
   profile: () => revisionRequest<RevisionProfile | null>('/profile'),
+  chapters: () => revisionRequest<RevisionChapter[]>('/chapters'),
+  deleteChapter: (id: string) => revisionRequest<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),
+  updateCard: (id: string, card: RevisionCardInput) => revisionRequest<null>(`/cards/${encodeURIComponent(id)}`, 'PUT', card),
   saveProfile: (profile: RevisionProfile) => revisionRequest<RevisionProfile>('/profile', 'PUT', profile),
   generateChapter: (input: { subject: string; title: string }) => revisionRequest<{ id: string }>('/chapters', 'POST', input),
   importQuota: () => revisionRequest<RevisionImportQuota>('/import/quota'),
@@ -661,7 +672,6 @@ export const revisionAPI = {
     form.append('file', input.file);
     return revisionRequest<RevisionImportedChapter>('/import', 'POST', form);
   },
-  deleteChapter: (id: string) => revisionRequest<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),
   session: () => revisionRequest<RevisionSession>('/session'),
   continue: () => revisionRequest<RevisionSession>('/session/continue', 'POST'),
   answer: (answer: { sessionId: string; cardId: string; position: number; knew: boolean; choice?: number; durationMs: number }) => revisionRequest<RevisionSession>('/session/answer', 'POST', answer),

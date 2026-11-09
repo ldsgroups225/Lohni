@@ -22,9 +22,11 @@ export function revisionRoutes(app: any) {
     })
   }
   route('get', '/revision/profile', context => revision.getProfile(context))
+  route('get', '/revision/progress', context => revision.getProgress(context))
   route('get', '/revision/home', context => revision.getHome(context))
   route('put', '/revision/profile', (context, req) => revision.saveProfile(context, req.body))
   route('post', '/revision/chapters', (context, req) => revision.generateChapter(context, req.body))
+  route('get', '/revision/chapters', context => revision.listChapters(context))
   route('get', '/revision/import/quota', context => revision.getImportQuota(context))
   route('post', '/revision/import', async (context, req) => {
     if (!req.headers['content-type']?.includes('multipart/form-data')) {
@@ -50,4 +52,5 @@ export function revisionRoutes(app: any) {
   route('post', '/revision/session/continue', context => revision.getSession(context, true))
   route('post', '/revision/session/answer', (context, req) => revision.answer(context, req.body))
   route('delete', '/revision/cards/:id', (context, req) => revision.deleteCard(context, req.params.id))
+  route('put', '/revision/cards/:id', (context, req) => revision.updateCard(context, req.params.id, req.body))
 }
