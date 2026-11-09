@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { revisionAPI, type RevisionProfile, type RevisionSession } from '../lib/api'
+import { revisionAPI, type RevisionProfile, type RevisionSession, type RevisionProgress } from '../lib/api'
 
 export default function Revision() {
   const [profile, setProfile] = useState<RevisionProfile | null>(null)
   const [session, setSession] = useState<RevisionSession | null>(null)
+  const [progress, setProgress] = useState<RevisionProgress | null>(null)
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState('')
   const [revealed, setRevealed] = useState(false)
@@ -47,6 +48,14 @@ export default function Revision() {
     void load()
     return () => { active = false }
   }, [])
+  useEffect(() => {
+    if (!session?.complete) return
+    let active = true
+    revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(error => {
+      if (active) setError(error instanceof Error ? error.message : 'Impossible de charger ta progression.')
+    })
+    return () => { active = false }
+  }, [session?.id, session?.complete])
 
   function generate(event: FormEvent) {
     event.preventDefault()
@@ -70,7 +79,7 @@ export default function Revision() {
       <div className="mx-auto max-w-xl space-y-6">
         <header className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-semibold text-white">Session de révision</h1>
-          <Link to="/" className="underline">Accueil</Link>
+          <div className="flex gap-4"><Link to="/courses" className="underline">Cours</Link><Link to="/" className="underline">Accueil</Link></div>
         </header>
         {error && <div role="alert" className="rounded-xl border border-red-800 p-4 text-red-200">{error}
           <button className="ml-3 underline" disabled={busy} onClick={() => void run(async () => {
@@ -78,6 +87,7 @@ export default function Revision() {
             setProfile(saved)
             setSubject(saved?.subjects[0] ?? '')
             if (saved) display(await revisionAPI.session())
+            setProgress(await revisionAPI.progress())
           })}>Réessayer</button>
         </div>}
         {busy && <p role="status">Chargement…</p>}
@@ -117,6 +127,9 @@ export default function Revision() {
           {session && <section className="space-y-4 rounded-2xl border border-stone-800 p-6" aria-live="polite">
             <h2 className="text-xl text-white">{session.position > 0 ? 'Session terminée !' : 'Aucune carte à réviser pour le moment'}</h2>
             <p>{session.position > 0 ? `${session.position} réponses enregistrées. Tu peux revenir demain ou continuer les cartes restantes.` : 'Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.'}</p>
+            {session.position > 0 && <p className="text-lg text-green-300">{session.earnedXP} XP gagnés pendant cette session</p>}
+            {progress && <p>{progress.xp} XP au total · Série : {progress.streak} jour{progress.streak > 1 ? 's' : ''}</p>}
+            <p className="text-sm text-stone-400">10 XP par carte sue, 2 XP par oubli et 50 XP à la fin d’une session.</p>
             <button className={button} disabled={busy} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer</button>
           </section>}
           <form onSubmit={generate} className="space-y-4 rounded-2xl border border-stone-800 p-6">

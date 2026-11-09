@@ -204,3 +204,119 @@ test('un élève peut déclarer un oubli même après avoir choisi la bonne opti
   expect(session.complete).toBe(false)
   expect(session.cards).toHaveLength(3)
 })
+
+test('les XP récompensent les réponses et une seule fin de session, même après reprise réseau', async () => {
+  await setup(2)
+  expect(await service.getProgress(context())).toMatchObject({ xp: 0, streak: 0 })
+  let session = await respond(await service.getSession(context()), true)
+  expect(await service.getProgress(context())).toMatchObject({ xp: 10, streak: 0 })
+  session = await respond(session, false)
+  expect(await service.getProgress(context())).toMatchObject({ xp: 12, streak: 0 })
+  const input = { sessionId: session.id, cardId: session.cards[session.position].id, position: session.position, knew: true, durationMs: 1 }
+  await Promise.all([service.answer(context(), input), service.answer(context(), input)])
+  expect(await service.getProgress(context())).toMatchObject({ xp: 72, streak: 1 })
+  expect((await service.getSession(context())).earnedXP).toBe(72)
+  await service.getSession(context(), true)
+  expect(await service.getProgress(context())).toMatchObject({ xp: 72, streak: 1 })
+  expect(await service.getProgress({ ...context(), deviceId: randomUUID() })).toEqual({ xp: 0, streak: 0, subjects: [] })
+})
+
+test('la série suit les jours locaux terminés, sans doubler le même jour, et casse après un jour sauté', async () => {
+  await setup(9)
+  await finish(await service.getSession(context()))
+  expect((await service.getProgress(context())).streak).toBe(1)
+  now = new Date('2026-11-10T12:00:00Z')
+  expect((await service.getProgress(context())).streak).toBe(1)
+  await finish(await service.getSession(context()))
+  generated = cards(1)
+  await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Encore' })
+  await finish(await service.getSession(context(), true))
+  expect((await service.getProgress(context())).streak).toBe(2)
+  expect((await service.getProgress({ ...context(), localDate: '2026-11-11' })).streak).toBe(2)
+  expect((await service.getProgress({ ...context(), localDate: '2026-11-12' })).streak).toBe(0)
+  now = new Date('2026-11-12T12:00:00Z')
+  await finish(await service.getSession(context()))
+  expect((await service.getProgress(context())).streak).toBe(1)
+})
+
+test('Cours regroupe les chapitres par matière et reste Fragile tant que moins de la moitié des cartes sont vues', async () => {
+  const chapter = await setup(12)
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques', 'Français'] })
+  expect(await service.listChapters(context())).toMatchObject([{
+    id: chapter.id, title: 'Fractions', subject: 'Mathématiques', summary: 'Les fractions', mastery: null, status: 'Fragile',
+  }])
+  expect((await service.listChapters(context()))[0].cards).toHaveLength(12)
+  await finish(await service.getSession(context()))
+  expect((await service.listChapters(context()))[0]).toMatchObject({ mastery: 100, status: 'Fragile' })
+  expect((await service.getProgress(context())).subjects).toEqual([
+    { subjectId: expect.any(String), name: 'Mathématiques', mastery: 100, status: 'Fragile' },
+    { subjectId: expect.any(String), name: 'Français', mastery: null, status: 'Fragile' },
+  ])
+  expect(await service.listChapters({ ...context(), deviceId: randomUUID() })).toEqual([])
+})
+
+test.each([
+  [0, 100, 100, 'Solide'], [4, 85, 86, 'Solide'], [5, 83, 85, 'En cours'],
+  [62, 60, 61, 'En cours'], [63, 59, 60, 'Fragile'],
+])('la maîtrise après %s jours respecte les seuils, avec exactement la moitié des cartes vues', async (days, minimum, maximum, status) => {
+  await setup(2)
+  await respond(await service.getSession(context()), true)
+  now = new Date(now.getTime() + Number(days) * 86400000)
+  const chapter = (await service.listChapters(context()))[0]
+  expect(chapter.mastery).toBeGreaterThanOrEqual(Number(minimum))
+  expect(chapter.mastery).toBeLessThanOrEqual(Number(maximum))
+  expect(chapter.status).toBe(status)
+  expect((await service.getProgress(context())).subjects[0]).toMatchObject({ mastery: chapter.mastery, status })
+})
+
+test('modifier une carte corrige aussi la session chargée et garde son apprentissage', async () => {
+  await setup(2)
+  let session = await respond(await service.getSession(context()), true)
+  const card = session.cards[1]
+  await service.updateCard(context(), card.id, { kind: 'basic', question: 'Question corrigée', answer: 'Réponse corrigée' })
+  session = await service.getSession(context())
+  expect(session.cards[1]).toMatchObject({ question: 'Question corrigée', answer: 'Réponse corrigée' })
+  await finish(session)
+  const learned = (await service.listChapters(context()))[0].cards[1]
+  await service.updateCard(context(), learned.id, { kind: 'basic', question: 'Précision', answer: 'Réponse précise' })
+  expect((await service.listChapters(context()))[0].cards[1]).toMatchObject({ question: 'Précision', due: learned.due, reviews: learned.reviews })
+  expect((await service.getProgress(context())).xp).toBe(70)
+})
+
+test('supprimer un chapitre retire ses cartes de la session et des jours suivants sans effacer les XP', async () => {
+  const deleted = await setup(3)
+  let session = await respond(await service.getSession(context()), true)
+  const other = { ...context(), deviceId: randomUUID() }
+  await expect(service.deleteChapter(other, deleted.id)).rejects.toThrow('Chapitre introuvable')
+  await service.deleteChapter(context(), deleted.id)
+  expect(await service.listChapters(context())).toEqual([])
+  session = await service.getSession(context())
+  expect(session.complete).toBe(true)
+  expect(session.cards.slice(session.position)).toEqual([])
+  expect(await service.getProgress(context())).toMatchObject({ xp: 10, streak: 0 })
+  now = new Date('2026-12-09T12:00:00Z')
+  expect((await service.getSession(context())).cards).toEqual([])
+  generated = cards(1)
+  const remaining = await service.generateChapter(context(), { subject: 'Mathématiques', title: 'À garder' })
+  await finish(await service.getSession(context(), true))
+  await service.deleteCard(context(), (await service.listChapters(context()))[0].cards[0].id)
+  expect(await service.getProgress(context())).toMatchObject({ xp: 70, streak: 1 })
+  expect((await service.listChapters(context()))[0]).toMatchObject({ id: remaining.id, mastery: null, status: 'Fragile', cards: [] })
+})
+
+test('la modification valide aussi les QCM et ne permet pas de toucher les cartes d’un autre appareil', async () => {
+  await setup(1)
+  const card = (await service.listChapters(context()))[0].cards[0]
+  const corrected = { kind: 'mcq' as const, question: 'Combien font deux et deux ?', answer: 'Quatre', options: ['Un', 'Deux', 'Trois', 'Quatre'], correct: 4 }
+  await expect(service.updateCard({ ...context(), deviceId: randomUUID() }, card.id, corrected)).rejects.toThrow('Carte introuvable')
+  await expect(service.updateCard(context(), card.id, { ...corrected, options: ['A', 'A', 'B', 'C'] })).rejects.toThrow('Carte invalide')
+  await expect(service.updateCard(context(), card.id, { ...corrected, correct: 1.5 })).rejects.toThrow('Carte invalide')
+  await expect(service.updateCard(context(), card.id, { kind: 'basic', question: ' ', answer: 'A' })).rejects.toThrow('Carte invalide')
+  expect((await service.listChapters(context()))[0].cards[0]).toEqual(card)
+  await service.updateCard(context(), card.id, corrected)
+  let session = await service.getSession(context())
+  expect(session.cards[0]).toMatchObject(corrected)
+  session = await respond(session, true, 4)
+  expect(session.complete).toBe(true)
+  expect((await service.getProgress(context())).xp).toBe(60)
+})

@@ -606,10 +606,22 @@ export function err(e: unknown) {
 export type RevisionProfile = { schoolClass: string; series?: string; subjects: string[]; examDate?: string };
 export type RevisionCard = {
   id: string; chapterId: string; kind: 'basic' | 'mcq'; question: string; answer: string;
-  options?: string[]; correct?: number; origin: 'ai'; due: string; reviews: number;
+  options?: string[]; correct?: number; origin: 'ai' | 'import'; due: string; reviews: number;
 };
 export type RevisionSession = {
-  id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; elapsedMs: number;
+  id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; elapsedMs: number; earnedXP: number;
+};
+export type MasteryStatus = 'Fragile' | 'En cours' | 'Solide';
+export type RevisionProgress = {
+  streak: number; xp: number;
+  subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[];
+};
+export type RevisionChapter = {
+  id: string; subjectId: string; subject: string; title: string; summary: string; origin: 'ai' | 'import';
+  cards: RevisionCard[]; seenCards: number; mastery: number | null; status: MasteryStatus;
+};
+export type RevisionCardInput = { kind: 'basic'; question: string; answer: string } | {
+  kind: 'mcq'; question: string; answer: string; options: string[]; correct: number;
 };
 
 async function revisionRequest<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
@@ -637,6 +649,10 @@ async function revisionRequest<T>(path: string, method = 'GET', body?: unknown):
 
 export const revisionAPI = {
   profile: () => revisionRequest<RevisionProfile | null>('/profile'),
+  progress: () => revisionRequest<RevisionProgress>('/progress'),
+  chapters: () => revisionRequest<RevisionChapter[]>('/chapters'),
+  deleteChapter: (id: string) => revisionRequest<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),
+  updateCard: (id: string, card: RevisionCardInput) => revisionRequest<null>(`/cards/${encodeURIComponent(id)}`, 'PUT', card),
   saveProfile: (profile: RevisionProfile) => revisionRequest<RevisionProfile>('/profile', 'PUT', profile),
   generateChapter: (input: { subject: string; title: string }) => revisionRequest<{ id: string }>('/chapters', 'POST', input),
   session: () => revisionRequest<RevisionSession>('/session'),
