@@ -26,7 +26,7 @@ export default function PromptBox({
 
   return (
     <div
-      className="rounded-3xl bg-stone-950 border border-stone-900 shadow-[inset_0_3px_15px] shadow-stone-900 flex items-start rounded-bl-none rounded-br-none md:rounded-br-3xl"
+      className="rounded-3xl bg-stone-950 border border-stone-900 shadow-[inset_0_3px_15px] shadow-stone-900 flex flex-col md:flex-row md:items-start rounded-bl-none rounded-br-none md:rounded-br-3xl"
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
@@ -51,7 +51,7 @@ export default function PromptBox({
         <textarea
           rows={1}
           placeholder="Ask me to teach you anything..."
-          className="w-full text-stone-200 bg-transparent rounded-2xl p-2.5 outline-none resize-none leading-6 min-h-[40px]"
+          className="w-full text-stone-200 bg-transparent rounded-2xl p-2.5 outline-none resize-none leading-6 min-h-[72px] md:min-h-[40px] text-base"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
@@ -64,9 +64,9 @@ export default function PromptBox({
         />
       </div>
 
-      <div className="h-full w-fit p-2 flex flex-col space-y-2">
+      <div className="w-full md:w-fit p-2 pt-0 md:pt-2 flex flex-row md:flex-col justify-between md:space-y-2">
         <button
-          className="rounded-full bg-stone-900 hover:bg-stone-800 duration-300 transition-all hover:text-white p-2.5"
+          className="rounded-full bg-stone-900 hover:bg-stone-800 duration-300 transition-all hover:text-white size-11 md:size-auto md:p-2.5 flex items-center justify-center"
           aria-label="Attach file"
           onClick={onPickFile}
           disabled={busy}
@@ -84,7 +84,7 @@ export default function PromptBox({
         <button
           onClick={onSend}
           disabled={busy || !value.trim()}
-          className="rounded-full bg-stone-900 hover:bg-stone-800 duration-300 transition-all hover:text-white p-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-full bg-sky-500 text-white md:bg-stone-900 md:text-inherit hover:bg-sky-400 md:hover:bg-stone-800 duration-300 transition-all md:hover:text-white size-11 md:size-auto md:p-2.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Send"
           title={busy ? "Please wait..." : "Send"}
         >

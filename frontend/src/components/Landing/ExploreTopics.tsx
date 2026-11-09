@@ -39,20 +39,20 @@ export default function ExploreTopics() {
       type="button"
       onClick={() => startTopic(title)}
       disabled={busy}
-      className={`w-full h-48 relative rounded-3xl border border-stone-900 bg-stone-950 
-                  hover:scale-105 transition-transform duration-200 ease-out 
+      className={`w-full h-32 sm:h-48 relative rounded-3xl border border-stone-900 bg-stone-950 
+                  md:hover:scale-105 active:scale-95 transition-transform duration-200 ease-out 
                   focus:outline-none focus:ring-2 focus:ring-stone-700 disabled:opacity-60 ${extra || ""}`}
       title={busy ? "Starting…" : `Learn ${title}`}
     >
-      <img src={imgSrc(title)} alt={title} className="w-full h-full rounded-3xl object-cover" draggable={false} />
+      <img src={imgSrc(title)} alt={title} className="w-full h-full rounded-3xl object-cover" loading="lazy" draggable={false} />
       <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-transparent to-black" />
-      <div className="absolute right-0 bottom-0 pr-4 pb-4 text-stone-200 text-xl sm:text-2xl">{title}</div>
+      <div className="absolute left-0 bottom-0 pl-4 pb-3 text-left text-stone-100 text-lg sm:text-2xl font-medium">{title}</div>
     </button>
   );
 
   return (
     <div className="mt-auto pb-4 pt-4 relative">
-      <div className="w-fit flex flex-col items-center mx-auto mb-8 cursor-pointer select-none" onClick={() => setOpen((v) => !v)}>
+      <div className="w-fit flex flex-col items-center mx-auto mb-5 md:mb-8 py-2 cursor-pointer select-none" onClick={() => setOpen((v) => !v)}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
@@ -73,10 +73,10 @@ export default function ExploreTopics() {
       </div>
 
       <div className="w-full max-w-4xl mx-auto overflow-hidden">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-3 md:mb-4">
           <Card title="Mathematics" />
           <Card title="English" />
-          <Card title="Science" extra="col-span-1 sm:col-span-2 lg:col-span-1" />
+          <Card title="Science" extra="col-span-2 md:col-span-1" />
         </div>
 
         <div
@@ -89,7 +89,7 @@ export default function ExploreTopics() {
           {moreRows.map((row, i) => (
             <div key={i} className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
               {row.map((title, j) => (
-                <Card key={title} title={title} extra={j === 2 ? "col-span-1 sm:col-span-2 lg:col-span-1" : ""} />
+                <Card key={title} title={title} extra={j === 2 ? "col-span-2 md:col-span-1" : ""} />
               ))}
             </div>
           ))}
