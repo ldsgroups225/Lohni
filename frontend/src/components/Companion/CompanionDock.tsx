@@ -116,7 +116,7 @@ export default function CompanionDock() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 px-4 py-3 rounded-2xl bg-sky-500/90 hover:bg-sky-500 text-white font-medium shadow-lg shadow-sky-500/30 transition-colors"
+          className="fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 px-4 py-3 rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg  transition-opacity"
         >
           Assistant de cours
         </button>
@@ -124,29 +124,29 @@ export default function CompanionDock() {
 
       <div
         className={cx(
-          "fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 w-[min(360px,calc(100vw-2rem))] max-h-[min(85vh,640px)] rounded-3xl border border-slate-800 bg-stone-950/95 backdrop-blur-xl shadow-2xl shadow-black/40 transition-all duration-300",
+          "fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 w-[min(360px,calc(100vw-2rem))] max-h-[min(85vh,640px)] rounded-3xl border border-border bg-surface backdrop-blur-xl shadow-2xl  transition-[transform,opacity] duration-300",
           open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
         )}
       >
-        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-white/5">
+        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-border">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-sky-300/80 mb-1">Assistant IA</div>
-            <div className="text-white text-base font-medium leading-snug">{headerTitle}</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-primary mb-1">Assistant IA</div>
+            <div className="text-foreground text-base font-medium leading-snug">{headerTitle}</div>
             {document?.filePath && (
-              <div className="text-[11px] text-stone-400 mt-1 truncate" title={document.filePath}>
+              <div className="text-[11px] text-muted mt-1 truncate" title={document.filePath}>
                 Contexte : {document.filePath}
               </div>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className={cx("inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px]", hasDocument ? "bg-emerald-500/10 text-emerald-300" : "bg-stone-800 text-stone-400")}>
+            <span className={cx("inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px]", hasDocument ? "bg-tint text-success" : "bg-border text-muted")}>
               <span className="w-2 h-2 rounded-full bg-current" />
               {hasDocument ? "Document associé" : "Aucun document"}
             </span>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="p-2 rounded-full hover:bg-white/10 text-stone-300 transition-colors"
+              className="p-2 rounded-full hover:bg-tint text-foreground transition-opacity"
               aria-label="Fermer l’assistant"
             >
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-4">
@@ -158,14 +158,14 @@ export default function CompanionDock() {
 
         <div ref={bodyRef} className="px-5 py-4 space-y-4 overflow-y-auto custom-scroll">
           {!hasDocument && (
-            <div className="text-sm text-stone-400">
+            <div className="text-sm text-muted">
               Ouvre une note ou un sujet pour utiliser l’assistant. Ses réponses s’appuieront sur ce document.
             </div>
           )}
 
           {hasDocument && !messages.length && (
             <div className="space-y-3">
-              <div className="text-sm text-stone-300 leading-relaxed">
+              <div className="text-sm text-foreground leading-relaxed">
                 Besoin d’un résumé, d’un quiz ou d’une explication ? Pose ta question sur ce document.
               </div>
               <div className="flex flex-wrap gap-2">
@@ -174,7 +174,7 @@ export default function CompanionDock() {
                     key={suggestion}
                     onClick={() => send(suggestion)}
                     disabled={disabled}
-                    className="px-3 py-1.5 rounded-full bg-stone-900/70 border border-stone-700 text-xs text-stone-200 hover:border-sky-500 hover:text-white transition-colors disabled:opacity-60"
+                    className="px-3 py-1.5 rounded-full bg-surface border border-border text-xs text-foreground hover:border-primary hover:text-foreground transition-opacity disabled:opacity-60"
                     type="button"
                   >
                     {suggestion}
@@ -190,25 +190,25 @@ export default function CompanionDock() {
                 className={cx(
                   "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
                   msg.role === "user"
-                    ? "bg-sky-500/10 border border-sky-500/30 text-sky-100"
-                    : "bg-stone-900/80 border border-stone-700 text-stone-100"
+                    ? "bg-tint border border-primary text-foreground"
+                    : "bg-surface border border-border text-foreground"
                 )}
               >
                 {msg.role === "assistant" ? (
                   <div className="space-y-3">
                     <MarkdownView md={msg.content} />
                     {msg.flashcards && msg.flashcards.length > 0 && (
-                      <div className="rounded-xl border border-sky-500/40 bg-sky-500/5 px-3 py-2">
-                        <div className="text-xs uppercase tracking-wide text-sky-300 mb-2">Cartes</div>
-                        <ul className="space-y-2 text-sm text-sky-100">
+                      <div className="rounded-xl border border-primary bg-tint px-3 py-2">
+                        <div className="text-xs uppercase tracking-wide text-primary mb-2">Cartes</div>
+                        <ul className="space-y-2 text-sm text-foreground">
                           {msg.flashcards.slice(0, 4).map((card, idx) => (
                             <li key={`${msg.id}-card-${idx}`}>
                               <div className="font-semibold">Q: <MarkdownView md={card.q} inline /></div>
-                              <div className="text-sky-100/90">A: <MarkdownView md={card.a} /></div>
+                              <div className="text-foreground">A: <MarkdownView md={card.a} /></div>
                             </li>
                           ))}
                           {msg.flashcards.length > 4 && (
-                            <li className="text-xs text-sky-200/80">
+                            <li className="text-xs text-muted">
                               +{msg.flashcards.length - 4} autres cartes créées dans cette réponse.
                             </li>
                           )}
@@ -225,7 +225,7 @@ export default function CompanionDock() {
 
           {busy && (
             <div className="flex justify-start">
-              <div className="px-4 py-2 rounded-2xl bg-stone-900/80 border border-stone-700 text-xs text-stone-300 animate-pulse">
+              <div className="px-4 py-2 rounded-2xl bg-surface border border-border text-xs text-foreground animate-pulse">
                 Réflexion…
               </div>
             </div>
@@ -238,7 +238,7 @@ export default function CompanionDock() {
           )}
         </div>
 
-        <div className="px-5 pb-5 pt-3 border-t border-white/5">
+        <div className="px-5 pb-5 pt-3 border-t border-border">
           <div className="flex items-center gap-2">
             <input
               value={input}
@@ -251,13 +251,13 @@ export default function CompanionDock() {
               }}
               placeholder={hasDocument ? "Pose une question sur ce document…" : "Ouvre un document pour commencer"}
               disabled={disabled && !hasDocument}
-              className="flex-1 px-4 py-2.5 rounded-2xl bg-stone-900/80 border border-stone-700 text-sm text-white placeholder-stone-500 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 rounded-2xl bg-surface border border-border text-sm text-foreground placeholder-muted focus:border-primary focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
             <button
               type="button"
               onClick={() => send()}
               disabled={disabled || !input.trim()}
-              className="px-4 py-2.5 rounded-2xl bg-sky-500 hover:bg-sky-400 text-white text-sm font-medium transition-colors disabled:opacity-50"
+              className="px-4 py-2.5 rounded-2xl bg-primary hover:bg-primary text-on-primary text-sm font-medium transition-opacity disabled:opacity-50"
             >
               Envoyer
             </button>

@@ -21,7 +21,7 @@ export default function QuestionCard({
             const isCorrect = showExp && i === q.correct;
             const isWrongSel = showExp && selected === i && i !== q.correct;
             const cls = [
-              "answer-option p-4 border rounded-xl cursor-pointer transition-all duration-200",
+              "answer-option p-4 border rounded-xl cursor-pointer transition-[transform,opacity] duration-200",
               "hover:border-border hover:bg-surface",
               "border-border",
               isSel ? "border-primary bg-tint" : "",
@@ -43,11 +43,11 @@ export default function QuestionCard({
         </div>
 
         <div className="mt-6 flex flex-col md:flex-row justify-between items-center">
-          <button onClick={onHint} className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground hover:text-foreground rounded-xl px-4 py-2 font-medium transition-all duration-300 flex items-center gap-2">
+          <button onClick={onHint} className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground hover:text-foreground rounded-xl px-4 py-2 font-medium transition-[transform,opacity] duration-300 flex items-center gap-2">
             <span className="text-lg">💡</span> Afficher un indice
           </button>
           <button onClick={onNext} disabled={selected == null}
-            className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground hover:text-foreground rounded-xl px-6 py-3 font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground hover:text-foreground rounded-xl px-6 py-3 font-medium transition-[transform,opacity] duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
             {isLast ? "Terminer le quiz" : "Question suivante"}
             <svg xmlns="http://www.w3.org/2000/svg" className="size-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>

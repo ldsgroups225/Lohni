@@ -8,6 +8,6 @@ body {
 }
 
 ::selection {
-    background: rgb(24, 24, 24);
-    color: skyblue;
+    background: var(--lohni-tint);
+    color: var(--lohni-foreground);
 }

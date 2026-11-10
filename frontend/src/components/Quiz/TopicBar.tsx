@@ -24,7 +24,7 @@ export default function TopicBar({
         <button
           onClick={onStart}
           disabled={disabled}
-          className="rounded-full bg-tint hover:bg-tint duration-300 transition-all hover:text-foreground px-5 py-3 disabled:opacity-50 flex items-center justify-center gap-2"
+          className="rounded-full bg-tint hover:bg-tint duration-300 transition-[transform,opacity] hover:text-foreground px-5 py-3 disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <>

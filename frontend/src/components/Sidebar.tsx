@@ -1,3 +1,4 @@
+import { revisionCardVisibility } from './ui/revisionPresentation'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { CoursesIcon, HomeIcon, ProfileIcon, TutorIcon } from './ui/NavigationIcons'
@@ -16,8 +17,8 @@ export default function Sidebar() {
   const indicator = useRef<HTMLSpanElement>(null)
   useEffect(() => {
     const update = (event: Event) => setCardVisible((event as CustomEvent<boolean>).detail)
-    window.addEventListener('revision-card-visibility', update)
-    return () => window.removeEventListener('revision-card-visibility', update)
+    window.addEventListener(revisionCardVisibility, update)
+    return () => window.removeEventListener(revisionCardVisibility, update)
   }, [])
   useEffect(() => {
     const move = () => {
@@ -41,8 +42,8 @@ export default function Sidebar() {
     <div ref={nav} className="relative flex justify-around md:h-full md:flex-col md:justify-center md:gap-5">
       <span ref={indicator} aria-hidden="true" className="navigation-indicator" />
       {tabs.map(tab => <Link key={tab.to} to={tab.to} aria-current={active === tab.to ? 'page' : undefined}
-        className={`relative flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-control p-2 text-xs focus-visible:outline-2 focus-visible:outline-secondary ${active === tab.to ? 'text-primary' : 'text-muted hover:bg-tint hover:text-foreground'}`}>
-        <tab.icon />
+        className={`relative flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-control p-2 text-xs focus-visible:outline-2 focus-visible:outline-secondary ${active === tab.to ? 'text-foreground' : 'text-muted hover:bg-tint hover:text-foreground'}`}>
+        <span className={active === tab.to ? 'text-primary' : undefined}><tab.icon /></span>
         {tab.label}
       </Link>)}
     </div>

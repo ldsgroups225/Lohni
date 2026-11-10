@@ -9,7 +9,7 @@ export default function App() {
   return (
     <CompanionProvider>
       <AdaptiveToastProvider
-        theme="dark"
+        theme="system"
       />
       <div className="bg-background text-foreground min-h-screen flex flex-col">
         <Sidebar />

@@ -28,7 +28,7 @@ export default function SmartNotes() {
   }
 
   return (
-    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-primary transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/10">
+    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-primary transition-[transform,opacity] duration-300  ">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -49,14 +49,14 @@ export default function SmartNotes() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Choisis ton sujet…"
-              className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:border-primary focus:ring-2 focus:ring-primary outline-none transition-all duration-300"
+              className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:border-primary focus:ring-2 focus:ring-primary outline-none transition-[transform,opacity] duration-300"
               onKeyDown={(e) => e.key === "Enter" && onGenerate()}
             />
           </div>
           <button
             onClick={onGenerate}
             disabled={busy || !topic.trim()}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed text-on-primary font-medium transition-all duration-300"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed text-on-primary font-medium transition-[transform,opacity] duration-300"
           >
             {busy ? "Création…" : "Créer"}
           </button>

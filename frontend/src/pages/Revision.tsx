@@ -1,3 +1,5 @@
+import { Button, ButtonLink } from '../components/ui/Button'
+import { revisionCardVisibility } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { CheckIcon, CloseIcon, FlameIcon } from '../components/ui/NavigationIcons'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
@@ -23,13 +25,12 @@ export default function Revision() {
   const [feedback, setFeedback] = useState<{ id: number; knew: boolean } | null>(null)
   const startedAt = useRef(Date.now())
   const card = session?.cards[session.position]
-  const button = 'rounded-xl bg-primary px-4 py-3 text-on-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-wait'
   const secondaryButton = 'rounded-xl border border-border bg-surface px-4 py-3 text-foreground disabled:opacity-50 disabled:cursor-wait'
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('revision-card-visibility', { detail: !!session && !session.complete && !!card }))
-    return () => { window.dispatchEvent(new CustomEvent('revision-card-visibility', { detail: false })) }
+    window.dispatchEvent(new CustomEvent(revisionCardVisibility, { detail: !!session && !session.complete && !!card }))
+    return () => { window.dispatchEvent(new CustomEvent(revisionCardVisibility, { detail: false })) }
   }, [session, card])
 
   useEffect(() => {
@@ -147,7 +148,7 @@ export default function Revision() {
         {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}
         {missed && <aside className="space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
           <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
-          <button className={button} disabled={busy || !sync.online} onClick={explain}>Explique-moi</button>
+          <Button disabled={busy || !sync.online} onClick={explain}>Explique-moi</Button>
         </aside>}
         {session && !session.complete && card ? (
           <section className="space-y-6" aria-label="Session de révision" aria-busy={busy}>
@@ -171,7 +172,7 @@ export default function Revision() {
                   {choice === card.correct ? 'Bonne réponse !' : <>Bonne réponse : <MarkdownView md={card.options?.[(card.correct ?? 1) - 1] ?? ''} inline /></>}
                 </p>}
                 <MarkdownView md={card.answer} />
-              </div> : <button className={button} disabled={busy || (card.kind === 'mcq' && choice === undefined)} onClick={() => setRevealed(true)}>Révéler la réponse</button>}
+              </div> : <Button disabled={busy || (card.kind === 'mcq' && choice === undefined)} onClick={() => setRevealed(true)}>Révéler la réponse</Button>}
             </article>
             {revealed && <div className="grid grid-cols-2 gap-3">
               <button className="flex items-center justify-center gap-1 whitespace-nowrap rounded-xl border border-border bg-surface px-2 py-3 text-sm text-foreground disabled:cursor-wait disabled:opacity-50 sm:text-base" disabled={busy} onClick={() => answer(false)}><CloseIcon />Je ne savais pas</button>
@@ -192,7 +193,7 @@ export default function Revision() {
               {!sync.pending && progress && <div className="rounded-2xl bg-tint p-4"><span className="flex items-center justify-center gap-2"><FlameIcon /><strong className="text-3xl"><AnimatedNumber value={progress.streak} /></strong></span><span>jour{progress.streak > 1 ? 's' : ''} de série</span></div>}
             </div>
             {!sync.pending && progress && <p><AnimatedNumber value={progress.xp} /> XP au total</p>}
-            <Link className={`${button} w-full text-center font-semibold`} to="/">Revenir à l’accueil</Link>
+            <ButtonLink className="w-full" to="/">Revenir à l’accueil</ButtonLink>
             <button className="text-primary underline disabled:opacity-50" disabled={busy || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer avec les cartes restantes</button>
           </section> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
             {!error && <Mascotte humeur="au repos" taille={112} />}
@@ -204,7 +205,7 @@ export default function Revision() {
             <h2 className="text-xl text-foreground">Préparer un chapitre</h2>
             <label className="block space-y-2"><span>Matière</span><select className={input} required value={subject} onChange={e => setSubject(e.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
             <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex. : Les fractions" /></label>
-            <button className={session && session.position > 0 ? secondaryButton : button} disabled={busy || !sync.online || sync.pending > 0}>Générer mes cartes</button>
+            {session && session.position > 0 ? <button className={secondaryButton} disabled={busy || !sync.online || sync.pending > 0}>Générer mes cartes</button> : <Button type="submit" disabled={busy || !sync.online || sync.pending > 0}>Générer mes cartes</Button>}
           </form>}
         </>}
         {profile && !(session && !session.complete && card) && !(session && session.position > 0) && <Link to="/import" className="block rounded-xl border border-border p-4 text-center text-foreground">Importer mon cours</Link>}

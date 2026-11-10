@@ -1,3 +1,5 @@
+import { Button, ButtonLink } from '../components/ui/Button'
+import { listDelay } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { Progress } from '../components/ui/Progress'
@@ -34,7 +36,7 @@ function CardEditor({ card, busy, onSave, onCancel }: {
         </select></label>
       </>}
       <label className="block space-y-2"><span>{card.kind === 'mcq' ? 'Explication' : 'Réponse'}</span><textarea className={input} required value={answer} onChange={event => setAnswer(event.target.value)} /></label>
-      <div className="flex flex-wrap gap-3"><button className={button}>Enregistrer</button><button type="button" className={button} onClick={onCancel}>Annuler</button></div>
+      <div className="flex flex-wrap gap-3"><Button type="submit">Enregistrer</Button><Button onClick={onCancel}>Annuler</Button></div>
     </fieldset>
   </form>
 }
@@ -72,7 +74,7 @@ export default function Courses() {
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-foreground">Cours</h1>
-        <div className="flex flex-wrap gap-3"><Link to="/import" className={button}>Importer mon cours</Link><Link to="/revision" className="rounded-xl border border-border px-4 py-3 text-foreground">Session du jour</Link></div>
+        <div className="flex flex-wrap gap-3"><ButtonLink to="/import">Importer mon cours</ButtonLink><Link to="/revision" className="rounded-xl border border-border px-4 py-3 text-foreground">Session du jour</Link></div>
       </header>
       {progress && <p className="rounded-2xl border border-border p-4" aria-live="polite">
         <strong className="text-foreground">{progress.xp} XP</strong> · Série : {progress.streak} jour{progress.streak > 1 ? 's' : ''}
@@ -91,10 +93,10 @@ export default function Courses() {
         const own = chapters.filter(chapter => chapter.subject === subject)
         return <section key={subject} style={{ animationDelay: `${Math.min(subjectIndex, 4) * 30}ms` }} className="motion-list space-y-4" aria-busy={busy}>
           <h2 className="text-xl font-semibold text-foreground">{subject}</h2>
-          {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: `${Math.min(index, 4) * 30}ms` }} className="motion-list space-y-4 rounded-2xl border border-border bg-surface p-5">
+          {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: listDelay(index) }} className="motion-list space-y-4 rounded-2xl border border-border bg-surface p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <h3 className="text-lg font-semibold text-foreground">{chapter.title}</h3>
-              <span className={chapter.status === 'Solide' ? 'text-foreground' : chapter.status === 'En cours' ? 'text-primary' : 'text-foreground'}>{chapter.status}</span>
+              <span className={chapter.status === 'En cours' ? 'text-primary' : 'text-foreground'}>{chapter.status}</span>
             </div>
             <p className="text-sm text-muted">{chapter.origin === 'ai' ? 'Généré par IA · Peut contenir des erreurs' : 'Cours importé'}</p>
             <p>{chapter.mastery === null ? 'Aucune carte vue' : <><AnimatedNumber value={Math.round(chapter.mastery)} /> % de rappel estimé</>} · {chapter.seenCards}/{chapter.cards.length} cartes vues</p>
@@ -112,10 +114,10 @@ export default function Courses() {
                   {card.kind === 'mcq' && <ol className="list-decimal space-y-1 pl-5">{card.options?.map((option, i) => <li key={i}><MarkdownView md={option} inline />{i + 1 === card.correct && <span className="text-foreground"> — Bonne réponse</span>}</li>)}</ol>}
                   <MarkdownView md={card.answer} />
                   <div className="flex flex-wrap gap-3">
-                    <button className={button} disabled={busy} onClick={() => setEditing(card.id)}>Modifier</button>
-                    <button className={`${button} text-foreground`} disabled={busy} onClick={() => {
+                    <Button disabled={busy} onClick={() => setEditing(card.id)}>Modifier</Button>
+                    <Button disabled={busy} onClick={() => {
                       if (window.confirm('Supprimer cette carte ? Elle ne sera plus proposée en révision.')) void run(async () => { await revisionAPI.deleteCard(card.id); await load() })
-                    }}>Supprimer la carte</button>
+                    }}>Supprimer la carte</Button>
                   </div>
                 </>}
               </article>)}</div>
@@ -133,7 +135,7 @@ export default function Courses() {
       <details className="rounded-2xl border border-border p-5">
         <summary className="cursor-pointer font-semibold text-foreground">Plus</summary>
         <nav aria-label="Autres outils" className="mt-4 grid grid-cols-2 gap-3">
-          {[['/exam', 'Examen'], ['/debate', 'Débat'], ['/tools', 'Podcast et autres outils'], ['/planner', 'Planning'], ['/quiz', 'Quiz libre']].map(([to, label]) => <Link key={to} to={to} className={button}>{label}</Link>)}
+          {[['/exam', 'Examen'], ['/debate', 'Débat'], ['/tools', 'Podcast et autres outils'], ['/planner', 'Planning'], ['/quiz', 'Quiz libre']].map(([to, label]) => <ButtonLink key={to} to={to}>{label}</ButtonLink>)}
         </nav>
       </details>
     </div>

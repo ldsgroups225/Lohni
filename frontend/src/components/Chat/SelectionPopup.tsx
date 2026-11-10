@@ -17,13 +17,13 @@ export default function SelectionPopup({ selected, addNote, askDoubt, popupRef }
     >
       <button
         onClick={() => addNote(selected.text)}
-        className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground px-3 py-1.5 rounded-lg text-xs transition-all duration-200 active:scale-95 mr-1"
+        className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground px-3 py-1.5 rounded-lg text-xs transition-[transform,opacity] duration-200 active:scale-95 mr-1"
       >
         📝 Enregistrer une note
       </button>
       <button
         onClick={() => askDoubt(selected.text)}
-        className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground px-3 py-1.5 rounded-lg text-xs transition-all duration-200 active:scale-95 ml-1"
+        className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground px-3 py-1.5 rounded-lg text-xs transition-[transform,opacity] duration-200 active:scale-95 ml-1"
       >
         ❓ Demander une explication
       </button>

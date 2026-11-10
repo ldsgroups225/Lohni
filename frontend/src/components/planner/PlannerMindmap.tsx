@@ -548,7 +548,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                     setZoom(newZoom)
                                 }}>
                                 <div className="pointer-events-none absolute -inset-2 opacity-35" style={{ background: `radial-gradient(22px 22px at 50% 65%, rgba(56,189,248,0.2), transparent 70%)` }} />
-                                <div onPointerDown={e => onDown(e, t.id)} className="cursor-grab active:cursor-grabbing rounded-full border bg-surface border-border pl-3 pr-1.5 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.4)] backdrop-blur flex items-center gap-1.5">
+                                <div onPointerDown={e => onDown(e, t.id)} className="cursor-grab active:cursor-grabbing rounded-full border bg-surface border-border pl-3 pr-1.5 py-1.5  backdrop-blur flex items-center gap-1.5">
                                     <div className="text-[12px] text-foreground whitespace-nowrap max-w-[260px] truncate">{t.title}</div>
                                     <button onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-foreground hover:text-foreground px-1 rounded hover:bg-tint">⋯</button>
                                 </div>
@@ -634,7 +634,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                         }} />
                         <div
                             onPointerDown={(e) => onDownCustom(e, n.id)}
-                            className="cursor-grab active:cursor-grabbing rounded-lg border bg-surface border-border px-2.5 py-1 shadow-[0_2px_8px_rgba(0,0,0,0.4)] backdrop-blur"
+                            className="cursor-grab active:cursor-grabbing rounded-lg border bg-surface border-border px-2.5 py-1  backdrop-blur"
                         >
                             <div className="flex items-center gap-2">
                                 {editingId === n.id ? (

@@ -1,20 +1,11 @@
 import { useEffect, useRef } from 'react'
 
-export function AnimatedNumber({ value, prefix = '', streak = false }: { value: number; prefix?: string; streak?: boolean }) {
+export function AnimatedNumber({ value, prefix = '', from = 0 }: { value: number; prefix?: string; from?: number | null }) {
   const visual = useRef<HTMLSpanElement>(null)
   useEffect(() => {
     const element = visual.current
     if (!element) return
-    let from = 0
-    if (streak) {
-      try {
-        const key = `lohni-last-streak:${localStorage.getItem('lohni-device-id') ?? ''}`
-        const previous = localStorage.getItem(key)
-        localStorage.setItem(key, String(value))
-        if (previous === null || !Number.isFinite(Number(previous)) || Number(previous) >= value) return
-        from = Number(previous)
-      } catch { return }
-    }
+    if (from === null) return
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
     if (motion.matches || from === value) return
     const durationToken = getComputedStyle(element).getPropertyValue('--duration-slow').trim()
@@ -35,6 +26,6 @@ export function AnimatedNumber({ value, prefix = '', streak = false }: { value: 
     element.textContent = `${prefix}${from}`
     frame = requestAnimationFrame(tick)
     return () => { cancelAnimationFrame(frame); motion.removeEventListener('change', stop) }
-  }, [value, prefix, streak])
+  }, [value, prefix, from])
   return <><span className="sr-only">{prefix}{value}</span><span aria-hidden="true" ref={visual}>{prefix}{value}</span></>
 }

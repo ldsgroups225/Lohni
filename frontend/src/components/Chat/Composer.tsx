@@ -51,7 +51,7 @@ export default function Composer({ disabled, onSend }: Props) {
             <button
               onClick={send}
               disabled={disabled}
-              className="rounded-full bg-tint hover:bg-tint duration-300 transition-all hover:text-foreground p-2.5 disabled:opacity-50"
+              className="rounded-full bg-tint hover:bg-tint duration-300 transition-[transform,opacity] hover:text-foreground p-2.5 disabled:opacity-50"
               aria-label="Envoyer"
               title={disabled ? "Patiente…" : "Envoyer"}
             >

@@ -103,7 +103,7 @@ export default function Landing() {
               <div className="relative flex-1 md:flex-none">
                 <div
                   onClick={() => setShowMode(!showMode)}
-                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-tint duration-300 transition-all cursor-pointer"
+                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer"
                 >
                   <div className="flex flex-col -space-y-0.5 pr-2">
                     <span className="text-xs text-foreground">Mode</span>
@@ -135,7 +135,7 @@ export default function Landing() {
 
               <div className="w-px h-8 mx-2 bg-tint rounded-full mt-2" />
 
-              <div className="p-1.5 rounded-xl hover:bg-tint duration-300 transition-all cursor-pointer min-w-fit h-fit hidden md:flex items-center space-x-4" onClick={onPickFile} title={stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}>
+              <div className="p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer min-w-fit h-fit hidden md:flex items-center space-x-4" onClick={onPickFile} title={stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}>
                 <div className="flex flex-col -space-y-0.5 pr-2">
                   <span className="text-xs text-foreground">{stagedFile ? "Fichier sélectionné" : "Ajouter des fichiers"}</span>
                   <span className="text-sm font-semibold text-foreground">{stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}</span>
@@ -154,7 +154,7 @@ export default function Landing() {
               <div className="relative flex-1 md:flex-none">
                 <div
                   onClick={() => setShowLength(!showLength)}
-                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-tint duration-300 transition-all cursor-pointer">
+                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer">
                   <div className="flex flex-col -space-y-0.5 pr-2">
                     <span className="text-xs text-foreground">Longueur de réponse</span>
                     <span className="text-sm font-semibold text-foreground">{responseLength}</span>

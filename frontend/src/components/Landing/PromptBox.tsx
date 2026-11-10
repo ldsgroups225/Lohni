@@ -66,7 +66,7 @@ export default function PromptBox({
 
       <div className="w-full md:w-fit p-2 pt-0 md:pt-2 flex flex-row md:flex-col justify-between md:space-y-2">
         <button
-          className="rounded-full bg-surface hover:bg-tint duration-300 transition-all hover:text-foreground size-11 md:size-auto md:p-2.5 flex items-center justify-center"
+          className="rounded-full bg-surface hover:bg-tint duration-300 transition-[transform,opacity] hover:text-foreground size-11 md:size-auto md:p-2.5 flex items-center justify-center"
           aria-label="Joindre un fichier"
           onClick={onPickFile}
           disabled={busy}
@@ -84,7 +84,7 @@ export default function PromptBox({
         <button
           onClick={onSend}
           disabled={busy || (!value.trim() && !stagedFileName)}
-          className="rounded-full bg-primary text-on-primary md:bg-surface md:text-inherit hover:bg-primary md:hover:bg-tint duration-300 transition-all md:hover:text-foreground size-11 md:size-auto md:p-2.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-full bg-primary text-on-primary md:bg-surface md:text-inherit hover:bg-primary md:hover:bg-tint duration-300 transition-[transform,opacity] md:hover:text-foreground size-11 md:size-auto md:p-2.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Envoyer"
           title={busy ? "Patiente…" : "Envoyer"}
         >

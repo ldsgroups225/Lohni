@@ -370,7 +370,7 @@ export default function Debate() {
                             <div className="flex gap-4">
                                 <button
                                     onClick={() => setPosition("for")}
-                                    className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-all ${position === "for"
+                                    className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-[transform,opacity] ${position === "for"
                                         ? "bg-secondary text-on-secondary shadow-lg shadow-green-600/30"
                                         : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
@@ -381,7 +381,7 @@ export default function Debate() {
                                 </button>
                                 <button
                                     onClick={() => setPosition("against")}
-                                    className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-all ${position === "against"
+                                    className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-[transform,opacity] ${position === "against"
                                         ? "bg-primary text-on-primary shadow-lg shadow-red-600/30"
                                         : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
@@ -396,7 +396,7 @@ export default function Debate() {
                         <button
                             onClick={startDebate}
                             disabled={!topic.trim()}
-                            className="w-full py-4 bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:from-tint disabled:to-tint disabled:cursor-not-allowed disabled:text-muted text-on-primary font-bold rounded-xl transition-all shadow-lg"
+                            className="w-full py-4 bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:from-tint disabled:to-tint disabled:cursor-not-allowed disabled:text-muted text-on-primary font-bold rounded-xl transition-[transform,opacity] shadow-lg"
                         >
                             Commencer le débat
                         </button>
@@ -443,7 +443,7 @@ export default function Debate() {
                                 setMessages([]);
                                 navigate("/debate");
                             }}
-                            className="px-4 py-2 bg-surface border border-border hover:bg-tint text-foreground rounded-lg transition-colors"
+                            className="px-4 py-2 bg-surface border border-border hover:bg-tint text-foreground rounded-lg transition-opacity"
                         >
                             Nouveau débat
                         </button>
@@ -495,7 +495,7 @@ export default function Debate() {
                                 )}
                             </div>
                             <div
-                                className={`px-6 py-4 rounded-2xl shadow-lg transition-all hover:shadow-xl ${msg.role === "user"
+                                className={`px-6 py-4 rounded-2xl shadow-lg transition-[transform,opacity] hover:shadow-xl ${msg.role === "user"
                                     ? session?.position === "for"
                                         ? "bg-gradient-to-br from-secondary to-secondary text-on-secondary shadow-green-600/20"
                                         : "bg-gradient-to-br from-primary to-primary text-on-primary shadow-red-600/20"
@@ -555,7 +555,7 @@ export default function Debate() {
                         <button
                             onClick={submitArgument}
                             disabled={!argument.trim() || isStreaming || isDebateEnded}
-                            className={`px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${session?.position === "for"
+                            className={`px-6 py-3 rounded-xl font-semibold transition-[transform,opacity] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${session?.position === "for"
                                 ? "bg-gradient-to-r from-secondary to-secondary hover:from-secondary hover:to-secondary text-on-secondary shadow-green-600/20"
                                 : "bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary text-on-primary shadow-red-600/20"
                                 }`}
@@ -574,7 +574,7 @@ export default function Debate() {
                         <button
                             onClick={handleSurrender}
                             disabled={isStreaming || messages.length === 0 || isDebateEnded}
-                            className="px-4 py-2 bg-tint hover:bg-tint border border-border hover:border-border text-foreground hover:text-foreground rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
+                            className="px-4 py-2 bg-tint hover:bg-tint border border-border hover:border-border text-foreground hover:text-foreground rounded-lg transition-[transform,opacity] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
                         >
                             🏳️ Terminer le débat
                         </button>
@@ -692,7 +692,7 @@ export default function Debate() {
                                         setAnalysis(null);
                                         navigate("/debate");
                                     }}
-                                    className="flex-1 py-3 bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary text-on-primary font-bold rounded-xl transition-all shadow-lg"
+                                    className="flex-1 py-3 bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary text-on-primary font-bold rounded-xl transition-[transform,opacity] shadow-lg"
                                 >
                                     Nouveau débat
                                 </button>
@@ -701,7 +701,7 @@ export default function Debate() {
                                         setIsDebateEnded(false);
                                         setAnalysis(null);
                                     }}
-                                    className="px-6 py-3 bg-surface border border-border hover:bg-tint text-foreground font-semibold rounded-xl transition-colors"
+                                    className="px-6 py-3 bg-surface border border-border hover:bg-tint text-foreground font-semibold rounded-xl transition-opacity"
                                 >
                                     Relire le débat
                                 </button>

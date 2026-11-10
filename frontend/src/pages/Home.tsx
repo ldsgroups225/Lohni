@@ -1,3 +1,5 @@
+import { ButtonLink } from '../components/ui/Button'
+import { humeurSerie, listDelay } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { FlameIcon } from '../components/ui/NavigationIcons'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
@@ -7,7 +9,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import Onboarding from '../components/Revision/Onboarding'
-import { revisionAPI, type RevisionHome, type RevisionProgress, type RevisionChapter } from '../lib/api'
+import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter } from '../lib/api'
 
 export default function Home() {
   const [home, setHome] = useState<RevisionHome | null>(null)
@@ -38,7 +40,17 @@ export default function Home() {
     void load()
     return () => { active = false }
   }, [attempt])
-  const button = 'block w-full rounded-2xl bg-primary p-5 text-center text-xl font-semibold text-on-primary hover:opacity-90'
+  const [streakFrom, setStreakFrom] = useState<number | null>(null)
+  useEffect(() => {
+    if (!progress) return
+    try {
+      const key = `lohni-last-streak:${revisionDeviceId()}`
+      const previous = localStorage.getItem(key)
+      localStorage.setItem(key, String(progress.streak))
+      const value = Number(previous)
+      setStreakFrom(previous !== null && Number.isFinite(value) && value < progress.streak ? value : null)
+    } catch { setStreakFrom(null) }
+  }, [progress])
 
   return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
@@ -47,32 +59,32 @@ export default function Home() {
         <Mascotte humeur="désolée" taille={96} /><p>{error}</p><button className="underline" onClick={() => setAttempt(value => value + 1)}>Réessayer</button>
       </div> : !home ? <Onboarding /> : <>
         <header className="flex items-center gap-3">
-          <Mascotte humeur={home.state === "done" ? "en fête" : progress && progress.streak === 0 && progress.xp > 0 ? "endormie" : progress && progress.streak > 0 ? "contente" : "au repos"} taille={92} />
+          <Mascotte humeur={humeurSerie(progress?.streak, progress?.xp, home.state === 'done')} taille={92} />
           <div><h1 className="text-2xl font-bold">Salut !</h1><p className="text-muted">{home.cardCount} carte{home.cardCount > 1 ? 's' : ''} t’attend{home.cardCount > 1 ? 'ent' : ''} aujourd’hui.</p></div>
         </header>
         <p>{curriculum.find(item => item.schoolClass === home.profile.schoolClass)?.label ?? home.profile.schoolClass}{home.profile.series ? ` · Série ${home.profile.series}` : ''}</p>
         <div className="flex flex-wrap gap-4">
-          {progress && <p className="flex w-full items-center gap-3 rounded-2xl bg-tint px-4 py-3"><span className="text-primary"><FlameIcon /></span><strong className="text-2xl"><AnimatedNumber value={progress.streak} streak /></strong> jour{progress.streak > 1 ? 's' : ''} de série</p>}
+          {progress && <p className="flex w-full items-center gap-3 rounded-2xl bg-tint px-4 py-3"><span className="text-primary"><FlameIcon /></span><strong className="text-2xl"><AnimatedNumber value={progress.streak} from={streakFrom} /></strong> jour{progress.streak > 1 ? 's' : ''} de série</p>}
           {home.daysUntilExam !== null && <p className="rounded-xl border border-border px-4 py-3">{home.daysUntilExam > 0 ? `Examen dans ${home.daysUntilExam} jour${home.daysUntilExam > 1 ? 's' : ''}` : 'Date d’examen atteinte'}</p>}
         </div>
         <Card className="space-y-5 p-6">
           <h2 className="text-2xl font-semibold text-foreground">{home.state === 'done' ? 'Session du jour terminée !' : home.state === 'empty' ? 'Aucune carte à réviser' : 'Session du jour'}</h2>
           {home.state === 'ready' ? <>
             <p>{home.cardCount} carte{home.cardCount > 1 ? 's' : ''} · environ {home.estimatedMinutes} min</p>
-            <Link to="/revision" className={button}>Commencer</Link>
+            <ButtonLink to="/revision" className="block w-full rounded-2xl p-5 text-xl">Commencer</ButtonLink>
           </> : home.state === 'done' ? <>
             <p>Ta journée est faite. Reviens demain pour entretenir ce que tu as appris.</p>
             <Link to="/revision" className="block underline">Continuer les cartes restantes</Link>
           </> : <p>{home.totalCards === 0 ? 'Importe ton cours pour créer tes cartes ou prépare un premier chapitre.' : "Aucune carte n'est à réviser aujourd'hui."}</p>}
           {home.state === 'empty' && home.totalCards > 0 && <Link to="/courses" className="block underline">Voir mes cours</Link>}
-          {home.totalCards === 0 && <Link className={button} to="/revision">Préparer un chapitre</Link>}
+          {home.totalCards === 0 && <ButtonLink className="block w-full rounded-2xl p-5 text-xl" to="/revision">Préparer un chapitre</ButtonLink>}
           <Link to="/import" className="block text-primary underline">Importer mon cours</Link>
         </Card>
         {progress && <section className="space-y-4" aria-label="Maîtrise par matière"><h2 className="text-xl font-semibold text-foreground">Tes matières</h2>{progress.subjects.map((subject, index) => {
           const own = chapters?.filter(chapter => chapter.subjectId === subject.subjectId)
           const seen = own?.reduce((sum, chapter) => sum + chapter.seenCards, 0)
           const total = own?.reduce((sum, chapter) => sum + chapter.cards.length, 0)
-          return <article key={subject.subjectId} style={{ animationDelay: `${Math.min(index, 4) * 30}ms` }} className="motion-list rounded-xl border border-border p-4">
+          return <article key={subject.subjectId} style={{ animationDelay: listDelay(index) }} className="motion-list rounded-xl border border-border p-4">
           <div className="mb-3 flex justify-between gap-3"><h3>{subject.name}</h3><span>{subject.mastery === null ? 'Pas encore révisée' : <>{subject.status} · <AnimatedNumber value={Math.round(subject.mastery)} /> %</>}</span></div>
           {seen !== undefined && <p className="mb-2 text-sm text-muted">{seen} carte{seen > 1 ? 's' : ''} vue{seen > 1 ? 's' : ''} sur {total}</p>}
           <Progress className="mastery-progress w-full" max={100} value={subject.mastery ?? 0} aria-label={`Maîtrise en ${subject.name}`} />

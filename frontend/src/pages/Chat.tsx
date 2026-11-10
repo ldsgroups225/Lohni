@@ -267,7 +267,7 @@ export default function Chat() {
       {!showTopics && (
         <button
           onClick={() => setShowTopics(true)}
-          className="fixed top-5 right-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-surface text-xs font-medium shadow-lg backdrop-blur transition-colors"
+          className="fixed top-5 right-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-surface text-xs font-medium shadow-lg backdrop-blur transition-opacity"
           title="Afficher les cartes"
           aria-label="Afficher les cartes"
         >

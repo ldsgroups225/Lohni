@@ -7,7 +7,7 @@ export default function ReviewModal({ answers, onClose }:{ answers:UA[]; onClose
       <div className="bg-surface border border-border rounded-2xl p-6 max-w-2xl w-full">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-foreground">Revoir les réponses</h2>
-          <button onClick={onClose} className="p-2 hover:bg-surface rounded-xl transition-all duration-300">
+          <button onClick={onClose} className="p-2 hover:bg-surface rounded-xl transition-[transform,opacity] duration-300">
             <svg xmlns="http://www.w3.org/2000/svg" className="size-6 text-muted hover:text-foreground" fill="none" viewBox="0 0 24 24" strokeWidth="1.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/>
             </svg>
@@ -46,7 +46,7 @@ export default function ReviewModal({ answers, onClose }:{ answers:UA[]; onClose
         </div>
 
         <div className="mt-6 flex justify-end">
-          <button onClick={onClose} className="px-5 py-2 rounded-xl bg-surface hover:bg-tint border border-border text-foreground transition-colors">
+          <button onClick={onClose} className="px-5 py-2 rounded-xl bg-surface hover:bg-tint border border-border text-foreground transition-opacity">
             Fermer
           </button>
         </div>

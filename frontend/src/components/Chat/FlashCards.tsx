@@ -23,7 +23,7 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors"
+                className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-opacity"
                 title="Masquer les cartes"
                 aria-label="Masquer les cartes"
               >
@@ -47,7 +47,7 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
               return (
                 <div
                   key={`${i}-${title}`}
-                  className="group rounded-2xl bg-surface border border-border hover:bg-surface transition-colors shadow-[0_6px_24px_rgba(0,0,0,0.35)]"
+                  className="group rounded-2xl bg-surface border border-border hover:bg-surface transition-opacity "
                 >
                   <div className="p-5">
                     <div className="flex items-start gap-3">
@@ -62,7 +62,7 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
                       <button
                         disabled={disabled}
                         onClick={() => onAdd({ kind: "flashcard", title, content })}
-                        className="shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-tint transition-colors"
+                        className="shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-tint transition-opacity"
                         aria-label="Enregistrer dans mes révisions"
                         title="Enregistrer dans mes révisions"
                       >

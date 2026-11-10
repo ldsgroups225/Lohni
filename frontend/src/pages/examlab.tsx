@@ -140,7 +140,7 @@ export default function ExamLabs() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 rounded-xl bg-surface border border-border hover:bg-surface transition-colors"
+            className="p-2 rounded-xl bg-surface border border-border hover:bg-surface transition-opacity"
             aria-label="Retour"
           >
             <svg
@@ -171,7 +171,7 @@ export default function ExamLabs() {
           <div
             key={ex.id}
             onClick={() => start(ex.id)}
-            className="group rounded-2xl bg-surface border border-border p-5 cursor-pointer hover:border-primary transition-all duration-300 hover:shadow-lg hover:shadow-primary/10"
+            className="group rounded-2xl bg-surface border border-border p-5 cursor-pointer hover:border-primary transition-[transform,opacity] duration-300 hover:shadow-lg hover:shadow-primary/10"
           >
             <div className="flex items-center justify-between mb-2">
               <div className="text-lg font-semibold text-foreground">

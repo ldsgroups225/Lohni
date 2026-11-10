@@ -15,7 +15,7 @@ export default function BagDrawer({ open, items, onClose, onClear }: Props) {
       <div className="absolute right-4 top-4 bottom-4 w-96 bg-surface border border-border rounded-2xl p-6 overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">📝 My Learning Bag</h2>
-          <button onClick={onClose} className="p-2 hover:bg-surface rounded-xl transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-surface rounded-xl transition-opacity">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -47,7 +47,7 @@ export default function BagDrawer({ open, items, onClose, onClear }: Props) {
         </div>
 
         <div className="mt-4 pt-4 border-t border-border">
-          <button onClick={onClear} className="w-full bg-tint hover:bg-tint border border-primary text-foreground rounded-xl px-4 py-2 text-sm transition-colors">
+          <button onClick={onClear} className="w-full bg-tint hover:bg-tint border border-primary text-foreground rounded-xl px-4 py-2 text-sm transition-opacity">
             Clear All Items
           </button>
         </div>

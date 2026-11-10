@@ -1,3 +1,5 @@
+import { Button } from '../components/ui/Button'
+import { humeurSerie } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { useEffect, useState, type FormEvent } from 'react'
@@ -44,8 +46,8 @@ export default function Profile() {
       <h1 className="text-2xl font-semibold text-foreground">Moi</h1>
       {busy && <p role="status">Chargement…</p>}
       {error && <div role="alert"><Mascotte humeur="désolée" taille={96} /><p>{error}</p></div>}
-      {!error && progress && <Mascotte humeur={progress.streak > 0 ? "contente" : progress.xp > 0 ? "endormie" : "au repos"} taille={112} />}
-      {!error && !busy && !profile && <Mascotte humeur="au repos" taille={112} />}
+      {!error && progress && <Mascotte humeur={humeurSerie(progress.streak, progress.xp)} taille={112} />}
+      {!error && !busy && !profile && !progress && <Mascotte humeur="au repos" taille={112} />}
       {progress && <dl className="grid grid-cols-3 gap-3 rounded-2xl border border-border p-5 text-center">
         <div><dt>XP</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.xp} /></dd></div>
         <div><dt>Série de jours</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.streak} /></dd></div>
@@ -68,7 +70,7 @@ export default function Profile() {
         <p className="text-sm text-muted">Les cours des matières décochées restent dans Cours. Leurs cartes sont mises de côté jusqu’à ce que tu recoches la matière.</p>
         <label className="block space-y-2"><span>Date d’examen (facultative)</span><input className={input} disabled={busy} type="date" value={profile.examDate ?? ''} onChange={event => update({ examDate: event.target.value || undefined })} /></label>
         {!profile.subjects.length && <p role="status">Choisis au moins une matière.</p>}
-        <button disabled={busy || !profile.subjects.length} className="rounded-xl bg-primary px-5 py-3 text-on-primary hover:opacity-90 disabled:opacity-50">Enregistrer</button>
+        <Button type="submit" disabled={busy || !profile.subjects.length}>Enregistrer</Button>
         {saved && <p role="status" className="text-foreground">Ton profil est enregistré.</p>}
       </form> : !busy && !error && <p><Link to="/" className="underline">Commencer mon parcours</Link> pour créer mon profil.</p>}
       <footer className="text-xs text-muted">À propos · Lohni est basé sur <a href="https://github.com/CaviraOSS/PageLM" className="text-primary underline">PageLM</a> de nullure et recabasic, sous licence PageLM Community License.</footer>

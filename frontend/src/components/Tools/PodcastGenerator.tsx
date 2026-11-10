@@ -126,7 +126,7 @@ export default function PodcastGenerator() {
   }
 
   return (
-    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
+    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-[transform,opacity] duration-300  ">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -147,14 +147,14 @@ export default function PodcastGenerator() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Choisis un sujet ou colle tes notes…"
-              className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:border-border focus:ring-2 focus:ring-primary outline-none transition-all duration-300"
+              className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:border-border focus:ring-2 focus:ring-primary outline-none transition-[transform,opacity] duration-300"
               onKeyDown={(e) => e.key === "Enter" && onGenerate()}
             />
           </div>
           <button
             onClick={onGenerate}
             disabled={busy || !topic.trim()}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed text-on-primary font-medium transition-all duration-300"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed text-on-primary font-medium transition-[transform,opacity] duration-300"
           >
             {busy ? "Création…" : "Créer"}
           </button>
@@ -183,7 +183,7 @@ export default function PodcastGenerator() {
             <a
               href={audioFile}
               download={audioFilename || "podcast.mp3"}
-              className="block p-4 rounded-xl bg-gradient-to-r from-secondary to-secondary hover:from-secondary hover:to-secondary text-on-secondary font-medium text-center transition-all duration-300 shadow-lg hover:shadow-emerald-500/20"
+              className="block p-4 rounded-xl bg-gradient-to-r from-secondary to-secondary hover:from-secondary hover:to-secondary text-on-secondary font-medium text-center transition-[transform,opacity] duration-300 shadow-lg "
             >
               Télécharger le podcast
             </a>

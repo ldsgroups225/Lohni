@@ -1,3 +1,4 @@
+import { Button } from '../components/ui/Button'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -17,7 +18,6 @@ export default function ImportCourse() {
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState('')
   const field = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
-  const button = 'rounded-xl bg-primary px-4 py-3 text-on-primary hover:opacity-90 disabled:opacity-50'
 
   async function run(operation: () => Promise<void>) {
     setBusy(true)
@@ -65,7 +65,7 @@ export default function ImportCourse() {
         <p>Le résumé, les cartes et les QCM sont enregistrés. Les cartes rejoignent tes prochaines sessions.</p>
         <p className="text-xs text-muted">Préparé par IA à partir de ton cours · Peut contenir des erreurs</p>
         <MarkdownView md={imported.summary} />
-        <button className={button} disabled={busy} onClick={() => void run(async () => { await revisionAPI.continue(); navigate('/revision') })}>Commencer à réviser</button>
+        <Button disabled={busy} onClick={() => void run(async () => { await revisionAPI.continue(); navigate('/revision') })}>Commencer à réviser</Button>
         <button className="block underline" disabled={busy} onClick={() => setImported(undefined)}>Importer un autre cours</button>
         <button className="block text-sm text-muted underline" disabled={busy} onClick={() => void run(async () => { await revisionAPI.deleteChapter(imported.id); setImported(undefined) })}>Supprimer ce chapitre</button>
       </section> : profile && <form onSubmit={submit} aria-busy={busy}>
@@ -78,7 +78,7 @@ export default function ImportCourse() {
             ? <label className="block space-y-2"><span>Texte du cours</span><textarea className={field} rows={10} required maxLength={revisionPolicy.maxTextChars} value={text} onChange={event => setText(event.target.value)} /></label>
             : <label className="block space-y-2"><span>{mode === 'photo' ? `Photo nette et bien éclairée (JPEG, PNG, WebP) · ${revisionPolicy.maxUploadMB} Mo maximum` : `Fichier texte, PDF, Word (.docx) ou Markdown · ${revisionPolicy.maxUploadMB} Mo maximum`}</span><input key={mode} className={field} type="file" required accept={mode === 'photo' ? 'image/jpeg,image/png,image/webp' : '.txt,.pdf,.docx,.md,.markdown'} onChange={event => setFile(event.target.files?.[0])} /></label>}
           <p className="text-sm text-muted">Le résumé, les cartes et les QCM sont créés automatiquement.</p>
-          <button className={button}>Importer et créer mon chapitre</button>
+          <Button type="submit">Importer et créer mon chapitre</Button>
         </fieldset>
       </form>}
     </div>

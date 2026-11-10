@@ -13,7 +13,7 @@ export default function ComingSoon() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* AI Study Planner */}
-        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-primary transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10">
+        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-primary transition-[transform,opacity] duration-300  ">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -48,7 +48,7 @@ export default function ComingSoon() {
         </div>
 
         {/* Mind Map Generator */}
-        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/10">
+        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-[transform,opacity] duration-300  ">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -83,7 +83,7 @@ export default function ComingSoon() {
         </div>
 
         {/* Presentation Builder */}
-        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10">
+        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-[transform,opacity] duration-300  ">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">

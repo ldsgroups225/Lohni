@@ -10,7 +10,7 @@ export default function PlannerPage() {
                         <div className="flex items-center gap-3">
                             <Link
                                 to='/'
-                                className="p-2 rounded-xl bg-surface border border-border hover:bg-surface transition-colors"
+                                className="p-2 rounded-xl bg-surface border border-border hover:bg-surface transition-opacity"
                                 aria-label="Retour"
                             >
                                 <svg viewBox="0 0 24 24" className="size-5 text-foreground" fill="none" stroke="currentColor" strokeWidth="1.5">

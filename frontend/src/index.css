@@ -188,18 +188,6 @@ body {
     transform: scale(1);
   }
 }
-.mastery-progress {
-  appearance: none;
-  height: 0.5rem;
-  border-radius: 9999px;
-  overflow: hidden;
-  background: #292524;
-  color: #38bdf8;
-}
-.mastery-progress::-webkit-progress-bar { background: #292524; }
-.mastery-progress::-webkit-progress-value { background: #38bdf8; }
-.mastery-progress::-moz-progress-bar { background: #38bdf8; }
-
 /* Les mouvements ne modifient ni le flux ni la disponibilité des commandes. */
 @keyframes lohni-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes lohni-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
