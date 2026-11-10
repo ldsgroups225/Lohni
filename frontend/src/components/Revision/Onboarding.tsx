@@ -45,6 +45,7 @@ export default function Onboarding() {
     {step === 1 && <p>La connaissance, un peu chaque jour.</p>}
     <p className="text-sm text-primary">Bienvenue sur Lohni · Étape {step} sur 4</p>
     <Progress className="w-full" value={step} max={4} aria-label="Progression du parcours d’arrivée" />
+    <div key={step} className="motion-enter space-y-4">
     {step === 1 && <>
       <h2 className="text-2xl font-semibold text-foreground">Dans quelle classe es-tu ?</h2>
       <p>Programme de Côte d’Ivoire. Aucun compte à créer.</p>
@@ -77,6 +78,7 @@ export default function Onboarding() {
       <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. : Les fractions" /></label>
       <p className="text-sm text-muted">{revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes générées par IA pour démarrer, puis quelques cartes par jour. Elles peuvent contenir des erreurs : tu peux les supprimer pendant ta session.</p>
     </>}
+    </div>
     {error && <p role="alert" className="text-foreground">{error}</p>}
     {busy && <p role="status">Préparation de tes {revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes… Cela peut prendre un instant.</p>}
     <div className="flex flex-wrap items-center gap-4">

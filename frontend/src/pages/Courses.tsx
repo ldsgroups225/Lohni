@@ -1,3 +1,4 @@
+import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { Progress } from '../components/ui/Progress'
 import { useEffect, useState, type FormEvent } from 'react'
@@ -67,7 +68,7 @@ export default function Courses() {
     return () => { active = false }
   }, [])
 
-  return <main className="min-h-screen px-4 pt-8 pb-36 md:pl-28">
+  return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-foreground">Cours</h1>
@@ -86,17 +87,17 @@ export default function Courses() {
         <p>Prépare ton premier chapitre pour commencer à réviser.</p>
         <Link to="/revision" className="inline-block underline">Commencer ma révision</Link>
       </section>}
-      {[...new Set(chapters.map(chapter => chapter.subject))].map(subject => {
+      {[...new Set(chapters.map(chapter => chapter.subject))].map((subject, subjectIndex) => {
         const own = chapters.filter(chapter => chapter.subject === subject)
-        return <section key={subject} className="space-y-4" aria-busy={busy}>
+        return <section key={subject} style={{ animationDelay: `${Math.min(subjectIndex, 4) * 30}ms` }} className="motion-list space-y-4" aria-busy={busy}>
           <h2 className="text-xl font-semibold text-foreground">{subject}</h2>
-          {own.map(chapter => <article key={chapter.id} className="space-y-4 rounded-2xl border border-border bg-surface p-5">
+          {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: `${Math.min(index, 4) * 30}ms` }} className="motion-list space-y-4 rounded-2xl border border-border bg-surface p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <h3 className="text-lg font-semibold text-foreground">{chapter.title}</h3>
               <span className={chapter.status === 'Solide' ? 'text-foreground' : chapter.status === 'En cours' ? 'text-primary' : 'text-foreground'}>{chapter.status}</span>
             </div>
             <p className="text-sm text-muted">{chapter.origin === 'ai' ? 'Généré par IA · Peut contenir des erreurs' : 'Cours importé'}</p>
-            <p>{chapter.mastery === null ? 'Aucune carte vue' : `${Math.round(chapter.mastery)} % de rappel estimé`} · {chapter.seenCards}/{chapter.cards.length} cartes vues</p>
+            <p>{chapter.mastery === null ? 'Aucune carte vue' : <><AnimatedNumber value={Math.round(chapter.mastery)} /> % de rappel estimé</>} · {chapter.seenCards}/{chapter.cards.length} cartes vues</p>
             <Progress className="mastery-progress w-full" value={chapter.mastery ?? 0} max={100} aria-label={`Maîtrise du chapitre ${chapter.title}`} />
             {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && <p className="text-sm text-muted">Révise au moins {Math.round(revisionPolicy.minimumSeenRatio * 100)} % des cartes pour faire évoluer la maîtrise.</p>}
             <details><summary className="cursor-pointer py-2 text-foreground">Relire le résumé</summary><MarkdownView md={chapter.summary} /></details>

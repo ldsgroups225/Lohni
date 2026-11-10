@@ -20,6 +20,7 @@
   --radius-card: 1rem;
   --radius-control: 0.75rem;
   --ease-lohni: cubic-bezier(0.2, 0, 0, 1);
+  --ease-celebration: cubic-bezier(0.2, 1.35, 0.4, 1);
   --duration-fast: 150ms;
   --duration-normal: 200ms;
   --duration-slow: 250ms;
@@ -82,7 +83,7 @@
 .ui-progress::-moz-progress-bar { background: var(--color-primary); }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
 body {
@@ -198,3 +199,20 @@ body {
 .mastery-progress::-webkit-progress-bar { background: #292524; }
 .mastery-progress::-webkit-progress-value { background: #38bdf8; }
 .mastery-progress::-moz-progress-bar { background: #38bdf8; }
+
+/* Les mouvements ne modifient ni le flux ni la disponibilité des commandes. */
+@keyframes lohni-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lohni-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes lohni-flip { from { opacity: 0.5; transform: perspective(800px) rotateY(-90deg); } to { opacity: 1; transform: perspective(800px) rotateY(0); } }
+@keyframes lohni-celebrate { from { opacity: 0; transform: translateY(8px) scale(0.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes lohni-feedback { 0% { opacity: 0; transform: translateY(4px); } 25%, 70% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-4px); } }
+.motion-route { animation: lohni-fade var(--duration-fast) var(--ease-lohni); }
+.motion-enter, .motion-list, .loop-screen [role="alert"], .loop-screen [role="status"] { animation: lohni-enter var(--duration-normal) var(--ease-lohni) backwards; }
+.motion-flip { animation: lohni-flip var(--duration-normal) var(--ease-lohni); transform-origin: center; }
+.motion-celebrate { display: inline-flex; animation: lohni-celebrate var(--duration-slow) var(--ease-celebration) both; }
+.motion-feedback { position: fixed; z-index: 60; inset: auto 1rem 1rem auto; pointer-events: none; border-radius: var(--radius-control); padding: .6rem 1rem; color: var(--color-foreground); background: var(--color-tint); animation: lohni-feedback var(--duration-slow) var(--ease-lohni) both; }
+.motion-progress { height: .5rem; border-radius: 9999px; overflow: hidden; background: var(--color-border); }
+.motion-progress > span { display: block; height: 100%; background: var(--color-primary); transform-origin: left; transition: transform var(--duration-normal) var(--ease-lohni); }
+.loop-screen button, .loop-screen a, .loop-screen .ui-card, .loop-screen article { transition: transform var(--duration-fast) var(--ease-lohni); }
+.loop-screen button:active:not(:disabled), .loop-screen a:active, .loop-screen .ui-card:active, .loop-screen article:active { transform: scale(.98); }
+.navigation-indicator { position: absolute; left: 0; top: 0; opacity: 0; pointer-events: none; border-radius: var(--radius-control); background: var(--color-tint); transition: transform var(--duration-normal) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni); }

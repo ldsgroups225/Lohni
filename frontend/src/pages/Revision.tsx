@@ -1,5 +1,6 @@
 import Mascotte from '../components/Mascotte/Mascotte'
 import { CheckIcon, CloseIcon, FlameIcon } from '../components/ui/NavigationIcons'
+import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { Progress } from '../components/ui/Progress'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
@@ -19,6 +20,7 @@ export default function Revision() {
   const [subject, setSubject] = useState('')
   const [title, setTitle] = useState('')
   const [missed, setMissed] = useState<RevisionCard | null>(null)
+  const [feedback, setFeedback] = useState<{ id: number; knew: boolean } | null>(null)
   const startedAt = useRef(Date.now())
   const card = session?.cards[session.position]
   const button = 'rounded-xl bg-primary px-4 py-3 text-on-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-wait'
@@ -29,6 +31,15 @@ export default function Revision() {
     window.dispatchEvent(new CustomEvent('revision-card-visibility', { detail: !!session && !session.complete && !!card }))
     return () => { window.dispatchEvent(new CustomEvent('revision-card-visibility', { detail: false })) }
   }, [session, card])
+
+  useEffect(() => {
+    if (!feedback) return
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const clear = () => { if (motion.matches) setFeedback(null) }
+    clear()
+    motion.addEventListener('change', clear)
+    return () => motion.removeEventListener('change', clear)
+  }, [feedback])
 
   function display(next: RevisionSession) {
     setSession(next)
@@ -95,6 +106,7 @@ export default function Revision() {
         sessionId: session.id, cardId: card.id, position: session.position, knew, choice,
         durationMs: Math.max(0, Date.now() - startedAt.current),
       })
+      setFeedback({ id: Date.now(), knew: knew && (card.kind !== 'mcq' || choice === card.correct) })
       setMissed(!knew || (card.kind === 'mcq' && choice !== card.correct) ? card : null)
       display(next)
     })
@@ -113,7 +125,7 @@ export default function Revision() {
   if (!busy && !error && !profile) return <Navigate to="/" replace />
 
   return (
-    <main className="min-h-screen px-4 pt-8 pb-36 md:pl-28">
+    <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
       <div className="mx-auto max-w-xl space-y-6">
         {session && !session.complete && card ? <header><Link to="/" aria-label="Quitter la session" className="inline-block rounded-xl p-2 text-muted"><CloseIcon /></Link></header> : !(session && session.position > 0) && <header><h1 className="text-2xl font-semibold text-foreground">Session de révision</h1></header>}
         {(!sync.online || sync.pending > 0) && <aside role="status" className="space-y-2 rounded-xl border border-border p-4 text-foreground">
@@ -132,6 +144,7 @@ export default function Revision() {
           })}>Réessayer</button>
         </div>}
         {busy && <p role="status">Chargement…</p>}
+        {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}
         {missed && <aside className="space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
           <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
           <button className={button} disabled={busy || !sync.online} onClick={explain}>Explique-moi</button>
@@ -140,9 +153,10 @@ export default function Revision() {
           <section className="space-y-6" aria-label="Session de révision" aria-busy={busy}>
             <div>
               <p className="mb-2">Carte {session.position + 1} sur {session.cards.length}</p>
-              <Progress className="w-full" value={session.position} max={session.cards.length} aria-label="Progression de la session" />
+              <div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div>
+              <Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" />
             </div>
-            <article className="space-y-5 rounded-2xl border border-border bg-surface p-6">
+            <article key={`${card.id}-${session.position}-${revealed}`} className={`space-y-5 rounded-2xl border border-border bg-surface p-6 ${revealed ? 'motion-flip' : 'motion-enter'}`}>
               {card.origin === 'ai' && <p className="text-xs text-muted">Générée par IA · Peut contenir des erreurs</p>}
               <h2 className="text-xl text-foreground"><MarkdownView md={card.question} inline /></h2>
               {card.kind === 'mcq' && <fieldset disabled={busy || revealed} className="space-y-3">
@@ -160,8 +174,8 @@ export default function Revision() {
               </div> : <button className={button} disabled={busy || (card.kind === 'mcq' && choice === undefined)} onClick={() => setRevealed(true)}>Révéler la réponse</button>}
             </article>
             {revealed && <div className="grid grid-cols-2 gap-3">
-              <button className={`${secondaryButton} flex items-center justify-center gap-2`} disabled={busy} onClick={() => answer(false)}><CloseIcon />Je ne savais pas</button>
-              <button className="flex items-center justify-center gap-2 rounded-xl bg-success px-4 py-3 font-semibold text-on-success disabled:opacity-50" disabled={busy || (card.kind === 'mcq' && choice !== card.correct)} onClick={() => answer(true)}><CheckIcon />Je savais</button>
+              <button className="flex items-center justify-center gap-1 whitespace-nowrap rounded-xl border border-border bg-surface px-2 py-3 text-sm text-foreground disabled:cursor-wait disabled:opacity-50 sm:text-base" disabled={busy} onClick={() => answer(false)}><CloseIcon />Je ne savais pas</button>
+              <button className="flex items-center justify-center gap-2 rounded-xl bg-success px-2 py-3 text-sm font-semibold text-on-success disabled:opacity-50 sm:text-base" disabled={busy || (card.kind === 'mcq' && choice !== card.correct)} onClick={() => answer(true)}><CheckIcon />Je savais</button>
             </div>}
             <button disabled={busy || !sync.online || sync.pending > 0} className="text-sm text-muted underline" onClick={() => void run(async () => {
               await revisionAPI.deleteCard(card.id)
@@ -170,14 +184,14 @@ export default function Revision() {
           </section>
         ) : !busy && <>
           {session && (session.position > 0 ? <section className="flex flex-col items-center gap-4 text-center" aria-live="polite">
-            {!error && <Mascotte humeur="en fête" taille={160} />}
+            {!error && <span className="motion-celebrate"><Mascotte humeur="en fête" taille={160} /></span>}
             <h2 className="text-2xl font-bold">Session terminée !</h2>
             <p>{session.position} réponses enregistrées{sync.pending ? ' sur cet appareil' : ''}. À demain pour la suite.</p>
-            <div className="flex gap-3">
-              <div className="rounded-2xl border border-border bg-surface p-4"><strong className="block text-3xl">+{session.earnedXP}</strong><span>XP gagnés</span></div>
-              {!sync.pending && progress && <div className="rounded-2xl bg-tint p-4"><span className="flex items-center justify-center gap-2"><FlameIcon /><strong className="text-3xl">{progress.streak}</strong></span><span>jour{progress.streak > 1 ? 's' : ''} de série</span></div>}
+            <div className="motion-enter flex gap-3">
+              <div className="rounded-2xl border border-border bg-surface p-4"><strong className="block text-3xl"><AnimatedNumber value={session.earnedXP} prefix="+" /></strong><span>XP gagnés</span></div>
+              {!sync.pending && progress && <div className="rounded-2xl bg-tint p-4"><span className="flex items-center justify-center gap-2"><FlameIcon /><strong className="text-3xl"><AnimatedNumber value={progress.streak} /></strong></span><span>jour{progress.streak > 1 ? 's' : ''} de série</span></div>}
             </div>
-            {!sync.pending && progress && <p>{progress.xp} XP au total</p>}
+            {!sync.pending && progress && <p><AnimatedNumber value={progress.xp} /> XP au total</p>}
             <Link className={`${button} w-full text-center font-semibold`} to="/">Revenir à l’accueil</Link>
             <button className="text-primary underline disabled:opacity-50" disabled={busy || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer avec les cartes restantes</button>
           </section> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">

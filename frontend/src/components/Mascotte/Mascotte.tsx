@@ -25,9 +25,10 @@ export default function Mascotte({ humeur, taille, decorative = false }: { humeu
       const float = Math.sin(time / 700) * 2
       const gaze = Math.sin(time / 1600) * 1.5
       const blink = time % 5000 < 120 ? 0.12 : 1
-      if (corps.current) corps.current.style.transform = `translateY(${float}px)`
-      if (bouche.current) bouche.current.style.transform = `translateY(${float}px)`
-      if (yeux.current) yeux.current.style.transform = `translate(${gaze}px, ${float}px) scaleY(${blink})`
+      const breath = humeur === 'pensive' ? 1 + (Math.sin(time / 800) + 1) * 0.01 : 1
+      if (corps.current) corps.current.style.transform = `translateY(${float}px) scale(${breath})`
+      if (bouche.current) bouche.current.style.transform = `translateY(${float}px) scale(${breath})`
+      if (yeux.current) yeux.current.style.transform = `translate(${gaze}px, ${float}px) scale(${breath}, ${breath * blink})`
       frame = requestAnimationFrame(tick)
     }
     const update = () => {
@@ -47,7 +48,7 @@ export default function Mascotte({ humeur, taille, decorative = false }: { humeu
       cancelAnimationFrame(frame)
       reset()
     }
-  }, [])
+  }, [humeur])
 
   const layer = { position: 'absolute' as const, inset: 0, width: '100%', height: '100%' }
   const fichier = fichiers[humeur]

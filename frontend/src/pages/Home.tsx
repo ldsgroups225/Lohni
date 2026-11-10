@@ -1,5 +1,6 @@
 import Mascotte from '../components/Mascotte/Mascotte'
 import { FlameIcon } from '../components/ui/NavigationIcons'
+import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { Card } from '../components/ui/Card'
 import { Progress } from '../components/ui/Progress'
 import { useEffect, useState } from 'react'
@@ -39,7 +40,7 @@ export default function Home() {
   }, [attempt])
   const button = 'block w-full rounded-2xl bg-primary p-5 text-center text-xl font-semibold text-on-primary hover:opacity-90'
 
-  return <main className="min-h-screen px-4 pt-8 pb-36 md:pl-28">
+  return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
       {(!home || loading || error) && <header><h1 className="text-2xl font-semibold text-foreground">Lohni</h1></header>}
       {loading ? <p role="status">Chargement de ta journée…</p> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
@@ -51,7 +52,7 @@ export default function Home() {
         </header>
         <p>{curriculum.find(item => item.schoolClass === home.profile.schoolClass)?.label ?? home.profile.schoolClass}{home.profile.series ? ` · Série ${home.profile.series}` : ''}</p>
         <div className="flex flex-wrap gap-4">
-          {progress && <p className="flex w-full items-center gap-3 rounded-2xl bg-tint px-4 py-3"><span className="text-primary"><FlameIcon /></span><strong className="text-2xl">{progress.streak}</strong> jour{progress.streak > 1 ? 's' : ''} de série</p>}
+          {progress && <p className="flex w-full items-center gap-3 rounded-2xl bg-tint px-4 py-3"><span className="text-primary"><FlameIcon /></span><strong className="text-2xl"><AnimatedNumber value={progress.streak} streak /></strong> jour{progress.streak > 1 ? 's' : ''} de série</p>}
           {home.daysUntilExam !== null && <p className="rounded-xl border border-border px-4 py-3">{home.daysUntilExam > 0 ? `Examen dans ${home.daysUntilExam} jour${home.daysUntilExam > 1 ? 's' : ''}` : 'Date d’examen atteinte'}</p>}
         </div>
         <Card className="space-y-5 p-6">
@@ -67,12 +68,12 @@ export default function Home() {
           {home.totalCards === 0 && <Link className={button} to="/revision">Préparer un chapitre</Link>}
           <Link to="/import" className="block text-primary underline">Importer mon cours</Link>
         </Card>
-        {progress && <section className="space-y-4" aria-label="Maîtrise par matière"><h2 className="text-xl font-semibold text-foreground">Tes matières</h2>{progress.subjects.map(subject => {
+        {progress && <section className="space-y-4" aria-label="Maîtrise par matière"><h2 className="text-xl font-semibold text-foreground">Tes matières</h2>{progress.subjects.map((subject, index) => {
           const own = chapters?.filter(chapter => chapter.subjectId === subject.subjectId)
           const seen = own?.reduce((sum, chapter) => sum + chapter.seenCards, 0)
           const total = own?.reduce((sum, chapter) => sum + chapter.cards.length, 0)
-          return <article key={subject.subjectId} className="rounded-xl border border-border p-4">
-          <div className="mb-3 flex justify-between gap-3"><h3>{subject.name}</h3><span>{subject.mastery === null ? 'Pas encore révisée' : `${subject.status} · ${Math.round(subject.mastery)} %`}</span></div>
+          return <article key={subject.subjectId} style={{ animationDelay: `${Math.min(index, 4) * 30}ms` }} className="motion-list rounded-xl border border-border p-4">
+          <div className="mb-3 flex justify-between gap-3"><h3>{subject.name}</h3><span>{subject.mastery === null ? 'Pas encore révisée' : <>{subject.status} · <AnimatedNumber value={Math.round(subject.mastery)} /> %</>}</span></div>
           {seen !== undefined && <p className="mb-2 text-sm text-muted">{seen} carte{seen > 1 ? 's' : ''} vue{seen > 1 ? 's' : ''} sur {total}</p>}
           <Progress className="mastery-progress w-full" max={100} value={subject.mastery ?? 0} aria-label={`Maîtrise en ${subject.name}`} />
         </article>})}</section>}

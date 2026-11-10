@@ -1,3 +1,4 @@
+import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -38,7 +39,7 @@ export default function Profile() {
     finally { setBusy(false) }
   }
 
-  return <main className="min-h-screen px-4 pt-8 pb-36 md:pl-28">
+  return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
       <h1 className="text-2xl font-semibold text-foreground">Moi</h1>
       {busy && <p role="status">Chargement…</p>}
@@ -46,9 +47,9 @@ export default function Profile() {
       {!error && progress && <Mascotte humeur={progress.streak > 0 ? "contente" : progress.xp > 0 ? "endormie" : "au repos"} taille={112} />}
       {!error && !busy && !profile && <Mascotte humeur="au repos" taille={112} />}
       {progress && <dl className="grid grid-cols-3 gap-3 rounded-2xl border border-border p-5 text-center">
-        <div><dt>XP</dt><dd className="text-xl text-foreground">{progress.xp}</dd></div>
-        <div><dt>Série de jours</dt><dd className="text-xl text-foreground">{progress.streak}</dd></div>
-        <div><dt>Cartes apprises</dt><dd className="text-xl text-foreground">{progress.learnedCards}</dd></div>
+        <div><dt>XP</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.xp} /></dd></div>
+        <div><dt>Série de jours</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.streak} /></dd></div>
+        <div><dt>Cartes apprises</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.learnedCards} /></dd></div>
       </dl>}
       {profile ? <form onSubmit={save} className="space-y-5 rounded-2xl border border-border p-6" aria-busy={busy}>
         <h2 className="text-xl text-foreground">Mon parcours</h2>
