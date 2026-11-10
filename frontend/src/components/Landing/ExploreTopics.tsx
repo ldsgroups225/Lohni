@@ -52,7 +52,7 @@ export default function ExploreTopics() {
     >
       <img src={imgSrc(title)} alt="" className="w-full h-full rounded-3xl object-cover" loading="lazy" draggable={false} />
       <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-transparent to-background" />
-      <div className="absolute left-0 bottom-0 pl-4 pb-3 text-left text-foreground text-lg sm:text-2xl font-medium">{labels[title]}</div>
+      <div className="absolute left-4 bottom-3 rounded-lg bg-surface px-2 py-1 text-left text-foreground text-lg sm:text-2xl font-medium">{labels[title]}</div>
     </button>
   );
 
@@ -104,7 +104,7 @@ export default function ExploreTopics() {
       </div>
 
       <div
-        className="absolute w-full h-full bottom-0 bg-gradient-to-b from-transparent to-background pointer-events-none"
+        className="absolute w-full h-full bottom-0 bg-gradient-to-b from-transparent to-background/20 pointer-events-none"
         style={{
           transition: "opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
           opacity: open ? 0 : 1
