@@ -403,7 +403,7 @@ export default function Debate() {
                     </div>
 
                     {error && (
-                        <div className="bg-tint border border-red-800 rounded-xl p-4 text-foreground">
+                        <div className="bg-tint border border-primary rounded-xl p-4 text-foreground">
                             {error}
                         </div>
                     )}
@@ -424,14 +424,14 @@ export default function Debate() {
                             <div className="flex items-center gap-3 text-sm">
                                 <span
                                     className={`px-3 py-1 rounded-full font-semibold ${session?.position === "for"
-                                        ? "bg-green-600/20 text-foreground border border-green-600/30"
-                                        : "bg-red-600/20 text-foreground border border-red-600/30"
+                                        ? "bg-tint text-foreground border border-secondary"
+                                        : "bg-tint text-foreground border border-primary"
                                         }`}
                                 >
                                     Toi : {session?.position === "for" ? "Pour" : "Contre"}
                                 </span>
                                 <span className="text-muted">contre</span>
-                                <span className="px-3 py-1 rounded-full font-semibold bg-purple-600/20 text-foreground border border-purple-600/30">
+                                <span className="px-3 py-1 rounded-full font-semibold bg-tint text-foreground border border-border">
                                     IA : {session?.position === "for" ? "Contre" : "Pour"}
                                 </span>
                             </div>
@@ -499,7 +499,7 @@ export default function Debate() {
                                     ? session?.position === "for"
                                         ? "bg-gradient-to-br from-secondary to-secondary text-on-secondary shadow-green-600/20"
                                         : "bg-gradient-to-br from-primary to-primary text-on-primary shadow-red-600/20"
-                                    : "bg-surface border border-border shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-black/10 backdrop-blur text-foreground"
+                                    : "bg-surface border border-border shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-border backdrop-blur text-foreground"
                                     }`}
                             >
                                 <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
@@ -519,7 +519,7 @@ export default function Debate() {
                                     Adversaire IA
                                 </span>
                             </div>
-                            <div className="px-6 py-4 rounded-2xl shadow-lg bg-surface border border-border shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-black/10 backdrop-blur text-foreground">
+                            <div className="px-6 py-4 rounded-2xl shadow-lg bg-surface border border-border shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-border backdrop-blur text-foreground">
                                 <p className="whitespace-pre-wrap leading-relaxed">
                                     {streamingContent}
                                     <span className="inline-block w-2 h-5 bg-gradient-to-r from-primary to-primary ml-1 animate-pulse rounded-sm" />
@@ -574,7 +574,7 @@ export default function Debate() {
                         <button
                             onClick={handleSurrender}
                             disabled={isStreaming || messages.length === 0 || isDebateEnded}
-                            className="px-4 py-2 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-600/40 hover:border-orange-600/60 text-orange-400 hover:text-orange-300 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
+                            className="px-4 py-2 bg-tint hover:bg-tint border border-border hover:border-border text-foreground hover:text-foreground rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
                         >
                             🏳️ Terminer le débat
                         </button>
@@ -611,24 +611,24 @@ export default function Debate() {
                             <div className="grid md:grid-cols-2 gap-6">
                                 {/* User Performance */}
                                 <div className="space-y-4">
-                                    <div className="bg-tint border border-green-800/30 rounded-xl p-5">
+                                    <div className="bg-tint border border-secondary rounded-xl p-5">
                                         <h3 className="text-lg font-bold text-foreground mb-3">💪 Tes points forts</h3>
                                         <ul className="space-y-2">
                                             {analysis.userStrengths.map((strength, idx) => (
                                                 <li key={idx} className="text-foreground text-sm flex items-start gap-2">
-                                                    <span className="text-green-500 mt-0.5">✓</span>
+                                                    <span className="text-secondary mt-0.5">✓</span>
                                                     <span>{strength}</span>
                                                 </li>
                                             ))}
                                         </ul>
                                     </div>
                                     {analysis.userWeaknesses.length > 0 && (
-                                        <div className="bg-tint border border-red-800/30 rounded-xl p-5">
+                                        <div className="bg-tint border border-primary rounded-xl p-5">
                                             <h3 className="text-lg font-bold text-foreground mb-3">📉 Points à améliorer</h3>
                                             <ul className="space-y-2">
                                                 {analysis.userWeaknesses.map((weakness, idx) => (
                                                     <li key={idx} className="text-foreground text-sm flex items-start gap-2">
-                                                        <span className="text-red-500 mt-0.5">✗</span>
+                                                        <span className="text-foreground mt-0.5">✗</span>
                                                         <span>{weakness}</span>
                                                     </li>
                                                 ))}
@@ -639,24 +639,24 @@ export default function Debate() {
 
                                 {/* AI Performance */}
                                 <div className="space-y-4">
-                                    <div className="bg-tint border border-purple-800/30 rounded-xl p-5">
+                                    <div className="bg-tint border border-border rounded-xl p-5">
                                         <h3 className="text-lg font-bold text-foreground mb-3">🤖 Points forts de l’IA</h3>
                                         <ul className="space-y-2">
                                             {analysis.aiStrengths.map((strength, idx) => (
                                                 <li key={idx} className="text-foreground text-sm flex items-start gap-2">
-                                                    <span className="text-purple-500 mt-0.5">✓</span>
+                                                    <span className="text-foreground mt-0.5">✓</span>
                                                     <span>{strength}</span>
                                                 </li>
                                             ))}
                                         </ul>
                                     </div>
                                     {analysis.aiWeaknesses.length > 0 && (
-                                        <div className="bg-tint border border-red-800/30 rounded-xl p-5">
+                                        <div className="bg-tint border border-primary rounded-xl p-5">
                                             <h3 className="text-lg font-bold text-foreground mb-3">📉 Points faibles de l’IA</h3>
                                             <ul className="space-y-2">
                                                 {analysis.aiWeaknesses.map((weakness, idx) => (
                                                     <li key={idx} className="text-foreground text-sm flex items-start gap-2">
-                                                        <span className="text-red-500 mt-0.5">✗</span>
+                                                        <span className="text-foreground mt-0.5">✗</span>
                                                         <span>{weakness}</span>
                                                     </li>
                                                 ))}
@@ -724,7 +724,7 @@ export default function Debate() {
             )}
 
             {error && (
-                <div className="fixed bottom-20 right-6 bg-tint border border-red-700 rounded-xl p-4 text-foreground shadow-lg max-w-md">
+                <div className="fixed bottom-20 right-6 bg-tint border border-primary rounded-xl p-4 text-foreground shadow-lg max-w-md">
                     <div className="flex items-start gap-3">
                         <span className="text-xl">⚠️</span>
                         <div className="flex-1">{error}</div>

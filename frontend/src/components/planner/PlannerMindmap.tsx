@@ -432,7 +432,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                 const y1 = pan.y + ayWorld * zoom
                                 const x2 = pan.x + bxWorld * zoom
                                 const y2 = pan.y + byWorld * zoom
-                                return <line key={sid} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#27272a" strokeWidth={1.5} />
+                                return <line key={sid} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--color-border)" strokeWidth={1.5} />
                             })}
                         </g>
                     )
@@ -467,7 +467,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                             <circle cx="210" cy="90" r="2.5" fill="#86efac" className="tw3" />
                             <circle cx="140" cy="250" r="3" fill="#a78bfa" className="tw2" />
                             <circle cx="580" cy="250" r="2.5" fill="#67e8f9" className="tw" />
-                            <g stroke="#3f3f46" strokeWidth="1">
+                            <g stroke="var(--color-border)" strokeWidth="1">
                                 <line x1="350" y1="190" x2="520" y2="120" />
                                 <line x1="350" y1="190" x2="210" y2="90" />
                                 <line x1="350" y1="190" x2="140" y2="250" />
@@ -475,16 +475,16 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                 <line x1="520" y1="120" x2="580" y2="250" />
                                 <line x1="210" y1="90" x2="140" y2="250" />
                             </g>
-                            <g fontFamily="Inter, ui-sans-serif" fontSize="12" fill="#e4e4e7" textAnchor="middle">
-                                <rect x="325" y="172" width="54" height="24" rx="7" fill="#18181b" stroke="#27272a" />
+                            <g fontFamily="Inter, ui-sans-serif" fontSize="12" fill="var(--color-foreground)" textAnchor="middle">
+                                <rect x="325" y="172" width="54" height="24" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
                                 <text x="352" y="189">Se concentrer</text>
-                                <rect x="495" y="104" width="54" height="22" rx="7" fill="#111827" stroke="#1f2937" />
+                                <rect x="495" y="104" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
                                 <text x="522" y="119">Se rappeler</text>
-                                <rect x="185" y="74" width="54" height="22" rx="7" fill="#0f172a" stroke="#1f2937" />
+                                <rect x="185" y="74" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
                                 <text x="212" y="89">Faire le plan</text>
-                                <rect x="115" y="234" width="54" height="22" rx="7" fill="#111827" stroke="#1f2937" />
+                                <rect x="115" y="234" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
                                 <text x="142" y="249">Réviser</text>
-                                <rect x="555" y="234" width="54" height="22" rx="7" fill="#0f172a" stroke="#1f2937" />
+                                <rect x="555" y="234" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
                                 <text x="582" y="249">Améliorer</text>
                             </g>
                             <g opacity="0.35">
@@ -519,7 +519,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                         }
                     }
                     return Array.from(edges.values()).map((e, i) => (
-                        <line key={i} x1={e.ax} y1={e.ay} x2={e.bx} y2={e.by} stroke="#3f3f46" strokeWidth={1} />
+                        <line key={i} x1={e.ax} y1={e.ay} x2={e.bx} y2={e.by} stroke="var(--color-border)" strokeWidth={1} />
                     ))
                 })()}
             </svg>
@@ -548,9 +548,9 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                     setZoom(newZoom)
                                 }}>
                                 <div className="pointer-events-none absolute -inset-2 opacity-35" style={{ background: `radial-gradient(22px 22px at 50% 65%, rgba(56,189,248,0.2), transparent 70%)` }} />
-                                <div onPointerDown={e => onDown(e, t.id)} className="cursor-grab active:cursor-grabbing rounded-full border bg-[#0b1220]/70 border-[#1f2937] pl-3 pr-1.5 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.4)] backdrop-blur flex items-center gap-1.5">
-                                    <div className="text-[12px] text-slate-200 whitespace-nowrap max-w-[260px] truncate">{t.title}</div>
-                                    <button onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-slate-300 hover:text-slate-100 px-1 rounded hover:bg-tint">⋯</button>
+                                <div onPointerDown={e => onDown(e, t.id)} className="cursor-grab active:cursor-grabbing rounded-full border bg-surface border-border pl-3 pr-1.5 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.4)] backdrop-blur flex items-center gap-1.5">
+                                    <div className="text-[12px] text-foreground whitespace-nowrap max-w-[260px] truncate">{t.title}</div>
+                                    <button onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-foreground hover:text-foreground px-1 rounded hover:bg-tint">⋯</button>
                                 </div>
                                 {menuOpen === t.id && (
                                     <div className="absolute left-0 top-[120%] z-30 bg-surface border border-border rounded-md shadow-lg min-w-[160px] p-1">
@@ -634,17 +634,17 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                         }} />
                         <div
                             onPointerDown={(e) => onDownCustom(e, n.id)}
-                            className="cursor-grab active:cursor-grabbing rounded-lg border bg-[#0b1220]/70 border-[#1f2937] px-2.5 py-1 shadow-[0_2px_8px_rgba(0,0,0,0.4)] backdrop-blur"
+                            className="cursor-grab active:cursor-grabbing rounded-lg border bg-surface border-border px-2.5 py-1 shadow-[0_2px_8px_rgba(0,0,0,0.4)] backdrop-blur"
                         >
                             <div className="flex items-center gap-2">
                                 {editingId === n.id ? (
                                     <input autoFocus defaultValue={n.label} onBlur={(e) => { setCustomNodes(list => list.map(x => x.id === n.id ? { ...x, label: e.target.value } : x)); setEditingId(null) }}
-                                        className="bg-transparent text-[12px] text-slate-200 outline-none" />
+                                        className="bg-transparent text-[12px] text-foreground outline-none" />
                                 ) : (
-                                    <div className="text-[12px] text-slate-200" onDoubleClick={() => setEditingId(n.id)}>{n.label}</div>
+                                    <div className="text-[12px] text-foreground" onDoubleClick={() => setEditingId(n.id)}>{n.label}</div>
                                 )}
                                 <button onClick={() => setCustomNodes(list => list.filter(x => x.id !== n.id))}
-                                    className="text-[11px] text-slate-400 hover:text-slate-200">×</button>
+                                    className="text-[11px] text-foreground hover:text-foreground">×</button>
                             </div>
                         </div>
                     </div>

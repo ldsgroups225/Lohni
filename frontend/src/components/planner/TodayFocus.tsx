@@ -103,7 +103,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                             {urgentTasks.map(task => {
                                 const hoursLeft = Math.max(0, (task.dueAt - Date.now()) / (1000 * 60 * 60))
                                 return (
-                                    <div key={task.id} className="bg-tint border border-yellow-800 rounded-lg p-3">
+                                    <div key={task.id} className="bg-tint border border-border rounded-lg p-3">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <div className="text-foreground font-medium">{task.title}</div>

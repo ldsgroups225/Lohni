@@ -24,9 +24,9 @@ export default function QuestionCard({
               "answer-option p-4 border rounded-xl cursor-pointer transition-all duration-200",
               "hover:border-border hover:bg-surface",
               "border-border",
-              isSel ? "border-primary bg-primary" : "",
-              isCorrect ? "border-green-500 bg-green-600/20" : "",
-              isWrongSel ? "border-red-500 bg-red-600/20" : "",
+              isSel ? "border-primary bg-tint" : "",
+              isCorrect ? "border-secondary bg-tint" : "",
+              isWrongSel ? "border-primary bg-tint" : "",
             ].join(" ");
 
             return (
@@ -55,7 +55,7 @@ export default function QuestionCard({
           </button>
         </div>
 
-        <div className={`${showHint ? "" : "hidden"} mt-4 p-4 bg-tint border border-yellow-700 rounded-xl`}>
+        <div className={`${showHint ? "" : "hidden"} mt-4 p-4 bg-tint border border-border rounded-xl`}>
           <p className="text-foreground text-sm"><strong>💡 Indice :</strong> <MarkdownView md={q.hint} inline /></p>
         </div>
 

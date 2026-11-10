@@ -56,10 +56,10 @@ export default function ExamLabs() {
   )
 
   const resultVisual = useMemo(() => {
-    if (percentage >= 90) return { msg: "Excellent!", cls: "bg-tint border border-green-700 text-foreground", icon: "🏆" }
-    if (percentage >= 70) return { msg: "Bravo !", cls: "bg-tint border border-primary text-primary", icon: "🎉" }
-    if (percentage >= 50) return { msg: "Bon travail !", cls: "bg-tint border border-yellow-700 text-foreground", icon: "📚" }
-    return { msg: "Continue à réviser !", cls: "bg-tint border border-red-700 text-foreground", icon: "💪" }
+    if (percentage >= 90) return { msg: "Excellent!", cls: "bg-tint border border-secondary text-foreground", icon: "🏆" }
+    if (percentage >= 70) return { msg: "Bravo !", cls: "bg-tint border border-primary text-foreground", icon: "🎉" }
+    if (percentage >= 50) return { msg: "Bon travail !", cls: "bg-tint border border-border text-foreground", icon: "📚" }
+    return { msg: "Continue à réviser !", cls: "bg-tint border border-primary text-foreground", icon: "💪" }
   }, [percentage])
 
   useEffect(() => {
@@ -177,7 +177,7 @@ export default function ExamLabs() {
               <div className="text-lg font-semibold text-foreground">
                 {ex.name}
               </div>
-              <div className="px-3 py-1 rounded-full bg-tint text-primary text-xs font-medium">
+              <div className="px-3 py-1 rounded-full bg-tint text-foreground text-xs font-medium">
                 {ex.sections.length} sections
               </div>
             </div>

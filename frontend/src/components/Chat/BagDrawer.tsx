@@ -47,7 +47,7 @@ export default function BagDrawer({ open, items, onClose, onClear }: Props) {
         </div>
 
         <div className="mt-4 pt-4 border-t border-border">
-          <button onClick={onClear} className="w-full bg-tint hover:bg-tint border border-red-800 text-foreground rounded-xl px-4 py-2 text-sm transition-colors">
+          <button onClick={onClear} className="w-full bg-tint hover:bg-tint border border-primary text-foreground rounded-xl px-4 py-2 text-sm transition-colors">
             Clear All Items
           </button>
         </div>

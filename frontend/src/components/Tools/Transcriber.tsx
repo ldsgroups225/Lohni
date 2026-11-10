@@ -181,8 +181,8 @@ export default function Transcriber() {
     return (
       <div className="fixed inset-0 z-50 backdrop-blur-3xl flex items-center justify-center bg-background">
         <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-primary to-transparent rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-gradient-to-tl from-purple-600/15 to-transparent rounded-full blur-3xl"></div>
-        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-b from-pink-500/10 to-transparent rounded-full blur-2xl"></div>
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-gradient-to-tl from-tint to-transparent rounded-full blur-3xl"></div>
+        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-b from-tint to-transparent rounded-full blur-2xl"></div>
         
         <div className="relative w-full h-full flex flex-col items-center justify-center px-6">
           <div className="relative" style={{ width: orbSize, height: orbSize }}>
@@ -244,12 +244,12 @@ export default function Transcriber() {
   }
 
   return (
-    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-orange-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10">
+    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <div className="text-xs uppercase tracking-wide text-orange-400 font-semibold">transcription vocale</div>
-            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-400 to-primary animate-pulse"></div>
+            <div className="text-xs uppercase tracking-wide text-foreground font-semibold">transcription vocale</div>
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-primary to-primary animate-pulse"></div>
           </div>
           <div className="text-foreground font-semibold text-xl mb-2">Audio en texte</div>
           <div className="text-foreground text-sm leading-relaxed">
@@ -304,8 +304,8 @@ export default function Transcriber() {
         {status && (
           <div className={`p-4 rounded-xl font-medium ${
             status.startsWith("Erreur")
-              ? 'bg-tint border border-red-800/40 text-foreground'
-              : 'bg-orange-950/40 border border-orange-800/40 text-orange-200'
+              ? 'bg-tint border border-primary text-foreground'
+              : 'bg-tint border border-border text-foreground'
           }`}>
             {status}
             {confidence && (
@@ -320,12 +320,12 @@ export default function Transcriber() {
           <div className="space-y-4">
             {studyMaterials && (
               <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-gradient-to-br from-orange-950/40 to-tint border border-orange-800/40">
+                <div className="p-4 rounded-xl bg-gradient-to-br from-tint to-tint border border-border">
                   <div className="flex items-center gap-2 mb-3">
-                    <svg className="w-5 h-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-foreground" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    <h3 className="text-orange-400 font-semibold">Supports de révision créés</h3>
+                    <h3 className="text-foreground font-semibold">Supports de révision créés</h3>
                   </div>
                   <MarkdownView md={studyMaterials.summary} />
                 </div>
@@ -418,7 +418,7 @@ export default function Transcriber() {
                 <label className="text-sm font-medium text-foreground">Transcription originale</label>
                 <button
                   onClick={copyToClipboard}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-orange-600 text-foreground hover:bg-orange-700 transition-colors flex items-center gap-1"
+                  className="text-xs px-3 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary transition-colors flex items-center gap-1"
                 >
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />

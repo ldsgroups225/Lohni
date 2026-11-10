@@ -126,7 +126,7 @@ export default function PodcastGenerator() {
   }
 
   return (
-    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-purple-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
+    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -147,7 +147,7 @@ export default function PodcastGenerator() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Choisis un sujet ou colle tes notes…"
-              className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all duration-300"
+              className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:border-border focus:ring-2 focus:ring-primary outline-none transition-all duration-300"
               onKeyDown={(e) => e.key === "Enter" && onGenerate()}
             />
           </div>
@@ -161,7 +161,7 @@ export default function PodcastGenerator() {
         </div>
 
         {status && (
-          <div className="p-4 rounded-xl bg-tint border border-purple-800/40 text-foreground font-medium">
+          <div className="p-4 rounded-xl bg-tint border border-border text-foreground font-medium">
             {status}
 
           </div>

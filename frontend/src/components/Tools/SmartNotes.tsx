@@ -63,7 +63,7 @@ export default function SmartNotes() {
         </div>
 
         {status && (
-          <div className="p-4 rounded-xl bg-tint border border-primary text-primary font-medium">{status}</div>
+          <div className="p-4 rounded-xl bg-tint border border-primary text-foreground font-medium">{status}</div>
         )}
 
         {filePath && (

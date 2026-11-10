@@ -285,11 +285,11 @@ export default function Planner() {
                 {notifications.length > 0 && (
                     <div className="space-y-2">
                         {notifications.map(n => (
-                            <div key={n.id} className={`px-3 py-2 rounded-lg text-sm ${n.type === 'error' ? 'bg-tint border border-red-800 text-foreground' :
-                                n.type === 'success' ? 'bg-tint border border-green-800 text-foreground' :
-                                    n.type === 'reminder' ? 'bg-tint border border-yellow-800 text-foreground' :
-                                        n.type === 'break' ? 'bg-tint border border-purple-800 text-foreground' :
-                                            'bg-tint border border-primary text-primary'
+                            <div key={n.id} className={`px-3 py-2 rounded-lg text-sm ${n.type === 'error' ? 'bg-tint border border-primary text-foreground' :
+                                n.type === 'success' ? 'bg-tint border border-secondary text-foreground' :
+                                    n.type === 'reminder' ? 'bg-tint border border-border text-foreground' :
+                                        n.type === 'break' ? 'bg-tint border border-border text-foreground' :
+                                            'bg-tint border border-primary text-foreground'
                                 }`}>
                                 {n.message}
                             </div>
