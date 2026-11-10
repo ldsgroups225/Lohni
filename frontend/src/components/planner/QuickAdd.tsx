@@ -31,8 +31,8 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
     }
 
     return (
-        <div className="rounded-xl border border-border bg-zinc-950 p-4">
-            <div className="text-zinc-200 font-medium mb-3 flex items-center gap-2">
+        <div className="rounded-xl border border-border bg-surface p-4">
+            <div className="text-foreground font-medium mb-3 flex items-center gap-2">
                 <span>⚡</span>
                 Ajouter une tâche
             </div>
@@ -43,7 +43,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                         value={text}
                         onChange={e => setText(e.target.value)}
                         placeholder="Ex. : devoir de maths chapitre 5 pour demain à 20 h, environ 2 h"
-                        className="flex-1 bg-zinc-900 border border-border rounded-lg px-3 py-2 text-zinc-200 placeholder:text-zinc-500 outline-none focus:ring-1 focus:ring-border"
+                        className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted outline-none focus:ring-1 focus:ring-border"
                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
                     />
                     <input
@@ -56,7 +56,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                     />
                     <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="px-3 py-2 rounded-lg bg-zinc-800 text-zinc-200 border border-border hover:bg-zinc-700"
+                        className="px-3 py-2 rounded-lg bg-tint text-foreground border border-border hover:bg-tint"
                         title="Ajouter les fichiers du devoir"
                     >
                         📎
@@ -74,12 +74,12 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                 {selectedFiles.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                         {selectedFiles.map((file, i) => (
-                            <div key={i} className="flex items-center gap-1 px-2 py-1 bg-zinc-800 rounded text-xs text-zinc-200">
+                            <div key={i} className="flex items-center gap-1 px-2 py-1 bg-tint rounded text-xs text-foreground">
                                 <span className="truncate max-w-32" title={file.name}>{file.name}</span>
-                                <span className="text-zinc-400">({Math.round(file.size / 1024)}KB)</span>
+                                <span className="text-muted">({Math.round(file.size / 1024)}KB)</span>
                                 <button
                                     onClick={() => removeFile(i)}
-                                    className="text-zinc-400 hover:text-zinc-200 ml-1"
+                                    className="text-muted hover:text-foreground ml-1"
                                 >×</button>
                             </div>
                         ))}
@@ -88,22 +88,22 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
 
                 {/* Quick Templates */}
                 <div className="flex flex-wrap gap-2">
-                    <div className="text-zinc-400 text-xs">Exemples :</div>
+                    <div className="text-muted text-xs">Exemples :</div>
                     <button
                         onClick={() => setText("Devoir de maths pour demain à 20 h, environ 1 h 30")}
-                        className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                        className="text-xs px-2 py-1 rounded bg-tint text-foreground hover:bg-tint"
                     >
                         Devoir de maths
                     </button>
                     <button
                         onClick={() => setText("Lire le chapitre d’anglais pour vendredi, environ 30 min")}
-                        className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                        className="text-xs px-2 py-1 rounded bg-tint text-foreground hover:bg-tint"
                     >
                         Lecture
                     </button>
                     <button
                         onClick={() => setText("Réviser le contrôle de la semaine prochaine, environ 2 h")}
-                        className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                        className="text-xs px-2 py-1 rounded bg-tint text-foreground hover:bg-tint"
                     >
                         Révision
                     </button>

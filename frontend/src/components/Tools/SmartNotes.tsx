@@ -49,7 +49,7 @@ export default function SmartNotes() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Choisis ton sujet…"
-              className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-zinc-400 focus:border-primary focus:ring-2 focus:ring-primary outline-none transition-all duration-300"
+              className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:border-primary focus:ring-2 focus:ring-primary outline-none transition-all duration-300"
               onKeyDown={(e) => e.key === "Enter" && onGenerate()}
             />
           </div>

@@ -29,8 +29,8 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
     const activeTasks = tasks.filter(t => t.status === 'doing')
 
     return (
-        <div className="rounded-xl border border-border bg-zinc-950 p-4">
-            <div className="text-zinc-200 font-medium mb-4 flex items-center gap-2">
+        <div className="rounded-xl border border-border bg-surface p-4">
+            <div className="text-foreground font-medium mb-4 flex items-center gap-2">
                 <span>🎯</span>
                 Priorités du jour
             </div>
@@ -39,7 +39,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                 {/* Active Sessions */}
                 {activeTasks.length > 0 && (
                     <div>
-                        <div className="text-zinc-300 text-sm mb-2">En cours :</div>
+                        <div className="text-foreground text-sm mb-2">En cours :</div>
                         <div className="space-y-2">
                             {activeTasks.map(task => (
                                 <div key={task.id} className="bg-tint border border-primary rounded-lg p-3">
@@ -66,14 +66,14 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                 {/* Due Today */}
                 {todayTasks.length > 0 && (
                     <div>
-                        <div className="text-zinc-300 text-sm mb-2">Pour aujourd’hui ({todayTasks.length}):</div>
+                        <div className="text-foreground text-sm mb-2">Pour aujourd’hui ({todayTasks.length}):</div>
                         <div className="space-y-2">
                             {todayTasks.slice(0, 3).map(task => (
-                                <div key={task.id} className="bg-zinc-900 border border-border rounded-lg p-3">
+                                <div key={task.id} className="bg-surface border border-border rounded-lg p-3">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <div className="text-zinc-200 font-medium">{task.title}</div>
-                                            <div className="text-zinc-400 text-xs">
+                                            <div className="text-foreground font-medium">{task.title}</div>
+                                            <div className="text-muted text-xs">
                                                 {task.course} • {task.estMins} mins • P{task.priority}
                                             </div>
                                         </div>
@@ -87,7 +87,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                 </div>
                             ))}
                             {todayTasks.length > 3 && (
-                                <div className="text-zinc-400 text-xs text-center">
+                                <div className="text-muted text-xs text-center">
                                     +{todayTasks.length - 3} autres tâches pour aujourd’hui
                                 </div>
                             )}
@@ -98,7 +98,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                 {/* Urgent (Next 24h) */}
                 {urgentTasks.length > 0 && (
                     <div>
-                        <div className="text-zinc-300 text-sm mb-2">Urgent (dans les 24 h) :</div>
+                        <div className="text-foreground text-sm mb-2">Urgent (dans les 24 h) :</div>
                         <div className="space-y-2">
                             {urgentTasks.map(task => {
                                 const hoursLeft = Math.max(0, (task.dueAt - Date.now()) / (1000 * 60 * 60))
@@ -127,10 +127,10 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
 
                 {/* Empty State */}
                 {todayTasks.length === 0 && urgentTasks.length === 0 && activeTasks.length === 0 && (
-                    <div className="text-center py-8 text-zinc-400">
+                    <div className="text-center py-8 text-muted">
                         <div className="text-2xl mb-2">🎉</div>
                         <div className="text-sm">Rien d’urgent aujourd’hui !</div>
-                        <div className="text-xs text-zinc-500">Continue à avancer à ton rythme.</div>
+                        <div className="text-xs text-muted">Continue à avancer à ton rythme.</div>
                     </div>
                 )}
             </div>

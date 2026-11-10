@@ -271,10 +271,10 @@ export default function Planner() {
             <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                 <div className="text-foreground font-medium">Planning des devoirs</div>
                 <div className="flex items-center gap-2">
-                    <div className="text-xs bg-zinc-900 border border-border rounded overflow-hidden">
-                        <button onClick={() => setView("today")} className={`px-2 py-1 ${view === 'today' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-300'}`}>Aujourd’hui</button>
-                        <button onClick={() => setView("list")} className={`px-2 py-1 ${view === 'list' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-300'}`}>Liste</button>
-                        <button onClick={() => setView("mindmap")} className={`px-2 py-1 ${view === 'mindmap' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-300'}`}>Carte mentale</button>
+                    <div className="text-xs bg-surface border border-border rounded overflow-hidden">
+                        <button onClick={() => setView("today")} className={`px-2 py-1 ${view === 'today' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Aujourd’hui</button>
+                        <button onClick={() => setView("list")} className={`px-2 py-1 ${view === 'list' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Liste</button>
+                        <button onClick={() => setView("mindmap")} className={`px-2 py-1 ${view === 'mindmap' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Carte mentale</button>
                     </div>
                     <button onClick={reload} className="text-xs px-2 py-1 rounded bg-tint text-foreground">Actualiser</button>
                 </div>
@@ -330,8 +330,8 @@ export default function Planner() {
                             <div key={t.id} className="rounded-xl border border-border bg-surface p-3">
                                 <div className="flex items-center justify-between">
                                     <div className="min-w-0">
-                                        <div className="text-zinc-100 font-medium truncate">{t.title}</div>
-                                        <div className="text-zinc-400 text-xs">
+                                        <div className="text-foreground font-medium truncate">{t.title}</div>
+                                        <div className="text-muted text-xs">
                                             Échéance : {fmtTime(t.dueAt)} · {t.estMins} mins · P{t.priority}
                                             {t.files && t.files.length > 0 && ` · ${t.files.length} fichier(s)`}
                                         </div>
@@ -343,9 +343,9 @@ export default function Planner() {
                                             <option value="done">Terminé</option>
                                             <option value="blocked">Bloqué</option>
                                         </select>
-                                        <button onClick={() => planTask(t.id)} className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-200">Planifier</button>
-                                        <button onClick={() => gen(t.id, "summary")} className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-200">Résumé</button>
-                                        <button onClick={() => gen(t.id, "flashcards")} className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-200">Cartes</button>
+                                        <button onClick={() => planTask(t.id)} className="text-xs px-2 py-1 rounded bg-tint text-foreground">Planifier</button>
+                                        <button onClick={() => gen(t.id, "summary")} className="text-xs px-2 py-1 rounded bg-tint text-foreground">Résumé</button>
+                                        <button onClick={() => gen(t.id, "flashcards")} className="text-xs px-2 py-1 rounded bg-tint text-foreground">Cartes</button>
                                         <button onClick={() => del(t.id)} className="text-xs px-2 py-1 rounded bg-primary text-on-primary">Supprimer</button>
                                     </div>
                                 </div>
@@ -353,15 +353,15 @@ export default function Planner() {
                                 {/* Task Files */}
                                 {t.files && t.files.length > 0 && (
                                     <div className="mt-3 border-t border-border pt-3">
-                                        <div className="text-zinc-300 text-xs mb-2">Fichiers joints :</div>
+                                        <div className="text-foreground text-xs mb-2">Fichiers joints :</div>
                                         <div className="flex flex-wrap gap-2">
                                             {t.files.map(file => (
-                                                <div key={file.id} className="flex items-center gap-1 px-2 py-1 bg-zinc-800 rounded text-xs text-zinc-200">
+                                                <div key={file.id} className="flex items-center gap-1 px-2 py-1 bg-tint rounded text-xs text-foreground">
                                                     <span className="truncate max-w-32" title={file.originalName}>{file.originalName}</span>
-                                                    <span className="text-zinc-400">({Math.round(file.size / 1024)}KB)</span>
+                                                    <span className="text-muted">({Math.round(file.size / 1024)}KB)</span>
                                                     <button
                                                         onClick={() => deleteFile(t.id, file.id)}
-                                                        className="text-zinc-400 hover:text-foreground ml-1"
+                                                        className="text-muted hover:text-foreground ml-1"
                                                         title="Supprimer le fichier"
                                                     >×</button>
                                                 </div>
@@ -371,14 +371,14 @@ export default function Planner() {
                                 )}
 
                                 {materials[t.id]?.summary && (
-                                    <div className="mt-3 text-sm text-zinc-200"><MarkdownView md={materials[t.id].summary.answer || materials[t.id].summary} /></div>
+                                    <div className="mt-3 text-sm text-foreground"><MarkdownView md={materials[t.id].summary.answer || materials[t.id].summary} /></div>
                                 )}
                                 {Array.isArray(materials[t.id]?.flashcards?.flashcards) && (
                                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         {materials[t.id].flashcards.flashcards.map((c: any, i: number) => (
                                             <div key={i} className="border border-border rounded-lg p-2">
-                                                <div className="text-zinc-200 text-sm font-medium">Q: <MarkdownView md={c.q} inline /></div>
-                                                <div className="text-zinc-400 text-sm">A: <MarkdownView md={c.a} /></div>
+                                                <div className="text-foreground text-sm font-medium">Q: <MarkdownView md={c.q} inline /></div>
+                                                <div className="text-muted text-sm">A: <MarkdownView md={c.a} /></div>
                                             </div>
                                         ))}
                                     </div>

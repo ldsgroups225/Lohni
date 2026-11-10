@@ -5,7 +5,7 @@ export default function ComingSoon() {
         <h2 className="text-xl font-semibold text-foreground">
           D’autres outils à venir
         </h2>
-        <div className="flex-1 h-px bg-gradient-to-r from-zinc-700 to-transparent"></div>
+        <div className="flex-1 h-px bg-gradient-to-r from-tint to-transparent"></div>
         <div className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-300 text-xs font-medium">
           EN DÉVELOPPEMENT
         </div>
@@ -106,7 +106,7 @@ export default function ComingSoon() {
       </div>
 
       <div className="mt-6 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-zinc-800/50 to-zinc-700/50 border border-border">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-tint to-tint border border-border">
           <div className="w-2 h-2 rounded-full bg-gradient-to-r from-primary to-primary animate-pulse"></div>
           <span className="text-foreground text-sm font-medium">
             De nouveaux outils sont en préparation
