@@ -146,7 +146,7 @@ export default function Revision() {
         </div>}
         {busy && <p role="status">Chargement…</p>}
         {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}
-        {missed && <aside className="space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
+        {missed && !session?.complete && <aside className="space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
           <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
           <Button disabled={busy || !sync.online} onClick={explain}>Explique-moi</Button>
         </aside>}

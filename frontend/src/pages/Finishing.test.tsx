@@ -37,3 +37,17 @@ test('la fin de session propose un retour à l’accueil', () => {
  expect(html).toContain('Lohni, en fête')
  expect(html).toContain('+70')
 })
+test('une carte ratée reste à retravailler pendant la session mais disparaît à la fin', () => {
+ const card={id:'1',kind:'basic',question:'Quelle réponse ?',answer:'Oui',origin:'ai'}
+ const profile={schoolClass:'3e',subjects:['Mathématiques']}
+ const sync={online:true,pending:0}
+ state.values=[profile,{cards:[card],position:0,complete:false},null,false,sync,'',false,undefined,'','',card]
+ const ongoing=render(<Revision />)
+ expect(ongoing).toContain('À retravailler')
+ expect(ongoing).toContain('Explique-moi')
+ state.values=[profile,{cards:[card],position:1,complete:true,earnedXP:0},null,false,sync,'',false,undefined,'','',card]
+ const finished=render(<Revision />)
+ expect(finished).toContain('Session terminée !')
+ expect(finished).not.toContain('À retravailler')
+ expect(finished).not.toContain('Explique-moi')
+})
