@@ -25,8 +25,8 @@ export default function QuestionCard({
               "hover:border-border hover:bg-surface",
               "border-border",
               isSel ? "border-primary bg-tint" : "",
-              isCorrect ? "border-secondary bg-tint" : "",
-              isWrongSel ? "border-primary bg-tint" : "",
+              isCorrect ? "border-success bg-success text-on-success" : "",
+              isWrongSel ? "border-danger bg-danger text-on-danger" : "",
             ].join(" ");
 
             return (
@@ -35,7 +35,7 @@ export default function QuestionCard({
                   <div className="w-6 h-6 rounded-full border-2 border-border flex items-center justify-center text-xs font-bold">
                     {String.fromCharCode(65 + i)}
                   </div>
-                  <span className="text-foreground"><MarkdownView md={opt} inline /></span>
+                  <span><MarkdownView md={opt} inline /></span>
                 </div>
               </div>
             );

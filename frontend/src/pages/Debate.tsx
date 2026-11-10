@@ -611,7 +611,7 @@ export default function Debate() {
                             <div className="grid md:grid-cols-2 gap-6">
                                 {/* User Performance */}
                                 <div className="space-y-4">
-                                    <div className="bg-tint border border-secondary rounded-xl p-5">
+                                    <div className="bg-tint border border-success rounded-xl p-5">
                                         <h3 className="text-lg font-bold text-foreground mb-3">💪 Tes points forts</h3>
                                         <ul className="space-y-2">
                                             {analysis.userStrengths.map((strength, idx) => (
@@ -623,7 +623,7 @@ export default function Debate() {
                                         </ul>
                                     </div>
                                     {analysis.userWeaknesses.length > 0 && (
-                                        <div className="bg-tint border border-primary rounded-xl p-5">
+                                        <div className="bg-tint border border-danger rounded-xl p-5">
                                             <h3 className="text-lg font-bold text-foreground mb-3">📉 Points à améliorer</h3>
                                             <ul className="space-y-2">
                                                 {analysis.userWeaknesses.map((weakness, idx) => (
@@ -651,7 +651,7 @@ export default function Debate() {
                                         </ul>
                                     </div>
                                     {analysis.aiWeaknesses.length > 0 && (
-                                        <div className="bg-tint border border-primary rounded-xl p-5">
+                                        <div className="bg-tint border border-danger rounded-xl p-5">
                                             <h3 className="text-lg font-bold text-foreground mb-3">📉 Points faibles de l’IA</h3>
                                             <ul className="space-y-2">
                                                 {analysis.aiWeaknesses.map((weakness, idx) => (

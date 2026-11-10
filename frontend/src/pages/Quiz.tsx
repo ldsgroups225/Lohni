@@ -44,7 +44,7 @@ export default function Quiz() {
   const q = qs[idx];
 
   const percentage = useMemo(() => (total ? Math.round((score / total) * 100) : 0), [score, total]);
-  const resultVisual = useMemo(() => { if (percentage >= 90) return { msg: "Excellent ! Tu maîtrises ce sujet !", cls: "bg-tint border border-secondary text-foreground", icon: "🏆" }; if (percentage >= 70) return { msg: "Bravo ! Tu as bien compris.", cls: "bg-tint border border-primary text-foreground", icon: "🎉" }; if (percentage >= 50) return { msg: "Bon travail ! Relis les notions puis réessaie.", cls: "bg-tint border border-border text-foreground", icon: "📚" }; return { msg: "Continue à réviser pour progresser.", cls: "bg-tint border border-primary text-foreground", icon: "💪" }; }, [percentage]);
+  const resultVisual = useMemo(() => { if (percentage >= 90) return { msg: "Excellent ! Tu maîtrises ce sujet !", cls: "bg-success border border-success text-on-success", icon: "🏆" }; if (percentage >= 70) return { msg: "Bravo ! Tu as bien compris.", cls: "bg-tint border border-primary text-foreground", icon: "🎉" }; if (percentage >= 50) return { msg: "Bon travail ! Relis les notions puis réessaie.", cls: "bg-tint border border-border text-foreground", icon: "📚" }; return { msg: "Continue à réviser pour progresser.", cls: "bg-tint border border-primary text-foreground", icon: "💪" }; }, [percentage]);
 
   useEffect(() => () => { if (closeRef.current) closeRef.current(); }, []);
   useEffect(() => { if (!initialTopic) return; start(initialTopic); }, [initialTopic]);

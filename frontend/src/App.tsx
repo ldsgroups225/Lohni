@@ -12,7 +12,7 @@ export default function App() {
       />
       <div className="bg-background text-foreground min-h-screen flex flex-col">
         <Sidebar />
-        <div className="flex-1 relative bg-black text-stone-300">
+        <div className="flex-1 relative">
           <Outlet />
         </div>
       </div>

@@ -56,7 +56,7 @@ export default function ExamLabs() {
   )
 
   const resultVisual = useMemo(() => {
-    if (percentage >= 90) return { msg: "Excellent!", cls: "bg-tint border border-secondary text-foreground", icon: "🏆" }
+    if (percentage >= 90) return { msg: "Excellent!", cls: "bg-success border border-success text-on-success", icon: "🏆" }
     if (percentage >= 70) return { msg: "Bravo !", cls: "bg-tint border border-primary text-foreground", icon: "🎉" }
     if (percentage >= 50) return { msg: "Bon travail !", cls: "bg-tint border border-border text-foreground", icon: "📚" }
     return { msg: "Continue à réviser !", cls: "bg-tint border border-primary text-foreground", icon: "💪" }

@@ -12,6 +12,10 @@
   --color-on-primary: var(--lohni-on-primary);
   --color-secondary: var(--lohni-secondary);
   --color-on-secondary: var(--lohni-on-secondary);
+  --color-success: var(--lohni-success);
+  --color-on-success: var(--lohni-on-success);
+  --color-danger: var(--lohni-danger);
+  --color-on-danger: var(--lohni-on-danger);
   --color-mascot: var(--lohni-mascot);
   --radius-card: 1rem;
   --radius-control: 0.75rem;
@@ -33,6 +37,10 @@
   --lohni-on-primary: #ffffff;
   --lohni-secondary: #087476;
   --lohni-on-secondary: #ffffff;
+  --lohni-success: #166534;
+  --lohni-on-success: #ffffff;
+  --lohni-danger: #a51d2d;
+  --lohni-on-danger: #ffffff;
   --lohni-mascot: #f2643d;
 }
 
@@ -48,6 +56,10 @@
     --lohni-on-primary: #1b1512;
     --lohni-secondary: #3cc4c1;
     --lohni-on-secondary: #1b1512;
+    --lohni-success: #86efac;
+    --lohni-on-success: #102417;
+    --lohni-danger: #fda4af;
+    --lohni-on-danger: #301116;
   }
 }
 
