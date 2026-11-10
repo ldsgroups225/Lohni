@@ -87,7 +87,7 @@ export default function Home() {
           const seen = own?.reduce((sum, chapter) => sum + chapter.seenCards, 0)
           const total = own?.reduce((sum, chapter) => sum + chapter.cards.length, 0)
           return <article key={subject.subjectId} style={{ animationDelay: listDelay(index) }} className="motion-list rounded-xl border border-border p-4">
-          <div className="mb-3 flex justify-between gap-3"><h3>{subject.name}</h3><span>{subject.mastery === null ? 'Pas encore révisée' : <>{subject.status} · <AnimatedNumber value={Math.round(subject.mastery)} /> %</>}</span></div>
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><h3>{subject.name}</h3><span className="whitespace-nowrap">{subject.mastery === null ? 'Pas encore révisée' : <>{subject.status} · <AnimatedNumber value={Math.round(subject.mastery)} /> %</>}</span></div>
           {seen !== undefined && <p className="mb-2 text-sm text-muted">{seen} carte{seen > 1 ? 's' : ''} vue{seen > 1 ? 's' : ''} sur {total}</p>}
           <Progress className="mastery-progress w-full" max={100} value={subject.mastery ?? 0} aria-label={`Maîtrise en ${subject.name}`} />
         </article>})}</section>}

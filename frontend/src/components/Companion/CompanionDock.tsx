@@ -116,7 +116,7 @@ export default function CompanionDock() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 px-4 py-3 rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg  transition-opacity"
+          className={`fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 px-3 py-2 text-sm md:px-4 md:py-3 md:text-base rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg  transition-opacity`}
         >
           Assistant de cours
         </button>
@@ -124,7 +124,7 @@ export default function CompanionDock() {
 
       <div
         className={cx(
-          "fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 w-[min(360px,calc(100vw-2rem))] max-h-[min(85vh,640px)] rounded-3xl border border-border bg-surface backdrop-blur-xl shadow-2xl  transition-[transform,opacity] duration-300",
+          "fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 w-[min(360px,calc(100vw-2rem))] max-h-[min(70vh,640px)] rounded-3xl border border-border bg-surface backdrop-blur-xl shadow-2xl  transition-[transform,opacity] duration-300",
           open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
         )}
       >
@@ -251,13 +251,13 @@ export default function CompanionDock() {
               }}
               placeholder={hasDocument ? "Pose une question sur ce document…" : "Ouvre un document pour commencer"}
               disabled={disabled && !hasDocument}
-              className="flex-1 px-4 py-2.5 rounded-2xl bg-surface border border-border text-sm text-foreground placeholder-muted focus:border-primary focus:ring-2 focus:ring-primary disabled:opacity-50"
+              className="min-w-0 flex-1 px-4 py-2.5 rounded-2xl bg-surface border border-border text-sm text-foreground placeholder-muted focus:border-primary focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
             <button
               type="button"
               onClick={() => send()}
               disabled={disabled || !input.trim()}
-              className="px-4 py-2.5 rounded-2xl bg-primary hover:bg-primary text-on-primary text-sm font-medium transition-opacity disabled:opacity-50"
+              className="shrink-0 px-4 py-2.5 rounded-2xl bg-primary hover:bg-primary text-on-primary text-sm font-medium transition-opacity disabled:opacity-50"
             >
               Envoyer
             </button>

@@ -50,8 +50,8 @@ export default function Profile() {
       {!error && !busy && !profile && !progress && <Mascotte humeur="au repos" taille={112} />}
       {progress && <dl className="grid grid-cols-3 gap-3 rounded-2xl border border-border p-5 text-center">
         <div><dt>XP</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.xp} /></dd></div>
-        <div><dt>Série de jours</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.streak} /></dd></div>
-        <div><dt>Cartes apprises</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.learnedCards} /></dd></div>
+        <div><dt>Série</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.streak} /></dd></div>
+        <div><dt>Cartes</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.learnedCards} /></dd></div>
       </dl>}
       {profile ? <form onSubmit={save} className="space-y-5 rounded-2xl border border-border p-6" aria-busy={busy}>
         <h2 className="text-xl text-foreground">Mon parcours</h2>

@@ -156,7 +156,7 @@ export default function Landing() {
                   onClick={() => setShowLength(!showLength)}
                   className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer">
                   <div className="flex flex-col -space-y-0.5 pr-2">
-                    <span className="text-xs text-foreground">Longueur de réponse</span>
+                    <span className="text-xs text-foreground">Longueur</span>
                     <span className="text-sm font-semibold text-foreground">{responseLength}</span>
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-muted">

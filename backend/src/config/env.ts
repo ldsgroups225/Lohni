@@ -12,7 +12,7 @@ export const config = {
   provider: process.env.LLM_PROVIDER || 'ollama',
   embeddings_provider: process.env.EMB_PROVIDER || 'openai',
   openrouter: process.env.OPENROUTER_API_KEY || '',
-  openrouter_model: process.env.openrouter_model || '',
+  openrouter_model: process.env.OPENROUTER_MODEL || '',
   requesty: process.env.REQUESTY_API_KEY || '',
   requesty_model: process.env.REQUESTY_MODEL || 'openai/gpt-4o-mini',
   requesty_embed_model: process.env.REQUESTY_EMBED_MODEL || 'openai/text-embedding-3-large',

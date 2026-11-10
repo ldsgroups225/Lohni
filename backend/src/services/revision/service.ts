@@ -208,6 +208,7 @@ export class RevisionService {
     } catch (error) {
       await this.execute(context, () => this.dependencies.db.run('DELETE FROM revision_generations WHERE id = ? AND device_id = ?', [generationId, context.deviceId]))
       if (error instanceof RevisionError) throw error
+      console.error('Génération IA en échec :', error)
       throw new RevisionError('Le service IA est indisponible pour le moment, réessaie plus tard.')
     }
   }

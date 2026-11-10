@@ -6,5 +6,5 @@ export function Button({ className = '', type = 'button', ...props }: ComponentP
 }
 
 export function ButtonLink({ className = '', ...props }: LinkProps) {
-  return <Link className={`ui-button inline-block text-center ${className}`} {...props} />
+  return <Link className={`ui-button inline-flex items-center justify-center text-center ${className}`} {...props} />
 }

@@ -25,6 +25,7 @@ export default function Revision() {
   const [feedback, setFeedback] = useState<{ id: number; knew: boolean } | null>(null)
   const [moreCards, setMoreCards] = useState(false)
   const startedAt = useRef(Date.now())
+  const actions = useRef<HTMLDivElement>(null)
   const card = session?.cards[session.position]
   const secondaryButton = 'rounded-xl border border-border bg-surface px-4 py-3 text-foreground disabled:opacity-50 disabled:cursor-wait'
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
@@ -33,6 +34,11 @@ export default function Revision() {
     window.dispatchEvent(new CustomEvent(revisionCardVisibility, { detail: !!session && !session.complete && !!card }))
     return () => { window.dispatchEvent(new CustomEvent(revisionCardVisibility, { detail: false })) }
   }, [session, card])
+
+  // Bring « Je savais » into view once the answer is revealed.
+  useEffect(() => {
+    if (revealed) actions.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [revealed])
 
   useEffect(() => {
     if (!feedback) return
@@ -129,7 +135,7 @@ export default function Revision() {
   if (!busy && !error && !profile) return <Navigate to="/" replace />
 
   return (
-    <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
+    <main className={`loop-screen min-h-screen px-4 pt-8 md:pl-28 ${session && !session.complete && card ? 'pb-10' : 'pb-36'}`}>
       <div className="mx-auto max-w-xl space-y-6">
         {session && !session.complete && card ? <header><Link to="/" aria-label="Quitter la session" className="inline-block rounded-xl p-2 text-muted"><CloseIcon /></Link></header> : !(session && session.position > 0) && <header><h1 className="text-2xl font-semibold text-foreground">Session de révision</h1></header>}
         {(!sync.online || sync.pending > 0) && <aside role="status" className="space-y-2 rounded-xl border border-border p-4 text-foreground">
@@ -160,7 +166,7 @@ export default function Revision() {
               <div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div>
               <Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" />
             </div>
-            <article key={`${card.id}-${session.position}-${revealed}`} className={`space-y-5 rounded-2xl border border-border bg-surface p-6 ${revealed ? 'motion-flip' : 'motion-enter'}`}>
+            <article key={`${card.id}-${session.position}-${revealed}`} className={`space-y-4 rounded-2xl border border-border bg-surface p-5 ${revealed && card.kind !== 'mcq' ? 'motion-flip' : 'motion-enter'}`}>
               {card.origin === 'ai' && <p className="text-xs text-muted">Générée par IA · Peut contenir des erreurs</p>}
               <h2 className="text-xl text-foreground"><MarkdownView md={card.question} inline /></h2>
               {card.kind === 'mcq' && <fieldset disabled={busy || revealed} className="space-y-3">
@@ -177,11 +183,11 @@ export default function Revision() {
                 <MarkdownView md={card.answer} />
               </div> : <Button disabled={busy || (card.kind === 'mcq' && choice === undefined)} onClick={() => setRevealed(true)}>Révéler la réponse</Button>}
             </article>
-            {revealed && <div className="grid grid-cols-2 gap-3">
+            {revealed && <div ref={actions} className="grid scroll-mb-6 grid-cols-2 gap-3">
               <button className="flex items-center justify-center gap-1 whitespace-nowrap rounded-xl border border-border bg-surface px-2 py-3 text-sm text-foreground disabled:cursor-wait disabled:opacity-50 sm:text-base" disabled={busy} onClick={() => answer(false)}><CloseIcon />Je ne savais pas</button>
               <button className="flex items-center justify-center gap-2 rounded-xl bg-success px-2 py-3 text-sm font-semibold text-on-success disabled:opacity-50 sm:text-base" disabled={busy || (card.kind === 'mcq' && choice !== card.correct)} onClick={() => answer(true)}><CheckIcon />Je savais</button>
             </div>}
-            <button disabled={busy || !sync.online || sync.pending > 0} className="text-sm text-muted underline" onClick={() => void run(async () => {
+            <button disabled={busy || !sync.online || sync.pending > 0} className="mt-4 block w-full rounded-xl py-3 text-center text-sm text-muted underline" onClick={() => void run(async () => {
               await revisionAPI.deleteCard(card.id)
               display(await revisionAPI.session())
             })}>Supprimer cette carte</button>

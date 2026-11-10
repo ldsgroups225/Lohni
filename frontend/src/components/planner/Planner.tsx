@@ -205,7 +205,7 @@ export default function Planner() {
     return (
         <div className="rounded-2xl border border-border bg-surface">
             <div className="px-4 py-3 border-b border-border flex flex-wrap gap-2 items-center justify-between">
-                <div className="text-foreground font-medium">Planning des devoirs</div>
+                <div className="sr-only">Planning des devoirs</div>
                 <div className="flex items-center gap-2">
                     <div className="text-xs bg-surface border border-border rounded flex flex-wrap">
                         <button onClick={() => setView("today")} className={`px-2 py-1 ${view === 'today' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Aujourd’hui</button>

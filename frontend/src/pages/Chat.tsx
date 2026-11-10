@@ -254,13 +254,14 @@ export default function Chat() {
   return (
     <div className="bg-background text-foreground flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
       <div className="mx-auto mt-6 w-full max-w-4xl space-y-3">
-        <Link to="/tutor" className="text-primary underline">Tuteur · Nouvelle discussion et historique</Link>
-        <Link to="/revision" className="ml-4 underline">Reprendre ma session</Link>
-        {profile ? <fieldset className="flex flex-wrap gap-3 rounded-xl border border-border p-3">
-          <legend className="px-2 text-sm">Enregistrer les cartes dans mes révisions</legend>
+        <div className="flex items-center justify-between gap-4 whitespace-nowrap text-sm">
+          <Link to="/tutor" className="text-primary underline">Discussions</Link>
+          <Link to="/revision" className="underline">Reprendre ma session</Link>
+        </div>
+        {profile ? <details className="rounded-xl border border-border p-3"><summary className="cursor-pointer text-sm">Enregistrer les cartes dans mes révisions</summary><fieldset className="mt-3 flex flex-wrap gap-3">
           <label className="min-w-40 flex-1">Matière<select className="mt-1 w-full rounded-lg bg-surface p-2" value={subject} onChange={event => setSubject(event.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
           <label className="min-w-40 flex-1">Chapitre<input className="mt-1 w-full rounded-lg bg-surface p-2" maxLength={revisionPolicy.maxTitleChars} value={noteTitle} placeholder={(topic || 'Notes du Tuteur').slice(0, revisionPolicy.maxTitleChars)} onChange={event => setNoteTitle(event.target.value)} /></label>
-        </fieldset> : <Link to="/" className="block underline">Créer mon profil pour enregistrer des cartes</Link>}
+        </fieldset></details> : <Link to="/" className="block underline">Créer mon profil pour enregistrer des cartes</Link>}
         {saveMessage && <p role="status" className="text-foreground">{saveMessage} <Link to="/courses" className="underline">Voir mes cours</Link></p>}
         {error && <p role="alert" className="text-foreground">{error}</p>}
       </div>
@@ -275,7 +276,7 @@ export default function Chat() {
             <rect width="18" height="18" x="3" y="3" rx="2" />
             <path d="M15 3v18" />
           </svg>
-          <span>Cartes ({cards.length})</span>
+          <span className="max-md:sr-only">Cartes ({cards.length})</span><span aria-hidden="true" className="md:hidden">{cards.length}</span>
         </button>
       )}
 

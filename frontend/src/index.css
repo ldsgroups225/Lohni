@@ -74,7 +74,7 @@
   transition: transform var(--duration-fast) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni);
 }
 .ui-button:active:not(:disabled) { transform: scale(0.98); }
-.ui-button:disabled { cursor: not-allowed; border: 2px dashed currentColor; }
+.ui-button:disabled { cursor: not-allowed; opacity: 0.55; }
 .ui-button:focus-visible { outline: 3px solid var(--color-secondary); outline-offset: 3px; }
 .ui-card { background: var(--color-surface); color: var(--color-foreground); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
 .ui-progress { appearance: none; width: 100%; height: 0.5rem; border: 0; border-radius: 9999px; overflow: hidden; background: var(--color-border); color: var(--color-primary); }
@@ -204,3 +204,27 @@ body {
 .loop-screen button, .loop-screen a, .loop-screen .ui-card, .loop-screen article { transition: transform var(--duration-fast) var(--ease-lohni); }
 .loop-screen button:active:not(:disabled), .loop-screen a:active, .loop-screen .ui-card:active, .loop-screen article:active { transform: scale(.98); }
 .navigation-indicator { position: absolute; left: 0; top: 0; opacity: 0; pointer-events: none; border-radius: var(--radius-control); background: var(--color-tint); transition: transform var(--duration-normal) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni); }
+
+body[data-onboarding] nav[aria-label="Navigation principale"] { display: none; }
+
+/* Native feel: hidden scrollbars, no tap flash, no UI text selection (content stays selectable) */
+html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; overscroll-behavior-y: none; }
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
+button, a, summary, nav, img, svg, label, [role="tab"], [role="button"] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+img, svg { -webkit-user-drag: none; }
+@media (max-width: 767px) { input, textarea, select { font-size: 16px; } }
+
+/* Smooth interactions everywhere */
+button, a, summary, input, select, textarea { transition: background-color var(--duration-fast) var(--ease-lohni), color var(--duration-fast) var(--ease-lohni), border-color var(--duration-fast) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni), transform var(--duration-fast) var(--ease-lohni); }
+button:active:not(:disabled) { transform: scale(.97); }
+.ui-card, article { transition: border-color var(--duration-fast) var(--ease-lohni), background-color var(--duration-fast) var(--ease-lohni); }
+
+/* Accordions: animated height, rotating chevron */
+details { interpolate-size: allow-keywords; }
+details::details-content { block-size: 0; overflow: hidden; transition: block-size var(--duration-slow) var(--ease-lohni), content-visibility var(--duration-slow) allow-discrete; }
+details[open]::details-content { block-size: auto; }
+summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: ""; flex: none; width: .55rem; height: .55rem; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform var(--duration-normal) var(--ease-lohni); opacity: .7; }
+details[open] > summary::after { transform: rotate(225deg) translateY(-2px); }

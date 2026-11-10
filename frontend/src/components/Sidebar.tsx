@@ -34,7 +34,7 @@ export default function Sidebar() {
     window.addEventListener('resize', move)
     return () => window.removeEventListener('resize', move)
   }, [pathname, cardVisible])
-  if (pathname === '/revision' && cardVisible) return null
+  if ((pathname === '/revision' && cardVisible) || pathname === '/quiz') return null
   const active = pathname === '/chat' ? '/tutor'
     : ['/import', '/cards', '/exam', '/debate', '/tools', '/planner', '/quiz'].includes(pathname) ? '/courses'
     : pathname === '/revision' ? '/' : pathname
