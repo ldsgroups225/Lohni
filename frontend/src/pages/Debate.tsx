@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { confirmDialog } from "../lib/confirm";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 type DebateMessage = {
@@ -232,7 +233,7 @@ export default function Debate() {
     const handleSurrender = async () => {
         if (!debateId || isDebateEnded) return;
 
-        if (!confirm("Veux-tu terminer ce débat ?")) return;
+        if (!(await confirmDialog("Veux-tu terminer ce débat ?", "Terminer"))) return;
 
         try {
             const response = await fetch(

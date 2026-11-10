@@ -1,4 +1,5 @@
 import { Button, ButtonLink } from '../components/ui/Button'
+import { confirmDialog } from '../lib/confirm'
 import { listDelay } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
@@ -115,18 +116,18 @@ export default function Courses() {
                   <div className="flex flex-wrap gap-3">
                     <Button disabled={busy} onClick={() => setEditing(card.id)}>Modifier</Button>
                     <button type="button" className="rounded-xl border border-danger px-4 py-3 text-danger disabled:opacity-50" disabled={busy} onClick={() => {
-                      if (window.confirm('Supprimer cette carte ? Elle ne sera plus proposée en révision.')) void run(async () => { await revisionAPI.deleteCard(card.id); await load() })
+                      void confirmDialog('Supprimer cette carte ? Elle ne sera plus proposée en révision.').then(ok => { if (ok) void run(async () => { await revisionAPI.deleteCard(card.id); await load() }) })
                     }}>Supprimer la carte</button>
                   </div>
                 </>}
               </article>)}</div>
             </details>
             <button className="py-2 text-sm text-foreground underline disabled:opacity-50" disabled={busy} onClick={() => {
-              if (window.confirm(`Supprimer le chapitre « ${chapter.title} » et toutes ses cartes ? Cette action est définitive.`)) void run(async () => {
+              void confirmDialog(`Supprimer le chapitre « ${chapter.title} » et toutes ses cartes ? Cette action est définitive.`).then(ok => { if (ok) void run(async () => {
                 await revisionAPI.deleteChapter(chapter.id)
                 setEditing(null)
                 await load()
-              })
+              }) })
             }}>Supprimer le chapitre</button>
           </article>)}
         </section>
