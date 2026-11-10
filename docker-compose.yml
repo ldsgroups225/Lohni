@@ -22,8 +22,8 @@ services:
     env_file:
       - .env
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
       target: runtime
       args:
         VITE_BACKEND_URL: ${VITE_BACKEND_URL}

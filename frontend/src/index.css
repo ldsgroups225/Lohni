@@ -103,3 +103,14 @@ body {
     transform: scale(1);
   }
 }
+.mastery-progress {
+  appearance: none;
+  height: 0.5rem;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: #292524;
+  color: #38bdf8;
+}
+.mastery-progress::-webkit-progress-bar { background: #292524; }
+.mastery-progress::-webkit-progress-value { background: #38bdf8; }
+.mastery-progress::-moz-progress-bar { background: #38bdf8; }

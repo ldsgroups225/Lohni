@@ -75,7 +75,7 @@ test('un échec du modèle vision reste réessayable sans créer de cartes ni co
   })
   await expect(service.importChapter(context(), { title: input.title, subject: input.subject,
     file: { path, filename: 'cahier.jpg', mimeType: 'image/jpeg' },
-  })).rejects.toThrow('Photo illisible')
+  })).rejects.toThrow('lecture des photos est indisponible')
   expect((await service.getSession(context())).cards).toEqual([])
   expect((await service.getImportQuota(context())).remaining).toBe(3)
 })

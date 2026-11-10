@@ -94,7 +94,7 @@ export default function Courses() {
             </div>
             <p className="text-sm text-stone-400">{chapter.origin === 'ai' ? 'Généré par IA · Peut contenir des erreurs' : 'Cours importé'}</p>
             <p>{chapter.mastery === null ? 'Aucune carte vue' : `${Math.round(chapter.mastery)} % de rappel estimé`} · {chapter.seenCards}/{chapter.cards.length} cartes vues</p>
-            <progress className="w-full" value={chapter.mastery ?? 0} max={100} aria-label={`Maîtrise du chapitre ${chapter.title}`} />
+            <progress className="mastery-progress w-full" value={chapter.mastery ?? 0} max={100} aria-label={`Maîtrise du chapitre ${chapter.title}`} />
             {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && <p className="text-sm text-stone-400">Révise au moins {Math.round(revisionPolicy.minimumSeenRatio * 100)} % des cartes pour faire évoluer la maîtrise.</p>}
             <details><summary className="cursor-pointer py-2 text-white">Relire le résumé</summary><MarkdownView md={chapter.summary} /></details>
             <details><summary className="cursor-pointer py-2 text-white">Voir les cartes ({chapter.cards.length})</summary>

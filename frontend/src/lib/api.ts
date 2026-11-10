@@ -642,7 +642,10 @@ export type RevisionHome = {
   cardCount: number; estimatedMinutes: number; state: 'ready' | 'done' | 'empty';
 };
 
+const revisionHttpsError = 'Ouvre Lohni en HTTPS dans un navigateur à jour pour sauvegarder tes réponses hors ligne.';
+
 function revisionDeviceId(): string {
+  if (!globalThis.crypto?.randomUUID || !navigator.locks) throw new Error(revisionHttpsError);
   let deviceId = localStorage.getItem('lohni-device-id');
   if (!deviceId) {
     deviceId = crypto.randomUUID();
@@ -698,10 +701,11 @@ async function updateOffline(update: (state: OfflineRevision) => void): Promise<
     window.dispatchEvent(new Event('revision-sync'));
   };
   // Le verrou protège la file quand deux onglets répondent ou synchronisent en même temps.
-  if (!navigator.locks) throw new Error('Ouvre Lohni en HTTPS dans un navigateur à jour pour sauvegarder tes réponses hors ligne.');
+  if (!navigator.locks) throw new Error(revisionHttpsError);
   await navigator.locks.request('lohni-revision-offline', save);
 }
 export function revisionSyncStatus() {
+  if (!globalThis.crypto?.randomUUID || !navigator.locks) return { pending: 0, error: revisionHttpsError, online: navigator.onLine };
   return { pending: readOffline().pending.length, error: syncError, online: navigator.onLine };
 }
 export function syncRevisionAnswers(): Promise<void> {
@@ -790,7 +794,7 @@ async function revisionMutation<T>(path: string, method: string, body?: unknown)
 
 window.addEventListener('online', () => { void syncRevisionAnswers(); });
 window.addEventListener('focus', () => { void syncRevisionAnswers(); });
-window.setInterval(() => { if (readOffline().pending.length) void syncRevisionAnswers(); }, 30000);
+window.setInterval(() => { if (revisionSyncStatus().pending) void syncRevisionAnswers(); }, 30000);
 
 export type RevisionImportedChapter = { id: string; title: string; summary: string; origin: 'import' };
 export type RevisionImportQuota = { remaining: number; resetsAt: string };

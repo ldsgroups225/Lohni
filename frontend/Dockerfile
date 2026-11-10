@@ -6,12 +6,12 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 RUN npm i -g pnpm@10.13.1
 
-WORKDIR /app
+WORKDIR /app/frontend
 
 # deps
 FROM base AS deps
 
-COPY package*.json pnpm*.yaml ./
+COPY frontend/package*.json frontend/pnpm*.yaml ./
 
 RUN pnpm i --frozen-lockfile
 
@@ -23,15 +23,16 @@ ARG VITE_TIMEOUT
 ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
 ENV VITE_TIMEOUT=$VITE_TIMEOUT
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --from=deps /app/frontend/node_modules ./node_modules
+COPY frontend/ ./
+COPY backend/src/services/revision/policy.ts backend/src/services/revision/session.ts /app/backend/src/services/revision/
 
 RUN pnpm build
 
 # runtime
 FROM base AS runtime
 
-COPY --from=build /app/dist ./dist
+COPY --from=build /app/frontend/dist ./dist
 
 RUN npm install -g serve
 

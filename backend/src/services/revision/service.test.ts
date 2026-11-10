@@ -132,7 +132,7 @@ test('quinze recto-verso et cinq QCM dus gardent leur place avant un quota de ci
   expect(session.cards.filter(card => card.kind === 'mcq')).toHaveLength(5)
 })
 
-test.each<[string | undefined, number, number]>([[undefined, 5, 15], ['2026-11-13', 3, 17]])('dose seulement les nouveaux recto-verso puis remplit le plafond avec les QCM : %s', async (examDate, basics, mcqs) => {
+test.each<[string | undefined, number, number]>([[undefined, 5, 5], ['2026-11-13', 3, 3]])('dose séparément les nouveaux recto-verso et QCM : %s', async (examDate, basics, mcqs) => {
   await setup(12, examDate)
   generated = { summary: 'QCM', notes: Array.from({ length: 25 }, (_, i) => ({ content: `QCM ${i}`, cards: [{
     kind: 'mcq' as const, question: `QCM ${i}`, answer: 'A', options: ['A', 'B', 'C', 'D'], correct: 1,
@@ -146,7 +146,7 @@ test.each<[string | undefined, number, number]>([[undefined, 5, 15], ['2026-11-1
   await finish(session)
   const continued = await service.getSession(context(), true)
   expect(continued.cards.every(card => card.kind === 'mcq')).toBe(true)
-  expect(continued.cards).toHaveLength(25 - mcqs)
+  expect(continued.cards).toHaveLength(0)
 })
 
 test('les QCM déjà découverts ne réduisent pas le quota recalculé après un nouveau chapitre', async () => {
@@ -160,7 +160,7 @@ test('les QCM déjà découverts ne réduisent pas le quota recalculé après un
   await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Nouveau chapitre' })
 
   const continued = await service.getSession(context(), true)
-  expect(continued.cards.map(card => card.kind)).toEqual(['basic', 'basic'])
+  expect(continued.cards.map(card => card.kind)).toEqual(['basic', 'basic', 'mcq', 'mcq'])
   await finish(continued)
   expect((await service.getSession(context(), true)).cards).toEqual([])
 })
@@ -458,4 +458,76 @@ test('les identifiants de réponse invalides sont refusés et les rejouages conc
   const otherSession = await service.getSession(other)
   await service.answer(other, { ...input, sessionId: otherSession.id, cardId: otherSession.cards[0].id })
   expect(await service.getProgress(other)).toMatchObject({ xp: 60, streak: 1 })
+})
+
+
+test('une session vide est reconstruite après un import', async () => {
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'] })
+  expect((await service.getHome(context()))?.state).toBe('empty')
+  generated = { summary: 'Résumé', notes: [{ content: 'Cours', cards: [
+    { kind: 'basic', question: 'Question', answer: 'Réponse' },
+    { kind: 'mcq', question: 'QCM', answer: 'A', options: ['A', 'B', 'C', 'D'], correct: 1 },
+  ] }] }
+  await service.importChapter(context(), { title: 'Cours', subject: 'Mathématiques', text: 'Cours' })
+  expect(await service.getHome(context())).toMatchObject({ state: 'ready', cardCount: 2 })
+})
+
+test('les jours observés sans carte préservent la série, mais un jour avec cartes non terminées la casse', async () => {
+  await setup(1)
+  await finish(await service.getSession(context()))
+  now = new Date('2026-11-10T12:00:00Z')
+  await finish(await service.getSession(context()))
+  now = new Date('2026-11-11T12:00:00Z')
+  expect((await service.getSession(context())).cards).toHaveLength(0)
+  now = new Date('2026-11-12T12:00:00Z')
+  expect((await service.getProgress(context())).streak).toBe(2)
+  await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Disponible' })
+  expect((await service.getSession(context())).cards).toHaveLength(1)
+  expect((await service.getProgress(context())).streak).toBe(2)
+  now = new Date('2026-11-13T12:00:00Z')
+  expect((await service.getProgress(context())).streak).toBe(0)
+  now = new Date('2026-11-14T12:00:00Z')
+  expect((await service.getProgress(context())).streak).toBe(0)
+})
+
+test('la génération réserve trois places par jour serveur et libère les échecs', async () => {
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'] })
+  let release!: () => void
+  let started!: () => void
+  const waiting = new Promise<void>(resolve => { release = resolve })
+  const running = new Promise<void>(resolve => { started = resolve })
+  let block = false
+  service = new RevisionService({ db, now: () => now, generateCards: async () => {
+    if (block) { block = false; started(); await waiting; throw new Error('indisponible') }
+    return generated
+  } })
+  const input = { subject: 'Mathématiques', title: 'Cours' }
+  await service.generateChapter(context(), input)
+  await service.generateChapter(context(), input)
+  block = true
+  const pending = service.generateChapter(context(), input)
+  await running
+  try {
+    await expect(service.generateChapter({ ...context(), localDate: '2026-11-10' }, input)).rejects.toThrow('Recharge le 2026-11-10 à 00:00 UTC')
+  } finally { release() }
+  await expect(pending).rejects.toThrow('indisponible')
+  block = false
+  await service.generateChapter(context(), input)
+  await expect(service.generateChapter(context(), input)).rejects.toThrow('3 générations')
+  now = new Date('2026-11-10T00:00:00Z')
+  await service.generateChapter(context(), input)
+})
+
+
+test('une connexion SQLite attend la libération du verrou par une autre connexion', async () => {
+  const other = new SQLiteDatabase(join(directory, 'test.sqlite'))
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'] })
+  await other.run('BEGIN IMMEDIATE')
+  const pending = service.generateChapter(context(), { subject: 'Mathématiques', title: 'Cours' })
+  const result = pending.then(value => ({ value }), error => ({ error }))
+  try {
+    await new Promise(resolve => setTimeout(resolve, 1200))
+    await other.run('COMMIT')
+    expect(await result).toMatchObject({ value: { title: 'Cours' } })
+  } finally { await other.close() }
 })
