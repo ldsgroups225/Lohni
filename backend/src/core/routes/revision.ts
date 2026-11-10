@@ -6,12 +6,14 @@ import { RevisionError, RevisionService, type RevisionContext } from '../../serv
 import { generateCards, transcribePhoto } from '../../services/revision/generator'
 import { REVISION_POLICY as policy } from '../../services/revision/policy'
 import { sqlite } from '../../utils/database/sqlite'
+import { config } from '../../config/env'
 
 const revision = new RevisionService({ db: sqlite, now: () => new Date(), generateCards, transcribePhoto })
 
 export function revisionRoutes(app: any) {
   const route = (method: string, path: string, handle: (context: RevisionContext, req: any) => Promise<unknown>) => {
     app[method](path, async (req: any, res: any) => {
+      req.setTimeout(config.timeout)
       try {
         const data = await handle({ deviceId: req.headers['x-device-id'], localDate: req.headers['x-local-date'] }, req)
         res.send({ ok: true, data: data ?? null })
