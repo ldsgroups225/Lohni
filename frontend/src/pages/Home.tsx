@@ -61,7 +61,6 @@ export default function Home() {
         </article>)}</section>}
         {progressError && <p role="status" className="text-sm text-stone-400">{progressError}</p>}
       </>}
-      <footer className="text-xs text-stone-500">Lohni, basé sur <a href="https://github.com/CaviraOSS/PageLM" className="underline">PageLM</a></footer>
     </div>
   </main>
 }

@@ -1,3 +1,4 @@
+import MarkdownView from '../components/Chat/MarkdownView'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { chatJSON, revisionAPI, revisionPolicy, revisionSyncStatus, syncRevisionAnswers, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress } from '../lib/api'
@@ -126,7 +127,7 @@ export default function Revision() {
         </div>}
         {busy && <p role="status">Chargement…</p>}
         {missed && <aside className="space-y-3 rounded-2xl border border-orange-900 p-4" aria-live="polite">
-          <p>À retravailler : {missed.question}</p>
+          <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
           <button className={button} disabled={busy || !sync.online} onClick={explain}>Explique-moi</button>
         </aside>}
         {session && !session.complete && card ? (
@@ -137,19 +138,19 @@ export default function Revision() {
             </div>
             <article className="space-y-5 rounded-2xl border border-stone-800 bg-stone-950 p-6">
               {card.origin === 'ai' && <p className="text-xs text-stone-400">Générée par IA · Peut contenir des erreurs</p>}
-              <h2 className="whitespace-pre-wrap text-xl text-white">{card.question}</h2>
+              <h2 className="text-xl text-white"><MarkdownView md={card.question} inline /></h2>
               {card.kind === 'mcq' && <fieldset disabled={busy || revealed} className="space-y-3">
                 <legend className="mb-3">Choisis ta réponse</legend>
                 {card.options?.map((option, i) => <label key={i} className="flex items-start gap-3 rounded-xl border border-stone-700 p-3">
                   <input type="radio" name="answer" value={i + 1} checked={choice === i + 1} onChange={() => setChoice(i + 1)} className="mt-1" />
-                  <span>{option}</span>
+                  <span>{i + 1}. <MarkdownView md={option} inline /></span>
                 </label>)}
               </fieldset>}
               {revealed ? <div className="space-y-3 border-t border-stone-700 pt-5" aria-live="polite">
                 {card.kind === 'mcq' && <p className={choice === card.correct ? 'text-green-300' : 'text-orange-300'}>
-                  {choice === card.correct ? 'Bonne réponse !' : `Bonne réponse : ${card.options?.[(card.correct ?? 1) - 1]}`}
+                  {choice === card.correct ? 'Bonne réponse !' : <>Bonne réponse : <MarkdownView md={card.options?.[(card.correct ?? 1) - 1] ?? ''} inline /></>}
                 </p>}
-                <p className="whitespace-pre-wrap">{card.answer}</p>
+                <MarkdownView md={card.answer} />
               </div> : <button className={button} disabled={busy || (card.kind === 'mcq' && choice === undefined)} onClick={() => setRevealed(true)}>Révéler la réponse</button>}
             </article>
             {revealed && <div className="grid grid-cols-2 gap-3">
@@ -179,7 +180,6 @@ export default function Revision() {
           </form>}
         </>}
         {profile && <Link to="/import" className="block rounded-xl border border-stone-700 p-4 text-center text-white">Importer mon cours</Link>}
-        <footer className="text-xs text-stone-500">Lohni, basé sur <a href="https://github.com/CaviraOSS/PageLM" className="underline">PageLM</a></footer>
       </div>
     </main>
   )

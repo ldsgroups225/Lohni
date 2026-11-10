@@ -1,3 +1,4 @@
+import MarkdownView from "../components/Chat/MarkdownView";
 import { useEffect, useState } from "react";
 import { deleteFlashcard, listFlashcards, type SavedFlashcard } from "../lib/api";
 import { useNavigate } from "react-router-dom";
@@ -70,7 +71,7 @@ export default function FlashCards() {
                   <div className="text-xs uppercase tracking-wide text-stone-400 mb-1">
                     {it.tag === "note" ? "note" : "flashcard"}
                   </div>
-                  <div className="text-white font-medium">{it.question}</div>
+                  <div className="text-white font-medium"><MarkdownView md={it.question} /></div>
                 </div>
                 <button
                   onClick={() => remove(it.id)}
@@ -84,7 +85,7 @@ export default function FlashCards() {
                   </svg>
                 </button>
               </div>
-              <div className="text-stone-300 text-sm mt-2 whitespace-pre-wrap">{it.answer}</div>
+              <div className="text-stone-300 text-sm mt-2"><MarkdownView md={it.answer} /></div>
             </div>
           ))}
         </div>

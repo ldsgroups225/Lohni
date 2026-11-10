@@ -67,7 +67,7 @@ export default function Profile() {
         <button disabled={busy || !profile.subjects.length} className="rounded-xl bg-sky-600 px-5 py-3 text-white hover:bg-sky-500 disabled:opacity-50">Enregistrer</button>
         {saved && <p role="status" className="text-green-300">Ton profil est enregistré.</p>}
       </form> : !busy && !error && <p><Link to="/" className="underline">Commencer mon parcours</Link> pour créer mon profil.</p>}
-      <footer className="rounded-2xl border border-stone-800 p-5 text-sm text-stone-400">Lohni est basé sur <a href="https://github.com/CaviraOSS/PageLM" className="text-sky-300 underline">PageLM</a>, sous licence PageLM Community License.</footer>
+      <footer className="text-xs text-stone-500">À propos · Lohni est basé sur <a href="https://github.com/CaviraOSS/PageLM" className="text-sky-300 underline">PageLM</a> de nullure et recabasic, sous licence PageLM Community License.</footer>
     </div>
   </main>
 }

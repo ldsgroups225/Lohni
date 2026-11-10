@@ -187,7 +187,13 @@ export class RevisionService {
   async generateChapter(context: RevisionContext, input: { title: string; subject: string }) {
     const profile = await this.execute(context, () => this.requireProfile(context.deviceId))
     if (!input || typeof input.title !== 'string' || !input.title.trim() || input.title.length > policy.maxTitleChars || !profile.subjects.includes(input.subject)) throw new RevisionError('Matière ou chapitre invalide.')
-    const generated = await this.dependencies.generateCards({ title: input.title.trim(), subject: input.subject, schoolClass: profile.schoolClass, series: profile.series })
+    let generated: GeneratedChapter
+    try {
+      generated = await this.dependencies.generateCards({ title: input.title.trim(), subject: input.subject, schoolClass: profile.schoolClass, series: profile.series })
+    } catch (error) {
+      if (error instanceof RevisionError) throw error
+      throw new RevisionError('Le service IA est indisponible pour le moment, réessaie plus tard.')
+    }
     return this.storeChapter(context, input, generated, 'ai')
   }
   async saveTutorNote(context: RevisionContext, input: { subject: string; title: string; question: string; answer: string }) {

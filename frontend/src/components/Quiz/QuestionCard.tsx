@@ -1,3 +1,4 @@
+import MarkdownView from "../Chat/MarkdownView";
 import type { Question } from "../../pages/Quiz";
 
 export default function QuestionCard({
@@ -10,7 +11,7 @@ export default function QuestionCard({
     <div id="quizContent" className="space-y-8">
       <div id="questionCard" className="bg-stone-950 border border-stone-900 rounded-2xl p-6">
         <div className="mb-6">
-          <h2 id="questionText" className="text-xl font-semibold text-white mb-4">{q.question}</h2>
+          <h2 id="questionText" className="text-xl font-semibold text-white mb-4"><MarkdownView md={q.question} inline /></h2>
           <div id="questionImage" className={`${q.imageHtml ? "" : "hidden"} mb-4`} dangerouslySetInnerHTML={{ __html: q.imageHtml || "" }} />
         </div>
 
@@ -34,7 +35,7 @@ export default function QuestionCard({
                   <div className="w-6 h-6 rounded-full border-2 border-stone-600 flex items-center justify-center text-xs font-bold">
                     {String.fromCharCode(65 + i)}
                   </div>
-                  <span className="text-stone-200">{opt}</span>
+                  <span className="text-stone-200"><MarkdownView md={opt} inline /></span>
                 </div>
               </div>
             );
@@ -55,12 +56,12 @@ export default function QuestionCard({
         </div>
 
         <div className={`${showHint ? "" : "hidden"} mt-4 p-4 bg-yellow-900/20 border border-yellow-700 rounded-xl`}>
-          <p className="text-yellow-200 text-sm"><strong>💡 Indice :</strong> {q.hint}</p>
+          <p className="text-yellow-200 text-sm"><strong>💡 Indice :</strong> <MarkdownView md={q.hint} inline /></p>
         </div>
 
         <div className={`${showExp ? "" : "hidden"} mt-4 p-4 bg-stone-900/50 border border-stone-800 rounded-xl`}>
           <h3 className="text-white font-medium mb-2">Explication :</h3>
-          <p className="text-stone-300 text-sm">{q.explanation}</p>
+          <MarkdownView md={q.explanation} />
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import MarkdownView from "./MarkdownView";
 type Item = { id: string; kind: "flashcard" | "note"; title: string; content: string };
 
 type Props = {
@@ -37,8 +38,8 @@ export default function BagDrawer({ open, items, onClose, onClear }: Props) {
               items.map((b) => (
                 <div key={b.id} className="bg-stone-900/60 border border-stone-800 rounded-xl p-3">
                   <div className="text-xs uppercase tracking-wide text-stone-400 mb-1">{b.kind}</div>
-                  <div className="text-white font-medium">{b.title}</div>
-                  <div className="text-stone-300 text-sm mt-1">{b.content}</div>
+                  <div className="text-white font-medium"><MarkdownView md={b.title} /></div>
+                  <div className="text-stone-300 text-sm mt-1"><MarkdownView md={b.content} /></div>
                 </div>
               ))
             )}

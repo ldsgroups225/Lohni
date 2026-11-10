@@ -1,3 +1,4 @@
+import MarkdownView from "../Chat/MarkdownView"
 import { useState, useRef, useEffect } from "react";
 import { transcribeAudio, type StudyMaterials } from "../../lib/api";
 
@@ -326,7 +327,7 @@ export default function Transcriber() {
                     </svg>
                     <h3 className="text-orange-400 font-semibold">Supports de révision créés</h3>
                   </div>
-                  <p className="text-orange-200 text-sm">{studyMaterials.summary}</p>
+                  <MarkdownView md={studyMaterials.summary} />
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">

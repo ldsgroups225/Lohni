@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { SQLiteDatabase } from '../../utils/database/sqlite'
-import { RevisionService, type GeneratedChapter } from './service'
+import { RevisionError, RevisionService, type GeneratedChapter } from './service'
 
 let directory: string
 let db: SQLiteDatabase
@@ -69,4 +69,30 @@ test('l’accueil conserve la reprise et utilise le jour local pour le compte à
   expect(await reopened.getHome({ ...context, deviceId: randomUUID() })).toBeNull()
   now = new Date('2026-11-10T23:30:00Z')
   expect(await reopened.getHome({ ...context, localDate: '2026-11-11' })).toMatchObject({ state: 'ready', daysUntilExam: 0, cardCount: 6 })
+})
+
+test.each([402, 429, 500, 503, 'invalid JSON'])('un échec IA %s du premier chapitre reste compréhensible et réessayable sans données partielles', async failure => {
+  let failing = true
+  service = new RevisionService({ db, now: () => now, generateCards: async () => {
+    if (failing) throw new Error(`provider: ${failure}`)
+    return generated
+  } })
+  await service.saveProfile(context, { schoolClass: '3e', subjects: ['Mathématiques'] })
+  await expect(service.generateChapter(context, { subject: 'Mathématiques', title: 'Fractions' })).rejects.toMatchObject({
+    constructor: RevisionError,
+    message: 'Le service IA est indisponible pour le moment, réessaie plus tard.',
+  })
+  expect(await service.listChapters(context)).toEqual([])
+  failing = false
+  await service.generateChapter(context, { subject: 'Mathématiques', title: 'Fractions' })
+  expect((await service.getHome(context))?.totalCards).toBe(10)
+})
+
+test('une génération de chapitre incomplète conserve une erreur de validation sans données partielles', async () => {
+  service = new RevisionService({ db, now: () => now, generateCards: async () => ({ summary: '', notes: [] }) })
+  await service.saveProfile(context, { schoolClass: '3e', subjects: ['Mathématiques'] })
+  await expect(service.generateChapter(context, { subject: 'Mathématiques', title: 'Fractions' })).rejects.toMatchObject({
+    constructor: RevisionError, message: 'Génération invalide. Réessaie avec un autre chapitre.',
+  })
+  expect(await service.listChapters(context)).toEqual([])
 })

@@ -4,8 +4,11 @@ import remarkBreaks from "remark-breaks";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
+import "katex/dist/katex.min.css";
 
-type Props = { md: string };
+type Props = { md: string; inline?: boolean };
+
+const blockElements = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "blockquote", "ul", "ol", "li", "table", "thead", "tbody", "tfoot", "tr", "th", "td", "hr"];
 
 const components: Components = {
   h1: (p) => <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mt-2 mb-4 text-stone-100 break-words" {...p} />,
@@ -46,17 +49,20 @@ const components: Components = {
   },
 };
 
-export default function MarkdownView({ md }: Props) {
+export default function MarkdownView({ md, inline = false }: Props) {
+  const Wrapper = inline ? "span" : "div";
   return (
-    <div className="prose prose-invert max-w-none leading-relaxed text-stone-200 w-full overflow-hidden">
+    <Wrapper className={inline ? "break-words" : "prose prose-invert max-w-none leading-relaxed text-stone-200 w-full overflow-hidden"}>
       <ReactMarkdown
         skipHtml
         remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
         rehypePlugins={[rehypeKatex, rehypeHighlight]}
-        components={components}
+        components={inline ? undefined : components}
+        disallowedElements={inline ? blockElements : undefined}
+        unwrapDisallowed={inline}
       >
         {md || ""}
       </ReactMarkdown>
-    </div>
+    </Wrapper>
   );
 }

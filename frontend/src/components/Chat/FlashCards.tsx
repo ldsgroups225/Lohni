@@ -1,3 +1,4 @@
+import MarkdownView from "./MarkdownView";
 import type { FlashCard } from "../../lib/api";
 
 type Props = {
@@ -51,12 +52,12 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
                   <div className="p-5">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-stone-50 text-sm font-medium leading-5 truncate">
-                          {title}
+                        <h4 className="text-stone-50 text-sm font-medium leading-5">
+                          <MarkdownView md={title} inline />
                         </h4>
-                        <p className="text-stone-400 text-xs leading-5 mt-1 line-clamp-3">
-                          {content}
-                        </p>
+                        <div className="text-stone-400 text-xs leading-5 mt-1 line-clamp-3">
+                          <MarkdownView md={content} />
+                        </div>
                       </div>
                       <button
                         disabled={disabled}

@@ -108,6 +108,8 @@ export default function CompanionDock() {
 
   const disabled = !hasDocument || busy
 
+  if (!hasDocument) return null
+
   return (
     <>
       {!open && (
@@ -201,8 +203,8 @@ export default function CompanionDock() {
                         <ul className="space-y-2 text-sm text-sky-100">
                           {msg.flashcards.slice(0, 4).map((card, idx) => (
                             <li key={`${msg.id}-card-${idx}`}>
-                              <div className="font-semibold">Q: {card.q}</div>
-                              <div className="text-sky-100/90">A: {card.a}</div>
+                              <div className="font-semibold">Q: <MarkdownView md={card.q} inline /></div>
+                              <div className="text-sky-100/90">A: <MarkdownView md={card.a} /></div>
                             </li>
                           ))}
                           {msg.flashcards.length > 4 && (

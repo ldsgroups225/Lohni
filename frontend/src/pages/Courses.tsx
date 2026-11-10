@@ -105,7 +105,7 @@ export default function Courses() {
                   await load()
                 })} /> : <>
                   <MarkdownView md={card.question} />
-                  {card.kind === 'mcq' && <ol className="list-decimal space-y-1 pl-5">{card.options?.map((option, i) => <li key={i}>{option}{i + 1 === card.correct && <span className="text-green-300"> — Bonne réponse</span>}</li>)}</ol>}
+                  {card.kind === 'mcq' && <ol className="list-decimal space-y-1 pl-5">{card.options?.map((option, i) => <li key={i}><MarkdownView md={option} inline />{i + 1 === card.correct && <span className="text-green-300"> — Bonne réponse</span>}</li>)}</ol>}
                   <MarkdownView md={card.answer} />
                   <div className="flex flex-wrap gap-3">
                     <button className={button} disabled={busy} onClick={() => setEditing(card.id)}>Modifier</button>
@@ -132,7 +132,6 @@ export default function Courses() {
           {[['/exam', 'Examen'], ['/debate', 'Débat'], ['/tools', 'Podcast et autres outils'], ['/planner', 'Planning'], ['/quiz', 'Quiz libre']].map(([to, label]) => <Link key={to} to={to} className={button}>{label}</Link>)}
         </nav>
       </details>
-      <footer className="text-xs text-stone-500">Lohni, basé sur <a href="https://github.com/CaviraOSS/PageLM" className="underline">PageLM</a></footer>
     </div>
   </main>
 }

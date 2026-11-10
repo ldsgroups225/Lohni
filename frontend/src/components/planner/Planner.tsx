@@ -1,3 +1,4 @@
+import MarkdownView from "../Chat/MarkdownView"
 import { useEffect, useMemo, useRef, useState } from "react"
 import PlannerMindmap from "./PlannerMindmap"
 import TodayFocus from "./TodayFocus"
@@ -370,14 +371,14 @@ export default function Planner() {
                                 )}
 
                                 {materials[t.id]?.summary && (
-                                    <div className="mt-3 text-sm text-zinc-200 whitespace-pre-wrap">{materials[t.id].summary.answer || materials[t.id].summary}</div>
+                                    <div className="mt-3 text-sm text-zinc-200"><MarkdownView md={materials[t.id].summary.answer || materials[t.id].summary} /></div>
                                 )}
                                 {Array.isArray(materials[t.id]?.flashcards?.flashcards) && (
                                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         {materials[t.id].flashcards.flashcards.map((c: any, i: number) => (
                                             <div key={i} className="border border-zinc-800 rounded-lg p-2">
-                                                <div className="text-zinc-200 text-sm font-medium">Q: {c.q}</div>
-                                                <div className="text-zinc-400 text-sm">A: {c.a}</div>
+                                                <div className="text-zinc-200 text-sm font-medium">Q: <MarkdownView md={c.q} inline /></div>
+                                                <div className="text-zinc-400 text-sm">A: <MarkdownView md={c.a} /></div>
                                             </div>
                                         ))}
                                     </div>

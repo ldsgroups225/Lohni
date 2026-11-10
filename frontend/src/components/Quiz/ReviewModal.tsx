@@ -1,3 +1,4 @@
+import MarkdownView from "../Chat/MarkdownView";
 import type { UA } from "../../pages/Quiz";
 
 export default function ReviewModal({ answers, onClose }:{ answers:UA[]; onClose:()=>void }) {
@@ -30,11 +31,11 @@ export default function ReviewModal({ answers, onClose }:{ answers:UA[]; onClose
                   )}
                   <div className="flex-1">
                     <h3 className="text-white font-medium mb-2">Question {i + 1}</h3>
-                    <p className="text-stone-300 text-sm mb-3">{a.question}</p>
+                    <p className="text-stone-300 text-sm mb-3"><MarkdownView md={a.question} inline /></p>
                     <div className="space-y-1 text-sm">
-                      <p className={ok ? "text-green-400" : "text-red-400"}>Ta réponse : {a.selectedOption}</p>
-                      {!ok && <p className="text-green-400">Bonne réponse : {a.correctOption}</p>}
-                      {a.explanation && <p className="text-stone-400">Explication : {a.explanation}</p>}
+                      <p className={ok ? "text-green-400" : "text-red-400"}>Ta réponse : <MarkdownView md={a.selectedOption} inline /></p>
+                      {!ok && <p className="text-green-400">Bonne réponse : <MarkdownView md={a.correctOption} inline /></p>}
+                      {a.explanation && <div className="text-stone-400">Explication : <MarkdownView md={a.explanation} /></div>}
                     </div>
                   </div>
                 </div>
