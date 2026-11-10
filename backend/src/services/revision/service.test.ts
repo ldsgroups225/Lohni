@@ -87,6 +87,19 @@ async function finish(session: Awaited<ReturnType<RevisionService['getSession']>
   return session
 }
 
+test('indique les cartes disponibles sans remplacer la session et distingue une série commencée', async () => {
+  await setup(2)
+  const session = await service.getSession(context())
+  expect(await service.getHome(context())).toMatchObject({ moreCards: true })
+  expect(await service.getSession(context())).toEqual(session)
+  const partial = await respond(session, true)
+  expect(await service.getProgress(context())).toMatchObject({ streak: 0, streakStarted: false })
+  await finish(partial)
+  expect(await service.getProgress(context())).toMatchObject({ streak: 1, streakStarted: true })
+  expect(await service.getHome(context())).toMatchObject({ moreCards: false })
+  expect((await service.getSession(context(), true)).cards).toHaveLength(0)
+})
+
 test('une erreur de QCM est traitée comme un oubli même si le client dit « Je savais »', async () => {
   await setup(1)
   generated = { summary: 'QCM', notes: [{ content: 'QCM', cards: [{ kind: 'mcq', question: 'Quelle fraction ?', answer: 'Un demi', options: ['Un demi', 'Un tiers', 'Un quart', 'Un cinquième'], correct: 1 }] }] }
@@ -180,6 +193,7 @@ test('après un long retard, la session reste plafonnée et continuer propose le
   expect(session.cards).toHaveLength(20)
   expect(session.cards.every(c => c.reviews > 0)).toBe(true)
   await finish(session)
+  expect(await service.getHome(context())).toMatchObject({ moreCards: true })
   expect((await service.getSession(context(), true)).cards).toHaveLength(10)
 })
 
@@ -314,7 +328,7 @@ test('les XP récompensent les réponses et une seule fin de session, même apr�
   expect((await service.getSession(context())).earnedXP).toBe(72)
   await service.getSession(context(), true)
   expect(await service.getProgress(context())).toMatchObject({ xp: 72, streak: 1 })
-  expect(await service.getProgress({ ...context(), deviceId: randomUUID() })).toEqual({ xp: 0, streak: 0, learnedCards: 0, subjects: [] })
+  expect(await service.getProgress({ ...context(), deviceId: randomUUID() })).toEqual({ xp: 0, streak: 0, streakStarted: false, learnedCards: 0, subjects: [] })
 })
 
 test('la série suit les jours locaux terminés, sans doubler le même jour, et casse après un jour sauté', async () => {
