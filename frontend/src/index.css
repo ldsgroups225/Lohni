@@ -5,6 +5,9 @@
   --color-background: var(--lohni-background);
   --color-surface: var(--lohni-surface);
   --color-foreground: var(--lohni-foreground);
+  --color-muted: var(--lohni-muted);
+  --color-border: var(--lohni-border);
+  --color-tint: var(--lohni-tint);
   --color-primary: var(--lohni-primary);
   --color-on-primary: var(--lohni-on-primary);
   --color-secondary: var(--lohni-secondary);
@@ -23,6 +26,9 @@
   --lohni-background: #fff8f1;
   --lohni-surface: #ffffff;
   --lohni-foreground: #2a1d17;
+  --lohni-muted: #7a6258;
+  --lohni-border: #f0e1d5;
+  --lohni-tint: #ffe6d9;
   --lohni-primary: #c8401a;
   --lohni-on-primary: #ffffff;
   --lohni-secondary: #087476;
@@ -35,6 +41,9 @@
     --lohni-background: #1b1512;
     --lohni-surface: #27201c;
     --lohni-foreground: #fbefe6;
+    --lohni-muted: #b8a297;
+    --lohni-border: #3a2f29;
+    --lohni-tint: #3b241a;
     --lohni-primary: #ff7a4d;
     --lohni-on-primary: #1b1512;
     --lohni-secondary: #3cc4c1;
@@ -54,9 +63,9 @@
 .ui-button:active:not(:disabled) { transform: scale(0.98); }
 .ui-button:disabled { cursor: not-allowed; border: 2px dashed currentColor; }
 .ui-button:focus-visible { outline: 3px solid var(--color-secondary); outline-offset: 3px; }
-.ui-card { background: var(--color-surface); color: var(--color-foreground); border-radius: var(--radius-card); }
-.ui-progress { appearance: none; width: 100%; height: 0.5rem; border: 0; border-radius: 9999px; overflow: hidden; background: var(--color-surface); color: var(--color-primary); }
-.ui-progress::-webkit-progress-bar { background: var(--color-surface); }
+.ui-card { background: var(--color-surface); color: var(--color-foreground); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
+.ui-progress { appearance: none; width: 100%; height: 0.5rem; border: 0; border-radius: 9999px; overflow: hidden; background: var(--color-border); color: var(--color-primary); }
+.ui-progress::-webkit-progress-bar { background: var(--color-border); }
 .ui-progress::-webkit-progress-value { background: var(--color-primary); }
 .ui-progress::-moz-progress-bar { background: var(--color-primary); }
 
