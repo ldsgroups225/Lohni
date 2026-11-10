@@ -40,10 +40,10 @@ export default function NotFound() {
         
         <div className="space-y-6">
           <h2 className="text-3xl font-light text-gray-200 tracking-wide">
-            Oops! Study session interrupted
+            Cette page est introuvable
           </h2>
           <p className="text-gray-400 text-lg leading-relaxed font-light max-w-md mx-auto">
-            The page you're looking for took a study break. Let's get you back to learning something amazing!
+            Retrouve tes révisions depuis l’accueil.
           </p>
         </div>
         
@@ -56,7 +56,7 @@ export default function NotFound() {
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 transition-transform group-hover:-translate-x-1 duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            <span className="relative z-10">Back to Dashboard</span>
+            <span className="relative z-10">Retour à l’accueil</span>
           </Link>
           
           <Link
@@ -67,7 +67,7 @@ export default function NotFound() {
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <span className="relative z-10">Chat</span>
+            <span className="relative z-10">Discussion</span>
           </Link>
           
           <Link
@@ -78,13 +78,13 @@ export default function NotFound() {
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
-            <span className="relative z-10">Take Quiz</span>
+            <span className="relative z-10">Faire un quiz</span>
           </Link>
         </div>
         
         <div className="mt-16 opacity-60">
           <p className="text-gray-500 text-sm font-light italic tracking-wide">
-            "Every mistake is a learning opportunity"
+            "Chaque erreur permet d’apprendre"
           </p>
         </div>
       </div>

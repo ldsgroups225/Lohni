@@ -39,6 +39,7 @@ function tryParse<T = unknown>(s: string): T | null {
 }
 
 export const BASE_SYSTEM_PROMPT = `
+Réponds en français : titre, explications et cartes de révision. Conserve les clés JSON demandées ci-dessous.
 Consider [[ ]] as section start/end and {{ }} as data places to insert;
 Return ONLY a JSON-format Object with this exact structure of this JSON:
 {

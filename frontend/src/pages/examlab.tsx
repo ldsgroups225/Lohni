@@ -57,9 +57,9 @@ export default function ExamLabs() {
 
   const resultVisual = useMemo(() => {
     if (percentage >= 90) return { msg: "Excellent!", cls: "bg-green-900/20 border border-green-700 text-green-200", icon: "🏆" }
-    if (percentage >= 70) return { msg: "Great job!", cls: "bg-blue-900/20 border border-blue-700 text-blue-200", icon: "🎉" }
-    if (percentage >= 50) return { msg: "Good effort!", cls: "bg-yellow-900/20 border border-yellow-700 text-yellow-200", icon: "📚" }
-    return { msg: "Keep studying!", cls: "bg-red-900/20 border border-red-700 text-red-200", icon: "💪" }
+    if (percentage >= 70) return { msg: "Bravo !", cls: "bg-blue-900/20 border border-blue-700 text-blue-200", icon: "🎉" }
+    if (percentage >= 50) return { msg: "Bon travail !", cls: "bg-yellow-900/20 border border-yellow-700 text-yellow-200", icon: "📚" }
+    return { msg: "Continue à réviser !", cls: "bg-red-900/20 border border-red-700 text-red-200", icon: "💪" }
   }, [percentage])
 
   useEffect(() => {
@@ -134,14 +134,14 @@ export default function ExamLabs() {
   // --- UI: Exam List ---
   if (!activeExam) {
     return (
-  <div className="min-h-screen w-full px-4 lg:pl-28 lg:pr-4">
-    <div className="max-w-5xl mx-auto pt-10 pb-14">
+  <div className="min-h-screen w-full px-4 md:pl-28 lg:pr-4">
+    <div className="max-w-5xl mx-auto pt-10 pb-28 md:pb-14">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
             className="p-2 rounded-xl bg-stone-950 border border-zinc-800 hover:bg-stone-900 transition-colors"
-            aria-label="Back"
+            aria-label="Retour"
           >
             <svg
               viewBox="0 0 24 24"
@@ -157,14 +157,14 @@ export default function ExamLabs() {
               />
             </svg>
           </button>
-          <h1 className="text-2xl font-semibold text-white">Exam Labs</h1>
+          <h1 className="text-2xl font-semibold text-white">Examens</h1>
         </div>
         <div className="px-3 py-1 rounded-full bg-gradient-to-r from-sky-500/20 to-blue-500/20 border border-sky-500/30 text-sky-300 text-xs font-medium">
-          BETA
+          BÊTA
         </div>
       </div>
 
-      {loadingExams && <LoadingIndicator label="Loading exams…" />}
+      {loadingExams && <LoadingIndicator label="Chargement des examens…" />}
 
       <div className="grid gap-6">
         {exams.map((ex) => (
@@ -182,7 +182,7 @@ export default function ExamLabs() {
               </div>
             </div>
             <div className="text-sm text-stone-400">
-              Click to start this exam
+              Clique pour commencer cet examen
             </div>
           </div>
         ))}
@@ -190,7 +190,7 @@ export default function ExamLabs() {
 
       {!loadingExams && !exams.length && (
         <div className="mt-16 text-center text-stone-400">
-          No exams available.
+          Aucun examen disponible.
         </div>
       )}
     </div>
@@ -200,11 +200,11 @@ export default function ExamLabs() {
 
   // --- UI: Exam Taking ---
   return (
-    <div className="flex flex-col min-h-screen w-full px-4 lg:pl-28 lg:pr-4">
+    <div className="flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
       <div className="w-full max-w-4xl mx-auto p-4 pt-8 pb-24 my-auto">
         {connecting && (
           <div className="mt-10">
-            <LoadingIndicator label="Building your exam…" />
+            <LoadingIndicator label="Préparation de ton examen…" />
           </div>
         )}
 

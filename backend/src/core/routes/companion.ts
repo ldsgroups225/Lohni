@@ -1,9 +1,10 @@
 import fs from "fs"
 import path from "path"
+import { publicStorage } from '../../config/storage'
 import { askWithContext, BASE_SYSTEM_PROMPT } from "../../lib/ai/ask"
 
 const allowedRoots = [
-  path.resolve(process.cwd(), "storage"),
+  ...publicStorage.map(entry => entry.directory),
   path.resolve(process.cwd(), "assets")
 ]
 
@@ -34,6 +35,7 @@ function resolveDocumentPath(input: string): string | null {
   if (path.isAbsolute(normalized)) {
     candidates.push(path.normalize(normalized))
   } else {
+    candidates.push(path.resolve(process.cwd(), 'storage', cleaned))
     for (const root of allowedRoots) {
       candidates.push(path.resolve(root, cleaned))
     }

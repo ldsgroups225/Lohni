@@ -1,0 +1,22 @@
+[
+  { "schoolClass": "6e", "label": "6ᵉ", "series": { "": ["Français", "Anglais", "Mathématiques", "Histoire-Géographie", "SVT", "Physique-Chimie", "EDHC", "EPS", "Arts plastiques", "Éducation musicale"] } },
+  { "schoolClass": "5e", "label": "5ᵉ", "series": { "": ["Français", "Anglais", "Mathématiques", "Histoire-Géographie", "SVT", "Physique-Chimie", "EDHC", "EPS", "Arts plastiques", "Éducation musicale"] } },
+  { "schoolClass": "4e", "label": "4ᵉ", "series": { "": ["Français", "Anglais", "Allemand", "Espagnol", "Mathématiques", "Histoire-Géographie", "SVT", "Physique-Chimie", "EDHC", "EPS", "Arts plastiques", "Éducation musicale"] } },
+  { "schoolClass": "3e", "label": "3ᵉ · BEPC", "series": { "": ["Français", "Anglais", "Allemand", "Espagnol", "Mathématiques", "Histoire-Géographie", "SVT", "Physique-Chimie", "EDHC", "EPS", "Arts plastiques", "Éducation musicale"] } },
+  { "schoolClass": "2nde", "label": "Seconde", "series": {
+    "A": ["Français", "Anglais", "Allemand", "Espagnol", "Mathématiques", "Histoire-Géographie", "SVT", "Physique-Chimie", "EPS"],
+    "C": ["Français", "Anglais", "Mathématiques", "Histoire-Géographie", "SVT", "Physique-Chimie", "EPS"]
+  } },
+  { "schoolClass": "1ere", "label": "Première", "series": {
+    "A1": ["Français", "Philosophie", "Anglais", "Allemand", "Espagnol", "Mathématiques", "Histoire-Géographie", "SVT", "EPS"],
+    "A2": ["Français", "Philosophie", "Anglais", "Allemand", "Espagnol", "Mathématiques", "Histoire-Géographie", "SVT", "EPS"],
+    "C": ["Français", "Philosophie", "Anglais", "Mathématiques", "Histoire-Géographie", "SVT", "Physique-Chimie", "EPS"],
+    "D": ["Français", "Philosophie", "Anglais", "Mathématiques", "Histoire-Géographie", "SVT", "Physique-Chimie", "EPS"]
+  } },
+  { "schoolClass": "terminale", "label": "Terminale · BAC", "series": {
+    "A1": ["Français", "Philosophie", "Anglais", "Allemand", "Espagnol", "Mathématiques", "Histoire-Géographie", "SVT", "EPS"],
+    "A2": ["Français", "Philosophie", "Anglais", "Allemand", "Espagnol", "Mathématiques", "Histoire-Géographie", "SVT", "EPS"],
+    "C": ["Français", "Philosophie", "Anglais", "Mathématiques", "Histoire-Géographie", "SVT", "Physique-Chimie", "EPS"],
+    "D": ["Français", "Philosophie", "Anglais", "Mathématiques", "Histoire-Géographie", "SVT", "Physique-Chimie", "EPS"]
+  } }
+]

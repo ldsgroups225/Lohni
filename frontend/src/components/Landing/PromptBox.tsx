@@ -40,9 +40,9 @@ export default function PromptBox({
             </div>
             <div className="flex flex-col -space-y-0.5">
               <span className="text-stone-100 text-sm">{stagedFileName}</span>
-              <span className="text-stone-400 text-xs">Attached</span>
+              <span className="text-stone-400 text-xs">Fichier joint</span>
             </div>
-            <button onClick={onRemoveFile} className="ml-2 text-stone-300 hover:text-white p-1 rounded-lg hover:bg-stone-800" aria-label="Remove file">
+            <button onClick={onRemoveFile} className="ml-2 text-stone-300 hover:text-white p-1 rounded-lg hover:bg-stone-800" aria-label="Retirer le fichier">
               ✕
             </button>
           </div>
@@ -50,7 +50,7 @@ export default function PromptBox({
 
         <textarea
           rows={1}
-          placeholder="Ask me to teach you anything..."
+          placeholder="Que veux-tu comprendre ?"
           className="w-full text-stone-200 bg-transparent rounded-2xl p-2.5 outline-none resize-none leading-6 min-h-[72px] md:min-h-[40px] text-base"
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -60,17 +60,17 @@ export default function PromptBox({
               onSend();
             }
           }}
-          aria-label="Main prompt"
+          aria-label="Ta question"
         />
       </div>
 
       <div className="w-full md:w-fit p-2 pt-0 md:pt-2 flex flex-row md:flex-col justify-between md:space-y-2">
         <button
           className="rounded-full bg-stone-900 hover:bg-stone-800 duration-300 transition-all hover:text-white size-11 md:size-auto md:p-2.5 flex items-center justify-center"
-          aria-label="Attach file"
+          aria-label="Joindre un fichier"
           onClick={onPickFile}
           disabled={busy}
-          title={stagedFileName ?? "Upload files"}
+          title={stagedFileName ?? "Ajouter des fichiers"}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
             <path
@@ -83,10 +83,10 @@ export default function PromptBox({
 
         <button
           onClick={onSend}
-          disabled={busy || !value.trim()}
+          disabled={busy || (!value.trim() && !stagedFileName)}
           className="rounded-full bg-sky-500 text-white md:bg-stone-900 md:text-inherit hover:bg-sky-400 md:hover:bg-stone-800 duration-300 transition-all md:hover:text-white size-11 md:size-auto md:p-2.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Send"
-          title={busy ? "Please wait..." : "Send"}
+          aria-label="Envoyer"
+          title={busy ? "Patiente…" : "Envoyer"}
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3" />

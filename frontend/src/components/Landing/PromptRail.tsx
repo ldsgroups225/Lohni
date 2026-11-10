@@ -3,14 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { chatJSON } from "../../lib/api";
 
 const PROMPTS = [
-  "Teach me a lesson on Quadratic Equations. Assume I absolutely know nothing.",
-  "Explain the basics of Photosynthesis.",
-  "How do I write a compelling short story?",
-  "What is Machine Learning and how does it work?",
-  "Teach me the fundamentals of cooking.",
-  "Help me understand the French Revolution.",
-  "Explain programming concepts.",
-  "How do I manage my personal finances?",
+  "Explique-moi les équations du second degré en partant des bases.",
+  "Explique-moi les bases de la photosynthèse.",
+  "Comment écrire une nouvelle captivante ?",
+  "Qu’est-ce que l’apprentissage automatique et comment fonctionne-t-il ?",
+  "Explique-moi les bases de la cuisine.",
+  "Aide-moi à comprendre la Révolution française.",
+  "Explique-moi les notions de programmation.",
+  "Comment gérer mon budget ?",
 ];
 
 const ITEM_H = 32;
@@ -114,8 +114,8 @@ export default function PromptRail({ onSend }: { onSend?: (prompt: string) => vo
         onClick={sendNow}
         disabled={busy}
         className="h-full w-fit px-3 flex items-center justify-center bg-stone-900/50 border border-stone-900 border-l-0 rounded-r-2xl relative z-10 pointer-events-auto"
-        aria-label="Send suggested prompt"
-        title={busy ? "Starting..." : "Send"}
+        aria-label="Envoyer la question proposée"
+        title={busy ? "Démarrage…" : "Envoyer"}
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3" />

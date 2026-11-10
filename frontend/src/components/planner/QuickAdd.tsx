@@ -34,7 +34,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
             <div className="text-zinc-200 font-medium mb-3 flex items-center gap-2">
                 <span>⚡</span>
-                Quick Add
+                Ajouter une tâche
             </div>
 
             <div className="space-y-3">
@@ -42,7 +42,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                     <input
                         value={text}
                         onChange={e => setText(e.target.value)}
-                        placeholder="e.g. Math homework ch 5 due tomorrow 8pm ~2h"
+                        placeholder="Ex. : devoir de maths chapitre 5 pour demain à 20 h, environ 2 h"
                         className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 placeholder:text-zinc-500 outline-none focus:ring-1 focus:ring-zinc-700"
                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
                     />
@@ -57,7 +57,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         className="px-3 py-2 rounded-lg bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700"
-                        title="Upload homework files"
+                        title="Ajouter les fichiers du devoir"
                     >
                         📎
                     </button>
@@ -88,24 +88,24 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
 
                 {/* Quick Templates */}
                 <div className="flex flex-wrap gap-2">
-                    <div className="text-zinc-400 text-xs">Quick templates:</div>
+                    <div className="text-zinc-400 text-xs">Exemples :</div>
                     <button
-                        onClick={() => setText("Math homework due tomorrow 8pm ~1.5h")}
+                        onClick={() => setText("Devoir de maths pour demain à 20 h, environ 1 h 30")}
                         className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
                     >
-                        Math HW
+                        Devoir de maths
                     </button>
                     <button
-                        onClick={() => setText("Read chapter for English class due Friday ~30m")}
+                        onClick={() => setText("Lire le chapitre d’anglais pour vendredi, environ 30 min")}
                         className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
                     >
-                        Reading
+                        Lecture
                     </button>
                     <button
-                        onClick={() => setText("Study for quiz next week ~2h")}
+                        onClick={() => setText("Réviser le contrôle de la semaine prochaine, environ 2 h")}
                         className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
                     >
-                        Study
+                        Révision
                     </button>
                 </div>
             </div>

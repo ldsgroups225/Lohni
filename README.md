@@ -22,6 +22,26 @@
 
 ---
 
+## API de révision Lohni
+
+Les routes `/revision/*` attendent `X-Device-Id` (UUID anonyme conservé sur l’appareil) et `X-Local-Date` (jour local au format `YYYY-MM-DD`). Le jour local doit rester à un jour au plus de la date UTC du serveur, sinon la réponse est HTTP 400 avec le code JSON `REVISION_LOCAL_DATE_OUT_OF_RANGE` ; cette règle s’applique aussi aux réponses hors ligne envoyées plus tard. La synchronisation retire une réponse de la file si elle reçoit ce code en HTTP 400 et poursuit avec la suivante : cette réponse ne compte plus dans la progression. Toute autre erreur conserve la file pour un nouvel essai. Les réponses JSON ont la forme `{ ok: true, data }` ou `{ ok: false, error, code? }`.
+
+| Méthode | Route | Usage |
+| --- | --- | --- |
+| GET / PUT | `/revision/profile` | Lire ou enregistrer classe, matières, série et date d’examen |
+| GET | `/revision/home`, `/revision/progress` | Accueil, maîtrise, série et XP |
+| GET / POST | `/revision/chapters` | Lister les chapitres ou générer un chapitre IA (`title`, `subject`) |
+| DELETE | `/revision/chapters/:id` | Supprimer un chapitre et ses cartes |
+| POST | `/revision/notes` | Sauver une carte du Tuteur (`title`, `subject`, `question`, `answer`) |
+| GET | `/revision/import/quota` | Imports restants et prochaine recharge UTC |
+| POST | `/revision/import` | Importer du texte (`title`, `subject`, `text`) ou un fichier multipart (`q` : JSON titre/matière, `file`) |
+| GET | `/revision/session` | Charger ou reprendre la session du jour |
+| POST | `/revision/session/continue` | Continuer avec les cartes restantes |
+| POST | `/revision/session/answer` | Répondre (`sessionId`, `cardId`, `position`, `knew`, `durationMs`, `choice` pour un QCM, UUID `answerId` pour le rejeu sans doublon) |
+| PUT / DELETE | `/revision/cards/:id` | Corriger une carte (`kind`, `question`, `answer`, `options` et `correct` pour un QCM) ou la supprimer |
+
+Les limites d’import et de génération, le dosage des nouvelles cartes et les XP sont regroupés dans `backend/src/services/revision/policy.ts`, également utilisé par le frontend.
+
 # 🚀 **We’re actively accepting volunteers!**
 
 We’re looking for **developers, social media volunteers, designers, content creators, community helpers, and more.** If you’d like to contribute and be part of what we’re building, we’d love to have you!

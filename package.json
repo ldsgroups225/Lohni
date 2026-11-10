@@ -4,8 +4,8 @@
     "dev": "nodemon",
     "build": "tsc -p backend/tsconfig.json",
     "start": "node backend/dist/src/core/index.js",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "vitest run backend/src",
+    "test:watch": "vitest backend/src"
   },
   "authors": [
     "nullure (https://github.com/nullure)",
@@ -40,6 +40,7 @@
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "pizzip": "^3.2.0",
+    "ts-fsrs": "^5.4.2",
     "ws": "^8.18.3",
     "youtube-transcript": "^1.2.1",
     "@langchain/textsplitters": "^1.0.1",

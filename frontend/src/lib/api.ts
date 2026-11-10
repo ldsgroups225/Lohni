@@ -1,4 +1,6 @@
 import { env } from "../config/env";
+import { REVISION_POLICY as revisionPolicy } from "../../../backend/src/services/revision/policy";
+import { advanceSession } from "../../../backend/src/services/revision/session";
 
 export type ChatStartResponse = { ok: true; chatId: string; stream: string };
 export type ChatMessage = { role: "user" | "assistant"; content: string; at: number };
@@ -84,6 +86,16 @@ const timeoutCtl = (ms: number) => {
   return { signal: c.signal, done: () => clearTimeout(t) };
 };
 
+class APIError extends Error {
+  readonly status: number;
+  readonly code?: string;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
+
 async function req<T = unknown>(
   url: string,
   init: RequestInit & { timeout?: number } = {}
@@ -94,7 +106,10 @@ async function req<T = unknown>(
     const r = await fetch(url, { signal, ...rest });
     if (!r.ok) {
       const txt = await r.text().catch(() => "");
-      throw new Error(`http ${r.status}: ${txt || r.statusText}`);
+      let detail: { error?: unknown; code?: unknown } | undefined;
+      try { detail = JSON.parse(txt); } catch { /* Non-JSON responses keep their HTTP status. */ }
+      throw new APIError(typeof detail?.error === "string" ? detail.error : `http ${r.status}: ${txt || r.statusText}`,
+        r.status, typeof detail?.code === 'string' ? detail.code : undefined);
     }
     const ct = r.headers.get("content-type") || "";
     if (ct.includes("application/json")) return (await r.json()) as T;
@@ -599,3 +614,223 @@ export async function analyzeDebate(debateId: string) {
 export function err(e: unknown) {
   return e instanceof Error ? e.message : String(e);
 }
+
+export { revisionPolicy };
+
+export type RevisionProfile = { schoolClass: string; series?: string; subjects: string[]; examDate?: string };
+export type RevisionCard = {
+  id: string; chapterId: string; kind: 'basic' | 'mcq'; question: string; answer: string;
+  options?: string[]; correct?: number; origin: 'ai' | 'import'; due: string; reviews: number;
+};
+export type RevisionSession = {
+  id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number;
+};
+export type MasteryStatus = 'Fragile' | 'En cours' | 'Solide';
+export type RevisionProgress = {
+  streak: number; xp: number; learnedCards: number;
+  subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[];
+};
+export type RevisionChapter = {
+  id: string; subjectId: string; subject: string; title: string; summary: string; origin: 'ai' | 'import';
+  cards: RevisionCard[]; seenCards: number; mastery: number | null; status: MasteryStatus;
+};
+export type RevisionCardInput = { kind: 'basic'; question: string; answer: string } | {
+  kind: 'mcq'; question: string; answer: string; options: string[]; correct: number;
+};
+export type RevisionHome = {
+  profile: RevisionProfile; daysUntilExam: number | null; totalCards: number;
+  cardCount: number; estimatedMinutes: number; state: 'ready' | 'done' | 'empty';
+};
+
+function revisionDeviceId(): string {
+  let deviceId = localStorage.getItem('lohni-device-id');
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem('lohni-device-id', deviceId);
+  }
+  return deviceId;
+}
+
+function revisionLocalDate(): string {
+  const today = new Date();
+  return [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+}
+
+class RevisionConnectionError extends Error {}
+
+async function revisionRequest<T>(path: string, method = 'GET', body?: unknown, localDate = revisionLocalDate(), timeout = Math.max(env.timeout, 120000)): Promise<T> {
+  const deviceId = revisionDeviceId();
+  const multipart = body instanceof FormData;
+  try {
+    const result = await req<{ data: T }>(`${env.backend}/revision${path}`, {
+      method,
+      headers: { ...(!multipart && { 'Content-Type': 'application/json' }), 'X-Device-Id': deviceId, 'X-Local-Date': localDate },
+      body: multipart ? body : body === undefined ? undefined : JSON.stringify(body),
+      timeout,
+    });
+    return result.data;
+  } catch (error) {
+    if (error instanceof TypeError) throw new RevisionConnectionError('Connexion impossible. Tes réponses restent enregistrées sur cet appareil.');
+    if (error instanceof Error && error.name === 'AbortError') throw new RevisionConnectionError('Le chargement prend trop de temps. Tes réponses restent enregistrées sur cet appareil.');
+    throw error;
+  }
+}
+
+type RevisionAnswer = { answerId: string; sessionId: string; cardId: string; position: number; knew: boolean; choice?: number; durationMs: number };
+type QueuedAnswer = { answer: RevisionAnswer; localDate: string };
+type OfflineRevision = { session?: RevisionSession; pending: QueuedAnswer[]; cache: Record<string, unknown> };
+let syncError = '';
+let syncing: Promise<void> | undefined;
+const offlineKey = () => `lohni-revision-offline:${revisionDeviceId()}`;
+function readOffline(): OfflineRevision {
+  const key = offlineKey();
+  const value = localStorage.getItem(key);
+  try { if (value) return JSON.parse(value); }
+  catch { localStorage.removeItem(key); }
+  return { pending: [], cache: {} };
+}
+async function updateOffline(update: (state: OfflineRevision) => void): Promise<void> {
+  const save = () => {
+    const state = readOffline();
+    update(state);
+    try { localStorage.setItem(offlineKey(), JSON.stringify(state)); }
+    catch { throw new Error('Stockage de l’appareil plein ou indisponible. Libère de la place avant de répondre.'); }
+    window.dispatchEvent(new Event('revision-sync'));
+  };
+  // Le verrou protège la file quand deux onglets répondent ou synchronisent en même temps.
+  if (!navigator.locks) throw new Error('Ouvre Lohni en HTTPS dans un navigateur à jour pour sauvegarder tes réponses hors ligne.');
+  await navigator.locks.request('lohni-revision-offline', save);
+}
+export function revisionSyncStatus() {
+  return { pending: readOffline().pending.length, error: syncError, online: navigator.onLine };
+}
+export function syncRevisionAnswers(): Promise<void> {
+  if (syncing) return syncing;
+  syncing = Promise.resolve().then(async () => {
+    syncError = '';
+    try {
+      while (navigator.onLine) {
+        const queued = readOffline().pending[0];
+        if (!queued) break;
+        let session: RevisionSession | undefined;
+        try { session = await revisionRequest<RevisionSession>('/session/answer', 'POST', queued.answer, queued.localDate, 8000); }
+        catch (error) {
+          if (!(error instanceof APIError && error.status === 400 && error.code === 'REVISION_LOCAL_DATE_OUT_OF_RANGE')) throw error;
+        }
+        await updateOffline(state => {
+          state.pending = state.pending.filter(item => item.answer.answerId !== queued.answer.answerId);
+          if (session && !state.pending.length && (!state.session || state.session.id !== session.id || state.session.position <= session.position)) state.session = session;
+        });
+      }
+    } catch (error) {
+      syncError = error instanceof Error ? error.message : 'Synchronisation impossible. Réessaie.';
+    }
+  }).finally(() => {
+    syncing = undefined;
+    window.dispatchEvent(new Event('revision-sync'));
+  });
+  return syncing;
+}
+async function cachedRevisionRead<T>(path: string): Promise<T> {
+  await syncRevisionAnswers();
+  const cached = readOffline().cache[path];
+  try {
+    if (!navigator.onLine) throw new RevisionConnectionError('Hors ligne. Connecte-toi pour charger ces données.');
+    const result = await revisionRequest<T>(path, 'GET', undefined, undefined, 8000);
+    await updateOffline(state => { state.cache[path] = result; });
+    return result;
+  } catch (error) {
+    if (error instanceof RevisionConnectionError && cached !== undefined) return cached as T;
+    throw error;
+  }
+}
+async function revisionSession(continueSession = false): Promise<RevisionSession> {
+  await syncRevisionAnswers();
+  const saved = readOffline();
+  if (saved.pending.length && saved.session) {
+    if (continueSession) throw new Error('Tes réponses doivent être envoyées avant de continuer. Reconnecte-toi puis réessaie.');
+    return saved.session;
+  }
+  try {
+    if (!navigator.onLine) throw new RevisionConnectionError('Hors ligne. Charge une session avec le réseau pour commencer.');
+    const next = await revisionRequest<RevisionSession>(continueSession ? '/session/continue' : '/session', continueSession ? 'POST' : 'GET', undefined, undefined, 8000);
+    await updateOffline(state => {
+      if (!state.pending.length && (!state.session || state.session.id !== next.id || state.session.position <= next.position)) state.session = next;
+    });
+    return readOffline().session!;
+  } catch (error) {
+    if (!continueSession && error instanceof RevisionConnectionError && saved.session) return saved.session;
+    throw error;
+  }
+}
+async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<RevisionSession> {
+  let next: RevisionSession | undefined;
+  await updateOffline(state => {
+    const session = state.session;
+    const card = session?.cards[session.position];
+    if (!session || session.complete || session.id !== input.sessionId || session.position !== input.position || card?.id !== input.cardId) {
+      throw new Error('Cette carte a déjà été répondue. Recharge ta session.');
+    }
+    const knew = input.knew && (card.kind !== 'mcq' || input.choice === card.correct);
+    const answer = { ...input, answerId: crypto.randomUUID() };
+    state.pending.push({ answer, localDate: session.localDate });
+    advanceSession(session, knew, input.durationMs);
+    next = session;
+  });
+  void syncRevisionAnswers();
+  return next!;
+}
+async function revisionMutation<T>(path: string, method: string, body?: unknown): Promise<T> {
+  await syncRevisionAnswers();
+  if (readOffline().pending.length) throw new Error('Reconnecte-toi pour envoyer tes réponses avant de modifier tes cours ou ton profil.');
+  const result = await revisionRequest<T>(path, method, body);
+  if (path === '/profile') await updateOffline(state => { state.cache['/profile'] = result; delete state.cache['/home']; });
+  return result;
+}
+
+window.addEventListener('online', () => { void syncRevisionAnswers(); });
+window.addEventListener('focus', () => { void syncRevisionAnswers(); });
+window.setInterval(() => { if (readOffline().pending.length) void syncRevisionAnswers(); }, 30000);
+
+export type RevisionImportedChapter = { id: string; title: string; summary: string; origin: 'import' };
+export type RevisionImportQuota = { remaining: number; resetsAt: string };
+
+export const revisionAPI = {
+  home: async () => {
+    let home: RevisionHome | null;
+    try { home = await cachedRevisionRead<RevisionHome | null>('/home'); }
+    catch (error) {
+      const saved = readOffline();
+      const profile = saved.cache['/profile'] as RevisionProfile | undefined;
+      if (!(error instanceof RevisionConnectionError) || !profile || !saved.session) throw error;
+      home = { profile, daysUntilExam: profile.examDate ? Math.max(0, (Date.parse(profile.examDate) - Date.parse(revisionLocalDate())) / 86400000) : null,
+        totalCards: saved.session.cards.length, cardCount: 0, estimatedMinutes: 0, state: 'empty' };
+    }
+    const session = readOffline().session;
+    if (home && session && (session.localDate === revisionLocalDate() || readOffline().pending.length) && (!navigator.onLine || readOffline().pending.length)) {
+      const cardCount = session.complete ? 0 : session.cards.length - session.position;
+      return { ...home, state: session.complete ? 'done' as const : 'ready' as const, cardCount, estimatedMinutes: Math.ceil(cardCount * revisionPolicy.sessionMinutes / revisionPolicy.sessionCards) };
+    }
+    return home;
+  },
+  progress: () => cachedRevisionRead<RevisionProgress>('/progress'),
+  profile: () => cachedRevisionRead<RevisionProfile | null>('/profile'),
+  chapters: () => revisionRequest<RevisionChapter[]>('/chapters'),
+  deleteChapter: (id: string) => revisionMutation<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),
+  updateCard: (id: string, card: RevisionCardInput) => revisionMutation<null>(`/cards/${encodeURIComponent(id)}`, 'PUT', card),
+  saveProfile: (profile: RevisionProfile) => revisionMutation<RevisionProfile>('/profile', 'PUT', profile),
+  saveTutorNote: (note: { subject: string; title: string; question: string; answer: string }) => revisionMutation<{ id: string }>('/notes', 'POST', note),
+  generateChapter: (input: { subject: string; title: string }) => revisionMutation<{ id: string }>('/chapters', 'POST', input),
+  importQuota: () => revisionRequest<RevisionImportQuota>('/import/quota'),
+  importChapter: (input: { subject: string; title: string; text?: string; file?: File }) => {
+    if (!input.file) return revisionMutation<RevisionImportedChapter>('/import', 'POST', input);
+    const form = new FormData();
+    form.append('q', JSON.stringify({ title: input.title, subject: input.subject }));
+    form.append('file', input.file);
+    return revisionMutation<RevisionImportedChapter>('/import', 'POST', form);
+  },
+  session: () => revisionSession(),
+  continue: () => revisionSession(true),
+  answer: revisionAnswer,
+  deleteCard: (id: string) => revisionMutation<null>(`/cards/${encodeURIComponent(id)}`, 'DELETE'),
+};

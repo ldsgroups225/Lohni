@@ -54,7 +54,7 @@ export function quizRoutes(app: any) {
       setImmediate(async () => {
         try {
           emitToAll(qs.get(quizId), { type: "phase", value: "generating" });
-          const qz = await withTimeout(handleQuiz(topic), 60000, "handleQuiz");
+          const qz = await withTimeout(handleQuiz(topic, 'fr'), 60000, "handleQuiz");
           qlog("generated", quizId, Array.isArray(qz) ? qz.length : "n/a");
           emitToAll(qs.get(quizId), { type: "quiz", quiz: qz });
           emitToAll(qs.get(quizId), { type: "done" });

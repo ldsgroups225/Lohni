@@ -19,13 +19,13 @@ export default function SelectionPopup({ selected, addNote, askDoubt, popupRef }
         onClick={() => addNote(selected.text)}
         className="bg-stone-900 hover:bg-stone-800 border border-stone-800 hover:border-stone-700 text-stone-200 px-3 py-1.5 rounded-lg text-xs transition-all duration-200 active:scale-95 mr-1"
       >
-        📝 Add Note
+        📝 Enregistrer une note
       </button>
       <button
         onClick={() => askDoubt(selected.text)}
         className="bg-stone-900 hover:bg-stone-800 border border-stone-800 hover:border-stone-700 text-stone-200 px-3 py-1.5 rounded-lg text-xs transition-all duration-200 active:scale-95 ml-1"
       >
-        ❓ Ask Doubt
+        ❓ Demander une explication
       </button>
     </div>
   );

@@ -3,11 +3,11 @@ export default function ComingSoon() {
     <div className="mt-8">
       <div className="flex items-center gap-3 mb-6">
         <h2 className="text-xl font-semibold text-white">
-          More Tools Coming Soon
+          D’autres outils à venir
         </h2>
         <div className="flex-1 h-px bg-gradient-to-r from-zinc-700 to-transparent"></div>
         <div className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-300 text-xs font-medium">
-          IN DEVELOPMENT
+          EN DÉVELOPPEMENT
         </div>
       </div>
 
@@ -18,15 +18,14 @@ export default function ComingSoon() {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <div className="text-xs uppercase tracking-wide text-blue-400 font-semibold">
-                  study planner
+                  planning de révision
                 </div>
               </div>
               <div className="text-white font-semibold text-lg mb-2">
-                AI Study Planner
+                Planning de révision IA
               </div>
               <div className="text-stone-400 text-sm leading-relaxed">
-                Create personalized study schedules with AI-optimized spaced
-                repetition and deadline management.
+                Prépare un planning de révision adapté à tes échéances.
               </div>
             </div>
             <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30">
@@ -54,15 +53,14 @@ export default function ComingSoon() {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <div className="text-xs uppercase tracking-wide text-pink-400 font-semibold">
-                  visual learning
+                  apprentissage visuel
                 </div>
               </div>
               <div className="text-white font-semibold text-lg mb-2">
-                Mind Map Generator
+                Créateur de cartes mentales
               </div>
               <div className="text-stone-400 text-sm leading-relaxed">
-                Convert complex topics into interactive visual mind maps with
-                AI-generated connections and insights.
+                Transforme un sujet complexe en carte mentale interactive.
               </div>
             </div>
             <div className="p-3 rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 border border-pink-500/30">
@@ -90,15 +88,14 @@ export default function ComingSoon() {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <div className="text-xs uppercase tracking-wide text-yellow-400 font-semibold">
-                  presentation maker
+                  création de présentations
                 </div>
               </div>
               <div className="text-white font-semibold text-lg mb-2">
-                Slide Builder Pro
+                Créateur de diaporamas
               </div>
               <div className="text-stone-400 text-sm leading-relaxed">
-                Generate professional presentations with AI-designed slides,
-                animations, and speaker notes.
+                Crée des présentations avec des diapositives et des notes.
               </div>
             </div>
             <div className="p-3 rounded-xl bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-500/30">
@@ -112,7 +109,7 @@ export default function ComingSoon() {
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-zinc-800/50 to-zinc-700/50 border border-zinc-600/50">
           <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-sky-400 animate-pulse"></div>
           <span className="text-stone-300 text-sm font-medium">
-            New tools launching every week
+            De nouveaux outils sont en préparation
           </span>
         </div>
       </div>

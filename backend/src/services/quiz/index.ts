@@ -1,3 +1,5 @@
+import { REVISION_POLICY as policy } from '../revision/policy'
+import { validQuiz } from "./validation"
 import llm from "../../utils/llm/llm"
 import { normalizeTopic } from "../../utils/text/normalize"
 
@@ -11,14 +13,14 @@ export type QuizItem = {
 }
 
 const SYS = `PRIMARY OBJECTIVE
-Generate exactly 5 multiple-choice questions about the given topic.
+Generate exactly ${policy.generatedMCQCards} multiple-choice questions about the given topic.
 
 OUTPUT CONTRACT
-Return only a JSON array with 5 objects.
+Return only a JSON array with ${policy.generatedMCQCards} objects.
 No markdown, no code fences, no prose outside the JSON.
 
 SCHEMA
-"id": 1..5
+"id": 1..${policy.generatedMCQCards}
 "question": plain English, 12..160 chars, unambiguous
 "options": array of exactly 4 distinct strings; each 6..80 chars; each prefixed with A) , B) , C) , D)  OR  1) , 2) , 3) , 4)
 "correct": 1|2|3|4 (1-based index into options)
@@ -29,7 +31,7 @@ STYLE
 Plain text only. ASCII. No LaTeX. No extra keys or nesting.
 
 VALIDATION
-Exactly 5 items
+Exactly ${policy.generatedMCQCards} items
 Each item has all 6 keys
 options length is 4
 correct in [1,2,3,4]
@@ -43,10 +45,10 @@ Output only the JSON array.`
 const SYS_STRICT = `RETRY: STRICT FORMAT ONLY
 
 OUTPUT
-Only a JSON array with 5 objects. No markdown. No extra text.
+Only a JSON array with ${policy.generatedMCQCards} objects. No markdown. No extra text.
 
 FIELDS
-id 1..5
+id 1..${policy.generatedMCQCards}
 question 12..160 chars
 options exactly 4 strings; prefixed A) , B) , C) , D)  OR  1) , 2) , 3) , 4)
 correct 1|2|3|4
@@ -79,7 +81,7 @@ function cleanOptions(v: any) {
 }
 function coerce(items: any): QuizItem[] {
   const arr = Array.isArray(items) ? items : []
-  const out = arr.slice(0, 5).map((o: any, i: number): QuizItem => {
+  const out = arr.slice(0, policy.generatedMCQCards).map((o: any, i: number): QuizItem => {
     const q = nstr(o?.question, 12, 160) || `Question ${i + 1}`
     const opts = cleanOptions(o?.options)
     const correct = to1_4(o?.correct)
@@ -87,7 +89,7 @@ function coerce(items: any): QuizItem[] {
     const explanation = nstr(o?.explanation, 12, 200) || "The correct option matches the main idea; others do not."
     return { id: i + 1, question: q, options: opts, correct, hint, explanation }
   })
-  while (out.length < 5) {
+  while (out.length < policy.generatedMCQCards) {
     const i = out.length
     const src = out[i - 1] || { question: `Question ${i + 1}`, options: cleanOptions([]), correct: 1, hint: "Use the core idea.", explanation: "The correct option matches the main idea; others do not." }
     const rot = src.options.map((_, k) => src.options[(k + 1) % 4])
@@ -96,13 +98,6 @@ function coerce(items: any): QuizItem[] {
   }
   return out
 }
-function validItem(x: any) {
-  return x && typeof x.id === "number" && typeof x.question === "string"
-    && Array.isArray(x.options) && x.options.length === 4 && x.options.every((o: any) => typeof o === "string")
-    && typeof x.correct === "number" && x.correct >= 1 && x.correct <= 4
-    && typeof x.hint === "string" && typeof x.explanation === "string"
-}
-function validQuiz(a: any): a is QuizItem[] { return Array.isArray(a) && a.length === 5 && a.every(validItem) }
 
 async function ask(topicIn: any, sys: string) {
   const topic = normalizeTopic(topicIn)
@@ -116,13 +111,14 @@ async function ask(topicIn: any, sys: string) {
   return tryParse<any>(txt)
 }
 
-export async function handleQuiz(topic: string): Promise<QuizItem[]> {
-  const parsed = await ask(topic, SYS)
+export async function handleQuiz(topic: string, language: "en" | "fr" = "en"): Promise<QuizItem[]> {
+  const french = (prompt: string) => language === "fr" ? prompt.replace("plain English", "français").replace("ASCII.", "Accents autorisés.") + "\nToutes les questions, options et explications doivent être en français." : prompt
+  const parsed = await ask(topic, french(SYS))
   if (parsed) {
     const out = coerce(parsed)
     if (validQuiz(out)) return out
   }
-  const parsed2 = await ask(topic, SYS_STRICT)
+  const parsed2 = await ask(topic, french(SYS_STRICT))
   const out2 = coerce(parsed2)
   if (!validQuiz(out2)) throw new Error("Invalid quiz JSON from model")
   return out2
