@@ -2,7 +2,7 @@ const svgProps = { 'aria-hidden': true as const, viewBox: '0 0 24 24', className
 const strokeProps = { stroke: 'currentColor', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, strokeWidth: 2 }
 
 export function HomeIcon() {
-  return <svg {...svgProps}><g fill="none" {...strokeProps}><path fill="currentColor" d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path fill="currentColor" d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g></svg>
+  return <svg {...svgProps}><g fill="none" {...strokeProps}><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g></svg>
 }
 
 export function CoursesIcon() {
@@ -14,5 +14,5 @@ export function TutorIcon() {
 }
 
 export function ProfileIcon() {
-  return <svg {...svgProps}><g fill="none" {...strokeProps}><circle fill="currentColor" cx="12" cy="8" r="5"/><path fill="currentColor" d="M20 21a8 8 0 0 0-16 0"/></g></svg>
+  return <svg {...svgProps}><g fill="none" {...strokeProps}><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></g></svg>
 }
