@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import Onboarding from '../components/Revision/Onboarding'
+import MobileHeader from '../components/MobileHeader'
 import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter } from '../lib/api'
 
 export default function Home() {
@@ -54,7 +55,8 @@ export default function Home() {
 
   return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
-      {(!home || loading || error) && <header><h1 className="text-2xl font-semibold text-foreground">Lohni</h1></header>}
+      <MobileHeader />
+      {(!home || loading || error) && <header className="hidden lg:block"><h1 className="text-2xl font-semibold text-foreground">Lohni</h1></header>}
       {loading ? <p role="status">Chargement de ta journée…</p> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
         <Mascotte humeur="désolée" taille={96} /><p>{error}</p><button className="underline" onClick={() => setAttempt(value => value + 1)}>Réessayer</button>
       </div> : !home ? <Onboarding /> : <>
