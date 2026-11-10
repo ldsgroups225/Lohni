@@ -2,36 +2,36 @@ export default function ComingSoon() {
   return (
     <div className="mt-8">
       <div className="flex items-center gap-3 mb-6">
-        <h2 className="text-xl font-semibold text-white">
+        <h2 className="text-xl font-semibold text-foreground">
           D’autres outils à venir
         </h2>
-        <div className="flex-1 h-px bg-gradient-to-r from-zinc-700 to-transparent"></div>
-        <div className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-300 text-xs font-medium">
+        <div className="flex-1 h-px bg-gradient-to-r from-tint to-transparent"></div>
+        <div className="px-3 py-1 rounded-full bg-tint border border-border text-foreground text-xs font-medium">
           EN DÉVELOPPEMENT
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* AI Study Planner */}
-        <div className="group rounded-2xl bg-stone-950/50 border border-zinc-800 p-4 hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 opacity-70 hover:opacity-90">
+        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-primary transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <div className="text-xs uppercase tracking-wide text-blue-400 font-semibold">
+                <div className="text-xs uppercase tracking-wide text-primary font-semibold">
                   planning de révision
                 </div>
               </div>
-              <div className="text-white font-semibold text-lg mb-2">
+              <div className="text-foreground font-semibold text-lg mb-2">
                 Planning de révision IA
               </div>
-              <div className="text-stone-400 text-sm leading-relaxed">
+              <div className="text-muted text-sm leading-relaxed">
                 Prépare un planning de révision adapté à tes échéances.
               </div>
             </div>
-            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30">
+            <div className="p-3 rounded-xl bg-tint border border-border">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="size-5 text-blue-400"
+                className="size-5 text-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -48,25 +48,25 @@ export default function ComingSoon() {
         </div>
 
         {/* Mind Map Generator */}
-        <div className="group rounded-2xl bg-stone-950/50 border border-zinc-800 p-4 hover:border-pink-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/10 opacity-70 hover:opacity-90">
+        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <div className="text-xs uppercase tracking-wide text-pink-400 font-semibold">
+                <div className="text-xs uppercase tracking-wide text-foreground font-semibold">
                   apprentissage visuel
                 </div>
               </div>
-              <div className="text-white font-semibold text-lg mb-2">
+              <div className="text-foreground font-semibold text-lg mb-2">
                 Créateur de cartes mentales
               </div>
-              <div className="text-stone-400 text-sm leading-relaxed">
+              <div className="text-muted text-sm leading-relaxed">
                 Transforme un sujet complexe en carte mentale interactive.
               </div>
             </div>
-            <div className="p-3 rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 border border-pink-500/30">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-tint to-tint border border-border">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="size-5 text-pink-400"
+                className="size-5 text-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -83,32 +83,32 @@ export default function ComingSoon() {
         </div>
 
         {/* Presentation Builder */}
-        <div className="group rounded-2xl bg-stone-950/50 border border-zinc-800 p-4 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10 opacity-70 hover:opacity-90">
+        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <div className="text-xs uppercase tracking-wide text-yellow-400 font-semibold">
+                <div className="text-xs uppercase tracking-wide text-foreground font-semibold">
                   création de présentations
                 </div>
               </div>
-              <div className="text-white font-semibold text-lg mb-2">
+              <div className="text-foreground font-semibold text-lg mb-2">
                 Créateur de diaporamas
               </div>
-              <div className="text-stone-400 text-sm leading-relaxed">
+              <div className="text-muted text-sm leading-relaxed">
                 Crée des présentations avec des diapositives et des notes.
               </div>
             </div>
-            <div className="p-3 rounded-xl bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-500/30">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5 text-yellow-400"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605" /></svg>
+            <div className="p-3 rounded-xl bg-gradient-to-br from-tint to-tint border border-border">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5 text-foreground"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605" /></svg>
             </div>
           </div>
         </div>
       </div>
 
       <div className="mt-6 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-zinc-800/50 to-zinc-700/50 border border-zinc-600/50">
-          <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-sky-400 animate-pulse"></div>
-          <span className="text-stone-300 text-sm font-medium">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-tint to-tint border border-border">
+          <div className="w-2 h-2 rounded-full bg-gradient-to-r from-primary to-primary animate-pulse"></div>
+          <span className="text-foreground text-sm font-medium">
             De nouveaux outils sont en préparation
           </span>
         </div>

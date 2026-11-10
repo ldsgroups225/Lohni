@@ -337,20 +337,20 @@ export default function Debate() {
 
     if (!debateId) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen w-full px-4 md:pl-28 lg:pr-4 bg-black">
+            <div className="flex flex-col items-center justify-center min-h-screen w-full px-4 md:pl-28 lg:pr-4 bg-background text-foreground">
                 <div className="max-w-2xl w-full space-y-8">
                     <div className="text-center space-y-4">
-                        <h1 className="text-4xl lg:text-5xl font-bold text-white">
+                        <h1 className="text-4xl lg:text-5xl font-bold text-foreground">
                             Commencer un débat
                         </h1>
-                        <p className="text-lg text-stone-400">
+                        <p className="text-lg text-muted">
                             Défends ton point de vue dans un débat avec l’IA
                         </p>
                     </div>
 
-                    <div className="bg-stone-950/90 backdrop-blur-sm border border-stone-900 rounded-2xl p-8 space-y-6">
+                    <div className="bg-surface backdrop-blur-sm border border-border rounded-2xl p-8 space-y-6">
                         <div>
-                            <label className="block text-sm font-medium text-stone-300 mb-2">
+                            <label className="block text-sm font-medium text-foreground mb-2">
                                 Sujet du débat
                             </label>
                             <input
@@ -358,21 +358,21 @@ export default function Debate() {
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}
                                 placeholder="Ex. : les avantages et les limites de l’IA à l’école"
-                                className="w-full px-4 py-3 bg-stone-900/70 border border-zinc-800 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                                className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                                 onKeyDown={(e) => e.key === "Enter" && startDebate()}
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-stone-300 mb-3">
+                            <label className="block text-sm font-medium text-foreground mb-3">
                                 Ton point de vue
                             </label>
                             <div className="flex gap-4">
                                 <button
                                     onClick={() => setPosition("for")}
                                     className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-all ${position === "for"
-                                        ? "bg-green-600 text-white shadow-lg shadow-green-600/30"
-                                        : "bg-stone-900/70 border border-zinc-800 text-stone-400 hover:bg-stone-800"
+                                        ? "bg-secondary text-on-secondary shadow-lg shadow-green-600/30"
+                                        : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
                                 >
                                     <div className="text-2xl mb-1">👍</div>
@@ -382,8 +382,8 @@ export default function Debate() {
                                 <button
                                     onClick={() => setPosition("against")}
                                     className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-all ${position === "against"
-                                        ? "bg-red-600 text-white shadow-lg shadow-red-600/30"
-                                        : "bg-stone-900/70 border border-zinc-800 text-stone-400 hover:bg-stone-800"
+                                        ? "bg-primary text-on-primary shadow-lg shadow-red-600/30"
+                                        : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
                                 >
                                     <div className="text-2xl mb-1">👎</div>
@@ -396,14 +396,14 @@ export default function Debate() {
                         <button
                             onClick={startDebate}
                             disabled={!topic.trim()}
-                            className="w-full py-4 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 disabled:from-stone-800 disabled:to-stone-800 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg"
+                            className="w-full py-4 bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:from-tint disabled:to-tint disabled:cursor-not-allowed disabled:text-muted text-on-primary font-bold rounded-xl transition-all shadow-lg"
                         >
                             Commencer le débat
                         </button>
                     </div>
 
                     {error && (
-                        <div className="bg-red-900/20 border border-red-800 rounded-xl p-4 text-red-400">
+                        <div className="bg-tint border border-primary rounded-xl p-4 text-foreground">
                             {error}
                         </div>
                     )}
@@ -413,25 +413,25 @@ export default function Debate() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] md:h-screen w-full md:pl-28 bg-black">
-            <div className="flex-shrink-0 border-b border-zinc-900 bg-stone-950/90 backdrop-blur-sm">
+        <div className="flex flex-col h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] md:h-screen w-full md:pl-28 bg-background text-foreground">
+            <div className="flex-shrink-0 border-b border-border bg-surface backdrop-blur-sm">
                 <div className="px-6 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex-1">
-                            <h1 className="text-xl font-bold text-white mb-1">
+                            <h1 className="text-xl font-bold text-foreground mb-1">
                                 {session?.topic || "Debate"}
                             </h1>
                             <div className="flex items-center gap-3 text-sm">
                                 <span
                                     className={`px-3 py-1 rounded-full font-semibold ${session?.position === "for"
-                                        ? "bg-green-600/20 text-green-400 border border-green-600/30"
-                                        : "bg-red-600/20 text-red-400 border border-red-600/30"
+                                        ? "bg-tint text-foreground border border-secondary"
+                                        : "bg-tint text-foreground border border-primary"
                                         }`}
                                 >
                                     Toi : {session?.position === "for" ? "Pour" : "Contre"}
                                 </span>
-                                <span className="text-stone-500">contre</span>
-                                <span className="px-3 py-1 rounded-full font-semibold bg-purple-600/20 text-purple-400 border border-purple-600/30">
+                                <span className="text-muted">contre</span>
+                                <span className="px-3 py-1 rounded-full font-semibold bg-tint text-foreground border border-border">
                                     IA : {session?.position === "for" ? "Contre" : "Pour"}
                                 </span>
                             </div>
@@ -443,7 +443,7 @@ export default function Debate() {
                                 setMessages([]);
                                 navigate("/debate");
                             }}
-                            className="px-4 py-2 bg-stone-900/70 border border-zinc-800 hover:bg-stone-800 text-stone-300 rounded-lg transition-colors"
+                            className="px-4 py-2 bg-surface border border-border hover:bg-tint text-foreground rounded-lg transition-colors"
                         >
                             Nouveau débat
                         </button>
@@ -456,10 +456,10 @@ export default function Debate() {
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center space-y-4 max-w-md">
                             <div className="text-6xl animate-[fadeIn_0.5s_ease-in-out]">⚖️</div>
-                            <h2 className="text-2xl font-bold text-white animate-[fadeIn_0.6s_ease-in-out]">
+                            <h2 className="text-2xl font-bold text-foreground animate-[fadeIn_0.6s_ease-in-out]">
                                 Prêt à débattre !
                             </h2>
-                            <p className="text-stone-400 animate-[fadeIn_0.7s_ease-in-out]">
+                            <p className="text-muted animate-[fadeIn_0.7s_ease-in-out]">
                                 Présente ton premier argument. L’IA proposera un
                                 contre-argument.
                             </p>
@@ -478,17 +478,17 @@ export default function Debate() {
                         >
                             <div className="flex items-center gap-2">
                                 {msg.role === "assistant" && (
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center text-white font-bold shadow-lg">
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary flex items-center justify-center text-on-primary font-bold shadow-lg">
                                         IA
                                     </div>
                                 )}
-                                <span className="text-sm font-semibold text-stone-400">
+                                <span className="text-sm font-semibold text-muted">
                                     {msg.role === "user" ? "Toi" : "Adversaire IA"}
                                 </span>
                                 {msg.role === "user" && (
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold shadow-lg ${session?.position === "for"
-                                        ? "bg-gradient-to-br from-green-600 to-green-700"
-                                        : "bg-gradient-to-br from-red-600 to-red-700"
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-foreground font-bold shadow-lg ${session?.position === "for"
+                                        ? "bg-gradient-to-br from-secondary to-secondary"
+                                        : "bg-gradient-to-br from-primary to-primary"
                                         }`}>
                                         U
                                     </div>
@@ -497,9 +497,9 @@ export default function Debate() {
                             <div
                                 className={`px-6 py-4 rounded-2xl shadow-lg transition-all hover:shadow-xl ${msg.role === "user"
                                     ? session?.position === "for"
-                                        ? "bg-gradient-to-br from-green-600 to-green-700 text-white shadow-green-600/20"
-                                        : "bg-gradient-to-br from-red-600 to-red-700 text-white shadow-red-600/20"
-                                    : "bg-stone-950/90 border border-zinc-900 shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-black/10 backdrop-blur text-white"
+                                        ? "bg-gradient-to-br from-secondary to-secondary text-on-secondary shadow-green-600/20"
+                                        : "bg-gradient-to-br from-primary to-primary text-on-primary shadow-red-600/20"
+                                    : "bg-surface border border-border shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-border backdrop-blur text-foreground"
                                     }`}
                             >
                                 <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
@@ -512,17 +512,17 @@ export default function Debate() {
                     <div className="flex justify-start animate-[slideInLeft_0.3s_ease-out]">
                         <div className="max-w-3xl items-start flex flex-col gap-2">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center text-white font-bold shadow-lg">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary flex items-center justify-center text-on-primary font-bold shadow-lg">
                                     IA
                                 </div>
-                                <span className="text-sm font-semibold text-stone-400">
+                                <span className="text-sm font-semibold text-muted">
                                     Adversaire IA
                                 </span>
                             </div>
-                            <div className="px-6 py-4 rounded-2xl shadow-lg bg-stone-950/90 border border-zinc-900 shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-black/10 backdrop-blur text-white">
+                            <div className="px-6 py-4 rounded-2xl shadow-lg bg-surface border border-border shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-border backdrop-blur text-foreground">
                                 <p className="whitespace-pre-wrap leading-relaxed">
                                     {streamingContent}
-                                    <span className="inline-block w-2 h-5 bg-gradient-to-r from-purple-500 to-purple-600 ml-1 animate-pulse rounded-sm" />
+                                    <span className="inline-block w-2 h-5 bg-gradient-to-r from-primary to-primary ml-1 animate-pulse rounded-sm" />
                                 </p>
                             </div>
                         </div>
@@ -532,7 +532,7 @@ export default function Debate() {
                 <div ref={messagesEndRef} />
             </div>
 
-            <div className="flex-shrink-0 border-t border-zinc-900 bg-stone-950/90 backdrop-blur-sm p-4">
+            <div className="flex-shrink-0 border-t border-border bg-surface backdrop-blur-sm p-4">
                 <div className="max-w-4xl mx-auto">
                     <div className="flex gap-3 mb-3">
                         <textarea
@@ -548,7 +548,7 @@ export default function Debate() {
                                         : "Écris ton argument… (Maj+Entrée pour une nouvelle ligne)"
                             }
                             disabled={isStreaming || isDebateEnded}
-                            className="flex-1 px-4 py-3 bg-stone-900/70 border border-zinc-800 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed custom-scroll"
+                            className="flex-1 px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed custom-scroll"
                             rows={1}
                             style={{ minHeight: "50px", maxHeight: "200px" }}
                         />
@@ -556,13 +556,13 @@ export default function Debate() {
                             onClick={submitArgument}
                             disabled={!argument.trim() || isStreaming || isDebateEnded}
                             className={`px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${session?.position === "for"
-                                ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white shadow-green-600/20"
-                                : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-red-600/20"
+                                ? "bg-gradient-to-r from-secondary to-secondary hover:from-secondary hover:to-secondary text-on-secondary shadow-green-600/20"
+                                : "bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary text-on-primary shadow-red-600/20"
                                 }`}
                         >
                             {isStreaming ? (
                                 <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <div className="w-5 h-5 border-2 border-border border-t-transparent rounded-full animate-spin" />
                                     <span>Patiente…</span>
                                 </div>
                             ) : (
@@ -574,7 +574,7 @@ export default function Debate() {
                         <button
                             onClick={handleSurrender}
                             disabled={isStreaming || messages.length === 0 || isDebateEnded}
-                            className="px-4 py-2 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-600/40 hover:border-orange-600/60 text-orange-400 hover:text-orange-300 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
+                            className="px-4 py-2 bg-tint hover:bg-tint border border-border hover:border-border text-foreground hover:text-foreground rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
                         >
                             🏳️ Terminer le débat
                         </button>
@@ -583,52 +583,52 @@ export default function Debate() {
             </div>
 
             {isDebateEnded && analysis && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-[fadeIn_0.3s_ease-in-out]">
-                    <div className="bg-stone-950 border border-zinc-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto custom-scroll shadow-2xl animate-[scaleIn_0.3s_ease-out]">
+                <div className="fixed inset-0 bg-background backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-[fadeIn_0.3s_ease-in-out]">
+                    <div className="bg-surface border border-border rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto custom-scroll shadow-2xl animate-[scaleIn_0.3s_ease-out]">
                         <div className="p-8 space-y-6">
                             {/* Header */}
                             <div className="text-center space-y-4">
                                 <div className="text-6xl">
                                     {analysis.winner === "user" ? "🏆" : analysis.winner === "ai" ? "🤖" : "🤝"}
                                 </div>
-                                <h2 className="text-3xl font-bold text-white">
+                                <h2 className="text-3xl font-bold text-foreground">
                                     {analysis.winner === "user"
                                         ? "Tu as gagné !"
                                         : analysis.winner === "ai"
                                             ? "L’IA a gagné !"
                                             : "Égalité !"}
                                 </h2>
-                                <p className="text-lg text-stone-400">{analysis.reason}</p>
+                                <p className="text-lg text-muted">{analysis.reason}</p>
                             </div>
 
                             {/* Overall Assessment */}
-                            <div className="bg-stone-900/50 border border-zinc-800 rounded-xl p-6">
-                                <h3 className="text-xl font-bold text-white mb-3">📊 Bilan général</h3>
-                                <p className="text-stone-300 leading-relaxed">{analysis.overallAssessment}</p>
+                            <div className="bg-surface border border-border rounded-xl p-6">
+                                <h3 className="text-xl font-bold text-foreground mb-3">📊 Bilan général</h3>
+                                <p className="text-foreground leading-relaxed">{analysis.overallAssessment}</p>
                             </div>
 
                             {/* Two Column Layout for Strengths/Weaknesses */}
                             <div className="grid md:grid-cols-2 gap-6">
                                 {/* User Performance */}
                                 <div className="space-y-4">
-                                    <div className="bg-green-900/20 border border-green-800/30 rounded-xl p-5">
-                                        <h3 className="text-lg font-bold text-green-400 mb-3">💪 Tes points forts</h3>
+                                    <div className="bg-tint border border-secondary rounded-xl p-5">
+                                        <h3 className="text-lg font-bold text-foreground mb-3">💪 Tes points forts</h3>
                                         <ul className="space-y-2">
                                             {analysis.userStrengths.map((strength, idx) => (
-                                                <li key={idx} className="text-stone-300 text-sm flex items-start gap-2">
-                                                    <span className="text-green-500 mt-0.5">✓</span>
+                                                <li key={idx} className="text-foreground text-sm flex items-start gap-2">
+                                                    <span className="text-secondary mt-0.5">✓</span>
                                                     <span>{strength}</span>
                                                 </li>
                                             ))}
                                         </ul>
                                     </div>
                                     {analysis.userWeaknesses.length > 0 && (
-                                        <div className="bg-red-900/20 border border-red-800/30 rounded-xl p-5">
-                                            <h3 className="text-lg font-bold text-red-400 mb-3">📉 Points à améliorer</h3>
+                                        <div className="bg-tint border border-primary rounded-xl p-5">
+                                            <h3 className="text-lg font-bold text-foreground mb-3">📉 Points à améliorer</h3>
                                             <ul className="space-y-2">
                                                 {analysis.userWeaknesses.map((weakness, idx) => (
-                                                    <li key={idx} className="text-stone-300 text-sm flex items-start gap-2">
-                                                        <span className="text-red-500 mt-0.5">✗</span>
+                                                    <li key={idx} className="text-foreground text-sm flex items-start gap-2">
+                                                        <span className="text-foreground mt-0.5">✗</span>
                                                         <span>{weakness}</span>
                                                     </li>
                                                 ))}
@@ -639,24 +639,24 @@ export default function Debate() {
 
                                 {/* AI Performance */}
                                 <div className="space-y-4">
-                                    <div className="bg-purple-900/20 border border-purple-800/30 rounded-xl p-5">
-                                        <h3 className="text-lg font-bold text-purple-400 mb-3">🤖 Points forts de l’IA</h3>
+                                    <div className="bg-tint border border-border rounded-xl p-5">
+                                        <h3 className="text-lg font-bold text-foreground mb-3">🤖 Points forts de l’IA</h3>
                                         <ul className="space-y-2">
                                             {analysis.aiStrengths.map((strength, idx) => (
-                                                <li key={idx} className="text-stone-300 text-sm flex items-start gap-2">
-                                                    <span className="text-purple-500 mt-0.5">✓</span>
+                                                <li key={idx} className="text-foreground text-sm flex items-start gap-2">
+                                                    <span className="text-foreground mt-0.5">✓</span>
                                                     <span>{strength}</span>
                                                 </li>
                                             ))}
                                         </ul>
                                     </div>
                                     {analysis.aiWeaknesses.length > 0 && (
-                                        <div className="bg-red-900/20 border border-red-800/30 rounded-xl p-5">
-                                            <h3 className="text-lg font-bold text-red-400 mb-3">📉 Points faibles de l’IA</h3>
+                                        <div className="bg-tint border border-primary rounded-xl p-5">
+                                            <h3 className="text-lg font-bold text-foreground mb-3">📉 Points faibles de l’IA</h3>
                                             <ul className="space-y-2">
                                                 {analysis.aiWeaknesses.map((weakness, idx) => (
-                                                    <li key={idx} className="text-stone-300 text-sm flex items-start gap-2">
-                                                        <span className="text-red-500 mt-0.5">✗</span>
+                                                    <li key={idx} className="text-foreground text-sm flex items-start gap-2">
+                                                        <span className="text-foreground mt-0.5">✗</span>
                                                         <span>{weakness}</span>
                                                     </li>
                                                 ))}
@@ -668,12 +668,12 @@ export default function Debate() {
 
                             {/* Key Moments */}
                             {analysis.keyMoments.length > 0 && (
-                                <div className="bg-stone-900/50 border border-zinc-800 rounded-xl p-6">
-                                    <h3 className="text-xl font-bold text-white mb-4">⚡ Moments clés</h3>
+                                <div className="bg-surface border border-border rounded-xl p-6">
+                                    <h3 className="text-xl font-bold text-foreground mb-4">⚡ Moments clés</h3>
                                     <ul className="space-y-3">
                                         {analysis.keyMoments.map((moment, idx) => (
-                                            <li key={idx} className="text-stone-300 flex items-start gap-3">
-                                                <span className="text-sky-500 font-bold text-sm mt-0.5">{idx + 1}.</span>
+                                            <li key={idx} className="text-foreground flex items-start gap-3">
+                                                <span className="text-primary font-bold text-sm mt-0.5">{idx + 1}.</span>
                                                 <span>{moment}</span>
                                             </li>
                                         ))}
@@ -692,7 +692,7 @@ export default function Debate() {
                                         setAnalysis(null);
                                         navigate("/debate");
                                     }}
-                                    className="flex-1 py-3 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all shadow-lg"
+                                    className="flex-1 py-3 bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary text-on-primary font-bold rounded-xl transition-all shadow-lg"
                                 >
                                     Nouveau débat
                                 </button>
@@ -701,7 +701,7 @@ export default function Debate() {
                                         setIsDebateEnded(false);
                                         setAnalysis(null);
                                     }}
-                                    className="px-6 py-3 bg-stone-900/70 border border-zinc-800 hover:bg-stone-800 text-stone-300 font-semibold rounded-xl transition-colors"
+                                    className="px-6 py-3 bg-surface border border-border hover:bg-tint text-foreground font-semibold rounded-xl transition-colors"
                                 >
                                     Relire le débat
                                 </button>
@@ -712,25 +712,25 @@ export default function Debate() {
             )}
 
             {isAnalyzing && !analysis && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-stone-950 border border-zinc-900 rounded-2xl p-8 text-center space-y-4 min-w-[300px]">
-                        <div className="w-16 h-16 border-4 border-sky-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                        <p className="text-white font-semibold">Analyse du débat…</p>
+                <div className="fixed inset-0 bg-background backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-surface border border-border rounded-2xl p-8 text-center space-y-4 min-w-[300px]">
+                        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+                        <p className="text-foreground font-semibold">Analyse du débat…</p>
                         {analysisPhase && (
-                            <p className="text-sky-400 text-sm animate-pulse">{analysisPhase}</p>
+                            <p className="text-primary text-sm animate-pulse">{analysisPhase}</p>
                         )}
                     </div>
                 </div>
             )}
 
             {error && (
-                <div className="fixed bottom-20 right-6 bg-red-900/90 border border-red-700 rounded-xl p-4 text-red-200 shadow-lg max-w-md">
+                <div className="fixed bottom-20 right-6 bg-tint border border-primary rounded-xl p-4 text-foreground shadow-lg max-w-md">
                     <div className="flex items-start gap-3">
                         <span className="text-xl">⚠️</span>
                         <div className="flex-1">{error}</div>
                         <button
                             onClick={() => setError(null)}
-                            className="text-red-400 hover:text-red-200"
+                            className="text-foreground hover:text-foreground"
                         >
                             ✕
                         </button>

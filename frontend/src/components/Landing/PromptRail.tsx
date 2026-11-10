@@ -97,7 +97,7 @@ export default function PromptRail({ onSend }: { onSend?: (prompt: string) => vo
 
   return (
     <div className="items-center justify-center pt-2 mt-2 md:mt-0 hidden md:flex">
-      <div className="relative z-0 rounded-3xl rounded-tl-[22px] rounded-bl-2xl md:rounded-r-none h-full p-2 px-4 border border-stone-800 md:border-r-0 text-sm flex items-center -ml-4 md:-ml-6.5 overflow-hidden max-w-sm">
+      <div className="relative z-0 rounded-3xl rounded-tl-[22px] rounded-bl-2xl md:rounded-r-none h-full p-2 px-4 border border-border md:border-r-0 text-sm flex items-center -ml-4 md:-ml-6.5 overflow-hidden max-w-sm">
         <div ref={railRef} className="h-8 overflow-hidden relative w-full cursor-grab active:cursor-grabbing">
           <div className="transition-transform duration-500 ease-in-out" style={{ transform: `translateY(${translateY}px)` }}>
             {PROMPTS.map((p, i) => (
@@ -113,7 +113,7 @@ export default function PromptRail({ onSend }: { onSend?: (prompt: string) => vo
         type="button"
         onClick={sendNow}
         disabled={busy}
-        className="h-full w-fit px-3 flex items-center justify-center bg-stone-900/50 border border-stone-900 border-l-0 rounded-r-2xl relative z-10 pointer-events-auto"
+        className="h-full w-fit px-3 flex items-center justify-center bg-surface border border-border border-l-0 rounded-r-2xl relative z-10 pointer-events-auto"
         aria-label="Envoyer la question proposée"
         title={busy ? "Démarrage…" : "Envoyer"}
       >

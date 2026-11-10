@@ -26,23 +26,23 @@ export default function PromptBox({
 
   return (
     <div
-      className="rounded-3xl bg-stone-950 border border-stone-900 shadow-[inset_0_3px_15px] shadow-stone-900 flex flex-col md:flex-row md:items-start rounded-bl-none rounded-br-none md:rounded-br-3xl"
+      className="rounded-3xl bg-surface border border-border shadow-[inset_0_3px_15px] shadow-border flex flex-col md:flex-row md:items-start rounded-bl-none rounded-br-none md:rounded-br-3xl"
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
       <div className="flex-1 p-3">
         {stagedFileName && (
-          <div className="mb-3 inline-flex items-center gap-3 bg-stone-900/60 border border-stone-800 rounded-2xl px-3 py-2">
-            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 text-rose-300" fill="currentColor">
+          <div className="mb-3 inline-flex items-center gap-3 bg-surface border border-border rounded-2xl px-3 py-2">
+            <div className="w-10 h-10 rounded-xl bg-tint border border-primary flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6 text-foreground" fill="currentColor">
                 <path d="M9 2a1 1 0 0 0-1 1v4H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9Zm5 5H10V4h4v3Z" />
               </svg>
             </div>
             <div className="flex flex-col -space-y-0.5">
-              <span className="text-stone-100 text-sm">{stagedFileName}</span>
-              <span className="text-stone-400 text-xs">Fichier joint</span>
+              <span className="text-foreground text-sm">{stagedFileName}</span>
+              <span className="text-muted text-xs">Fichier joint</span>
             </div>
-            <button onClick={onRemoveFile} className="ml-2 text-stone-300 hover:text-white p-1 rounded-lg hover:bg-stone-800" aria-label="Retirer le fichier">
+            <button onClick={onRemoveFile} className="ml-2 text-foreground hover:text-foreground p-1 rounded-lg hover:bg-tint" aria-label="Retirer le fichier">
               ✕
             </button>
           </div>
@@ -51,7 +51,7 @@ export default function PromptBox({
         <textarea
           rows={1}
           placeholder="Que veux-tu comprendre ?"
-          className="w-full text-stone-200 bg-transparent rounded-2xl p-2.5 outline-none resize-none leading-6 min-h-[72px] md:min-h-[40px] text-base"
+          className="w-full text-foreground bg-transparent rounded-2xl p-2.5 outline-none resize-none leading-6 min-h-[72px] md:min-h-[40px] text-base"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
@@ -66,7 +66,7 @@ export default function PromptBox({
 
       <div className="w-full md:w-fit p-2 pt-0 md:pt-2 flex flex-row md:flex-col justify-between md:space-y-2">
         <button
-          className="rounded-full bg-stone-900 hover:bg-stone-800 duration-300 transition-all hover:text-white size-11 md:size-auto md:p-2.5 flex items-center justify-center"
+          className="rounded-full bg-surface hover:bg-tint duration-300 transition-all hover:text-foreground size-11 md:size-auto md:p-2.5 flex items-center justify-center"
           aria-label="Joindre un fichier"
           onClick={onPickFile}
           disabled={busy}
@@ -84,7 +84,7 @@ export default function PromptBox({
         <button
           onClick={onSend}
           disabled={busy || (!value.trim() && !stagedFileName)}
-          className="rounded-full bg-sky-500 text-white md:bg-stone-900 md:text-inherit hover:bg-sky-400 md:hover:bg-stone-800 duration-300 transition-all md:hover:text-white size-11 md:size-auto md:p-2.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-full bg-primary text-on-primary md:bg-surface md:text-inherit hover:bg-primary md:hover:bg-tint duration-300 transition-all md:hover:text-foreground size-11 md:size-auto md:p-2.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Envoyer"
           title={busy ? "Patiente…" : "Envoyer"}
         >

@@ -56,10 +56,10 @@ export default function ExamLabs() {
   )
 
   const resultVisual = useMemo(() => {
-    if (percentage >= 90) return { msg: "Excellent!", cls: "bg-green-900/20 border border-green-700 text-green-200", icon: "🏆" }
-    if (percentage >= 70) return { msg: "Bravo !", cls: "bg-blue-900/20 border border-blue-700 text-blue-200", icon: "🎉" }
-    if (percentage >= 50) return { msg: "Bon travail !", cls: "bg-yellow-900/20 border border-yellow-700 text-yellow-200", icon: "📚" }
-    return { msg: "Continue à réviser !", cls: "bg-red-900/20 border border-red-700 text-red-200", icon: "💪" }
+    if (percentage >= 90) return { msg: "Excellent!", cls: "bg-tint border border-secondary text-foreground", icon: "🏆" }
+    if (percentage >= 70) return { msg: "Bravo !", cls: "bg-tint border border-primary text-foreground", icon: "🎉" }
+    if (percentage >= 50) return { msg: "Bon travail !", cls: "bg-tint border border-border text-foreground", icon: "📚" }
+    return { msg: "Continue à réviser !", cls: "bg-tint border border-primary text-foreground", icon: "💪" }
   }, [percentage])
 
   useEffect(() => {
@@ -134,18 +134,18 @@ export default function ExamLabs() {
   // --- UI: Exam List ---
   if (!activeExam) {
     return (
-  <div className="min-h-screen w-full px-4 md:pl-28 lg:pr-4">
+  <div className="bg-background text-foreground min-h-screen w-full px-4 md:pl-28 lg:pr-4">
     <div className="max-w-5xl mx-auto pt-10 pb-28 md:pb-14">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 rounded-xl bg-stone-950 border border-zinc-800 hover:bg-stone-900 transition-colors"
+            className="p-2 rounded-xl bg-surface border border-border hover:bg-surface transition-colors"
             aria-label="Retour"
           >
             <svg
               viewBox="0 0 24 24"
-              className="size-5 text-stone-300"
+              className="size-5 text-foreground"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.5"
@@ -157,9 +157,9 @@ export default function ExamLabs() {
               />
             </svg>
           </button>
-          <h1 className="text-2xl font-semibold text-white">Examens</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Examens</h1>
         </div>
-        <div className="px-3 py-1 rounded-full bg-gradient-to-r from-sky-500/20 to-blue-500/20 border border-sky-500/30 text-sky-300 text-xs font-medium">
+        <div className="px-3 py-1 rounded-full bg-tint border border-border text-foreground text-xs font-medium">
           BÊTA
         </div>
       </div>
@@ -171,17 +171,17 @@ export default function ExamLabs() {
           <div
             key={ex.id}
             onClick={() => start(ex.id)}
-            className="group rounded-2xl bg-stone-950 border border-zinc-800 p-5 cursor-pointer hover:border-sky-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-sky-500/10"
+            className="group rounded-2xl bg-surface border border-border p-5 cursor-pointer hover:border-primary transition-all duration-300 hover:shadow-lg hover:shadow-primary/10"
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="text-lg font-semibold text-white">
+              <div className="text-lg font-semibold text-foreground">
                 {ex.name}
               </div>
-              <div className="px-3 py-1 rounded-full bg-sky-900/30 text-sky-300 text-xs font-medium">
+              <div className="px-3 py-1 rounded-full bg-tint text-foreground text-xs font-medium">
                 {ex.sections.length} sections
               </div>
             </div>
-            <div className="text-sm text-stone-400">
+            <div className="text-sm text-muted">
               Clique pour commencer cet examen
             </div>
           </div>
@@ -189,7 +189,7 @@ export default function ExamLabs() {
       </div>
 
       {!loadingExams && !exams.length && (
-        <div className="mt-16 text-center text-stone-400">
+        <div className="mt-16 text-center text-muted">
           Aucun examen disponible.
         </div>
       )}
@@ -200,7 +200,7 @@ export default function ExamLabs() {
 
   // --- UI: Exam Taking ---
   return (
-    <div className="flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
+    <div className="bg-background text-foreground flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
       <div className="w-full max-w-4xl mx-auto p-4 pt-8 pb-24 my-auto">
         {connecting && (
           <div className="mt-10">

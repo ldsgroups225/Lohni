@@ -252,22 +252,22 @@ export default function Chat() {
   const list = Array.isArray(messages) ? messages : [];
 
   return (
-    <div className="flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
+    <div className="bg-background text-foreground flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
       <div className="mx-auto mt-6 w-full max-w-4xl space-y-3">
-        <Link to="/tutor" className="text-sky-300 underline">Tuteur · Nouvelle discussion et historique</Link>
+        <Link to="/tutor" className="text-primary underline">Tuteur · Nouvelle discussion et historique</Link>
         <Link to="/revision" className="ml-4 underline">Reprendre ma session</Link>
-        {profile ? <fieldset className="flex flex-wrap gap-3 rounded-xl border border-stone-800 p-3">
+        {profile ? <fieldset className="flex flex-wrap gap-3 rounded-xl border border-border p-3">
           <legend className="px-2 text-sm">Enregistrer les cartes dans mes révisions</legend>
-          <label className="min-w-40 flex-1">Matière<select className="mt-1 w-full rounded-lg bg-stone-900 p-2" value={subject} onChange={event => setSubject(event.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
-          <label className="min-w-40 flex-1">Chapitre<input className="mt-1 w-full rounded-lg bg-stone-900 p-2" maxLength={revisionPolicy.maxTitleChars} value={noteTitle} placeholder={(topic || 'Notes du Tuteur').slice(0, revisionPolicy.maxTitleChars)} onChange={event => setNoteTitle(event.target.value)} /></label>
+          <label className="min-w-40 flex-1">Matière<select className="mt-1 w-full rounded-lg bg-surface p-2" value={subject} onChange={event => setSubject(event.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
+          <label className="min-w-40 flex-1">Chapitre<input className="mt-1 w-full rounded-lg bg-surface p-2" maxLength={revisionPolicy.maxTitleChars} value={noteTitle} placeholder={(topic || 'Notes du Tuteur').slice(0, revisionPolicy.maxTitleChars)} onChange={event => setNoteTitle(event.target.value)} /></label>
         </fieldset> : <Link to="/" className="block underline">Créer mon profil pour enregistrer des cartes</Link>}
-        {saveMessage && <p role="status" className="text-green-300">{saveMessage} <Link to="/courses" className="underline">Voir mes cours</Link></p>}
-        {error && <p role="alert" className="text-red-300">{error}</p>}
+        {saveMessage && <p role="status" className="text-foreground">{saveMessage} <Link to="/courses" className="underline">Voir mes cours</Link></p>}
+        {error && <p role="alert" className="text-foreground">{error}</p>}
       </div>
       {!showTopics && (
         <button
           onClick={() => setShowTopics(true)}
-          className="fixed top-5 right-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-950/90 border border-zinc-800 text-stone-400 hover:text-stone-100 hover:bg-stone-900 text-xs font-medium shadow-lg backdrop-blur transition-colors"
+          className="fixed top-5 right-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-surface text-xs font-medium shadow-lg backdrop-blur transition-colors"
           title="Afficher les cartes"
           aria-label="Afficher les cartes"
         >
@@ -288,11 +288,11 @@ export default function Chat() {
           <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 pt-2 pb-28">
             <div className="space-y-6">
               {list.map((m, i) => {
-                const userBubble = "inline-block max-w-[85%] bg-stone-900/70 border border-zinc-800 rounded-2xl px-4 py-3";
+                const userBubble = "inline-block max-w-[85%] bg-surface border border-border rounded-2xl px-4 py-3";
                 if (m.role === "assistant") {
                   return (
                     <div key={i} className="w-full flex justify-start">
-                      <div className="w-full mx-auto rounded-3xl bg-stone-950/90 border border-zinc-900 shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-black/10 backdrop-blur px-5 sm:px-8 py-5 sm:py-8 max-w-full">
+                      <div className="w-full mx-auto rounded-3xl bg-surface border border-border shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-border backdrop-blur px-5 sm:px-8 py-5 sm:py-8 max-w-full">
                         <div className="animate-[fadeIn_300ms_ease-out] leading-7 md:leading-8 overflow-x-auto">
                           <MarkdownView md={m.content} />
                         </div>
@@ -303,7 +303,7 @@ export default function Chat() {
                 return (
                   <div key={i} className="w-full flex justify-start">
                     <div className={userBubble}>
-                      <div className="text-stone-200 whitespace-pre-wrap leading-relaxed">{m.content}</div>
+                      <div className="text-foreground whitespace-pre-wrap leading-relaxed">{m.content}</div>
                     </div>
                   </div>
                 );

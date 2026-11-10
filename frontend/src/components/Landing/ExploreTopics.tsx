@@ -45,20 +45,20 @@ export default function ExploreTopics() {
       type="button"
       onClick={() => startTopic(title)}
       disabled={busy}
-      className={`w-full h-32 sm:h-48 relative rounded-3xl border border-stone-900 bg-stone-950 
-                  md:hover:scale-105 active:scale-95 transition-transform duration-200 ease-out 
-                  focus:outline-none focus:ring-2 focus:ring-stone-700 disabled:opacity-60 ${extra || ""}`}
+      className={`w-full h-32 sm:h-48 relative rounded-3xl border border-border bg-surface
+                  md:hover:scale-105 active:scale-95 transition-transform duration-200 ease-out
+                  focus:outline-none focus:ring-2 focus:ring-border disabled:opacity-60 ${extra || ""}`}
       title={busy ? "Démarrage…" : `Découvrir : ${labels[title]}`}
     >
       <img src={imgSrc(title)} alt="" className="w-full h-full rounded-3xl object-cover" loading="lazy" draggable={false} />
-      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-transparent to-black" />
-      <div className="absolute left-0 bottom-0 pl-4 pb-3 text-left text-stone-100 text-lg sm:text-2xl font-medium">{labels[title]}</div>
+      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-transparent to-background" />
+      <div className="absolute left-4 bottom-3 rounded-lg bg-surface px-2 py-1 text-left text-foreground text-lg sm:text-2xl font-medium">{labels[title]}</div>
     </button>
   );
 
   return (
     <div className="mt-auto pb-4 pt-4 relative">
-      {error && <p role="alert" className="text-center text-red-300">{error}</p>}
+      {error && <p role="alert" className="text-center text-foreground">{error}</p>}
       <button type="button" aria-expanded={open} className="w-fit flex flex-col items-center mx-auto mb-5 md:mb-8 py-2 cursor-pointer select-none" onClick={() => setOpen((v) => !v)}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -104,7 +104,7 @@ export default function ExploreTopics() {
       </div>
 
       <div
-        className="absolute w-full h-full bottom-0 bg-gradient-to-b from-transparent to-black/80 pointer-events-none"
+        className="absolute w-full h-full bottom-0 bg-gradient-to-b from-transparent to-background/20 pointer-events-none"
         style={{
           transition: "opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
           opacity: open ? 0 : 1
