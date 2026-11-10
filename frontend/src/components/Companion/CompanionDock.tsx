@@ -42,9 +42,15 @@ export default function CompanionDock() {
   // Hide the floating button while scrolling down so it never covers the text being read.
   useEffect(() => {
     let last = window.scrollY
-    const onScroll = () => { const y = window.scrollY; if (Math.abs(y - last) > 4) { setFabHidden(y > last); last = y } }
+    let timer: ReturnType<typeof setTimeout>
+    const onScroll = () => {
+      const y = window.scrollY
+      if (Math.abs(y - last) > 4) { setFabHidden(y > last); last = y }
+      clearTimeout(timer)
+      timer = setTimeout(() => setFabHidden(false), 1200) // reappear once scrolling stops
+    }
     window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
+    return () => { clearTimeout(timer); window.removeEventListener("scroll", onScroll) }
   }, [])
 
   const hasDocument = !!document
@@ -125,9 +131,10 @@ export default function CompanionDock() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`fixed bottom-[calc(12.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-28 md:right-6 z-40 px-3 py-2 text-sm md:px-4 md:py-3 md:text-base rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg transition-[opacity,transform] ${fabHidden ? "pointer-events-none translate-y-4 opacity-0" : ""}`}
+          className={`fixed bottom-[calc(12.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-28 md:right-6 z-40 flex size-12 items-center justify-center md:size-auto md:px-4 md:py-3 rounded-full md:rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg transition-[opacity,transform] ${fabHidden ? "pointer-events-none translate-y-4 opacity-0" : ""}`}
         >
-          Assistant de cours
+          <svg aria-hidden="true" className="size-6 md:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg>
+          <span className="max-md:sr-only">Assistant de cours</span>
         </button>
       )}
 
