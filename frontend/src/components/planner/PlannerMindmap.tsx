@@ -12,17 +12,15 @@ type Props = {
     onUpdateStatus: (id: string, s: PlannerTask["status"]) => void
     onUpload: (id: string, file: File) => void
     onDelete: (id: string) => void
-    onStartNow?: (id: string) => void
     onUpdateNotes?: (id: string, notes: string) => void
 }
 
 type Pt = { x: number; y: number }
 type CustomNode = { id: string; x: number; y: number; label: string; color: string }
 
-export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdateStatus, onUpload, onDelete, onStartNow, onUpdateNotes }: Props) {
+export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdateStatus, onUpload, onDelete, onUpdateNotes }: Props) {
     const wrapRef = useRef<HTMLDivElement>(null)
     const [positions, setPositions] = useState<Record<string, Pt>>({})
-    const [selected, setSelected] = useState<string | null>(null)
     const [drag, setDrag] = useState<{ id: string; off: Pt } | null>(null)
     const [dragCustom, setDragCustom] = useState<{ id: string; off: Pt } | null>(null)
     const [dragStep, setDragStep] = useState<{ id: string; off: Pt } | null>(null)
@@ -344,7 +342,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
             return
         }
     }
-    const onUp = (e: React.PointerEvent) => {
+    const onUp = () => {
         if (drag) setDrag(null)
         if (dragStep) {
             const snode = nodeMapRef.current[`s:${dragStep.id}`]
@@ -383,7 +381,6 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
         panning.current = { on: true, start: { x: localX, y: localY }, base: { ...pan } }
     }
 
-    const taskIndex = useMemo(() => Object.fromEntries(tasks.map(t => [t.id, t])), [tasks])
     const slotsByTask = useMemo(() => {
         const m: Record<string, PlannerSlot[]> = {}
         for (const d of plan?.days || []) for (const s of d.slots) (m[s.taskId] ||= []).push(s)
@@ -439,7 +436,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
             </svg>
             {tasks.length === 0 && customNodes.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <svg width="520" height="280" viewBox="0 0 700 380" className="opacity-60">
+                    <svg viewBox="90 50 550 230" className="w-full max-w-[520px] opacity-60">
                         <defs>
                             <radialGradient id="pulse1" cx="50%" cy="50%">
                                 <stop offset="0%" stopColor="var(--color-secondary)" stopOpacity="0.7" />
@@ -474,17 +471,17 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                 <line x1="520" y1="120" x2="580" y2="250" />
                                 <line x1="210" y1="90" x2="140" y2="250" />
                             </g>
-                            <g fontFamily="Inter, ui-sans-serif" fontSize="12" fill="var(--color-foreground)" textAnchor="middle">
-                                <rect x="325" y="172" width="54" height="24" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
-                                <text x="352" y="189">Se concentrer</text>
-                                <rect x="495" y="104" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
-                                <text x="522" y="119">Se rappeler</text>
-                                <rect x="185" y="74" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
-                                <text x="212" y="89">Faire le plan</text>
-                                <rect x="115" y="234" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
-                                <text x="142" y="249">Réviser</text>
-                                <rect x="555" y="234" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
-                                <text x="582" y="249">Améliorer</text>
+                            <g fontFamily="Inter, ui-sans-serif" fontSize="20" fill="var(--color-foreground)" textAnchor="middle">
+                                <rect x="282" y="172" width="140" height="32" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
+                                <text x="352" y="195">Se concentrer</text>
+                                <rect x="468" y="104" width="108" height="32" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
+                                <text x="522" y="127">Se rappeler</text>
+                                <rect x="155" y="74" width="114" height="32" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
+                                <text x="212" y="97">Faire le plan</text>
+                                <rect x="106" y="234" width="72" height="32" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
+                                <text x="142" y="257">Réviser</text>
+                                <rect x="529" y="234" width="106" height="32" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
+                                <text x="582" y="257">Améliorer</text>
                             </g>
                             <g opacity="0.35">
                                 <circle cx="350" cy="190" r="28" fill="url(#pulse1)" />
@@ -629,7 +626,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     style={{ left: pan.x + n.x * zoom, top: pan.y + n.y * zoom }}>
                     <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', position: 'relative' }}>
                         <div className="pointer-events-none absolute -inset-2 opacity-35" style={{
-                            background: `radial-gradient(22px 22px at 50% 65%, color-mix(in srgb, ${n.color} 20%, transparent), transparent 70%)`
+                            background: `radial-gradient(22px 22px at 50% 65%, color-mix(in srgb, var(--color-secondary) 20%, transparent), transparent 70%)`
                         }} />
                         <div
                             onPointerDown={(e) => onDownCustom(e, n.id)}
