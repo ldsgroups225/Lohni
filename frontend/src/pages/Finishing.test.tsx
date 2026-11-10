@@ -51,3 +51,8 @@ test('une carte ratée reste à retravailler pendant la session mais disparaît 
  expect(finished).not.toContain('À retravailler')
  expect(finished).not.toContain('Explique-moi')
 })
+
+test.each([true, false])('fin de session : continuation selon les cartes disponibles (%s)', moreCards => {
+ state.values=[{schoolClass:'3e',subjects:['Mathématiques']},{id:'s',cards:[],position:2,complete:true,earnedXP:70},{xp:100,streak:3},false,{online:true,pending:0},'',false,undefined,'','',null,null,moreCards]
+ expect(render(<Revision />).includes('Continuer avec les cartes restantes')).toBe(moreCards)
+})

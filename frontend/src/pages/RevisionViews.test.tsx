@@ -27,9 +27,9 @@ test('accueil : libellé de classe, maîtrise vide et accès aux cours sans prom
   expect(html).toMatch(/<progress[^>]*value="0"[^>]*class="[^"]*mastery-progress|<progress[^>]*class="[^"]*mastery-progress[^>]*value="0"/)
 })
 
-test('accueil : la session terminée conserve le lien pour continuer', () => {
-  state.values = [{ ...home, state: 'done' }, null, false, '', '', 0]
-  expect(render(<Home />)).toContain('Continuer les cartes restantes')
+test.each([true, false])('accueil : lien de continuation selon les cartes disponibles (%s)', moreCards => {
+  state.values = [{ ...home, state: 'done', moreCards }, null, false, '', '', 0]
+  expect(render(<Home />).includes('Continuer les cartes restantes')).toBe(moreCards)
 })
 
 test.each([null, 0])('cours : la maîtrise %s est visuellement vide', mastery => {

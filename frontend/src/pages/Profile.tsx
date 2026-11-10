@@ -46,7 +46,7 @@ export default function Profile() {
       <h1 className="text-2xl font-semibold text-foreground">Moi</h1>
       {busy && <p role="status">Chargement…</p>}
       {error && <div role="alert"><Mascotte humeur="désolée" taille={96} /><p>{error}</p></div>}
-      {!error && progress && <Mascotte humeur={humeurSerie(progress.streak, progress.xp)} taille={112} />}
+      {!error && progress && <Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={112} />}
       {!error && !busy && !profile && !progress && <Mascotte humeur="au repos" taille={112} />}
       {progress && <dl className="grid grid-cols-3 gap-3 rounded-2xl border border-border p-5 text-center">
         <div><dt>XP</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.xp} /></dd></div>

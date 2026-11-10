@@ -7,8 +7,8 @@ vi.mock('react', async importOriginal => ({ ...await importOriginal<typeof impor
 vi.mock('../lib/api', () => ({ revisionAPI: {} }))
 import Profile from './Profile'
 
-test.each([[0, 0, 'au repos'], [0, 12, 'endormie'], [2, 12, 'contente']])('Moi annonce une seule mascotte selon la série %s et les XP %s', (streak, xp, humeur) => {
-  state.values = [null, { streak, xp, learnedCards: 0 }, false, '', false]
+test.each([[0, 0, false, 'au repos'], [0, 12, false, 'au repos'], [0, 12, true, 'endormie'], [2, 12, true, 'contente']])('Moi annonce une seule mascotte selon la série %s et les XP %s', (streak, xp, streakStarted, humeur) => {
+  state.values = [null, { streak, xp, streakStarted, learnedCards: 0 }, false, '', false]
   const html = renderToStaticMarkup(<MemoryRouter><Profile /></MemoryRouter>)
   expect(html.match(/aria-label="Lohni,/g)).toHaveLength(1)
   expect(html).toContain(`aria-label="Lohni, ${humeur}"`)
