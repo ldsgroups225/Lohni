@@ -184,8 +184,8 @@ export default function Revision() {
               </div> : <Button disabled={busy || (card.kind === 'mcq' && choice === undefined)} onClick={() => setRevealed(true)}>Révéler la réponse</Button>}
             </article>
             {revealed && <div ref={actions} className="grid scroll-mb-6 grid-cols-2 gap-3">
-              <button className="flex items-center justify-center gap-1 whitespace-nowrap rounded-xl border border-border bg-surface px-2 py-3 text-sm text-foreground disabled:cursor-wait disabled:opacity-50 sm:text-base" disabled={busy} onClick={() => answer(false)}><CloseIcon />Je ne savais pas</button>
-              <button className="flex items-center justify-center gap-2 rounded-xl bg-success px-2 py-3 text-sm font-semibold text-on-success disabled:opacity-50 sm:text-base" disabled={busy || (card.kind === 'mcq' && choice !== card.correct)} onClick={() => answer(true)}><CheckIcon />Je savais</button>
+              <button className="flex items-center justify-center gap-1 whitespace-nowrap rounded-xl border border-border bg-surface px-2 py-3 [&>svg]:shrink-0 text-sm text-foreground disabled:cursor-wait disabled:opacity-50 sm:text-base" disabled={busy} onClick={() => answer(false)}><CloseIcon />Je ne savais pas</button>
+              <button className="flex items-center justify-center gap-2 rounded-xl bg-success px-2 py-3 [&>svg]:shrink-0 text-sm font-semibold text-on-success disabled:opacity-50 sm:text-base" disabled={busy || (card.kind === 'mcq' && choice !== card.correct)} onClick={() => answer(true)}><CheckIcon />Je savais</button>
             </div>}
             <button disabled={busy || !sync.online || sync.pending > 0} className="mt-4 block w-full rounded-xl py-3 text-center text-sm text-muted underline" onClick={() => void run(async () => {
               await revisionAPI.deleteCard(card.id)

@@ -206,8 +206,8 @@ export default function Planner() {
         <div className="rounded-2xl border border-border bg-surface">
             <div className="px-4 py-3 border-b border-border flex flex-wrap gap-2 items-center justify-between">
                 <div className="sr-only">Planning des devoirs</div>
-                <div className="flex items-center gap-2">
-                    <div className="text-xs bg-surface border border-border rounded flex flex-wrap">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <div className="text-xs bg-surface border border-border rounded flex whitespace-nowrap">
                         <button onClick={() => setView("today")} className={`px-2 py-1 ${view === 'today' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Aujourd’hui</button>
                         <button onClick={() => setView("list")} className={`px-2 py-1 ${view === 'list' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Liste</button>
                         <button onClick={() => setView("mindmap")} className={`px-2 py-1 ${view === 'mindmap' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Carte mentale</button>

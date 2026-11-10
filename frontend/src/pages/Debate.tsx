@@ -583,7 +583,7 @@ export default function Debate() {
             </div>
 
             {isDebateEnded && analysis && (
-                <div className="fixed inset-0 bg-background backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-[fadeIn_0.3s_ease-in-out]">
+                <div className="fixed inset-0 bg-background flex items-center justify-center p-4 z-[60] animate-[fadeIn_0.3s_ease-in-out]" role="dialog" aria-modal="true">
                     <div className="bg-surface border border-border rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto custom-scroll shadow-2xl animate-[scaleIn_0.3s_ease-out]">
                         <div className="p-8 space-y-6">
                             {/* Header */}
@@ -712,7 +712,7 @@ export default function Debate() {
             )}
 
             {isAnalyzing && !analysis && (
-                <div className="fixed inset-0 bg-background backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-background flex items-center justify-center z-[60]" role="dialog" aria-modal="true">
                     <div className="bg-surface border border-border rounded-2xl p-8 text-center space-y-4 min-w-[300px]">
                         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
                         <p className="text-foreground font-semibold">Analyse du débat…</p>
@@ -724,7 +724,7 @@ export default function Debate() {
             )}
 
             {error && (
-                <div className="fixed bottom-20 right-6 bg-tint border border-primary rounded-xl p-4 text-foreground shadow-lg max-w-md">
+                <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-4 right-4 z-[55] bg-tint border border-primary rounded-xl p-4 text-foreground shadow-lg md:left-auto md:right-6 md:max-w-md">
                     <div className="flex items-start gap-3">
                         <span className="text-xl">⚠️</span>
                         <div className="flex-1">{error}</div>

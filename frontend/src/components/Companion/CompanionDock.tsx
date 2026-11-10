@@ -125,19 +125,22 @@ export default function CompanionDock() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 px-3 py-2 text-sm md:px-4 md:py-3 md:text-base rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg transition-[opacity,transform] ${fabHidden ? "pointer-events-none translate-y-4 opacity-0" : ""}`}
+          className={`fixed bottom-[calc(12.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-28 md:right-6 z-40 px-3 py-2 text-sm md:px-4 md:py-3 md:text-base rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg transition-[opacity,transform] ${fabHidden ? "pointer-events-none translate-y-4 opacity-0" : ""}`}
         >
           Assistant de cours
         </button>
       )}
 
       <div
+        role="dialog"
+        aria-label="Assistant de cours"
+        inert={!open}
         className={cx(
-          "fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 w-[min(360px,calc(100vw-2rem))] max-h-[min(70vh,640px)] rounded-3xl border border-border bg-surface backdrop-blur-xl shadow-2xl  transition-[transform,opacity] duration-300",
+          "fixed bottom-[calc(12.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-28 md:right-6 z-40 w-[min(360px,calc(100vw-2rem))] max-h-[calc(100dvh-15rem)] md:max-h-[min(70vh,640px)] overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl  transition-[transform,opacity] duration-300",
           open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
         )}
       >
-        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-border">
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-5 pt-5 pb-3 border-b border-border">
           <div>
             <div className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-primary mb-1">Assistant IA</div>
             <div className="text-foreground text-base font-medium leading-snug">{headerTitle}</div>

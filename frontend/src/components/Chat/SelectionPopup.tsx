@@ -12,8 +12,8 @@ export default function SelectionPopup({ selected, addNote, askDoubt, popupRef }
   return (
     <div
       ref={popupRef}
-      className="absolute z-50 bg-surface border border-border rounded-xl p-2 shadow-xl backdrop-blur-md"
-      style={{ left: selected.x, top: selected.y + 10, transition: "opacity .15s" }}
+      className="absolute z-[45] flex max-w-[calc(100vw-1rem)] flex-wrap gap-1 bg-surface border border-border rounded-xl p-2 shadow-xl"
+      style={{ left: Math.max(8, Math.min(selected.x, window.innerWidth - 296)), top: selected.y + 10, transition: "opacity .15s" }}
     >
       <button
         onClick={() => addNote(selected.text)}

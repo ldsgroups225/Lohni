@@ -103,7 +103,7 @@ export default function Landing() {
               <div className="relative flex-1 md:flex-none">
                 <div
                   onClick={() => setShowMode(!showMode)}
-                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer"
+                  className="flex items-center space-x-1 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer"
                 >
                   <div className="flex flex-col -space-y-0.5 pr-2">
                     <span className="text-xs text-foreground">Mode</span>
@@ -154,7 +154,7 @@ export default function Landing() {
               <div className="relative flex-1 md:flex-none">
                 <div
                   onClick={() => setShowLength(!showLength)}
-                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer">
+                  className="flex items-center space-x-1 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer">
                   <div className="flex flex-col -space-y-0.5 pr-2">
                     <span className="text-xs text-foreground">Longueur</span>
                     <span className="text-sm font-semibold text-foreground">{responseLength}</span>

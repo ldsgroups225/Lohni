@@ -268,7 +268,7 @@ export default function Chat() {
       {!showTopics && (
         <button
           onClick={() => setShowTopics(true)}
-          className="fixed top-5 right-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-surface text-xs font-medium shadow-lg backdrop-blur transition-opacity"
+          className="fixed top-[calc(1.25rem+env(safe-area-inset-top))] right-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-surface text-xs font-medium shadow-lg backdrop-blur transition-opacity"
           title="Afficher les cartes"
           aria-label="Afficher les cartes"
         >
@@ -286,7 +286,7 @@ export default function Chat() {
         } gap-6 mt-6 mb-36`}
       >
         <div className="flex-1 min-w-0 pr-0 lg:pr-2">
-          <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 pt-2 pb-28">
+          <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 pt-2 pb-[calc(12rem+env(safe-area-inset-bottom))] md:pb-28">
             <div className="space-y-6">
               {list.map((m, i) => {
                 const userBubble = "inline-block max-w-[85%] bg-surface border border-border rounded-2xl px-4 py-3";

@@ -52,7 +52,7 @@ export default function ExploreTopics() {
     >
       <img src={imgSrc(title)} alt="" className="w-full h-full rounded-3xl object-cover" loading="lazy" draggable={false} />
       <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-transparent to-background" />
-      <div className="absolute left-4 bottom-3 rounded-lg bg-surface px-2 py-1 text-left text-foreground text-lg sm:text-2xl font-medium">{labels[title]}</div>
+      <div className="absolute left-3 right-3 bottom-3 w-fit max-w-[calc(100%-1.5rem)] truncate rounded-lg bg-surface px-1.5 py-1 text-left text-foreground text-xs min-[360px]:text-sm sm:text-2xl font-medium">{labels[title]}</div>
     </button>
   );
 
