@@ -1,5 +1,7 @@
 import cors from 'cors';
 import path from 'path'
+import { mkdirSync } from 'node:fs'
+import { publicStorage } from '../config/storage'
 import server from '../utils/server/server'
 import { registerRoutes } from './router'
 import { loggerMiddleware } from './middleware'
@@ -16,7 +18,10 @@ app.use(cors({
   credentials: true,
 }));
 app.options('*', cors());
-app.use(app.serverStatic("/storage", "./storage"))
+for (const { route, directory } of publicStorage) {
+  mkdirSync(directory, { recursive: true })
+  app.use(app.serverStatic(route, directory))
+}
 
 registerRoutes(app)
 
