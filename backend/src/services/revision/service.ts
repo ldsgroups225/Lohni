@@ -28,10 +28,10 @@ export type RevisionChapter = {
   cards: RevisionCard[]; seenCards: number; mastery: number | null; status: MasteryStatus
 }
 export type RevisionProgress = {
-  streak: number; xp: number; learnedCards: number;
+  streak: number; streakStarted: boolean; xp: number; learnedCards: number;
   subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[]
 }
-export type RevisionHome = { profile: ProfileInput; daysUntilExam: number | null; totalCards: number; cardCount: number; estimatedMinutes: number; state: 'ready' | 'done' | 'empty' }
+export type RevisionHome = { profile: ProfileInput; daysUntilExam: number | null; totalCards: number; cardCount: number; estimatedMinutes: number; moreCards: boolean; state: 'ready' | 'done' | 'empty' }
 type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; series?: string; text?: string }) => Promise<GeneratedChapter>; transcribePhoto?: (file: UpFile) => Promise<string> }
 const validDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
@@ -117,7 +117,7 @@ export class RevisionService {
         return { subjectId: subject.id, name: subject.name, mastery,
           status: this.masteryStatus(mastery, own.reduce((sum, chapter) => sum + chapter.seenCards, 0), own.reduce((sum, chapter) => sum + chapter.cards.length, 0)) }
       })
-      return { xp, streak, learnedCards: new Set(rows.filter(row => row.knew).map(row => row.card_id)).size, subjects }
+      return { xp, streak, streakStarted: days.size > 0, learnedCards: new Set(rows.filter(row => row.knew).map(row => row.card_id)).size, subjects }
     })
   }
   async listChapters(context: RevisionContext): Promise<RevisionChapter[]> {
@@ -156,6 +156,7 @@ export class RevisionService {
       const cardCount = session.complete ? 0 : session.cards.length - session.position
       return {
         profile, totalCards: total.count, cardCount,
+        moreCards: !session.complete || (await this.selectSessionCards(context, profile)).length > 0,
         daysUntilExam: profile.examDate ? Math.max(0, (Date.parse(profile.examDate) - Date.parse(context.localDate)) / 86400000) : null,
         estimatedMinutes: Math.ceil(cardCount * policy.sessionMinutes / policy.sessionCards),
         state: session.complete ? (completed ? 'done' : 'empty') : 'ready',
@@ -308,33 +309,37 @@ export class RevisionService {
       const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate])
       if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return this.sessionResult(JSON.parse(saved.state))
       const profile = await this.requireProfile(context.deviceId)
-      const rows = await db.all(`SELECT c.*, ch.origin FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id
-        JOIN revision_subjects s ON s.id = ch.subject_id WHERE c.device_id = ? AND s.selected = 1 ORDER BY c.rowid`, [context.deviceId])
-      const introduced = await db.get(`SELECT COUNT(DISTINCT j.card_id) AS count FROM revision_journal j
-        JOIN revision_cards c ON c.id = j.card_id AND c.device_id = j.device_id
-        WHERE j.device_id = ? AND j.local_date = ? AND json_extract(j.scheduling, '$.log.state') = 0
-        AND json_extract(c.content, '$.kind') = 'basic'`, [context.deviceId, context.localDate])
-      const introducedMcq = await db.get(`SELECT COUNT(DISTINCT j.card_id) AS count FROM revision_journal j
-        JOIN revision_cards c ON c.id = j.card_id AND c.device_id = j.device_id
-        WHERE j.device_id = ? AND j.local_date = ? AND json_extract(j.scheduling, '$.log.state') = 0
-        AND json_extract(c.content, '$.kind') = 'mcq'`, [context.deviceId, context.localDate])
-      const reviewed = new Set((await db.all('SELECT card_id FROM revision_journal WHERE device_id = ? AND local_date = ?', [context.deviceId, context.localDate])).map(r => r.card_id))
-      const unseen = rows.filter(r => r.reviews === 0 && JSON.parse(r.content).kind === 'basic').length
-      const days = profile.examDate ? (Date.parse(profile.examDate) - Date.parse(context.localDate)) / 86400000 : 0
-      const quota = (days > 0 ? Math.max(policy.minNewCards, Math.min(policy.maxNewCards, Math.ceil((unseen + introduced.count) / days))) : policy.defaultNewCards) - introduced.count
-      const eligible = rows.filter(r => !reviewed.has(r.id) && (r.reviews === 0 || r.due.slice(0, 10) <= context.localDate))
-      const rank = (row: any) => row.reviews > 0 ? 0 : JSON.parse(row.content).kind === 'mcq' ? 2 : 1
-      eligible.sort((a, b) => rank(a) - rank(b) || (a.reviews > 0 && b.reviews > 0
-        ? this.scheduler.get_retrievability(JSON.parse(a.scheduling), this.dependencies.now(), false) - this.scheduler.get_retrievability(JSON.parse(b.scheduling), this.dependencies.now(), false) : 0))
-      let newCount = 0
-      let newMcqCount = 0
-      const mcqQuota = quota + introduced.count - introducedMcq.count
-      const selected = eligible.filter(row => row.reviews > 0 || (JSON.parse(row.content).kind === 'mcq' ? ++newMcqCount <= mcqQuota : ++newCount <= quota)).slice(0, policy.sessionCards)
-      const cards = selected.map(revisionCard)
+      const cards = await this.selectSessionCards(context, profile)
       const session: RevisionSession = { id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: cards.length === 0, repeated: [], elapsedMs: 0, earnedXP: 0 }
       await db.run('INSERT INTO revision_sessions VALUES (?, ?, ?, ?)', [session.id, context.deviceId, context.localDate, JSON.stringify(session)])
       return session
     })
+  }
+  private async selectSessionCards(context: RevisionContext, profile: ProfileInput): Promise<RevisionCard[]> {
+    const db = this.dependencies.db
+    const rows = await db.all(`SELECT c.*, ch.origin FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id
+      JOIN revision_subjects s ON s.id = ch.subject_id WHERE c.device_id = ? AND s.selected = 1 ORDER BY c.rowid`, [context.deviceId])
+    const introduced = await db.get(`SELECT COUNT(DISTINCT j.card_id) AS count FROM revision_journal j
+      JOIN revision_cards c ON c.id = j.card_id AND c.device_id = j.device_id
+      WHERE j.device_id = ? AND j.local_date = ? AND json_extract(j.scheduling, '$.log.state') = 0
+      AND json_extract(c.content, '$.kind') = 'basic'`, [context.deviceId, context.localDate])
+    const introducedMcq = await db.get(`SELECT COUNT(DISTINCT j.card_id) AS count FROM revision_journal j
+      JOIN revision_cards c ON c.id = j.card_id AND c.device_id = j.device_id
+      WHERE j.device_id = ? AND j.local_date = ? AND json_extract(j.scheduling, '$.log.state') = 0
+      AND json_extract(c.content, '$.kind') = 'mcq'`, [context.deviceId, context.localDate])
+    const reviewed = new Set((await db.all('SELECT card_id FROM revision_journal WHERE device_id = ? AND local_date = ?', [context.deviceId, context.localDate])).map(r => r.card_id))
+    const unseen = rows.filter(r => r.reviews === 0 && JSON.parse(r.content).kind === 'basic').length
+    const days = profile.examDate ? (Date.parse(profile.examDate) - Date.parse(context.localDate)) / 86400000 : 0
+    const quota = (days > 0 ? Math.max(policy.minNewCards, Math.min(policy.maxNewCards, Math.ceil((unseen + introduced.count) / days))) : policy.defaultNewCards) - introduced.count
+    const eligible = rows.filter(r => !reviewed.has(r.id) && (r.reviews === 0 || r.due.slice(0, 10) <= context.localDate))
+    const rank = (row: any) => row.reviews > 0 ? 0 : JSON.parse(row.content).kind === 'mcq' ? 2 : 1
+    eligible.sort((a, b) => rank(a) - rank(b) || (a.reviews > 0 && b.reviews > 0
+      ? this.scheduler.get_retrievability(JSON.parse(a.scheduling), this.dependencies.now(), false) - this.scheduler.get_retrievability(JSON.parse(b.scheduling), this.dependencies.now(), false) : 0))
+    let newCount = 0
+    let newMcqCount = 0
+    const mcqQuota = quota + introduced.count - introducedMcq.count
+    const selected = eligible.filter(row => row.reviews > 0 || (JSON.parse(row.content).kind === 'mcq' ? ++newMcqCount <= mcqQuota : ++newCount <= quota)).slice(0, policy.sessionCards)
+    return selected.map(revisionCard)
   }
   private async sessionResult(session: RevisionSession): Promise<RevisionSession> {
     const rows = await this.dependencies.db.all('SELECT knew, session_complete FROM revision_journal WHERE session_id = ?', [session.id])
