@@ -18,7 +18,7 @@ export default function PlannerPage() {
                                 </svg>
                             </Link>
                             <h1 className="text-2xl font-semibold text-foreground flex items-center gap-3">Planning des devoirs</h1>
-                            <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-primary to-primary border border-primary text-primary text-[10px] font-medium">BÊTA</span>
+                            <span className="px-2 py-0.5 rounded-full bg-tint border border-border text-foreground text-[10px] font-medium">BÊTA</span>
                         </div>
                     </header>
                     <Planner />

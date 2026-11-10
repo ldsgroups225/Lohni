@@ -142,7 +142,7 @@ export default function Quiz() {
             </Link>
             <h1 className="text-2xl font-semibold text-foreground flex items-center gap-3">Quiz</h1>
           </div>
-          <div className="px-3 py-1 rounded-full bg-gradient-to-r from-primary to-primary border border-primary text-primary text-xs font-medium">
+          <div className="px-3 py-1 rounded-full bg-tint border border-border text-foreground text-xs font-medium">
             BÊTA
           </div>
         </div>
