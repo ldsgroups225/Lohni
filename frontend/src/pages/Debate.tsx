@@ -357,7 +357,7 @@ export default function Debate() {
                                 type="text"
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}
-                                placeholder="Ex. : les avantages et les limites de l’IA à l’école"
+                                placeholder="Ex. : l’IA à l’école"
                                 className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                                 onKeyDown={(e) => e.key === "Enter" && startDebate()}
                             />

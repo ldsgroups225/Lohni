@@ -37,6 +37,15 @@ export default function CompanionDock() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
+  const [fabHidden, setFabHidden] = useState(false)
+
+  // Hide the floating button while scrolling down so it never covers the text being read.
+  useEffect(() => {
+    let last = window.scrollY
+    const onScroll = () => { const y = window.scrollY; if (Math.abs(y - last) > 4) { setFabHidden(y > last); last = y } }
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
 
   const hasDocument = !!document
 
@@ -116,7 +125,7 @@ export default function CompanionDock() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 px-3 py-2 text-sm md:px-4 md:py-3 md:text-base rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg  transition-opacity`}
+          className={`fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 px-3 py-2 text-sm md:px-4 md:py-3 md:text-base rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg transition-[opacity,transform] ${fabHidden ? "pointer-events-none translate-y-4 opacity-0" : ""}`}
         >
           Assistant de cours
         </button>
@@ -130,7 +139,7 @@ export default function CompanionDock() {
       >
         <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-border">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-primary mb-1">Assistant IA</div>
+            <div className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-primary mb-1">Assistant IA</div>
             <div className="text-foreground text-base font-medium leading-snug">{headerTitle}</div>
             {document?.filePath && (
               <div className="text-[11px] text-muted mt-1 truncate" title={document.filePath}>
@@ -139,7 +148,7 @@ export default function CompanionDock() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className={cx("inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px]", hasDocument ? "bg-tint text-success" : "bg-border text-muted")}>
+            <span className={cx("inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2 py-1 rounded-full text-[11px]", hasDocument ? "bg-tint text-success" : "bg-border text-muted")}>
               <span className="w-2 h-2 rounded-full bg-current" />
               {hasDocument ? "Document associé" : "Aucun document"}
             </span>

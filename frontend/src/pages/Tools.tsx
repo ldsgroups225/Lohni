@@ -26,7 +26,7 @@ export default function Tools() {
           </div>
         </div>
 
-        <div className="grid gap-6 mb-12">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 mb-12">
           <Link to="/revision" className="rounded-2xl border border-border bg-surface p-6 text-lg text-foreground hover:bg-surface">Session de révision →</Link>
           <SmartNotes />
           <PodcastGenerator />

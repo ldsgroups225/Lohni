@@ -146,7 +146,7 @@ export default function PodcastGenerator() {
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="Choisis un sujet ou colle tes notes…"
+              placeholder="Sujet ou notes…"
               className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:border-border focus:ring-2 focus:ring-primary outline-none transition-[transform,opacity] duration-300"
               onKeyDown={(e) => e.key === "Enter" && onGenerate()}
             />
