@@ -15,7 +15,7 @@ test('la mascotte reste fixe quand la réduction des animations est demandée', 
   vi.stubGlobal('window', { matchMedia: () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }) })
   vi.stubGlobal('cancelAnimationFrame', vi.fn())
   vi.stubGlobal('document', { hidden: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })
-  vi.stubGlobal('IntersectionObserver', class { constructor(private callback: (entries: unknown[]) => void) {} observe() { this.callback([{ isIntersecting: true }]) } disconnect() {} })
+  vi.stubGlobal('IntersectionObserver', class { callback: (entries: unknown[]) => void; constructor(callback: (entries: unknown[]) => void) { this.callback = callback } observe() { this.callback([{ isIntersecting: true }]) } disconnect() {} })
   renderToStaticMarkup(<Mascotte humeur="au repos" taille={120} />)
   const cleanups = effects.splice(0).map(effect => effect())
   expect(raf).not.toHaveBeenCalled()
