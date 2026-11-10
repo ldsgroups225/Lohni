@@ -207,7 +207,7 @@ export default function Transcriber() {
               onClick={cancelRecording}
               className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border border-border text-foreground hover:text-foreground hover:border-border transition-[transform,opacity] duration-300 flex items-center justify-center"
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
+                background: 'var(--color-surface)',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)'
               }}
@@ -221,7 +221,7 @@ export default function Transcriber() {
               onClick={recording ? stopRecording : undefined}
               className="w-16 h-16 sm:w-18 sm:h-18 rounded-full border border-border text-foreground hover:text-foreground hover:border-border transition-[transform,opacity] duration-300 flex items-center justify-center"
               style={{
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: 'var(--color-tint)',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)'
               }}

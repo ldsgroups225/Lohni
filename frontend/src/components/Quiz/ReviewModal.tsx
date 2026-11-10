@@ -54,10 +54,10 @@ export default function ReviewModal({ answers, onClose }:{ answers:UA[]; onClose
 
       <style>{`
         .np-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
-        .np-scroll::-webkit-scrollbar-track { background: #0b0b0b; border-radius: 9999px; }
-        .np-scroll::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 9999px; border: 2px solid #0b0b0b; }
-        .np-scroll::-webkit-scrollbar-thumb:hover { background: #52525b; }
-        .np-scroll { scrollbar-width: thin; scrollbar-color: #3f3f46 #0b0b0b; }
+        .np-scroll::-webkit-scrollbar-track { background: var(--color-surface); border-radius: 9999px; }
+        .np-scroll::-webkit-scrollbar-thumb { background: var(--color-muted); border-radius: 9999px; border: 2px solid var(--color-surface); }
+        .np-scroll::-webkit-scrollbar-thumb:hover { background: var(--color-foreground); }
+        .np-scroll { scrollbar-width: thin; scrollbar-color: var(--color-muted) var(--color-surface); }
       `}</style>
     </div>
   );

@@ -8,7 +8,6 @@ import { Link } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
 
-const button = 'rounded-xl bg-primary px-4 py-3 text-on-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-wait'
 const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
 function CardEditor({ card, busy, onSave, onCancel }: {
@@ -36,7 +35,7 @@ function CardEditor({ card, busy, onSave, onCancel }: {
         </select></label>
       </>}
       <label className="block space-y-2"><span>{card.kind === 'mcq' ? 'Explication' : 'Réponse'}</span><textarea className={input} required value={answer} onChange={event => setAnswer(event.target.value)} /></label>
-      <div className="flex flex-wrap gap-3"><Button type="submit">Enregistrer</Button><Button onClick={onCancel}>Annuler</Button></div>
+      <div className="flex flex-wrap gap-3"><Button type="submit">Enregistrer</Button><button type="button" className="rounded-xl border border-border px-4 py-3 text-foreground" onClick={onCancel}>Annuler</button></div>
     </fieldset>
   </form>
 }
@@ -91,7 +90,7 @@ export default function Courses() {
       </section>}
       {[...new Set(chapters.map(chapter => chapter.subject))].map((subject, subjectIndex) => {
         const own = chapters.filter(chapter => chapter.subject === subject)
-        return <section key={subject} style={{ animationDelay: `${Math.min(subjectIndex, 4) * 30}ms` }} className="motion-list space-y-4" aria-busy={busy}>
+        return <section key={subject} style={{ animationDelay: listDelay(subjectIndex) }} className="motion-list space-y-4" aria-busy={busy}>
           <h2 className="text-xl font-semibold text-foreground">{subject}</h2>
           {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: listDelay(index) }} className="motion-list space-y-4 rounded-2xl border border-border bg-surface p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -115,9 +114,9 @@ export default function Courses() {
                   <MarkdownView md={card.answer} />
                   <div className="flex flex-wrap gap-3">
                     <Button disabled={busy} onClick={() => setEditing(card.id)}>Modifier</Button>
-                    <Button disabled={busy} onClick={() => {
+                    <button type="button" className="rounded-xl border border-danger px-4 py-3 text-danger disabled:opacity-50" disabled={busy} onClick={() => {
                       if (window.confirm('Supprimer cette carte ? Elle ne sera plus proposée en révision.')) void run(async () => { await revisionAPI.deleteCard(card.id); await load() })
-                    }}>Supprimer la carte</Button>
+                    }}>Supprimer la carte</button>
                   </div>
                 </>}
               </article>)}</div>

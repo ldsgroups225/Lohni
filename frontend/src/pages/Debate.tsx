@@ -371,7 +371,7 @@ export default function Debate() {
                                 <button
                                     onClick={() => setPosition("for")}
                                     className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-[transform,opacity] ${position === "for"
-                                        ? "bg-secondary text-on-secondary shadow-lg shadow-green-600/30"
+                                        ? "bg-secondary text-on-secondary shadow-lg"
                                         : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
                                 >
@@ -382,7 +382,7 @@ export default function Debate() {
                                 <button
                                     onClick={() => setPosition("against")}
                                     className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-[transform,opacity] ${position === "against"
-                                        ? "bg-primary text-on-primary shadow-lg shadow-red-600/30"
+                                        ? "bg-primary text-on-primary shadow-lg"
                                         : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
                                 >
@@ -497,9 +497,9 @@ export default function Debate() {
                             <div
                                 className={`px-6 py-4 rounded-2xl shadow-lg transition-[transform,opacity] hover:shadow-xl ${msg.role === "user"
                                     ? session?.position === "for"
-                                        ? "bg-gradient-to-br from-secondary to-secondary text-on-secondary shadow-green-600/20"
-                                        : "bg-gradient-to-br from-primary to-primary text-on-primary shadow-red-600/20"
-                                    : "bg-surface border border-border shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-border backdrop-blur text-foreground"
+                                        ? "bg-gradient-to-br from-secondary to-secondary text-on-secondary"
+                                        : "bg-gradient-to-br from-primary to-primary text-on-primary"
+                                    : "bg-surface border border-border ring-1 ring-border backdrop-blur text-foreground"
                                     }`}
                             >
                                 <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
@@ -519,7 +519,7 @@ export default function Debate() {
                                     Adversaire IA
                                 </span>
                             </div>
-                            <div className="px-6 py-4 rounded-2xl shadow-lg bg-surface border border-border shadow-[0_10px_30px_rgba(0,0,0,0.45)] ring-1 ring-border backdrop-blur text-foreground">
+                            <div className="px-6 py-4 rounded-2xl shadow-lg bg-surface border border-border ring-1 ring-border backdrop-blur text-foreground">
                                 <p className="whitespace-pre-wrap leading-relaxed">
                                     {streamingContent}
                                     <span className="inline-block w-2 h-5 bg-gradient-to-r from-primary to-primary ml-1 animate-pulse rounded-sm" />
@@ -556,8 +556,8 @@ export default function Debate() {
                             onClick={submitArgument}
                             disabled={!argument.trim() || isStreaming || isDebateEnded}
                             className={`px-6 py-3 rounded-xl font-semibold transition-[transform,opacity] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${session?.position === "for"
-                                ? "bg-gradient-to-r from-secondary to-secondary hover:from-secondary hover:to-secondary text-on-secondary shadow-green-600/20"
-                                : "bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary text-on-primary shadow-red-600/20"
+                                ? "bg-gradient-to-r from-secondary to-secondary hover:from-secondary hover:to-secondary text-on-secondary"
+                                : "bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary text-on-primary"
                                 }`}
                         >
                             {isStreaming ? (

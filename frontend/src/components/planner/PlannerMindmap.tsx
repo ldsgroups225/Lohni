@@ -394,16 +394,15 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
         <div ref={wrapRef} className="relative w-full h-full bg-background overflow-hidden"
             onPointerMove={onMove} onPointerUp={onUp} onWheel={onWheel} onWheelCapture={onWheel} onPointerDown={startPan}
             style={{ overscrollBehavior: 'contain', touchAction: 'none' }}>
-            <div className="absolute inset-0 opacity-40" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, #1f2937 1px, transparent 0)`, backgroundSize: `24px 24px`, zIndex: 0 }} />
+            <div className="absolute inset-0 opacity-40" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, var(--color-border) 1px, transparent 0)`, backgroundSize: `24px 24px`, zIndex: 0 }} />
             <div className="pointer-events-none absolute inset-0" style={{
                 zIndex: 1,
                 opacity: 0.7,
-                mixBlendMode: 'screen' as any,
                 backgroundImage: [
-                    `radial-gradient(900px 500px at 18% 8%, rgba(56,189,248,0.10), rgba(56,189,248,0) 60%)`,
-                    `radial-gradient(700px 420px at 82% 28%, rgba(147,51,234,0.09), rgba(147,51,234,0) 60%)`,
-                    `radial-gradient(800px 600px at 50% 88%, rgba(34,197,94,0.08), rgba(34,197,94,0) 60%)`,
-                    `radial-gradient(1200px 800px at 50% 50%, rgba(255,255,255,0.06), rgba(0,0,0,0) 70%)`
+                    `radial-gradient(900px 500px at 18% 8%, color-mix(in srgb, var(--color-secondary) 10%, transparent), transparent 60%)`,
+                    `radial-gradient(700px 420px at 82% 28%, color-mix(in srgb, var(--color-primary) 9%, transparent), transparent 60%)`,
+                    `radial-gradient(800px 600px at 50% 88%, color-mix(in srgb, var(--color-success) 8%, transparent), transparent 60%)`,
+                    `radial-gradient(1200px 800px at 50% 50%, color-mix(in srgb, var(--color-surface) 6%, transparent), transparent 70%)`
                 ].join(', ')
             }} />
             <div className="absolute top-3 left-3 z-20 text-[11px] text-muted bg-surface border border-border rounded px-2 py-1 backdrop-blur">
@@ -443,16 +442,16 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     <svg width="520" height="280" viewBox="0 0 700 380" className="opacity-60">
                         <defs>
                             <radialGradient id="pulse1" cx="50%" cy="50%">
-                                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.7" />
-                                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+                                <stop offset="0%" stopColor="var(--color-secondary)" stopOpacity="0.7" />
+                                <stop offset="100%" stopColor="var(--color-secondary)" stopOpacity="0" />
                             </radialGradient>
                             <radialGradient id="pulse2" cx="50%" cy="50%">
-                                <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.6" />
-                                <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
+                                <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.6" />
+                                <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
                             </radialGradient>
                             <radialGradient id="pulse3" cx="50%" cy="50%">
-                                <stop offset="0%" stopColor="#4ade80" stopOpacity="0.6" />
-                                <stop offset="100%" stopColor="#4ade80" stopOpacity="0" />
+                                <stop offset="0%" stopColor="var(--color-success)" stopOpacity="0.6" />
+                                <stop offset="100%" stopColor="var(--color-success)" stopOpacity="0" />
                             </radialGradient>
                             <style>
                                 {`@keyframes twinkle { 0%, 100% { opacity: .2 } 50% { opacity: 1 } }
@@ -462,11 +461,11 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                             </style>
                         </defs>
                         <g>
-                            <circle cx="350" cy="190" r="5" fill="#93c5fd" className="tw" />
-                            <circle cx="520" cy="120" r="3" fill="#fca5a5" className="tw2" />
-                            <circle cx="210" cy="90" r="2.5" fill="#86efac" className="tw3" />
-                            <circle cx="140" cy="250" r="3" fill="#a78bfa" className="tw2" />
-                            <circle cx="580" cy="250" r="2.5" fill="#67e8f9" className="tw" />
+                            <circle cx="350" cy="190" r="5" fill="var(--color-secondary)" className="tw" />
+                            <circle cx="520" cy="120" r="3" fill="var(--color-danger)" className="tw2" />
+                            <circle cx="210" cy="90" r="2.5" fill="var(--color-success)" className="tw3" />
+                            <circle cx="140" cy="250" r="3" fill="var(--color-primary)" className="tw2" />
+                            <circle cx="580" cy="250" r="2.5" fill="var(--color-secondary)" className="tw" />
                             <g stroke="var(--color-border)" strokeWidth="1">
                                 <line x1="350" y1="190" x2="520" y2="120" />
                                 <line x1="350" y1="190" x2="210" y2="90" />
@@ -547,7 +546,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                     setPan({ x: newPanX, y: newPanY })
                                     setZoom(newZoom)
                                 }}>
-                                <div className="pointer-events-none absolute -inset-2 opacity-35" style={{ background: `radial-gradient(22px 22px at 50% 65%, rgba(56,189,248,0.2), transparent 70%)` }} />
+                                <div className="pointer-events-none absolute -inset-2 opacity-35" style={{ background: `radial-gradient(22px 22px at 50% 65%, color-mix(in srgb, var(--color-secondary) 20%, transparent), transparent 70%)` }} />
                                 <div onPointerDown={e => onDown(e, t.id)} className="cursor-grab active:cursor-grabbing rounded-full border bg-surface border-border pl-3 pr-1.5 py-1.5  backdrop-blur flex items-center gap-1.5">
                                     <div className="text-[12px] text-foreground whitespace-nowrap max-w-[260px] truncate">{t.title}</div>
                                     <button onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-foreground hover:text-foreground px-1 rounded hover:bg-tint">⋯</button>
@@ -577,7 +576,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                 const sp = stepPos[sid]
                                 if (!sp) return null
                                 const cnt = counts[label] || 0
-                                const glow = 'radial-gradient(18px 18px at 50% 60%, rgba(125,211,252,0.12), rgba(0,0,0,0) 70%)'
+                                const glow = 'radial-gradient(18px 18px at 50% 60%, color-mix(in srgb, var(--color-secondary) 12%, transparent), transparent 70%)'
                                 const relX = sp.x - p.x
                                 const relY = sp.y - p.y
                                 return (
@@ -630,7 +629,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     style={{ left: pan.x + n.x * zoom, top: pan.y + n.y * zoom }}>
                     <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', position: 'relative' }}>
                         <div className="pointer-events-none absolute -inset-2 opacity-35" style={{
-                            background: `radial-gradient(22px 22px at 50% 65%, ${n.color}33, transparent 70%)`
+                            background: `radial-gradient(22px 22px at 50% 65%, color-mix(in srgb, ${n.color} 20%, transparent), transparent 70%)`
                         }} />
                         <div
                             onPointerDown={(e) => onDownCustom(e, n.id)}
@@ -658,7 +657,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     const cy = rect ? rect.height / 2 : 200
                     const worldX = (cx - pan.x) / zoom
                     const worldY = (cy - pan.y) / zoom
-                    const colors = ['#22d3ee', '#a78bfa', '#4ade80', '#f472b6', '#f59e0b']
+                    const colors = ['var(--color-secondary)', 'var(--color-primary)', 'var(--color-success)', 'var(--color-danger)', 'var(--color-mascot)']
                     const color = colors[Math.floor(Math.random() * colors.length)]
                     const id = Math.random().toString(36).slice(2, 9)
                     setCustomNodes(list => [...list, { id, x: worldX, y: worldY, label: "Idée", color }])

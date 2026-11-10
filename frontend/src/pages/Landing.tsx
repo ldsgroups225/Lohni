@@ -187,11 +187,11 @@ export default function Landing() {
           </div>
 
           <svg className="h-9 w-8 -ml-0.5 -mt-[2px] min-w-fit hidden md:block rotate-3" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 1H71C21.4764 5.44502 6.18653 20.4467 1 71V1Z" fill="#101110" strokeWidth="2" stroke="url(#paint0_linear_1409_7)" />
+            <path d="M1 1H71C21.4764 5.44502 6.18653 20.4467 1 71V1Z" fill="var(--color-background)" strokeWidth="2" stroke="url(#paint0_linear_1409_7)" />
             <defs>
               <linearGradient id="paint0_linear_1409_7" x1="33" y1="31" x2="1" y2="1" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#0D0B0B" />
-                <stop offset="1" stopColor="#070707" stopOpacity="0" />
+                <stop stopColor="var(--color-border)" />
+                <stop offset="1" stopColor="var(--color-border)" stopOpacity="0" />
               </linearGradient>
             </defs>
           </svg>
