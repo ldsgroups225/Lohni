@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
-import { revisionAPI, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
+import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
 
 const button = 'rounded-xl bg-stone-800 px-4 py-3 text-white hover:bg-stone-700 disabled:opacity-50 disabled:cursor-wait'
 const input = 'w-full rounded-xl border border-stone-700 bg-stone-950 p-3 text-white'
@@ -95,7 +95,7 @@ export default function Courses() {
             <p className="text-sm text-stone-400">{chapter.origin === 'ai' ? 'Généré par IA · Peut contenir des erreurs' : 'Cours importé'}</p>
             <p>{chapter.mastery === null ? 'Aucune carte vue' : `${Math.round(chapter.mastery)} % de rappel estimé`} · {chapter.seenCards}/{chapter.cards.length} cartes vues</p>
             <progress className="w-full" value={chapter.mastery ?? 0} max={100} aria-label={`Maîtrise du chapitre ${chapter.title}`} />
-            {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length / 2 && <p className="text-sm text-stone-400">Révise au moins la moitié des cartes pour faire évoluer la maîtrise.</p>}
+            {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && <p className="text-sm text-stone-400">Révise au moins {Math.round(revisionPolicy.minimumSeenRatio * 100)} % des cartes pour faire évoluer la maîtrise.</p>}
             <details><summary className="cursor-pointer py-2 text-white">Relire le résumé</summary><MarkdownView md={chapter.summary} /></details>
             <details><summary className="cursor-pointer py-2 text-white">Voir les cartes ({chapter.cards.length})</summary>
               <div className="mt-3 space-y-4">{chapter.cards.map(card => <article key={card.id} className="space-y-3 rounded-xl border border-stone-800 p-4">
