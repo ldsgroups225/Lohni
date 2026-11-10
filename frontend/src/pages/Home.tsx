@@ -59,7 +59,7 @@ export default function Home() {
         <Mascotte humeur="désolée" taille={96} /><p>{error}</p><button className="underline" onClick={() => setAttempt(value => value + 1)}>Réessayer</button>
       </div> : !home ? <Onboarding /> : <>
         <header className="flex items-center gap-3">
-          <Mascotte humeur={humeurSerie(progress?.streak, progress?.xp, home.state === 'done')} taille={92} />
+          <Mascotte humeur={humeurSerie(progress?.streak, progress?.streakStarted, home.state === 'done')} taille={92} />
           <div><h1 className="text-2xl font-bold">Salut !</h1><p className="text-muted">{home.cardCount} carte{home.cardCount > 1 ? 's' : ''} t’attend{home.cardCount > 1 ? 'ent' : ''} aujourd’hui.</p></div>
         </header>
         <p>{curriculum.find(item => item.schoolClass === home.profile.schoolClass)?.label ?? home.profile.schoolClass}{home.profile.series ? ` · Série ${home.profile.series}` : ''}</p>
@@ -74,7 +74,7 @@ export default function Home() {
             <ButtonLink to="/revision" className="block w-full rounded-2xl p-5 text-xl">Commencer</ButtonLink>
           </> : home.state === 'done' ? <>
             <p>Ta journée est faite. Reviens demain pour entretenir ce que tu as appris.</p>
-            <Link to="/revision" className="block underline">Continuer les cartes restantes</Link>
+            {home.moreCards && <Link to="/revision" className="block underline">Continuer les cartes restantes</Link>}
           </> : <p>{home.totalCards === 0 ? 'Importe ton cours pour créer tes cartes ou prépare un premier chapitre.' : "Aucune carte n'est à réviser aujourd'hui."}</p>}
           {home.state === 'empty' && home.totalCards > 0 && <Link to="/courses" className="block underline">Voir mes cours</Link>}
           {home.totalCards === 0 && <ButtonLink className="block w-full rounded-2xl p-5 text-xl" to="/revision">Préparer un chapitre</ButtonLink>}
