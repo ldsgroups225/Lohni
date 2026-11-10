@@ -1,0 +1,5 @@
+# /opt/lohni/caddy/Caddyfile on the VPS; container lohni-caddy binds 2.31.23.145:80/443 (Tailscale holds 443 on its own interface).
+lohni-api.2-31-23-145.sslip.io {
+	encode gzip
+	reverse_proxy lohni-api:5000
+}
