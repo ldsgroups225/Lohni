@@ -391,7 +391,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
     }, [plan])
 
     return (
-        <div ref={wrapRef} className="relative w-full h-full bg-black overflow-hidden"
+        <div ref={wrapRef} className="relative w-full h-full bg-background overflow-hidden"
             onPointerMove={onMove} onPointerUp={onUp} onWheel={onWheel} onWheelCapture={onWheel} onPointerDown={startPan}
             style={{ overscrollBehavior: 'contain', touchAction: 'none' }}>
             <div className="absolute inset-0 opacity-40" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, #1f2937 1px, transparent 0)`, backgroundSize: `24px 24px`, zIndex: 0 }} />
@@ -406,7 +406,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     `radial-gradient(1200px 800px at 50% 50%, rgba(255,255,255,0.06), rgba(0,0,0,0) 70%)`
                 ].join(', ')
             }} />
-            <div className="absolute top-3 left-3 z-20 text-[11px] text-stone-400 bg-stone-900/60 border border-zinc-800 rounded px-2 py-1 backdrop-blur">
+            <div className="absolute top-3 left-3 z-20 text-[11px] text-muted bg-surface border border-border rounded px-2 py-1 backdrop-blur">
                 Fais glisser pour déplacer la carte, défile pour zoomer. Double-clique sur une bulle pour la centrer.
             </div>
             <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
@@ -550,25 +550,25 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                 <div className="pointer-events-none absolute -inset-2 opacity-35" style={{ background: `radial-gradient(22px 22px at 50% 65%, rgba(56,189,248,0.2), transparent 70%)` }} />
                                 <div onPointerDown={e => onDown(e, t.id)} className="cursor-grab active:cursor-grabbing rounded-full border bg-[#0b1220]/70 border-[#1f2937] pl-3 pr-1.5 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.4)] backdrop-blur flex items-center gap-1.5">
                                     <div className="text-[12px] text-slate-200 whitespace-nowrap max-w-[260px] truncate">{t.title}</div>
-                                    <button onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-slate-300 hover:text-slate-100 px-1 rounded hover:bg-stone-800">⋯</button>
+                                    <button onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-slate-300 hover:text-slate-100 px-1 rounded hover:bg-tint">⋯</button>
                                 </div>
                                 {menuOpen === t.id && (
-                                    <div className="absolute left-0 top-[120%] z-30 bg-stone-900/95 border border-zinc-800 rounded-md shadow-lg min-w-[160px] p-1">
-                                        <button onClick={() => { setMenuOpen(null); onUpdateStatus(t.id, 'doing'); onPlan(t.id); }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Commencer</button>
-                                        <button onClick={() => { setMenuOpen(null); onPlan(t.id) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Planifier</button>
-                                        <div className="border-t border-zinc-800 my-1" />
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'summary') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Aide : résumé</button>
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'studyGuide') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Aide : guide de révision</button>
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'flashcards') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Aide : cartes</button>
-                                        <div className="border-t border-zinc-800 my-1" />
-                                        <label className="block text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800 cursor-pointer">
+                                    <div className="absolute left-0 top-[120%] z-30 bg-surface border border-border rounded-md shadow-lg min-w-[160px] p-1">
+                                        <button onClick={() => { setMenuOpen(null); onUpdateStatus(t.id, 'doing'); onPlan(t.id); }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Commencer</button>
+                                        <button onClick={() => { setMenuOpen(null); onPlan(t.id) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Planifier</button>
+                                        <div className="border-t border-border my-1" />
+                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'summary') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : résumé</button>
+                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'studyGuide') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : guide de révision</button>
+                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'flashcards') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : cartes</button>
+                                        <div className="border-t border-border my-1" />
+                                        <label className="block text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint cursor-pointer">
                                             Ajouter un fichier
                                             <input type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(t.id, f); setMenuOpen(null) }} />
                                         </label>
-                                        <button onClick={() => { const val = window.prompt("Ajouter une note"); if (val != null) { onUpdateNotes?.(t.id, val) } setMenuOpen(null) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Ajouter une note…</button>
-                                        <button onClick={() => { recenterSteps(t.id); setMenuOpen(null) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Recentrer les étapes</button>
-                                        <div className="border-t border-zinc-800 my-1" />
-                                        <button onClick={() => { setMenuOpen(null); onDelete(t.id) }} className="w-full text-left text-[12px] text-red-400 px-2 py-1 rounded hover:bg-red-950/40">Supprimer la tâche</button>
+                                        <button onClick={() => { const val = window.prompt("Ajouter une note"); if (val != null) { onUpdateNotes?.(t.id, val) } setMenuOpen(null) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Ajouter une note…</button>
+                                        <button onClick={() => { recenterSteps(t.id); setMenuOpen(null) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Recentrer les étapes</button>
+                                        <div className="border-t border-border my-1" />
+                                        <button onClick={() => { setMenuOpen(null); onDelete(t.id) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Supprimer la tâche</button>
                                     </div>
                                 )}
                             </div>
@@ -581,7 +581,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                 const relX = sp.x - p.x
                                 const relY = sp.y - p.y
                                 return (
-                                    <div key={sid} className="absolute rounded-full border border-zinc-800 bg-stone-950/80 text-center text-stone-300 cursor-grab active:cursor-grabbing"
+                                    <div key={sid} className="absolute rounded-full border border-border bg-surface text-center text-foreground cursor-grab active:cursor-grabbing"
                                         onPointerDown={e => {
                                             const rect = wrapRef.current?.getBoundingClientRect()
                                             const localX = rect ? e.clientX - rect.left : e.clientX
@@ -613,7 +613,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                                     const nn = { ...sp }; delete nn[sid]; return nn
                                                 })
                                             }}
-                                            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-stone-800 text-stone-100 hover:bg-red-600 hover:text-white flex items-center justify-center z-20"
+                                            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-tint text-foreground hover:bg-primary hover:text-on-primary flex items-center justify-center z-20"
                                             aria-label="Supprimer la bulle"
                                         >×</button>
                                         <span className="relative px-2">{label}{cnt ? ` (${cnt})` : ''}</span>
@@ -651,7 +651,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                 </div>
             ))}
 
-            <div className="absolute top-3 right-3 z-20 bg-stone-900/70 backdrop-blur border border-zinc-800 rounded-lg px-2 py-1 flex items-center gap-2 text-xs text-stone-300">
+            <div className="absolute top-3 right-3 z-20 bg-surface backdrop-blur border border-border rounded-lg px-2 py-1 flex items-center gap-2 text-xs text-foreground">
                 <button onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
                     const cx = rect ? rect.width / 2 : 300
@@ -663,7 +663,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     const id = Math.random().toString(36).slice(2, 9)
                     setCustomNodes(list => [...list, { id, x: worldX, y: worldY, label: "Idée", color }])
                     setEditingId(id)
-                }} className="px-2 py-1 bg-stone-800 rounded">Ajouter une bulle</button>
+                }} className="px-2 py-1 bg-tint rounded">Ajouter une bulle</button>
                 <button onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
                     const cx = rect ? rect.width / 2 : 0
@@ -673,7 +673,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     const worldY = (cy - pan.y) / zoom
                     setPan({ x: cx - worldX * newZoom, y: cy - worldY * newZoom })
                     setZoom(newZoom)
-                }} className="px-2 py-1 bg-stone-800 rounded">-</button>
+                }} className="px-2 py-1 bg-tint rounded">-</button>
                 <div className="px-2">{Math.round(zoom * 100)}%</div>
                 <button onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
@@ -684,8 +684,8 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     const worldY = (cy - pan.y) / zoom
                     setPan({ x: cx - worldX * newZoom, y: cy - worldY * newZoom })
                     setZoom(newZoom)
-                }} className="px-2 py-1 bg-stone-800 rounded">+</button>
-                <button onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1.25) }} className="px-2 py-1 bg-stone-800 rounded">Réinitialiser</button>
+                }} className="px-2 py-1 bg-tint rounded">+</button>
+                <button onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1.25) }} className="px-2 py-1 bg-tint rounded">Réinitialiser</button>
             </div>
         </div>
     )

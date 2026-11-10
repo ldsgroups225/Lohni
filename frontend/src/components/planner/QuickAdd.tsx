@@ -31,7 +31,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
     }
 
     return (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+        <div className="rounded-xl border border-border bg-zinc-950 p-4">
             <div className="text-zinc-200 font-medium mb-3 flex items-center gap-2">
                 <span>⚡</span>
                 Ajouter une tâche
@@ -43,7 +43,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                         value={text}
                         onChange={e => setText(e.target.value)}
                         placeholder="Ex. : devoir de maths chapitre 5 pour demain à 20 h, environ 2 h"
-                        className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 placeholder:text-zinc-500 outline-none focus:ring-1 focus:ring-zinc-700"
+                        className="flex-1 bg-zinc-900 border border-border rounded-lg px-3 py-2 text-zinc-200 placeholder:text-zinc-500 outline-none focus:ring-1 focus:ring-border"
                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
                     />
                     <input
@@ -56,7 +56,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                     />
                     <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="px-3 py-2 rounded-lg bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700"
+                        className="px-3 py-2 rounded-lg bg-zinc-800 text-zinc-200 border border-border hover:bg-zinc-700"
                         title="Ajouter les fichiers du devoir"
                     >
                         📎
@@ -64,7 +64,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                     <button
                         onClick={handleSubmit}
                         disabled={loading || (!text.trim() && selectedFiles.length === 0)}
-                        className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-60 hover:bg-blue-700"
+                        className="px-4 py-2 rounded-lg bg-primary text-on-primary disabled:opacity-60 hover:bg-primary"
                     >
                         {loading ? "Adding..." : "Add"}
                     </button>

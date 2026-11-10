@@ -29,7 +29,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
     const activeTasks = tasks.filter(t => t.status === 'doing')
 
     return (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+        <div className="rounded-xl border border-border bg-zinc-950 p-4">
             <div className="text-zinc-200 font-medium mb-4 flex items-center gap-2">
                 <span>🎯</span>
                 Priorités du jour
@@ -42,17 +42,17 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                         <div className="text-zinc-300 text-sm mb-2">En cours :</div>
                         <div className="space-y-2">
                             {activeTasks.map(task => (
-                                <div key={task.id} className="bg-blue-900/30 border border-blue-800 rounded-lg p-3">
+                                <div key={task.id} className="bg-tint border border-primary rounded-lg p-3">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <div className="text-blue-200 font-medium">{task.title}</div>
-                                            <div className="text-blue-300 text-xs">
+                                            <div className="text-primary font-medium">{task.title}</div>
+                                            <div className="text-primary text-xs">
                                                 {task.course} • {task.estMins} mins • Échéance : {fmtTime(task.dueAt)}
                                             </div>
                                         </div>
                                         <button
                                             onClick={() => onCompleteTask(task.id)}
-                                            className="px-3 py-1 rounded bg-green-600 text-white text-xs hover:bg-green-700"
+                                            className="px-3 py-1 rounded bg-secondary text-on-secondary text-xs hover:bg-secondary"
                                         >
                                             Terminer
                                         </button>
@@ -69,7 +69,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                         <div className="text-zinc-300 text-sm mb-2">Pour aujourd’hui ({todayTasks.length}):</div>
                         <div className="space-y-2">
                             {todayTasks.slice(0, 3).map(task => (
-                                <div key={task.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
+                                <div key={task.id} className="bg-zinc-900 border border-border rounded-lg p-3">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <div className="text-zinc-200 font-medium">{task.title}</div>
@@ -79,7 +79,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                         </div>
                                         <button
                                             onClick={() => onStartSession(task.id)}
-                                            className="px-3 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                                            className="px-3 py-1 rounded bg-primary text-on-primary text-xs hover:bg-primary"
                                         >
                                             Commencer
                                         </button>
@@ -103,17 +103,17 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                             {urgentTasks.map(task => {
                                 const hoursLeft = Math.max(0, (task.dueAt - Date.now()) / (1000 * 60 * 60))
                                 return (
-                                    <div key={task.id} className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-3">
+                                    <div key={task.id} className="bg-tint border border-yellow-800 rounded-lg p-3">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <div className="text-yellow-200 font-medium">{task.title}</div>
-                                                <div className="text-yellow-300 text-xs">
+                                                <div className="text-foreground font-medium">{task.title}</div>
+                                                <div className="text-foreground text-xs">
                                                     {task.course} • Dans {Math.round(hoursLeft)}h • {task.estMins} min
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={() => onStartSession(task.id)}
-                                                className="px-3 py-1 rounded bg-yellow-600 text-white text-xs hover:bg-yellow-700"
+                                                className="px-3 py-1 rounded bg-primary text-on-primary text-xs hover:bg-primary"
                                             >
                                                 Commencer
                                             </button>

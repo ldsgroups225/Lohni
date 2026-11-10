@@ -12,17 +12,17 @@ function fmtTime(ts: number) {
 
 function DaySlots({ date, slots, tasks }: { date: string; slots: PlannerSlot[]; tasks: Record<string, PlannerTask> }) {
     return (
-        <div className="rounded-xl border border-zinc-800 bg-stone-950 p-3">
-            <div className="text-xs text-stone-400 mb-2">{date}</div>
+        <div className="rounded-xl border border-border bg-surface p-3">
+            <div className="text-xs text-muted mb-2">{date}</div>
             <div className="space-y-2">
-                {slots.length === 0 && <div className="text-stone-500 text-sm">Aucun créneau</div>}
+                {slots.length === 0 && <div className="text-muted text-sm">Aucun créneau</div>}
                 {slots.map(s => (
-                    <div key={s.id} className="flex items-center justify-between text-sm text-stone-200/90">
+                    <div key={s.id} className="flex items-center justify-between text-sm text-foreground">
                         <div className="truncate">
-                            <span className="px-1.5 py-0.5 rounded bg-stone-800/60 text-[10px] mr-2">{s.kind}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-tint text-[10px] mr-2">{s.kind}</span>
                             <span className="font-medium">{tasks[s.taskId]?.title || s.taskId}</span>
                         </div>
-                        <div className="text-stone-400 text-xs">{fmtTime(s.start)} → {new Date(s.end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                        <div className="text-muted text-xs">{fmtTime(s.start)} → {new Date(s.end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
                     </div>
                 ))}
             </div>
@@ -267,16 +267,16 @@ export default function Planner() {
     }
 
     return (
-        <div className="rounded-2xl border border-zinc-800 bg-stone-950">
-            <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
-                <div className="text-stone-200 font-medium">Planning des devoirs</div>
+        <div className="rounded-2xl border border-border bg-surface">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                <div className="text-foreground font-medium">Planning des devoirs</div>
                 <div className="flex items-center gap-2">
-                    <div className="text-xs bg-zinc-900 border border-zinc-800 rounded overflow-hidden">
+                    <div className="text-xs bg-zinc-900 border border-border rounded overflow-hidden">
                         <button onClick={() => setView("today")} className={`px-2 py-1 ${view === 'today' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-300'}`}>Aujourd’hui</button>
                         <button onClick={() => setView("list")} className={`px-2 py-1 ${view === 'list' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-300'}`}>Liste</button>
                         <button onClick={() => setView("mindmap")} className={`px-2 py-1 ${view === 'mindmap' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-300'}`}>Carte mentale</button>
                     </div>
-                    <button onClick={reload} className="text-xs px-2 py-1 rounded bg-stone-800 text-stone-200">Actualiser</button>
+                    <button onClick={reload} className="text-xs px-2 py-1 rounded bg-tint text-foreground">Actualiser</button>
                 </div>
             </div>
 
@@ -285,11 +285,11 @@ export default function Planner() {
                 {notifications.length > 0 && (
                     <div className="space-y-2">
                         {notifications.map(n => (
-                            <div key={n.id} className={`px-3 py-2 rounded-lg text-sm ${n.type === 'error' ? 'bg-red-900/50 border border-red-800 text-red-200' :
-                                n.type === 'success' ? 'bg-green-900/50 border border-green-800 text-green-200' :
-                                    n.type === 'reminder' ? 'bg-yellow-900/50 border border-yellow-800 text-yellow-200' :
-                                        n.type === 'break' ? 'bg-purple-900/50 border border-purple-800 text-purple-200' :
-                                            'bg-blue-900/50 border border-blue-800 text-blue-200'
+                            <div key={n.id} className={`px-3 py-2 rounded-lg text-sm ${n.type === 'error' ? 'bg-tint border border-red-800 text-foreground' :
+                                n.type === 'success' ? 'bg-tint border border-green-800 text-foreground' :
+                                    n.type === 'reminder' ? 'bg-tint border border-yellow-800 text-foreground' :
+                                        n.type === 'break' ? 'bg-tint border border-purple-800 text-foreground' :
+                                            'bg-tint border border-primary text-primary'
                                 }`}>
                                 {n.message}
                             </div>
@@ -311,7 +311,7 @@ export default function Planner() {
                         </div>
                     </div>
                 ) : view === 'mindmap' ? (
-                    <div className="rounded-xl border border-zinc-800 overflow-hidden h-[75vh]">
+                    <div className="rounded-xl border border-border overflow-hidden h-[75vh]">
                         <PlannerMindmap
                             tasks={tasks}
                             plan={plan}
@@ -327,7 +327,7 @@ export default function Planner() {
                 ) : (
                     <div className="grid gap-3">
                         {tasks.map(t => (
-                            <div key={t.id} className="rounded-xl border border-zinc-800 bg-stone-950 p-3">
+                            <div key={t.id} className="rounded-xl border border-border bg-surface p-3">
                                 <div className="flex items-center justify-between">
                                     <div className="min-w-0">
                                         <div className="text-zinc-100 font-medium truncate">{t.title}</div>
@@ -337,7 +337,7 @@ export default function Planner() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <select value={t.status} onChange={e => mark(t.id, e.target.value as any)} className="bg-stone-900 border border-zinc-800 text-stone-200 text-xs rounded px-2 py-1">
+                                        <select value={t.status} onChange={e => mark(t.id, e.target.value as any)} className="bg-surface border border-border text-foreground text-xs rounded px-2 py-1">
                                             <option value="todo">À faire</option>
                                             <option value="doing">En cours</option>
                                             <option value="done">Terminé</option>
@@ -346,13 +346,13 @@ export default function Planner() {
                                         <button onClick={() => planTask(t.id)} className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-200">Planifier</button>
                                         <button onClick={() => gen(t.id, "summary")} className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-200">Résumé</button>
                                         <button onClick={() => gen(t.id, "flashcards")} className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-200">Cartes</button>
-                                        <button onClick={() => del(t.id)} className="text-xs px-2 py-1 rounded bg-red-600 text-white">Supprimer</button>
+                                        <button onClick={() => del(t.id)} className="text-xs px-2 py-1 rounded bg-primary text-on-primary">Supprimer</button>
                                     </div>
                                 </div>
 
                                 {/* Task Files */}
                                 {t.files && t.files.length > 0 && (
-                                    <div className="mt-3 border-t border-zinc-800 pt-3">
+                                    <div className="mt-3 border-t border-border pt-3">
                                         <div className="text-zinc-300 text-xs mb-2">Fichiers joints :</div>
                                         <div className="flex flex-wrap gap-2">
                                             {t.files.map(file => (
@@ -361,7 +361,7 @@ export default function Planner() {
                                                     <span className="text-zinc-400">({Math.round(file.size / 1024)}KB)</span>
                                                     <button
                                                         onClick={() => deleteFile(t.id, file.id)}
-                                                        className="text-zinc-400 hover:text-red-400 ml-1"
+                                                        className="text-zinc-400 hover:text-foreground ml-1"
                                                         title="Supprimer le fichier"
                                                     >×</button>
                                                 </div>
@@ -376,7 +376,7 @@ export default function Planner() {
                                 {Array.isArray(materials[t.id]?.flashcards?.flashcards) && (
                                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         {materials[t.id].flashcards.flashcards.map((c: any, i: number) => (
-                                            <div key={i} className="border border-zinc-800 rounded-lg p-2">
+                                            <div key={i} className="border border-border rounded-lg p-2">
                                                 <div className="text-zinc-200 text-sm font-medium">Q: <MarkdownView md={c.q} inline /></div>
                                                 <div className="text-zinc-400 text-sm">A: <MarkdownView md={c.a} /></div>
                                             </div>
@@ -389,7 +389,7 @@ export default function Planner() {
                 )}
                 {view === 'list' && (
                     <div>
-                        <div className="text-stone-300 text-sm mb-2">Planning de la semaine</div>
+                        <div className="text-foreground text-sm mb-2">Planning de la semaine</div>
                         {plan ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {plan.days.map(d => (
@@ -397,7 +397,7 @@ export default function Planner() {
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-stone-500 text-sm">Aucun planning pour le moment</div>
+                            <div className="text-muted text-sm">Aucun planning pour le moment</div>
                         )}
                     </div>
                 )}

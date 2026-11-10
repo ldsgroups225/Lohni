@@ -56,7 +56,7 @@ export default function ActionRow({
           key={i}
           onClick={btn.onClick}
           disabled={disabled}
-          className="flex-1 min-w-[140px] sm:min-w-[180px] md:min-w-[200px] bg-stone-950 hover:bg-stone-900 border border-stone-900 hover:border-stone-800 text-stone-200 hover:text-white rounded-2xl px-5 py-3 font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-sm disabled:opacity-60"
+          className="flex-1 min-w-[140px] sm:min-w-[180px] md:min-w-[200px] bg-surface hover:bg-surface border border-border hover:border-border text-foreground hover:text-foreground rounded-2xl px-5 py-3 font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-sm disabled:opacity-60"
         >
           {btn.icon}
           <span>{btn.label}</span>
