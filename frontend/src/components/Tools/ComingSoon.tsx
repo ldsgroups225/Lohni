@@ -13,7 +13,7 @@ export default function ComingSoon() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* AI Study Planner */}
-        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-primary transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 opacity-70 hover:opacity-90">
+        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-primary transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -28,10 +28,10 @@ export default function ComingSoon() {
                 Prépare un planning de révision adapté à tes échéances.
               </div>
             </div>
-            <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-tint border border-primary">
+            <div className="p-3 rounded-xl bg-tint border border-border">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="size-5 text-primary"
+                className="size-5 text-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -48,7 +48,7 @@ export default function ComingSoon() {
         </div>
 
         {/* Mind Map Generator */}
-        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/10 opacity-70 hover:opacity-90">
+        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -83,7 +83,7 @@ export default function ComingSoon() {
         </div>
 
         {/* Presentation Builder */}
-        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10 opacity-70 hover:opacity-90">
+        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
