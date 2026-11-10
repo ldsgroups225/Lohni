@@ -1,6 +1,69 @@
 @import "tailwindcss";
 @import "@cognicatch/react/style.css";
 
+@theme inline {
+  --color-background: var(--lohni-background);
+  --color-surface: var(--lohni-surface);
+  --color-foreground: var(--lohni-foreground);
+  --color-primary: var(--lohni-primary);
+  --color-on-primary: var(--lohni-on-primary);
+  --color-secondary: var(--lohni-secondary);
+  --color-on-secondary: var(--lohni-on-secondary);
+  --color-mascot: var(--lohni-mascot);
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
+  --ease-lohni: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 250ms;
+}
+
+:root {
+  color-scheme: light dark;
+  --lohni-background: #fff8f1;
+  --lohni-surface: #ffffff;
+  --lohni-foreground: #2a1d17;
+  --lohni-primary: #c8401a;
+  --lohni-on-primary: #ffffff;
+  --lohni-secondary: #087476;
+  --lohni-on-secondary: #ffffff;
+  --lohni-mascot: #f2643d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lohni-background: #1b1512;
+    --lohni-surface: #27201c;
+    --lohni-foreground: #fbefe6;
+    --lohni-primary: #ff7a4d;
+    --lohni-on-primary: #1b1512;
+    --lohni-secondary: #3cc4c1;
+    --lohni-on-secondary: #1b1512;
+  }
+}
+
+.ui-button {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-radius: var(--radius-control);
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni);
+}
+.ui-button:active:not(:disabled) { transform: scale(0.98); }
+.ui-button:disabled { cursor: not-allowed; border: 2px dashed currentColor; }
+.ui-button:focus-visible { outline: 3px solid var(--color-secondary); outline-offset: 3px; }
+.ui-card { background: var(--color-surface); color: var(--color-foreground); border-radius: var(--radius-card); }
+.ui-progress { appearance: none; width: 100%; height: 0.5rem; border: 0; border-radius: 9999px; overflow: hidden; background: var(--color-surface); color: var(--color-primary); }
+.ui-progress::-webkit-progress-bar { background: var(--color-surface); }
+.ui-progress::-webkit-progress-value { background: var(--color-primary); }
+.ui-progress::-moz-progress-bar { background: var(--color-primary); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
 body {
   font-family: 'Schibsted Grotesk', sans-serif;
 }
