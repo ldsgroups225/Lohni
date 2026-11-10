@@ -62,6 +62,6 @@ Les limites d’import et de génération, le dosage des nouvelles cartes et les
 
 ## Licence et crédit
 
-Lohni est dérivé de [PageLM](https://github.com/CaviraOSS/PageLM), créé par CaviraOSS et ses contributeurs. Consultez la [licence](LICENSE.md) pour les conditions d’utilisation et de redistribution. Lohni reste gratuit et non commercial : tout usage commercial nécessite un accord préalable avec les auteurs de PageLM.
+Lohni est dérivé de [PageLM](https://github.com/CaviraOSS/PageLM), créé par nullure et recabasic (CaviraOSS). Consultez la [licence](LICENSE.md) pour les conditions d’utilisation et de redistribution. Lohni reste gratuit et non commercial : tout usage commercial nécessite un accord préalable avec les auteurs de PageLM.
 
 Pour contribuer, consultez [CONTRIBUTING.md](CONTRIBUTING.md) et les [issues du dépôt](https://github.com/ldsgroups225/Lohni/issues).
