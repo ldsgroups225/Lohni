@@ -77,7 +77,7 @@ export default function Planner() {
             }
             if (ev.type === "task.created") {
                 setTasks(t => [ev.task, ...t.filter(x => x.id !== ev.task.id)])
-                addNotification("success", `Task "${ev.task.title}" created`)
+                addNotification("success", `Tâche « ${ev.task.title} » créée`)
             }
             if (ev.type === "task.updated") {
                 setTasks(t => t.map(x => x.id === ev.task.id ? ev.task : x))
@@ -88,7 +88,7 @@ export default function Planner() {
             }
             if (ev.type === "task.files.added") {
                 setTasks(t => t.map(x => x.id === ev.taskId ? { ...x, files: [...(x.files || []), ...ev.files] } : x))
-                addNotification("success", `${ev.files.length} file(s) uploaded`)
+                addNotification("success", `${ev.files.length} fichier(s) ajouté(s)`)
             }
             if (ev.type === "task.file.removed") {
                 setTasks(t => t.map(x => x.id === ev.taskId ? { ...x, files: (x.files || []).filter(f => f.id !== ev.fileId) } : x))
@@ -112,7 +112,7 @@ export default function Planner() {
                 addNotification("success", "Session de travail démarrée")
             }
             if (ev.type === "session.ended") {
-                addNotification("success", `Session completed: ${ev.session.minutesWorked} minutes`)
+                addNotification("success", `Session terminée : ${ev.session.minutesWorked} minutes`)
             }
             if (ev.type === "materials.chunk") {
                 setMaterials(m => ({ ...m, _chunks: [...(m._chunks || []), ev] }))
@@ -332,7 +332,7 @@ export default function Planner() {
                                         <div className="text-zinc-100 font-medium truncate">{t.title}</div>
                                         <div className="text-zinc-400 text-xs">
                                             Échéance : {fmtTime(t.dueAt)} · {t.estMins} mins · P{t.priority}
-                                            {t.files && t.files.length > 0 && ` · ${t.files.length} file(s)`}
+                                            {t.files && t.files.length > 0 && ` · ${t.files.length} fichier(s)`}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
