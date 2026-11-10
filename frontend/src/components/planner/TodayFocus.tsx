@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react"
-import { plannerList, type PlannerTask, type PlannerSlot } from "../../lib/api"
+import type { PlannerTask } from "../../lib/api"
 
 function fmtTime(ts: number) {
     const d = new Date(ts)

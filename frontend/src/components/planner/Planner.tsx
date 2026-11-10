@@ -31,18 +31,14 @@ function DaySlots({ date, slots, tasks }: { date: string; slots: PlannerSlot[]; 
 }
 
 export default function Planner() {
-    const [text, setText] = useState("")
     const [loading, setLoading] = useState(false)
     const [tasks, setTasks] = useState<PlannerTask[]>([])
     const [sid] = useState(() => Math.random().toString(36).slice(2, 10))
     const [plan, setPlan] = useState<WeeklyPlan | null>(null)
     const [materials, setMaterials] = useState<Record<string, any>>({})
-    const [loadingStates, setLoadingStates] = useState<Record<string, { plan?: boolean; summary?: boolean; flashcards?: boolean }>>({})
     const wsRef = useRef<ReturnType<typeof connectPlannerStream> | null>(null)
     const [view, setView] = useState<"today" | "list" | "mindmap">("today")
-    const [selectedFiles, setSelectedFiles] = useState<File[]>([])
     const [notifications, setNotifications] = useState<Array<{ id: string; type: string; message: string; at: number }>>([])
-    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const taskIndex = useMemo(() => Object.fromEntries(tasks.map(t => [t.id, t])), [tasks])
     const slotsByTask = useMemo(() => {
@@ -51,24 +47,6 @@ export default function Planner() {
         for (const k of Object.keys(m)) m[k].sort((a, b) => a.start - b.start)
         return m
     }, [plan])
-
-    const suggestions = useMemo(() => {
-        const now = Date.now()
-        type Sug = { task: PlannerTask; score: number; nextSlot?: PlannerSlot }
-        const out: Sug[] = []
-        for (const t of tasks) {
-            if (t.status === "done") continue
-            const hoursLeft = Math.max(0.1, (t.dueAt - now) / 3600000)
-            const planned = slotsByTask[t.id]?.length || 0
-            const nextSlot = (slotsByTask[t.id] || []).find(s => s.start >= now) || (slotsByTask[t.id] || [])[0]
-            let score = (t.priority || 3) * (1 / hoursLeft) + (t.estMins || 60) * 0.002
-            if (!planned) score += 0.5
-            if (t.status === "blocked") score -= 2
-            if (t.status === "doing") score += 0.2
-            out.push({ task: t, score, nextSlot })
-        }
-        return out.sort((a, b) => b.score - a.score).slice(0, 3)
-    }, [tasks, slotsByTask])
 
     useEffect(() => {
         wsRef.current = connectPlannerStream(sid, (ev: PlannerEvent) => {
@@ -147,25 +125,18 @@ export default function Planner() {
 
     useEffect(() => { reload() }, [])
 
-    const add = async (data?: { text?: string; files?: File[] }) => {
-        const taskText = data?.text || text
-        const taskFiles = data?.files || selectedFiles
+    const add = async (data: { text?: string; files?: File[] }) => {
+        const taskText = data.text || ""
+        const taskFiles = data.files || []
 
         if (!taskText.trim() && taskFiles.length === 0) return
         setLoading(true)
         try {
             if (taskFiles.length > 0) {
                 const { task } = await plannerCreateWithFiles({ text: taskText, files: taskFiles })
-                if (!data) {
-                    setText("")
-                    setSelectedFiles([])
-                }
                 setTasks(t => [task, ...t.filter(x => x.id !== task.id)])
             } else {
                 const { task } = await plannerIngest(taskText)
-                if (!data) {
-                    setText("")
-                }
                 setTasks(t => [task, ...t.filter(x => x.id !== task.id)])
             }
         } finally {
@@ -173,21 +144,7 @@ export default function Planner() {
         }
     }
 
-    const handleFileSelect = (files: FileList | null) => {
-        if (!files) return
-        const newFiles = Array.from(files).filter(f =>
-            f.size <= 10 * 1024 * 1024 && // 10MB limit
-            (f.type.includes('pdf') || f.type.includes('image') || f.type.includes('text') || f.type.includes('document'))
-        )
-        setSelectedFiles(prev => [...prev, ...newFiles])
-    }
-
-    const removeFile = (index: number) => {
-        setSelectedFiles(prev => prev.filter((_, i) => i !== index))
-    }
-
     const planTask = async (id: string) => {
-        setLoadingStates(prev => ({ ...prev, [id]: { ...prev[id], plan: true } }))
         try {
             console.log('Planning task:', id)
             const result = await plannerPlan(id, false)
@@ -200,19 +157,12 @@ export default function Planner() {
         } catch (error) {
             console.error('Plan task error:', error)
             addNotification("error", "Impossible de planifier la tâche : " + (error as any)?.message)
-        } finally {
-            setLoadingStates(prev => ({ ...prev, [id]: { ...prev[id], plan: false } }))
         }
     }
 
     const gen = async (id: string, kind: "summary" | "studyGuide" | "flashcards" | "quiz") => {
-        setLoadingStates(prev => ({ ...prev, [id]: { ...prev[id], [kind]: true } }))
-        try {
-            const { data } = await plannerMaterials(id, kind)
-            setMaterials(m => ({ ...m, [id]: { ...(m[id] || {}), [kind]: data } }))
-        } finally {
-            setLoadingStates(prev => ({ ...prev, [id]: { ...prev[id], [kind]: false } }))
-        }
+        const { data } = await plannerMaterials(id, kind)
+        setMaterials(m => ({ ...m, [id]: { ...(m[id] || {}), [kind]: data } }))
     }
 
     const onUpload = async (id: string, file: File) => {
@@ -254,24 +204,12 @@ export default function Planner() {
         setTasks(t => t.map(x => x.id === id ? task : x))
     }
 
-    const fmtRel = (ts: number) => {
-        const d = ts - Date.now()
-        const sign = d < 0 ? "ago" : "in"
-        const v = Math.abs(d)
-        const h = Math.round(v / 3600000)
-        if (h < 1) {
-            const m = Math.max(1, Math.round(v / 60000))
-            return `${sign} ${m}m`
-        }
-        return `${sign} ${h}h`
-    }
-
     return (
         <div className="rounded-2xl border border-border bg-surface">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-border flex flex-wrap gap-2 items-center justify-between">
                 <div className="text-foreground font-medium">Planning des devoirs</div>
                 <div className="flex items-center gap-2">
-                    <div className="text-xs bg-surface border border-border rounded overflow-hidden">
+                    <div className="text-xs bg-surface border border-border rounded flex flex-wrap">
                         <button onClick={() => setView("today")} className={`px-2 py-1 ${view === 'today' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Aujourd’hui</button>
                         <button onClick={() => setView("list")} className={`px-2 py-1 ${view === 'list' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Liste</button>
                         <button onClick={() => setView("mindmap")} className={`px-2 py-1 ${view === 'mindmap' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Carte mentale</button>
@@ -320,7 +258,6 @@ export default function Planner() {
                             onUpdateStatus={mark}
                             onUpload={onUpload}
                             onDelete={del}
-                            onStartNow={startNow}
                             onUpdateNotes={updateNotes}
                         />
                     </div>
