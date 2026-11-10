@@ -89,3 +89,12 @@ test('une erreur réseau conserve les réponses pour un nouvel essai', async () 
   await api.syncRevisionAnswers()
   expect(api.revisionSyncStatus()).toMatchObject({ pending: 2, error: expect.stringContaining('Connexion impossible') })
 })
+
+test('un contexte non sécurisé affiche le message HTTPS avant toute requête', async () => {
+  entries.clear()
+  vi.stubGlobal('crypto', {})
+  expect(api.revisionSyncStatus()).toMatchObject({ error: expect.stringContaining('HTTPS') })
+  await expect(api.revisionAPI.profile()).rejects.toThrow('Ouvre Lohni en HTTPS dans un navigateur à jour pour sauvegarder tes réponses hors ligne.')
+  expect(fetch).not.toHaveBeenCalled()
+  vi.unstubAllGlobals()
+})

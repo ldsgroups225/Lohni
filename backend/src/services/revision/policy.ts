@@ -1,5 +1,6 @@
 export const REVISION_POLICY = {
   dailyImports: 3,
+  dailyGenerations: 3,
   maxUploadMB: 10,
   maxTextChars: 100000,
   maxTitleChars: 200,

@@ -8,6 +8,7 @@ export class SQLiteDatabase {
 
     constructor(dbPath: string) {
         this.db = new sqlite3.Database(dbPath)
+        this.db.configure('busyTimeout', 5000)
     }
 
     async run(sql: string, params: any[] = []): Promise<sqlite3.RunResult> {

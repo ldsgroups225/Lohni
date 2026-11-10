@@ -51,6 +51,8 @@ export class RevisionService {
   constructor(private dependencies: Dependencies) {
     this.ready = dependencies.db.transaction(async () => {
       for (const sql of [
+        `CREATE TABLE IF NOT EXISTS revision_generations (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, server_date TEXT NOT NULL)`,
+        `CREATE INDEX IF NOT EXISTS revision_generations_daily ON revision_generations(device_id, server_date)`,
         `CREATE TABLE IF NOT EXISTS revision_imports (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, server_date TEXT NOT NULL)`,
         `CREATE INDEX IF NOT EXISTS revision_imports_daily ON revision_imports(device_id, server_date)`,
         `CREATE TABLE IF NOT EXISTS revision_profiles (device_id TEXT PRIMARY KEY, school_class TEXT NOT NULL, series TEXT, exam_date TEXT, xp INTEGER NOT NULL DEFAULT 0)`,
@@ -96,11 +98,15 @@ export class RevisionService {
       const rows = await this.dependencies.db.all('SELECT card_id, knew, session_complete, local_date FROM revision_journal WHERE device_id = ?', [context.deviceId])
       const xp = journalXP(rows)
       const days = new Set(rows.filter(row => row.session_complete).map(row => row.local_date))
+      // shortcut: seuls les jours sans carte constatés par une visite sont neutres ; historiser les échéances si ce suivi doit être exhaustif.
+      const sessions = await this.dependencies.db.all('SELECT local_date, state FROM revision_sessions WHERE device_id = ?', [context.deviceId])
+      const emptyDays = new Set(sessions.filter(row => JSON.parse(row.state).cards.length === 0).map(row => row.local_date))
+      for (const row of sessions) if (JSON.parse(row.state).cards.length > 0 && !days.has(row.local_date)) emptyDays.delete(row.local_date)
       let date = Date.parse(context.localDate)
       if (!days.has(context.localDate)) date -= 86400000
       let streak = 0
-      while (days.has(new Date(date).toISOString().slice(0, 10))) {
-        streak++
+      while (days.has(new Date(date).toISOString().slice(0, 10)) || emptyDays.has(new Date(date).toISOString().slice(0, 10))) {
+        if (days.has(new Date(date).toISOString().slice(0, 10))) streak++
         date -= 86400000
       }
       const chapters = await this.readChapters(context.deviceId)
@@ -187,15 +193,24 @@ export class RevisionService {
   async generateChapter(context: RevisionContext, input: { title: string; subject: string }) {
     const profile = await this.execute(context, () => this.requireProfile(context.deviceId))
     if (!input || typeof input.title !== 'string' || !input.title.trim() || input.title.length > policy.maxTitleChars || !profile.subjects.includes(input.subject)) throw new RevisionError('Matière ou chapitre invalide.')
-    let generated: GeneratedChapter
+    const generationId = randomUUID()
+    await this.execute(context, async () => {
+      const date = this.dependencies.now().toISOString().slice(0, 10)
+      const row = await this.dependencies.db.get('SELECT COUNT(*) AS count FROM revision_generations WHERE device_id = ? AND server_date = ?', [context.deviceId, date])
+      if (row.count >= policy.dailyGenerations) throw new RevisionError(`Tu as atteint tes ${policy.dailyGenerations} générations du jour. Recharge le ${new Date(Date.parse(date) + 86400000).toISOString().slice(0, 10)} à 00:00 UTC.`)
+      // shortcut: un arrêt serveur consomme cette place jusqu’à minuit ; réconcilier si les arrêts deviennent fréquents.
+      await this.dependencies.db.run('INSERT INTO revision_generations VALUES (?, ?, ?)', [generationId, context.deviceId, date])
+    })
     try {
-      generated = await this.dependencies.generateCards({ title: input.title.trim(), subject: input.subject, schoolClass: profile.schoolClass, series: profile.series })
+      const generated = await this.dependencies.generateCards({ title: input.title.trim(), subject: input.subject, schoolClass: profile.schoolClass, series: profile.series })
+      return await this.storeChapter(context, input, generated, 'ai')
     } catch (error) {
+      await this.execute(context, () => this.dependencies.db.run('DELETE FROM revision_generations WHERE id = ? AND device_id = ?', [generationId, context.deviceId]))
       if (error instanceof RevisionError) throw error
       throw new RevisionError('Le service IA est indisponible pour le moment, réessaie plus tard.')
     }
-    return this.storeChapter(context, input, generated, 'ai')
   }
+
   async saveTutorNote(context: RevisionContext, input: { subject: string; title: string; question: string; answer: string }) {
     return this.execute(context, async () => {
       const profile = await this.requireProfile(context.deviceId)
@@ -241,12 +256,12 @@ export class RevisionService {
           if (mime.startsWith('image/')) {
             if (!this.dependencies.transcribePhoto) throw new RevisionError('La lecture des photos est indisponible. Colle le texte du cours ou réessaie plus tard.')
             text = await this.dependencies.transcribePhoto({ ...input.file, mimeType: mime })
-            if (!nonempty(text)) throw new Error('empty transcription')
+            if (!nonempty(text)) throw new RevisionError('Photo illisible. Prends une photo nette et bien éclairée ou colle le texte du cours.')
           } else text = await extractText(input.file.path, mime)
         } catch (error) {
           if (error instanceof RevisionError) throw error
           throw new RevisionError(mime.startsWith('image/')
-            ? 'Photo illisible. Prends une photo nette et bien éclairée ou colle le texte du cours.'
+            ? 'La lecture des photos est indisponible. Colle le texte du cours ou réessaie plus tard.'
             : 'Fichier illisible. Essaie un autre fichier ou colle le texte du cours.')
         }
       }
@@ -290,7 +305,7 @@ export class RevisionService {
   async getSession(context: RevisionContext, continueSession = false): Promise<RevisionSession> {
     return this.execute(context, async () => {
       const db = this.dependencies.db
-      const saved = await db.get('SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? ORDER BY rowid DESC LIMIT 1', [context.deviceId, context.localDate])
+      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate])
       if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return this.sessionResult(JSON.parse(saved.state))
       const profile = await this.requireProfile(context.deviceId)
       const rows = await db.all(`SELECT c.*, ch.origin FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id
@@ -299,6 +314,10 @@ export class RevisionService {
         JOIN revision_cards c ON c.id = j.card_id AND c.device_id = j.device_id
         WHERE j.device_id = ? AND j.local_date = ? AND json_extract(j.scheduling, '$.log.state') = 0
         AND json_extract(c.content, '$.kind') = 'basic'`, [context.deviceId, context.localDate])
+      const introducedMcq = await db.get(`SELECT COUNT(DISTINCT j.card_id) AS count FROM revision_journal j
+        JOIN revision_cards c ON c.id = j.card_id AND c.device_id = j.device_id
+        WHERE j.device_id = ? AND j.local_date = ? AND json_extract(j.scheduling, '$.log.state') = 0
+        AND json_extract(c.content, '$.kind') = 'mcq'`, [context.deviceId, context.localDate])
       const reviewed = new Set((await db.all('SELECT card_id FROM revision_journal WHERE device_id = ? AND local_date = ?', [context.deviceId, context.localDate])).map(r => r.card_id))
       const unseen = rows.filter(r => r.reviews === 0 && JSON.parse(r.content).kind === 'basic').length
       const days = profile.examDate ? (Date.parse(profile.examDate) - Date.parse(context.localDate)) / 86400000 : 0
@@ -308,7 +327,9 @@ export class RevisionService {
       eligible.sort((a, b) => rank(a) - rank(b) || (a.reviews > 0 && b.reviews > 0
         ? this.scheduler.get_retrievability(JSON.parse(a.scheduling), this.dependencies.now(), false) - this.scheduler.get_retrievability(JSON.parse(b.scheduling), this.dependencies.now(), false) : 0))
       let newCount = 0
-      const selected = eligible.filter(row => row.reviews > 0 || JSON.parse(row.content).kind === 'mcq' || ++newCount <= quota).slice(0, policy.sessionCards)
+      let newMcqCount = 0
+      const mcqQuota = quota + introduced.count - introducedMcq.count
+      const selected = eligible.filter(row => row.reviews > 0 || (JSON.parse(row.content).kind === 'mcq' ? ++newMcqCount <= mcqQuota : ++newCount <= quota)).slice(0, policy.sessionCards)
       const cards = selected.map(revisionCard)
       const session: RevisionSession = { id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: cards.length === 0, repeated: [], elapsedMs: 0, earnedXP: 0 }
       await db.run('INSERT INTO revision_sessions VALUES (?, ?, ?, ?)', [session.id, context.deviceId, context.localDate, JSON.stringify(session)])
