@@ -352,7 +352,7 @@ export function connectPodcastStream(pid: string, onEvent: (ev: any) => void) {
     }
   }
 
-  ws.onclose = (e) => {
+  ws.onclose = () => {
   }
 
   ws.onerror = () => onEvent({ type: "error", error: "stream_error" } as any)
