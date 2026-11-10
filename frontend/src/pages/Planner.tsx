@@ -17,7 +17,7 @@ export default function PlannerPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                                 </svg>
                             </Link>
-                            <h1 className="text-2xl font-semibold text-foreground flex items-center gap-3">Planning des devoirs</h1>
+                            <h1 className="text-xl sm:text-2xl font-semibold text-foreground flex items-center gap-3">Planning des devoirs</h1>
                             <span className="px-2 py-0.5 rounded-full bg-tint border border-border text-foreground text-[10px] font-medium">BÊTA</span>
                         </div>
                     </header>
