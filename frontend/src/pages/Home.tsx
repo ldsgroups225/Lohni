@@ -1,11 +1,12 @@
 import Mascotte from '../components/Mascotte/Mascotte'
+import { FlameIcon } from '../components/ui/NavigationIcons'
 import { Card } from '../components/ui/Card'
 import { Progress } from '../components/ui/Progress'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import Onboarding from '../components/Revision/Onboarding'
-import { revisionAPI, type RevisionHome, type RevisionProgress } from '../lib/api'
+import { revisionAPI, type RevisionHome, type RevisionProgress, type RevisionChapter } from '../lib/api'
 
 export default function Home() {
   const [home, setHome] = useState<RevisionHome | null>(null)
@@ -14,6 +15,7 @@ export default function Home() {
   const [error, setError] = useState('')
   const [progressError, setProgressError] = useState('')
   const [attempt, setAttempt] = useState(0)
+  const [chapters, setChapters] = useState<RevisionChapter[] | null>(null)
   useEffect(() => {
     let active = true
     async function load() {
@@ -24,6 +26,7 @@ export default function Home() {
         const data = await revisionAPI.home()
         if (!active) return
         setHome(data)
+        if (data) void revisionAPI.chapters().then(value => { if (active) setChapters(value) }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
         if (data) void revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(cause => {
           if (active && !(cause instanceof Error && cause.message.startsWith('http 404'))) setProgressError('Ta progression est temporairement indisponible.')
         })
@@ -38,21 +41,24 @@ export default function Home() {
 
   return <main className="min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
-      <header className="flex items-center justify-between gap-4"><h1 className="text-2xl font-semibold text-foreground">Lohni</h1><Link to="/tutor" className="underline">Tuteur</Link></header>
+      {(!home || loading || error) && <header><h1 className="text-2xl font-semibold text-foreground">Lohni</h1></header>}
       {loading ? <p role="status">Chargement de ta journée…</p> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
         <Mascotte humeur="désolée" taille={96} /><p>{error}</p><button className="underline" onClick={() => setAttempt(value => value + 1)}>Réessayer</button>
       </div> : !home ? <Onboarding /> : <>
-        <Mascotte humeur={home.state === "done" ? "en fête" : progress && progress.streak === 0 && progress.xp > 0 ? "endormie" : progress && progress.streak > 0 ? "contente" : "au repos"} taille={112} />
+        <header className="flex items-center gap-3">
+          <Mascotte humeur={home.state === "done" ? "en fête" : progress && progress.streak === 0 && progress.xp > 0 ? "endormie" : progress && progress.streak > 0 ? "contente" : "au repos"} taille={92} />
+          <div><h1 className="text-2xl font-bold">Salut !</h1><p className="text-muted">{home.cardCount} carte{home.cardCount > 1 ? 's' : ''} t’attend{home.cardCount > 1 ? 'ent' : ''} aujourd’hui.</p></div>
+        </header>
         <p>{curriculum.find(item => item.schoolClass === home.profile.schoolClass)?.label ?? home.profile.schoolClass}{home.profile.series ? ` · Série ${home.profile.series}` : ''}</p>
         <div className="flex flex-wrap gap-4">
-          {progress && <p className="rounded-xl border border-border px-4 py-3">Série : <strong className="text-foreground">{progress.streak} jour{progress.streak > 1 ? 's' : ''}</strong></p>}
+          {progress && <p className="flex w-full items-center gap-3 rounded-2xl bg-tint px-4 py-3"><span className="text-primary"><FlameIcon /></span><strong className="text-2xl">{progress.streak}</strong> jour{progress.streak > 1 ? 's' : ''} de série</p>}
           {home.daysUntilExam !== null && <p className="rounded-xl border border-border px-4 py-3">{home.daysUntilExam > 0 ? `Examen dans ${home.daysUntilExam} jour${home.daysUntilExam > 1 ? 's' : ''}` : 'Date d’examen atteinte'}</p>}
         </div>
         <Card className="space-y-5 p-6">
-          <h2 className="text-2xl font-semibold text-foreground">{home.state === 'done' ? 'Session du jour terminée !' : home.state === 'empty' ? 'Aucune carte à réviser' : 'Prêt pour ta session du jour ?'}</h2>
+          <h2 className="text-2xl font-semibold text-foreground">{home.state === 'done' ? 'Session du jour terminée !' : home.state === 'empty' ? 'Aucune carte à réviser' : 'Session du jour'}</h2>
           {home.state === 'ready' ? <>
             <p>{home.cardCount} carte{home.cardCount > 1 ? 's' : ''} · environ {home.estimatedMinutes} min</p>
-            <Link to="/revision" className={button}>Session du jour</Link>
+            <Link to="/revision" className={button}>Commencer</Link>
           </> : home.state === 'done' ? <>
             <p>Ta journée est faite. Reviens demain pour entretenir ce que tu as appris.</p>
             <Link to="/revision" className="block underline">Continuer les cartes restantes</Link>
@@ -61,10 +67,15 @@ export default function Home() {
           {home.totalCards === 0 && <Link className={button} to="/revision">Préparer un chapitre</Link>}
           <Link to="/import" className="block text-primary underline">Importer mon cours</Link>
         </Card>
-        {progress && <section className="space-y-4" aria-label="Maîtrise par matière"><h2 className="text-xl font-semibold text-foreground">Tes matières</h2>{progress.subjects.map(subject => <article key={subject.subjectId} className="rounded-xl border border-border p-4">
+        {progress && <section className="space-y-4" aria-label="Maîtrise par matière"><h2 className="text-xl font-semibold text-foreground">Tes matières</h2>{progress.subjects.map(subject => {
+          const own = chapters?.filter(chapter => chapter.subjectId === subject.subjectId)
+          const seen = own?.reduce((sum, chapter) => sum + chapter.seenCards, 0)
+          const total = own?.reduce((sum, chapter) => sum + chapter.cards.length, 0)
+          return <article key={subject.subjectId} className="rounded-xl border border-border p-4">
           <div className="mb-3 flex justify-between gap-3"><h3>{subject.name}</h3><span>{subject.mastery === null ? 'Pas encore révisée' : `${subject.status} · ${Math.round(subject.mastery)} %`}</span></div>
+          {seen !== undefined && <p className="mb-2 text-sm text-muted">{seen} carte{seen > 1 ? 's' : ''} vue{seen > 1 ? 's' : ''} sur {total}</p>}
           <Progress className="mastery-progress w-full" max={100} value={subject.mastery ?? 0} aria-label={`Maîtrise en ${subject.name}`} />
-        </article>)}</section>}
+        </article>})}</section>}
         {progressError && <p role="status" className="text-sm text-muted">{progressError}</p>}
       </>}
     </div>

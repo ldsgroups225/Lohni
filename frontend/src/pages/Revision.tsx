@@ -1,4 +1,5 @@
 import Mascotte from '../components/Mascotte/Mascotte'
+import { CheckIcon, CloseIcon, FlameIcon } from '../components/ui/NavigationIcons'
 import { Progress } from '../components/ui/Progress'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
@@ -23,6 +24,11 @@ export default function Revision() {
   const button = 'rounded-xl bg-primary px-4 py-3 text-on-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-wait'
   const secondaryButton = 'rounded-xl border border-border bg-surface px-4 py-3 text-foreground disabled:opacity-50 disabled:cursor-wait'
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('revision-card-visibility', { detail: !!session && !session.complete && !!card }))
+    return () => { window.dispatchEvent(new CustomEvent('revision-card-visibility', { detail: false })) }
+  }, [session, card])
 
   function display(next: RevisionSession) {
     setSession(next)
@@ -109,10 +115,7 @@ export default function Revision() {
   return (
     <main className="min-h-screen px-4 pt-8 pb-36 md:pl-28">
       <div className="mx-auto max-w-xl space-y-6">
-        <header className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-semibold text-foreground">Session de révision</h1>
-          <div className="flex gap-4"><Link to="/courses" className="underline">Cours</Link><Link to="/" className="underline">Accueil</Link></div>
-        </header>
+        {session && !session.complete && card ? <header><Link to="/" aria-label="Quitter la session" className="inline-block rounded-xl p-2 text-muted"><CloseIcon /></Link></header> : !(session && session.position > 0) && <header><h1 className="text-2xl font-semibold text-foreground">Session de révision</h1></header>}
         {(!sync.online || sync.pending > 0) && <aside role="status" className="space-y-2 rounded-xl border border-border p-4 text-foreground">
           {!sync.online && <p>Hors ligne. Tu peux terminer ta session déjà chargée.</p>}
           {sync.pending > 0 && <p>{sync.pending} réponse{sync.pending > 1 ? 's' : ''} enregistrée{sync.pending > 1 ? 's' : ''} sur cet appareil, en attente d’envoi. Tes XP et ta série seront confirmés au retour du réseau.</p>}
@@ -134,7 +137,7 @@ export default function Revision() {
           <button className={button} disabled={busy || !sync.online} onClick={explain}>Explique-moi</button>
         </aside>}
         {session && !session.complete && card ? (
-          <section className="space-y-6" aria-busy={busy}>
+          <section className="space-y-6" aria-label="Session de révision" aria-busy={busy}>
             <div>
               <p className="mb-2">Carte {session.position + 1} sur {session.cards.length}</p>
               <Progress className="w-full" value={session.position} max={session.cards.length} aria-label="Progression de la session" />
@@ -157,8 +160,8 @@ export default function Revision() {
               </div> : <button className={button} disabled={busy || (card.kind === 'mcq' && choice === undefined)} onClick={() => setRevealed(true)}>Révéler la réponse</button>}
             </article>
             {revealed && <div className="grid grid-cols-2 gap-3">
-              <button className={`${button} border border-danger`} disabled={busy} onClick={() => answer(false)}>Je ne savais pas</button>
-              <button className={`${button} border border-success`} disabled={busy || (card.kind === 'mcq' && choice !== card.correct)} onClick={() => answer(true)}>Je savais</button>
+              <button className={`${secondaryButton} flex items-center justify-center gap-2`} disabled={busy} onClick={() => answer(false)}><CloseIcon />Je ne savais pas</button>
+              <button className="flex items-center justify-center gap-2 rounded-xl bg-success px-4 py-3 font-semibold text-on-success disabled:opacity-50" disabled={busy || (card.kind === 'mcq' && choice !== card.correct)} onClick={() => answer(true)}><CheckIcon />Je savais</button>
             </div>}
             <button disabled={busy || !sync.online || sync.pending > 0} className="text-sm text-muted underline" onClick={() => void run(async () => {
               await revisionAPI.deleteCard(card.id)
@@ -166,24 +169,31 @@ export default function Revision() {
             })}>Supprimer cette carte</button>
           </section>
         ) : !busy && <>
-          {session && <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
-            {!error && <Mascotte humeur={session.position > 0 ? "en fête" : "au repos"} taille={112} />}
-            <h2 className="text-xl text-foreground">{session.position > 0 ? 'Session terminée !' : 'Aucune carte à réviser pour le moment'}</h2>
-            <p>{session.position > 0 ? `${session.position} réponses enregistrées${sync.pending ? " sur cet appareil" : ""}. Tu peux revenir demain ou continuer les cartes restantes.` : 'Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.'}</p>
-            {session.position > 0 && <p className="text-lg text-foreground">{session.earnedXP} XP gagnés pendant cette session</p>}
-            {!sync.pending && progress && <p>{progress.xp} XP au total · Série : {progress.streak} jour{progress.streak > 1 ? 's' : ''}</p>}
-            <p className="text-sm text-muted">{revisionPolicy.knownXP} XP par carte sue, {revisionPolicy.missedXP} XP par oubli et {revisionPolicy.sessionXP} XP à la fin d’une session.</p>
-            {session.position > 0 && <p>Pour réviser ton vrai cours, <Link to="/import" className="text-primary underline">importe ton cours</Link> : il deviendra un chapitre avec tes propres cartes.</p>}
-            <button className={session.position > 0 ? button : secondaryButton} disabled={busy || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer</button>
-          </section>}
-          {profile && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-border p-6">
+          {session && (session.position > 0 ? <section className="flex flex-col items-center gap-4 text-center" aria-live="polite">
+            {!error && <Mascotte humeur="en fête" taille={160} />}
+            <h2 className="text-2xl font-bold">Session terminée !</h2>
+            <p>{session.position} réponses enregistrées{sync.pending ? ' sur cet appareil' : ''}. À demain pour la suite.</p>
+            <div className="flex gap-3">
+              <div className="rounded-2xl border border-border bg-surface p-4"><strong className="block text-3xl">+{session.earnedXP}</strong><span>XP gagnés</span></div>
+              {!sync.pending && progress && <div className="rounded-2xl bg-tint p-4"><span className="flex items-center justify-center gap-2"><FlameIcon /><strong className="text-3xl">{progress.streak}</strong></span><span>jour{progress.streak > 1 ? 's' : ''} de série</span></div>}
+            </div>
+            {!sync.pending && progress && <p>{progress.xp} XP au total</p>}
+            <Link className={`${button} w-full text-center font-semibold`} to="/">Revenir à l’accueil</Link>
+            <button className="text-primary underline disabled:opacity-50" disabled={busy || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer avec les cartes restantes</button>
+          </section> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
+            {!error && <Mascotte humeur="au repos" taille={112} />}
+            <h2 className="text-xl">Aucune carte à réviser pour le moment</h2>
+            <p>Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.</p>
+            <button className={secondaryButton} disabled={busy || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer</button>
+          </section>)}
+          {profile && !(session && session.position > 0) && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-border p-6">
             <h2 className="text-xl text-foreground">Préparer un chapitre</h2>
             <label className="block space-y-2"><span>Matière</span><select className={input} required value={subject} onChange={e => setSubject(e.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
             <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex. : Les fractions" /></label>
             <button className={session && session.position > 0 ? secondaryButton : button} disabled={busy || !sync.online || sync.pending > 0}>Générer mes cartes</button>
           </form>}
         </>}
-        {profile && <Link to="/import" className="block rounded-xl border border-border p-4 text-center text-foreground">Importer mon cours</Link>}
+        {profile && !(session && !session.complete && card) && !(session && session.position > 0) && <Link to="/import" className="block rounded-xl border border-border p-4 text-center text-foreground">Importer mon cours</Link>}
       </div>
     </main>
   )

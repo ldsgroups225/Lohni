@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { CoursesIcon, HomeIcon, ProfileIcon, TutorIcon } from './ui/NavigationIcons'
 
@@ -10,6 +11,13 @@ const tabs = [
 
 export default function Sidebar() {
   const { pathname } = useLocation()
+  const [cardVisible, setCardVisible] = useState(false)
+  useEffect(() => {
+    const update = (event: Event) => setCardVisible((event as CustomEvent<boolean>).detail)
+    window.addEventListener('revision-card-visibility', update)
+    return () => window.removeEventListener('revision-card-visibility', update)
+  }, [])
+  if (pathname === '/revision' && cardVisible) return null
   const active = pathname === '/chat' ? '/tutor'
     : ['/import', '/cards', '/exam', '/debate', '/tools', '/planner', '/quiz'].includes(pathname) ? '/courses'
     : pathname === '/revision' ? '/' : pathname

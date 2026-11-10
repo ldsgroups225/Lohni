@@ -16,3 +16,13 @@ export function TutorIcon() {
 export function ProfileIcon() {
   return <svg {...svgProps}><g fill="none" {...strokeProps}><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></g></svg>
 }
+
+export function FlameIcon() {
+  return <svg {...svgProps}><path fill="none" {...strokeProps} d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0a5 5 0 0 1 1-3a1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/></svg>
+}
+export function CheckIcon() {
+  return <svg {...svgProps}><path fill="none" {...strokeProps} d="M20 6L9 17l-5-5"/></svg>
+}
+export function CloseIcon() {
+  return <svg {...svgProps}><path fill="none" {...strokeProps} d="M18 6L6 18M6 6l12 12"/></svg>
+}
