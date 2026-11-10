@@ -1,10 +1,14 @@
+import { Button, ButtonLink } from '../components/ui/Button'
+import { listDelay } from '../components/ui/revisionPresentation'
+import { AnimatedNumber } from '../components/ui/AnimatedNumber'
+import Mascotte from '../components/Mascotte/Mascotte'
+import { Progress } from '../components/ui/Progress'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
 
-const button = 'rounded-xl bg-stone-800 px-4 py-3 text-white hover:bg-stone-700 disabled:opacity-50 disabled:cursor-wait'
-const input = 'w-full rounded-xl border border-stone-700 bg-stone-950 p-3 text-white'
+const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
 function CardEditor({ card, busy, onSave, onCancel }: {
   card: RevisionCard; busy: boolean; onSave: (value: RevisionCardInput) => void; onCancel: () => void
@@ -20,7 +24,7 @@ function CardEditor({ card, busy, onSave, onCancel }: {
   }
   return <form onSubmit={submit}>
     <fieldset disabled={busy} className="space-y-4">
-      <legend className="mb-4 font-semibold text-white">Modifier la carte</legend>
+      <legend className="mb-4 font-semibold text-foreground">Modifier la carte</legend>
       <label className="block space-y-2"><span>Question</span><textarea autoFocus className={input} required value={question} onChange={event => setQuestion(event.target.value)} /></label>
       {card.kind === 'mcq' && <>
         {options.map((option, index) => <label key={index} className="block space-y-2"><span>Choix {index + 1}</span>
@@ -31,7 +35,7 @@ function CardEditor({ card, busy, onSave, onCancel }: {
         </select></label>
       </>}
       <label className="block space-y-2"><span>{card.kind === 'mcq' ? 'Explication' : 'Réponse'}</span><textarea className={input} required value={answer} onChange={event => setAnswer(event.target.value)} /></label>
-      <div className="flex flex-wrap gap-3"><button className={button}>Enregistrer</button><button type="button" className={button} onClick={onCancel}>Annuler</button></div>
+      <div className="flex flex-wrap gap-3"><Button type="submit">Enregistrer</Button><button type="button" className="rounded-xl border border-border px-4 py-3 text-foreground" onClick={onCancel}>Annuler</button></div>
     </fieldset>
   </form>
 }
@@ -65,58 +69,59 @@ export default function Courses() {
     return () => { active = false }
   }, [])
 
-  return <main className="min-h-screen px-4 pt-8 pb-36 md:pl-28">
+  return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-white">Cours</h1>
-        <div className="flex flex-wrap gap-3"><Link to="/import" className={button}>Importer mon cours</Link><Link to="/revision" className={button}>Session du jour</Link></div>
+        <h1 className="text-2xl font-semibold text-foreground">Cours</h1>
+        <div className="flex flex-wrap gap-3"><ButtonLink to="/import">Importer mon cours</ButtonLink><Link to="/revision" className="rounded-xl border border-border px-4 py-3 text-foreground">Session du jour</Link></div>
       </header>
-      {progress && <p className="rounded-2xl border border-stone-800 p-4" aria-live="polite">
-        <strong className="text-white">{progress.xp} XP</strong> · Série : {progress.streak} jour{progress.streak > 1 ? 's' : ''}
+      {progress && <p className="rounded-2xl border border-border p-4" aria-live="polite">
+        <strong className="text-foreground">{progress.xp} XP</strong> · Série : {progress.streak} jour{progress.streak > 1 ? 's' : ''}
       </p>}
-      {error && <div role="alert" className="rounded-xl border border-red-800 p-4 text-red-200">{error}
+      {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
         <button className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Réessayer</button>
       </div>}
       {busy && <p role="status">Chargement…</p>}
-      {!busy && !error && chapters.length === 0 && <section className="space-y-3 rounded-2xl border border-stone-800 p-6">
-        <h2 className="text-xl text-white">Tes cours apparaîtront ici</h2>
+      {!busy && !error && chapters.length === 0 && <section className="space-y-3 rounded-2xl border border-border p-6">
+        <Mascotte humeur="au repos" taille={112} />
+        <h2 className="text-xl text-foreground">Tes cours apparaîtront ici</h2>
         <p>Prépare ton premier chapitre pour commencer à réviser.</p>
         <Link to="/revision" className="inline-block underline">Commencer ma révision</Link>
       </section>}
-      {[...new Set(chapters.map(chapter => chapter.subject))].map(subject => {
+      {[...new Set(chapters.map(chapter => chapter.subject))].map((subject, subjectIndex) => {
         const own = chapters.filter(chapter => chapter.subject === subject)
-        return <section key={subject} className="space-y-4" aria-busy={busy}>
-          <h2 className="text-xl font-semibold text-white">{subject}</h2>
-          {own.map(chapter => <article key={chapter.id} className="space-y-4 rounded-2xl border border-stone-800 bg-stone-950 p-5">
+        return <section key={subject} style={{ animationDelay: listDelay(subjectIndex) }} className="motion-list space-y-4" aria-busy={busy}>
+          <h2 className="text-xl font-semibold text-foreground">{subject}</h2>
+          {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: listDelay(index) }} className="motion-list space-y-4 rounded-2xl border border-border bg-surface p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <h3 className="text-lg font-semibold text-white">{chapter.title}</h3>
-              <span className={chapter.status === 'Solide' ? 'text-green-300' : chapter.status === 'En cours' ? 'text-sky-300' : 'text-orange-300'}>{chapter.status}</span>
+              <h3 className="text-lg font-semibold text-foreground">{chapter.title}</h3>
+              <span className={chapter.status === 'En cours' ? 'text-primary' : 'text-foreground'}>{chapter.status}</span>
             </div>
-            <p className="text-sm text-stone-400">{chapter.origin === 'ai' ? 'Généré par IA · Peut contenir des erreurs' : 'Cours importé'}</p>
-            <p>{chapter.mastery === null ? 'Aucune carte vue' : `${Math.round(chapter.mastery)} % de rappel estimé`} · {chapter.seenCards}/{chapter.cards.length} cartes vues</p>
-            <progress className="mastery-progress w-full" value={chapter.mastery ?? 0} max={100} aria-label={`Maîtrise du chapitre ${chapter.title}`} />
-            {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && <p className="text-sm text-stone-400">Révise au moins {Math.round(revisionPolicy.minimumSeenRatio * 100)} % des cartes pour faire évoluer la maîtrise.</p>}
-            <details><summary className="cursor-pointer py-2 text-white">Relire le résumé</summary><MarkdownView md={chapter.summary} /></details>
-            <details><summary className="cursor-pointer py-2 text-white">Voir les cartes ({chapter.cards.length})</summary>
-              <div className="mt-3 space-y-4">{chapter.cards.map(card => <article key={card.id} className="space-y-3 rounded-xl border border-stone-800 p-4">
+            <p className="text-sm text-muted">{chapter.origin === 'ai' ? 'Généré par IA · Peut contenir des erreurs' : 'Cours importé'}</p>
+            <p>{chapter.mastery === null ? 'Aucune carte vue' : <><AnimatedNumber value={Math.round(chapter.mastery)} /> % de rappel estimé</>} · {chapter.seenCards}/{chapter.cards.length} cartes vues</p>
+            <Progress className="mastery-progress w-full" value={chapter.mastery ?? 0} max={100} aria-label={`Maîtrise du chapitre ${chapter.title}`} />
+            {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && <p className="text-sm text-muted">Révise au moins {Math.round(revisionPolicy.minimumSeenRatio * 100)} % des cartes pour faire évoluer la maîtrise.</p>}
+            <details><summary className="cursor-pointer py-2 text-foreground">Relire le résumé</summary><MarkdownView md={chapter.summary} /></details>
+            <details><summary className="cursor-pointer py-2 text-foreground">Voir les cartes ({chapter.cards.length})</summary>
+              <div className="mt-3 space-y-4">{chapter.cards.map(card => <article key={card.id} className="space-y-3 rounded-xl border border-border p-4">
                 {editing === card.id ? <CardEditor key={card.id} card={card} busy={busy} onCancel={() => setEditing(null)} onSave={value => void run(async () => {
                   await revisionAPI.updateCard(card.id, value)
                   setEditing(null)
                   await load()
                 })} /> : <>
                   <MarkdownView md={card.question} />
-                  {card.kind === 'mcq' && <ol className="list-decimal space-y-1 pl-5">{card.options?.map((option, i) => <li key={i}><MarkdownView md={option} inline />{i + 1 === card.correct && <span className="text-green-300"> — Bonne réponse</span>}</li>)}</ol>}
+                  {card.kind === 'mcq' && <ol className="list-decimal space-y-1 pl-5">{card.options?.map((option, i) => <li key={i}><MarkdownView md={option} inline />{i + 1 === card.correct && <span className="text-foreground"> — Bonne réponse</span>}</li>)}</ol>}
                   <MarkdownView md={card.answer} />
                   <div className="flex flex-wrap gap-3">
-                    <button className={button} disabled={busy} onClick={() => setEditing(card.id)}>Modifier</button>
-                    <button className={`${button} text-red-200`} disabled={busy} onClick={() => {
+                    <Button disabled={busy} onClick={() => setEditing(card.id)}>Modifier</Button>
+                    <button type="button" className="rounded-xl border border-danger px-4 py-3 text-danger disabled:opacity-50" disabled={busy} onClick={() => {
                       if (window.confirm('Supprimer cette carte ? Elle ne sera plus proposée en révision.')) void run(async () => { await revisionAPI.deleteCard(card.id); await load() })
                     }}>Supprimer la carte</button>
                   </div>
                 </>}
               </article>)}</div>
             </details>
-            <button className="py-2 text-sm text-red-200 underline disabled:opacity-50" disabled={busy} onClick={() => {
+            <button className="py-2 text-sm text-foreground underline disabled:opacity-50" disabled={busy} onClick={() => {
               if (window.confirm(`Supprimer le chapitre « ${chapter.title} » et toutes ses cartes ? Cette action est définitive.`)) void run(async () => {
                 await revisionAPI.deleteChapter(chapter.id)
                 setEditing(null)
@@ -126,10 +131,10 @@ export default function Courses() {
           </article>)}
         </section>
       })}
-      <details className="rounded-2xl border border-stone-800 p-5">
-        <summary className="cursor-pointer font-semibold text-white">Plus</summary>
+      <details className="rounded-2xl border border-border p-5">
+        <summary className="cursor-pointer font-semibold text-foreground">Plus</summary>
         <nav aria-label="Autres outils" className="mt-4 grid grid-cols-2 gap-3">
-          {[['/exam', 'Examen'], ['/debate', 'Débat'], ['/tools', 'Podcast et autres outils'], ['/planner', 'Planning'], ['/quiz', 'Quiz libre']].map(([to, label]) => <Link key={to} to={to} className={button}>{label}</Link>)}
+          {[['/exam', 'Examen'], ['/debate', 'Débat'], ['/tools', 'Podcast et autres outils'], ['/planner', 'Planning'], ['/quiz', 'Quiz libre']].map(([to, label]) => <ButtonLink key={to} to={to}>{label}</ButtonLink>)}
         </nav>
       </details>
     </div>

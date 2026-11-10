@@ -13,18 +13,18 @@ export default function TopicBar({
 }) {
   const disabled = !value.trim() || isLoading;
   return (
-    <div className="sticky top-4 z-10 bg-black/50 backdrop-blur border border-stone-900 rounded-3xl p-4 mb-8">
+    <div className="sticky top-4 z-10 bg-background backdrop-blur border border-border rounded-3xl p-4 mb-8">
       <div className="flex flex-col sm:flex-row gap-3 items-stretch">
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Choisis un sujet pour créer un quiz (ex. : les fractions)"
-          className="flex-1 bg-stone-950 border border-stone-900 rounded-3xl px-5 py-3 text-stone-100 placeholder-stone-500 outline-none"
+          className="flex-1 bg-surface border border-border rounded-3xl px-5 py-3 text-foreground placeholder-muted outline-none"
         />
         <button
           onClick={onStart}
           disabled={disabled}
-          className="rounded-full bg-stone-800 hover:bg-stone-700 duration-300 transition-all hover:text-white px-5 py-3 disabled:opacity-50 flex items-center justify-center gap-2"
+          className="rounded-full bg-tint hover:bg-tint duration-300 transition-[transform,opacity] hover:text-foreground px-5 py-3 disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <>
@@ -44,7 +44,7 @@ export default function TopicBar({
           )}
         </button>
       </div>
-      {phase && <div className="text-xs text-stone-500 mt-2">État : {phase}</div>}
+      {phase && <div className="text-xs text-muted mt-2">État : {phase}</div>}
     </div>
   );
 }

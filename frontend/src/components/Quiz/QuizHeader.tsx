@@ -2,15 +2,15 @@ export default function QuizHeader({ topic, idx, total, score }:{ topic:string; 
   const pct = Math.round(((idx + 1) / total) * 100);
   return (
     <div id="quizHeader" className="text-center mb-8">
-      <h1 className="text-3xl font-bold text-white mb-2">{topic}</h1>
-      <p className="text-stone-400">Teste tes connaissances avec {total} questions</p>
-      <div className="mt-4 bg-stone-950 rounded-2xl p-4 inline-block">
+      <h1 className="text-3xl font-bold text-foreground mb-2">{topic}</h1>
+      <p className="text-muted">Teste tes connaissances avec {total} questions</p>
+      <div className="mt-4 bg-surface rounded-2xl p-4 inline-block">
         <div className="flex items-center gap-4 text-sm">
-          <span className="text-stone-300">Question <span id="currentQuestion">{Math.min(idx + 1, total)}</span> sur <span id="totalQuestions">{total}</span></span>
-          <div className="w-48 bg-stone-800 rounded-full h-2">
-            <div id="progressBar" className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+          <span className="text-foreground">Question <span id="currentQuestion">{Math.min(idx + 1, total)}</span> sur <span id="totalQuestions">{total}</span></span>
+          <div className="w-48 bg-tint rounded-full h-2">
+            <div id="progressBar" className="bg-primary h-2 rounded-full origin-left transition-transform duration-300" style={{ transform: `scaleX(${pct / 100})` }} />
           </div>
-          <span className="text-stone-300">Score : <span id="currentScore">{score}</span></span>
+          <span className="text-foreground">Score : <span id="currentScore">{score}</span></span>
         </div>
       </div>
     </div>

@@ -126,15 +126,15 @@ export default function PodcastGenerator() {
   }
 
   return (
-    <div className="group rounded-2xl bg-stone-950 border border-zinc-800 p-4 hover:border-purple-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
+    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-[transform,opacity] duration-300  ">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <div className="text-xs uppercase tracking-wide text-purple-400 font-semibold">créateur de podcast</div>
-            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 animate-pulse"></div>
+            <div className="text-xs uppercase tracking-wide text-foreground font-semibold">créateur de podcast</div>
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-primary to-primary animate-pulse"></div>
           </div>
-          <div className="text-white font-semibold text-xl mb-2">Podcast IA</div>
-          <div className="text-stone-300 text-sm leading-relaxed">
+          <div className="text-foreground font-semibold text-xl mb-2">Podcast IA</div>
+          <div className="text-foreground text-sm leading-relaxed">
             Transforme un sujet ou tes notes en podcast pour réviser où tu veux.
           </div>
         </div>
@@ -147,21 +147,21 @@ export default function PodcastGenerator() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Choisis un sujet ou colle tes notes…"
-              className="w-full px-4 py-3 pr-16 rounded-xl bg-stone-900/70 border border-zinc-700 text-white placeholder-zinc-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all duration-300"
+              className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:border-border focus:ring-2 focus:ring-primary outline-none transition-[transform,opacity] duration-300"
               onKeyDown={(e) => e.key === "Enter" && onGenerate()}
             />
           </div>
           <button
             onClick={onGenerate}
             disabled={busy || !topic.trim()}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-300"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed text-on-primary font-medium transition-[transform,opacity] duration-300"
           >
             {busy ? "Création…" : "Créer"}
           </button>
         </div>
 
         {status && (
-          <div className="p-4 rounded-xl bg-purple-950/40 border border-purple-800/40 text-purple-200 font-medium">
+          <div className="p-4 rounded-xl bg-tint border border-border text-foreground font-medium">
             {status}
 
           </div>
@@ -169,8 +169,8 @@ export default function PodcastGenerator() {
 
         {audioFile && (
           <div className="space-y-3">
-            <div className="p-4 rounded-xl bg-stone-900/70 border border-zinc-700">
-              <div className="text-sm text-stone-400 mb-2">Écouter :</div>
+            <div className="p-4 rounded-xl bg-surface border border-border">
+              <div className="text-sm text-muted mb-2">Écouter :</div>
               <audio
                 controls
                 className="w-full"
@@ -183,7 +183,7 @@ export default function PodcastGenerator() {
             <a
               href={audioFile}
               download={audioFilename || "podcast.mp3"}
-              className="block p-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium text-center transition-all duration-300 shadow-lg hover:shadow-emerald-500/20"
+              className="block p-4 rounded-xl bg-gradient-to-r from-secondary to-secondary hover:from-secondary hover:to-secondary text-on-secondary font-medium text-center transition-[transform,opacity] duration-300 shadow-lg "
             >
               Télécharger le podcast
             </a>
@@ -191,7 +191,7 @@ export default function PodcastGenerator() {
         )}
 
         {!audioFile && !busy && (
-          <div className="text-xs text-stone-500 text-center p-2">
+          <div className="text-xs text-muted text-center p-2">
             Clique sur Créer pour préparer ton podcast
           </div>
         )}

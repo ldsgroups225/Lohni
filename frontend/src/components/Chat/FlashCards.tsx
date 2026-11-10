@@ -13,17 +13,17 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
     <div className="w-full">
       <div className="lg:sticky lg:top-6 lg:h-[calc(100vh-8rem)] flex flex-col">
         <div className="mb-4">
-          <div className="rounded-2xl bg-stone-950/80 border border-zinc-900 px-4 py-3 flex items-center justify-between">
+          <div className="rounded-2xl bg-surface border border-border px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h3 className="text-stone-100 font-semibold tracking-wide text-sm">Cartes à retenir</h3>
-              <span className="text-[11px] font-medium text-stone-400 bg-stone-900 px-2 py-0.5 rounded-full border border-zinc-800">
+              <h3 className="text-foreground font-semibold tracking-wide text-sm">Cartes à retenir</h3>
+              <span className="text-[11px] font-medium text-muted bg-surface px-2 py-0.5 rounded-full border border-border">
                 {items.length}
               </span>
             </div>
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="p-1 rounded-lg text-stone-400 hover:text-stone-100 hover:bg-stone-900 transition-colors"
+                className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-opacity"
                 title="Masquer les cartes"
                 aria-label="Masquer les cartes"
               >
@@ -37,7 +37,7 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
 
         <div className="flex-1 overflow-y-auto pr-1 custom-scroll space-y-4 mb-8">
           {items.length === 0 ? (
-            <div className="text-stone-400 text-sm bg-stone-950/60 border border-zinc-900 rounded-2xl p-6 text-center">
+            <div className="text-muted text-sm bg-surface border border-border rounded-2xl p-6 text-center">
               Aucune carte pour le moment
             </div>
           ) : (
@@ -47,22 +47,22 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
               return (
                 <div
                   key={`${i}-${title}`}
-                  className="group rounded-2xl bg-stone-950/80 border border-zinc-900 hover:bg-stone-900/80 transition-colors shadow-[0_6px_24px_rgba(0,0,0,0.35)]"
+                  className="group rounded-2xl bg-surface border border-border hover:bg-surface transition-opacity "
                 >
                   <div className="p-5">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-stone-50 text-sm font-medium leading-5">
+                        <h4 className="text-foreground text-sm font-medium leading-5">
                           <MarkdownView md={title} inline />
                         </h4>
-                        <div className="text-stone-400 text-xs leading-5 mt-1 line-clamp-3">
+                        <div className="text-muted text-xs leading-5 mt-1 line-clamp-3">
                           <MarkdownView md={content} />
                         </div>
                       </div>
                       <button
                         disabled={disabled}
                         onClick={() => onAdd({ kind: "flashcard", title, content })}
-                        className="shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-xl bg-stone-900/70 border border-zinc-800 text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
+                        className="shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-tint transition-opacity"
                         aria-label="Enregistrer dans mes révisions"
                         title="Enregistrer dans mes révisions"
                       >

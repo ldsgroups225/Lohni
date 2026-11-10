@@ -31,15 +31,15 @@ export default function Composer({ disabled, onSend }: Props) {
   };
 
   return (
-    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-0 pt-6 pb-4 border-t border-stone-900 left-4 right-4 md:left-32 z-40 bg-black">
+    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-0 pt-6 pb-4 border-t border-border left-4 right-4 md:left-32 z-40 bg-background">
       <div className="max-w-4xl mx-auto">
-        <div className="relative rounded-3xl bg-stone-950 border border-stone-900 shadow-[inset_0_3px_15px] shadow-stone-900 flex items-end backdrop-blur-lg">
+        <div className="relative rounded-3xl bg-surface border border-border shadow-[inset_0_3px_15px] shadow-border flex items-end backdrop-blur-lg">
           <textarea
             ref={inputRef}
             placeholder="Pose une question ou demande d’autres exemples…"
             aria-label="Ta question au Tuteur"
             rows={1}
-            className="w-full text-stone-200 bg-transparent rounded-3xl p-4 pl-2 pr-20 outline-none resize-none overflow-y-auto max-h-64 min-h-[2.5rem]"
+            className="w-full text-foreground bg-transparent rounded-3xl p-4 pl-2 pr-20 outline-none resize-none overflow-y-auto max-h-64 min-h-[2.5rem]"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -51,7 +51,7 @@ export default function Composer({ disabled, onSend }: Props) {
             <button
               onClick={send}
               disabled={disabled}
-              className="rounded-full bg-stone-800 hover:bg-stone-700 duration-300 transition-all hover:text-white p-2.5 disabled:opacity-50"
+              className="rounded-full bg-tint hover:bg-tint duration-300 transition-[transform,opacity] hover:text-foreground p-2.5 disabled:opacity-50"
               aria-label="Envoyer"
               title={disabled ? "Patiente…" : "Envoyer"}
             >

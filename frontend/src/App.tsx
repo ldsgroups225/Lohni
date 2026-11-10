@@ -1,18 +1,19 @@
 import Sidebar from "./components/Sidebar";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { AdaptiveToastProvider } from '@cognicatch/react';
 import { CompanionProvider } from "./components/Companion/CompanionProvider";
 import CompanionDock from "./components/Companion/CompanionDock";
 
 export default function App() {
+  const { pathname } = useLocation()
   return (
     <CompanionProvider>
       <AdaptiveToastProvider
-        theme="dark"
+        theme="system"
       />
-      <div className="bg-black text-stone-300 min-h-screen flex flex-col">
+      <div className="bg-background text-foreground min-h-screen flex flex-col">
         <Sidebar />
-        <div className="flex-1 relative">
+        <div key={pathname} className="motion-route flex-1 relative">
           <Outlet />
         </div>
       </div>

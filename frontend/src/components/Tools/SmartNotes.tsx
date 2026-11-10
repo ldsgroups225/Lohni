@@ -28,15 +28,15 @@ export default function SmartNotes() {
   }
 
   return (
-    <div className="group rounded-2xl bg-stone-950 border border-zinc-800 p-4 hover:border-sky-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/10">
+    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-primary transition-[transform,opacity] duration-300  ">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <div className="text-xs uppercase tracking-wide text-blue-400 font-semibold">créateur de fiches</div>
-            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-sky-400 animate-pulse"></div>
+            <div className="text-xs uppercase tracking-wide text-primary font-semibold">créateur de fiches</div>
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-primary to-primary animate-pulse"></div>
           </div>
-          <div className="text-white font-semibold text-xl mb-2">Fiches de cours</div>
-          <div className="text-stone-300 text-sm leading-relaxed">
+          <div className="text-foreground font-semibold text-xl mb-2">Fiches de cours</div>
+          <div className="text-foreground text-sm leading-relaxed">
             Transforme un sujet en fiches structurées pour préparer tes examens.
           </div>
         </div>
@@ -49,21 +49,21 @@ export default function SmartNotes() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Choisis ton sujet…"
-              className="w-full px-4 py-3 pr-16 rounded-xl bg-stone-900/70 border border-zinc-700 text-white placeholder-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition-all duration-300"
+              className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:border-primary focus:ring-2 focus:ring-primary outline-none transition-[transform,opacity] duration-300"
               onKeyDown={(e) => e.key === "Enter" && onGenerate()}
             />
           </div>
           <button
             onClick={onGenerate}
             disabled={busy || !topic.trim()}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium transition-all duration-300"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed text-on-primary font-medium transition-[transform,opacity] duration-300"
           >
             {busy ? "Création…" : "Créer"}
           </button>
         </div>
 
         {status && (
-          <div className="p-4 rounded-xl bg-sky-950/40 border border-sky-800/40 text-sky-200 font-medium">{status}</div>
+          <div className="p-4 rounded-xl bg-tint border border-primary text-foreground font-medium">{status}</div>
         )}
 
         {filePath && (
@@ -71,7 +71,7 @@ export default function SmartNotes() {
             href={filePath}
             target="_blank"
             rel="noopener noreferrer"
-            className="block p-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium text-center"
+            className="block p-4 rounded-xl bg-gradient-to-r from-secondary to-secondary text-on-secondary font-medium text-center"
           >
             Télécharger les fiches
           </a>

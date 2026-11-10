@@ -1,5 +1,5 @@
 {
-  "name": "pagelm",
+  "name": "lohni",
   "scripts": {
     "dev": "nodemon",
     "build": "tsc -p backend/tsconfig.json",

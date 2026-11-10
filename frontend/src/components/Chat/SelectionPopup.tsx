@@ -12,18 +12,18 @@ export default function SelectionPopup({ selected, addNote, askDoubt, popupRef }
   return (
     <div
       ref={popupRef}
-      className="absolute z-50 bg-stone-950/50 border border-stone-900 rounded-xl p-2 shadow-xl backdrop-blur-md"
+      className="absolute z-50 bg-surface border border-border rounded-xl p-2 shadow-xl backdrop-blur-md"
       style={{ left: selected.x, top: selected.y + 10, transition: "opacity .15s" }}
     >
       <button
         onClick={() => addNote(selected.text)}
-        className="bg-stone-900 hover:bg-stone-800 border border-stone-800 hover:border-stone-700 text-stone-200 px-3 py-1.5 rounded-lg text-xs transition-all duration-200 active:scale-95 mr-1"
+        className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground px-3 py-1.5 rounded-lg text-xs transition-[transform,opacity] duration-200 active:scale-95 mr-1"
       >
         📝 Enregistrer une note
       </button>
       <button
         onClick={() => askDoubt(selected.text)}
-        className="bg-stone-900 hover:bg-stone-800 border border-stone-800 hover:border-stone-700 text-stone-200 px-3 py-1.5 rounded-lg text-xs transition-all duration-200 active:scale-95 ml-1"
+        className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground px-3 py-1.5 rounded-lg text-xs transition-[transform,opacity] duration-200 active:scale-95 ml-1"
       >
         ❓ Demander une explication
       </button>

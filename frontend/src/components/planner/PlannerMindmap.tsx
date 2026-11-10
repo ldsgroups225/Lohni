@@ -391,22 +391,21 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
     }, [plan])
 
     return (
-        <div ref={wrapRef} className="relative w-full h-full bg-black overflow-hidden"
+        <div ref={wrapRef} className="relative w-full h-full bg-background overflow-hidden"
             onPointerMove={onMove} onPointerUp={onUp} onWheel={onWheel} onWheelCapture={onWheel} onPointerDown={startPan}
             style={{ overscrollBehavior: 'contain', touchAction: 'none' }}>
-            <div className="absolute inset-0 opacity-40" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, #1f2937 1px, transparent 0)`, backgroundSize: `24px 24px`, zIndex: 0 }} />
+            <div className="absolute inset-0 opacity-40" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, var(--color-border) 1px, transparent 0)`, backgroundSize: `24px 24px`, zIndex: 0 }} />
             <div className="pointer-events-none absolute inset-0" style={{
                 zIndex: 1,
                 opacity: 0.7,
-                mixBlendMode: 'screen' as any,
                 backgroundImage: [
-                    `radial-gradient(900px 500px at 18% 8%, rgba(56,189,248,0.10), rgba(56,189,248,0) 60%)`,
-                    `radial-gradient(700px 420px at 82% 28%, rgba(147,51,234,0.09), rgba(147,51,234,0) 60%)`,
-                    `radial-gradient(800px 600px at 50% 88%, rgba(34,197,94,0.08), rgba(34,197,94,0) 60%)`,
-                    `radial-gradient(1200px 800px at 50% 50%, rgba(255,255,255,0.06), rgba(0,0,0,0) 70%)`
+                    `radial-gradient(900px 500px at 18% 8%, color-mix(in srgb, var(--color-secondary) 10%, transparent), transparent 60%)`,
+                    `radial-gradient(700px 420px at 82% 28%, color-mix(in srgb, var(--color-primary) 9%, transparent), transparent 60%)`,
+                    `radial-gradient(800px 600px at 50% 88%, color-mix(in srgb, var(--color-success) 8%, transparent), transparent 60%)`,
+                    `radial-gradient(1200px 800px at 50% 50%, color-mix(in srgb, var(--color-surface) 6%, transparent), transparent 70%)`
                 ].join(', ')
             }} />
-            <div className="absolute top-3 left-3 z-20 text-[11px] text-stone-400 bg-stone-900/60 border border-zinc-800 rounded px-2 py-1 backdrop-blur">
+            <div className="absolute top-3 left-3 z-20 text-[11px] text-muted bg-surface border border-border rounded px-2 py-1 backdrop-blur">
                 Fais glisser pour déplacer la carte, défile pour zoomer. Double-clique sur une bulle pour la centrer.
             </div>
             <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
@@ -432,7 +431,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                 const y1 = pan.y + ayWorld * zoom
                                 const x2 = pan.x + bxWorld * zoom
                                 const y2 = pan.y + byWorld * zoom
-                                return <line key={sid} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#27272a" strokeWidth={1.5} />
+                                return <line key={sid} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--color-border)" strokeWidth={1.5} />
                             })}
                         </g>
                     )
@@ -443,16 +442,16 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     <svg width="520" height="280" viewBox="0 0 700 380" className="opacity-60">
                         <defs>
                             <radialGradient id="pulse1" cx="50%" cy="50%">
-                                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.7" />
-                                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+                                <stop offset="0%" stopColor="var(--color-secondary)" stopOpacity="0.7" />
+                                <stop offset="100%" stopColor="var(--color-secondary)" stopOpacity="0" />
                             </radialGradient>
                             <radialGradient id="pulse2" cx="50%" cy="50%">
-                                <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.6" />
-                                <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
+                                <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.6" />
+                                <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
                             </radialGradient>
                             <radialGradient id="pulse3" cx="50%" cy="50%">
-                                <stop offset="0%" stopColor="#4ade80" stopOpacity="0.6" />
-                                <stop offset="100%" stopColor="#4ade80" stopOpacity="0" />
+                                <stop offset="0%" stopColor="var(--color-success)" stopOpacity="0.6" />
+                                <stop offset="100%" stopColor="var(--color-success)" stopOpacity="0" />
                             </radialGradient>
                             <style>
                                 {`@keyframes twinkle { 0%, 100% { opacity: .2 } 50% { opacity: 1 } }
@@ -462,12 +461,12 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                             </style>
                         </defs>
                         <g>
-                            <circle cx="350" cy="190" r="5" fill="#93c5fd" className="tw" />
-                            <circle cx="520" cy="120" r="3" fill="#fca5a5" className="tw2" />
-                            <circle cx="210" cy="90" r="2.5" fill="#86efac" className="tw3" />
-                            <circle cx="140" cy="250" r="3" fill="#a78bfa" className="tw2" />
-                            <circle cx="580" cy="250" r="2.5" fill="#67e8f9" className="tw" />
-                            <g stroke="#3f3f46" strokeWidth="1">
+                            <circle cx="350" cy="190" r="5" fill="var(--color-secondary)" className="tw" />
+                            <circle cx="520" cy="120" r="3" fill="var(--color-danger)" className="tw2" />
+                            <circle cx="210" cy="90" r="2.5" fill="var(--color-success)" className="tw3" />
+                            <circle cx="140" cy="250" r="3" fill="var(--color-primary)" className="tw2" />
+                            <circle cx="580" cy="250" r="2.5" fill="var(--color-secondary)" className="tw" />
+                            <g stroke="var(--color-border)" strokeWidth="1">
                                 <line x1="350" y1="190" x2="520" y2="120" />
                                 <line x1="350" y1="190" x2="210" y2="90" />
                                 <line x1="350" y1="190" x2="140" y2="250" />
@@ -475,16 +474,16 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                 <line x1="520" y1="120" x2="580" y2="250" />
                                 <line x1="210" y1="90" x2="140" y2="250" />
                             </g>
-                            <g fontFamily="Inter, ui-sans-serif" fontSize="12" fill="#e4e4e7" textAnchor="middle">
-                                <rect x="325" y="172" width="54" height="24" rx="7" fill="#18181b" stroke="#27272a" />
+                            <g fontFamily="Inter, ui-sans-serif" fontSize="12" fill="var(--color-foreground)" textAnchor="middle">
+                                <rect x="325" y="172" width="54" height="24" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
                                 <text x="352" y="189">Se concentrer</text>
-                                <rect x="495" y="104" width="54" height="22" rx="7" fill="#111827" stroke="#1f2937" />
+                                <rect x="495" y="104" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
                                 <text x="522" y="119">Se rappeler</text>
-                                <rect x="185" y="74" width="54" height="22" rx="7" fill="#0f172a" stroke="#1f2937" />
+                                <rect x="185" y="74" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
                                 <text x="212" y="89">Faire le plan</text>
-                                <rect x="115" y="234" width="54" height="22" rx="7" fill="#111827" stroke="#1f2937" />
+                                <rect x="115" y="234" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
                                 <text x="142" y="249">Réviser</text>
-                                <rect x="555" y="234" width="54" height="22" rx="7" fill="#0f172a" stroke="#1f2937" />
+                                <rect x="555" y="234" width="54" height="22" rx="7" fill="var(--color-surface)" stroke="var(--color-border)" />
                                 <text x="582" y="249">Améliorer</text>
                             </g>
                             <g opacity="0.35">
@@ -519,7 +518,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                         }
                     }
                     return Array.from(edges.values()).map((e, i) => (
-                        <line key={i} x1={e.ax} y1={e.ay} x2={e.bx} y2={e.by} stroke="#3f3f46" strokeWidth={1} />
+                        <line key={i} x1={e.ax} y1={e.ay} x2={e.bx} y2={e.by} stroke="var(--color-border)" strokeWidth={1} />
                     ))
                 })()}
             </svg>
@@ -547,28 +546,28 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                     setPan({ x: newPanX, y: newPanY })
                                     setZoom(newZoom)
                                 }}>
-                                <div className="pointer-events-none absolute -inset-2 opacity-35" style={{ background: `radial-gradient(22px 22px at 50% 65%, rgba(56,189,248,0.2), transparent 70%)` }} />
-                                <div onPointerDown={e => onDown(e, t.id)} className="cursor-grab active:cursor-grabbing rounded-full border bg-[#0b1220]/70 border-[#1f2937] pl-3 pr-1.5 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.4)] backdrop-blur flex items-center gap-1.5">
-                                    <div className="text-[12px] text-slate-200 whitespace-nowrap max-w-[260px] truncate">{t.title}</div>
-                                    <button onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-slate-300 hover:text-slate-100 px-1 rounded hover:bg-stone-800">⋯</button>
+                                <div className="pointer-events-none absolute -inset-2 opacity-35" style={{ background: `radial-gradient(22px 22px at 50% 65%, color-mix(in srgb, var(--color-secondary) 20%, transparent), transparent 70%)` }} />
+                                <div onPointerDown={e => onDown(e, t.id)} className="cursor-grab active:cursor-grabbing rounded-full border bg-surface border-border pl-3 pr-1.5 py-1.5  backdrop-blur flex items-center gap-1.5">
+                                    <div className="text-[12px] text-foreground whitespace-nowrap max-w-[260px] truncate">{t.title}</div>
+                                    <button onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-foreground hover:text-foreground px-1 rounded hover:bg-tint">⋯</button>
                                 </div>
                                 {menuOpen === t.id && (
-                                    <div className="absolute left-0 top-[120%] z-30 bg-stone-900/95 border border-zinc-800 rounded-md shadow-lg min-w-[160px] p-1">
-                                        <button onClick={() => { setMenuOpen(null); onUpdateStatus(t.id, 'doing'); onPlan(t.id); }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Commencer</button>
-                                        <button onClick={() => { setMenuOpen(null); onPlan(t.id) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Planifier</button>
-                                        <div className="border-t border-zinc-800 my-1" />
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'summary') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Aide : résumé</button>
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'studyGuide') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Aide : guide de révision</button>
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'flashcards') }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Aide : cartes</button>
-                                        <div className="border-t border-zinc-800 my-1" />
-                                        <label className="block text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800 cursor-pointer">
+                                    <div className="absolute left-0 top-[120%] z-30 bg-surface border border-border rounded-md shadow-lg min-w-[160px] p-1">
+                                        <button onClick={() => { setMenuOpen(null); onUpdateStatus(t.id, 'doing'); onPlan(t.id); }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Commencer</button>
+                                        <button onClick={() => { setMenuOpen(null); onPlan(t.id) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Planifier</button>
+                                        <div className="border-t border-border my-1" />
+                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'summary') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : résumé</button>
+                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'studyGuide') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : guide de révision</button>
+                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'flashcards') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : cartes</button>
+                                        <div className="border-t border-border my-1" />
+                                        <label className="block text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint cursor-pointer">
                                             Ajouter un fichier
                                             <input type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(t.id, f); setMenuOpen(null) }} />
                                         </label>
-                                        <button onClick={() => { const val = window.prompt("Ajouter une note"); if (val != null) { onUpdateNotes?.(t.id, val) } setMenuOpen(null) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Ajouter une note…</button>
-                                        <button onClick={() => { recenterSteps(t.id); setMenuOpen(null) }} className="w-full text-left text-[12px] text-stone-200 px-2 py-1 rounded hover:bg-stone-800">Recentrer les étapes</button>
-                                        <div className="border-t border-zinc-800 my-1" />
-                                        <button onClick={() => { setMenuOpen(null); onDelete(t.id) }} className="w-full text-left text-[12px] text-red-400 px-2 py-1 rounded hover:bg-red-950/40">Supprimer la tâche</button>
+                                        <button onClick={() => { const val = window.prompt("Ajouter une note"); if (val != null) { onUpdateNotes?.(t.id, val) } setMenuOpen(null) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Ajouter une note…</button>
+                                        <button onClick={() => { recenterSteps(t.id); setMenuOpen(null) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Recentrer les étapes</button>
+                                        <div className="border-t border-border my-1" />
+                                        <button onClick={() => { setMenuOpen(null); onDelete(t.id) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Supprimer la tâche</button>
                                     </div>
                                 )}
                             </div>
@@ -577,11 +576,11 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                 const sp = stepPos[sid]
                                 if (!sp) return null
                                 const cnt = counts[label] || 0
-                                const glow = 'radial-gradient(18px 18px at 50% 60%, rgba(125,211,252,0.12), rgba(0,0,0,0) 70%)'
+                                const glow = 'radial-gradient(18px 18px at 50% 60%, color-mix(in srgb, var(--color-secondary) 12%, transparent), transparent 70%)'
                                 const relX = sp.x - p.x
                                 const relY = sp.y - p.y
                                 return (
-                                    <div key={sid} className="absolute rounded-full border border-zinc-800 bg-stone-950/80 text-center text-stone-300 cursor-grab active:cursor-grabbing"
+                                    <div key={sid} className="absolute rounded-full border border-border bg-surface text-center text-foreground cursor-grab active:cursor-grabbing"
                                         onPointerDown={e => {
                                             const rect = wrapRef.current?.getBoundingClientRect()
                                             const localX = rect ? e.clientX - rect.left : e.clientX
@@ -613,7 +612,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                                     const nn = { ...sp }; delete nn[sid]; return nn
                                                 })
                                             }}
-                                            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-stone-800 text-stone-100 hover:bg-red-600 hover:text-white flex items-center justify-center z-20"
+                                            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-tint text-foreground hover:bg-primary hover:text-on-primary flex items-center justify-center z-20"
                                             aria-label="Supprimer la bulle"
                                         >×</button>
                                         <span className="relative px-2">{label}{cnt ? ` (${cnt})` : ''}</span>
@@ -630,40 +629,40 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     style={{ left: pan.x + n.x * zoom, top: pan.y + n.y * zoom }}>
                     <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', position: 'relative' }}>
                         <div className="pointer-events-none absolute -inset-2 opacity-35" style={{
-                            background: `radial-gradient(22px 22px at 50% 65%, ${n.color}33, transparent 70%)`
+                            background: `radial-gradient(22px 22px at 50% 65%, color-mix(in srgb, ${n.color} 20%, transparent), transparent 70%)`
                         }} />
                         <div
                             onPointerDown={(e) => onDownCustom(e, n.id)}
-                            className="cursor-grab active:cursor-grabbing rounded-lg border bg-[#0b1220]/70 border-[#1f2937] px-2.5 py-1 shadow-[0_2px_8px_rgba(0,0,0,0.4)] backdrop-blur"
+                            className="cursor-grab active:cursor-grabbing rounded-lg border bg-surface border-border px-2.5 py-1  backdrop-blur"
                         >
                             <div className="flex items-center gap-2">
                                 {editingId === n.id ? (
                                     <input autoFocus defaultValue={n.label} onBlur={(e) => { setCustomNodes(list => list.map(x => x.id === n.id ? { ...x, label: e.target.value } : x)); setEditingId(null) }}
-                                        className="bg-transparent text-[12px] text-slate-200 outline-none" />
+                                        className="bg-transparent text-[12px] text-foreground outline-none" />
                                 ) : (
-                                    <div className="text-[12px] text-slate-200" onDoubleClick={() => setEditingId(n.id)}>{n.label}</div>
+                                    <div className="text-[12px] text-foreground" onDoubleClick={() => setEditingId(n.id)}>{n.label}</div>
                                 )}
                                 <button onClick={() => setCustomNodes(list => list.filter(x => x.id !== n.id))}
-                                    className="text-[11px] text-slate-400 hover:text-slate-200">×</button>
+                                    className="text-[11px] text-foreground hover:text-foreground">×</button>
                             </div>
                         </div>
                     </div>
                 </div>
             ))}
 
-            <div className="absolute top-3 right-3 z-20 bg-stone-900/70 backdrop-blur border border-zinc-800 rounded-lg px-2 py-1 flex items-center gap-2 text-xs text-stone-300">
+            <div className="absolute top-3 right-3 z-20 bg-surface backdrop-blur border border-border rounded-lg px-2 py-1 flex items-center gap-2 text-xs text-foreground">
                 <button onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
                     const cx = rect ? rect.width / 2 : 300
                     const cy = rect ? rect.height / 2 : 200
                     const worldX = (cx - pan.x) / zoom
                     const worldY = (cy - pan.y) / zoom
-                    const colors = ['#22d3ee', '#a78bfa', '#4ade80', '#f472b6', '#f59e0b']
+                    const colors = ['var(--color-secondary)', 'var(--color-primary)', 'var(--color-success)', 'var(--color-danger)', 'var(--color-mascot)']
                     const color = colors[Math.floor(Math.random() * colors.length)]
                     const id = Math.random().toString(36).slice(2, 9)
                     setCustomNodes(list => [...list, { id, x: worldX, y: worldY, label: "Idée", color }])
                     setEditingId(id)
-                }} className="px-2 py-1 bg-stone-800 rounded">Ajouter une bulle</button>
+                }} className="px-2 py-1 bg-tint rounded">Ajouter une bulle</button>
                 <button onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
                     const cx = rect ? rect.width / 2 : 0
@@ -673,7 +672,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     const worldY = (cy - pan.y) / zoom
                     setPan({ x: cx - worldX * newZoom, y: cy - worldY * newZoom })
                     setZoom(newZoom)
-                }} className="px-2 py-1 bg-stone-800 rounded">-</button>
+                }} className="px-2 py-1 bg-tint rounded">-</button>
                 <div className="px-2">{Math.round(zoom * 100)}%</div>
                 <button onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
@@ -684,8 +683,8 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     const worldY = (cy - pan.y) / zoom
                     setPan({ x: cx - worldX * newZoom, y: cy - worldY * newZoom })
                     setZoom(newZoom)
-                }} className="px-2 py-1 bg-stone-800 rounded">+</button>
-                <button onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1.25) }} className="px-2 py-1 bg-stone-800 rounded">Réinitialiser</button>
+                }} className="px-2 py-1 bg-tint rounded">+</button>
+                <button onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1.25) }} className="px-2 py-1 bg-tint rounded">Réinitialiser</button>
             </div>
         </div>
     )

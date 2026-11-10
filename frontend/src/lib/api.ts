@@ -644,7 +644,7 @@ export type RevisionHome = {
 
 const revisionHttpsError = 'Ouvre Lohni en HTTPS dans un navigateur à jour pour sauvegarder tes réponses hors ligne.';
 
-function revisionDeviceId(): string {
+export function revisionDeviceId(): string {
   if (!globalThis.crypto?.randomUUID || !navigator.locks) throw new Error(revisionHttpsError);
   let deviceId = localStorage.getItem('lohni-device-id');
   if (!deviceId) {

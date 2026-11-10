@@ -65,9 +65,9 @@ export default function Landing() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full px-4 pb-28 md:pb-4 md:pl-28 lg:pr-4">
+    <div className="bg-background text-foreground flex flex-col min-h-screen w-full px-4 pb-28 md:pb-4 md:pl-28 lg:pr-4">
       <div className="flex-1 flex flex-col justify-center max-w-4xl mx-auto pt-8 md:pt-0 my-4 w-full px-0 md:px-2">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl text-white font-semibold pl-3 border-l-2 border-sky-500 mb-5 md:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl text-foreground font-semibold pl-3 border-l-2 border-primary mb-5 md:mb-8">
           Que veux-tu comprendre aujourd’hui ?
         </h1>
 
@@ -77,9 +77,9 @@ export default function Landing() {
           title="La saisie est indisponible"
           description="Impossible de charger la zone de saisie. Actualise la page pour continuer."
           theme={{
-            backgroundColor: "#0c0a09",
-            textColor: "#e7e5e4",
-            primaryColor: "#1c1917",
+            backgroundColor: "var(--color-surface)",
+            textColor: "var(--color-foreground)",
+            primaryColor: "var(--color-primary)",
             fontFamily: "'Schibsted Grotesk', sans-serif",
             borderRadius: "24px"
           }}
@@ -98,24 +98,24 @@ export default function Landing() {
         </AdaptiveErrorBoundary>
 
         <div className="w-full md:w-fit flex">
-          <div className="w-full md:w-fit md:min-w-fit p-1.5 rounded-2xl rounded-t-none bg-stone-950 flex flex-col items-start sm:items-center border border-stone-900 border-t-0 border-r-0 border-b-0 sm:border-b shadow-[inset_2px_-2px_15px] shadow-stone-900/80">
+          <div className="w-full md:w-fit md:min-w-fit p-1.5 rounded-2xl rounded-t-none bg-surface flex flex-col items-start sm:items-center border border-border border-t-0 border-r-0 border-b-0 sm:border-b shadow-[inset_2px_-2px_15px] shadow-border">
             <div className="flex items-start justify-between md:justify-start space-x-1 md:space-x-2 p-1.5 w-full">
               <div className="relative flex-1 md:flex-none">
                 <div
                   onClick={() => setShowMode(!showMode)}
-                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-white/5 duration-300 transition-all cursor-pointer"
+                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer"
                 >
                   <div className="flex flex-col -space-y-0.5 pr-2">
-                    <span className="text-xs text-stone-300">Mode</span>
-                    <span className="text-sm font-semibold text-white">{mode}</span>
+                    <span className="text-xs text-foreground">Mode</span>
+                    <span className="text-sm font-semibold text-foreground">{mode}</span>
                   </div>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-stone-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-muted">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
                   </svg>
                 </div>
 
                 {showMode && (
-                  <div className="absolute top-full left-0 mt-1 p-1 w-36 bg-stone-950 border border-stone-800 rounded-xl shadow-lg z-20">
+                  <div className="absolute top-full left-0 mt-1 p-1 w-36 bg-surface border border-border rounded-xl shadow-lg z-20">
                     {["Discussion", "Quiz"].map((opt) => (
                       <div
                         key={opt}
@@ -123,7 +123,7 @@ export default function Landing() {
                           setMode(opt as "Discussion" | "Quiz");
                           setShowMode(false);
                         }}
-                        className={`px-3 py-3 md:py-2 cursor-pointer hover:bg-stone-800 transition rounded-lg ${mode === opt ? "text-sky-400" : "text-white"
+                        className={`px-3 py-3 md:py-2 cursor-pointer hover:bg-tint transition rounded-lg ${mode === opt ? "text-primary" : "text-foreground"
                           }`}
                       >
                         {opt}
@@ -133,14 +133,14 @@ export default function Landing() {
                 )}
               </div>
 
-              <div className="w-px h-8 mx-2 bg-white/10 rounded-full mt-2" />
+              <div className="w-px h-8 mx-2 bg-tint rounded-full mt-2" />
 
-              <div className="p-1.5 rounded-xl hover:bg-white/5 duration-300 transition-all cursor-pointer min-w-fit h-fit hidden md:flex items-center space-x-4" onClick={onPickFile} title={stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}>
+              <div className="p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer min-w-fit h-fit hidden md:flex items-center space-x-4" onClick={onPickFile} title={stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}>
                 <div className="flex flex-col -space-y-0.5 pr-2">
-                  <span className="text-xs text-stone-300">{stagedFile ? "Fichier sélectionné" : "Ajouter des fichiers"}</span>
-                  <span className="text-sm font-semibold text-white">{stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}</span>
+                  <span className="text-xs text-foreground">{stagedFile ? "Fichier sélectionné" : "Ajouter des fichiers"}</span>
+                  <span className="text-sm font-semibold text-foreground">{stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}</span>
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-6 text-stone-400">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-6 text-muted">
                   <path
                     fillRule="evenodd"
                     d="M5.5 17a4.5 4.5 0 0 1-1.44-8.765 4.5 4.5 0 0 1 8.302-3.046 3.5 3.5 0 0 1 4.504 4.272A4 4 0 0 1 15 17H5.5Zm3.75-2.75a.75.75 0 0 0 1.5 0V9.66l1.95 2.1a.75.75 0 1 0 1.1-1.02l-3.25-3.5a.75.75 0 0 0-1.1 0l-3.25 3.5a.75.75 0 1 0 1.1 1.02l1.95-2.1v4.59Z"
@@ -149,23 +149,23 @@ export default function Landing() {
                 </svg>
               </div>
 
-              <div className="w-px h-8 mx-2 bg-white/10 rounded-full mt-2" />
+              <div className="w-px h-8 mx-2 bg-tint rounded-full mt-2" />
 
               <div className="relative flex-1 md:flex-none">
                 <div
                   onClick={() => setShowLength(!showLength)}
-                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-white/5 duration-300 transition-all cursor-pointer">
+                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer">
                   <div className="flex flex-col -space-y-0.5 pr-2">
-                    <span className="text-xs text-stone-300">Longueur de réponse</span>
-                    <span className="text-sm font-semibold text-white">{responseLength}</span>
+                    <span className="text-xs text-foreground">Longueur de réponse</span>
+                    <span className="text-sm font-semibold text-foreground">{responseLength}</span>
                   </div>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-stone-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-muted">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
                   </svg>
                 </div>
 
                 {showLength && (
-                  <div className="absolute top-full right-0 md:right-auto md:left-0 mt-1 p-1 w-40 bg-stone-950 border border-stone-800 rounded-xl shadow-lg z-20">
+                  <div className="absolute top-full right-0 md:right-auto md:left-0 mt-1 p-1 w-40 bg-surface border border-border rounded-xl shadow-lg z-20">
                     {["Courte", "Moyenne", "Longue"].map((opt) => (
                       <div
                         key={opt}
@@ -173,7 +173,7 @@ export default function Landing() {
                           setResponseLength(opt as "Courte" | "Moyenne" | "Longue");
                           setShowLength(false);
                         }}
-                        className={`px-3 py-3 md:py-2 cursor-pointer hover:bg-stone-800 transition rounded-lg ${responseLength === opt ? "text-sky-400" : "text-white"
+                        className={`px-3 py-3 md:py-2 cursor-pointer hover:bg-tint transition rounded-lg ${responseLength === opt ? "text-primary" : "text-foreground"
                           }`}
                       >
                         {opt}
@@ -187,11 +187,11 @@ export default function Landing() {
           </div>
 
           <svg className="h-9 w-8 -ml-0.5 -mt-[2px] min-w-fit hidden md:block rotate-3" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 1H71C21.4764 5.44502 6.18653 20.4467 1 71V1Z" fill="#101110" strokeWidth="2" stroke="url(#paint0_linear_1409_7)" />
+            <path d="M1 1H71C21.4764 5.44502 6.18653 20.4467 1 71V1Z" fill="var(--color-background)" strokeWidth="2" stroke="url(#paint0_linear_1409_7)" />
             <defs>
               <linearGradient id="paint0_linear_1409_7" x1="33" y1="31" x2="1" y2="1" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#0D0B0B" />
-                <stop offset="1" stopColor="#070707" stopOpacity="0" />
+                <stop stopColor="var(--color-border)" />
+                <stop offset="1" stopColor="var(--color-border)" stopOpacity="0" />
               </linearGradient>
             </defs>
           </svg>
@@ -201,10 +201,10 @@ export default function Landing() {
       </div>
 
       <ExploreTopics />
-      <details className="mx-auto mb-6 w-full max-w-4xl rounded-2xl border border-stone-800 p-5">
-        <summary className="cursor-pointer text-white">Mes discussions</summary>
-        <ul className="mt-4 space-y-3">{chats.map(chat => <li key={chat.id}><Link to={`/chat?chatId=${encodeURIComponent(chat.id)}`} className="block truncate text-sky-300 underline">{chat.title || 'Discussion sans titre'}</Link></li>)}</ul>
-        {!chats.length && <p className="mt-3 text-sm text-stone-400">Aucune discussion pour le moment.</p>}
+      <details className="mx-auto mb-6 w-full max-w-4xl rounded-2xl border border-border p-5">
+        <summary className="cursor-pointer text-foreground">Mes discussions</summary>
+        <ul className="mt-4 space-y-3">{chats.map(chat => <li key={chat.id}><Link to={`/chat?chatId=${encodeURIComponent(chat.id)}`} className="block truncate text-primary underline">{chat.title || 'Discussion sans titre'}</Link></li>)}</ul>
+        {!chats.length && <p className="mt-3 text-sm text-muted">Aucune discussion pour le moment.</p>}
       </details>
 
       <input ref={fileRef} type="file" className="hidden" onChange={onFileChange} />
