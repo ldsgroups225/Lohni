@@ -17,10 +17,16 @@ test.each([
   [null, null, true, '', ''],
   [null, null, false, '', ''],
   [null, null, false, 'Erreur', ''],
-  [{ profile: { schoolClass: '3e' }, state: 'ready', totalCards: 1, cardCount: 1, daysUntilExam: null }, null, false, '', ''],
 ])('accueil : le logo mobile est présent sans menu inactif', (home, progress, loading, error, progressError) => {
   state.values = [home, progress, loading, error, progressError, 0, null, null, 1, '3e', '', [], '', 'Mathématiques', '', false, '']
   const html = renderToStaticMarkup(<MemoryRouter><Home /></MemoryRouter>)
-  expect(html).toMatch(/<header class="[^"]*lg:hidden[^"]*">.*?mascotte\/corps\.webp.*?Lohni<\/h2>/)
+  expect(html).toMatch(/<header class="[^"]*lg:hidden[^"]*">.*?mascotte\/corps\.webp.*?Lohni<\/span>/)
   expect(html).not.toContain('aria-label="Menu"')
+})
+
+test('accueil chargé : seule la mascotte de bienvenue est affichée', () => {
+  state.values = [{ profile: { schoolClass: '3e' }, state: 'ready', totalCards: 1, cardCount: 1, daysUntilExam: null }, null, false, '', '', 0, null, null]
+  const html = renderToStaticMarkup(<MemoryRouter><Home /></MemoryRouter>)
+  expect(html).not.toContain('lg:hidden bg-surface')
+  expect(html).toContain('aria-label="Lohni, au repos"')
 })

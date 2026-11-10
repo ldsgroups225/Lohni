@@ -146,9 +146,7 @@ export default function Planner() {
 
     const planTask = async (id: string) => {
         try {
-            console.log('Planning task:', id)
             const result = await plannerPlan(id, false)
-            console.log('Plan result:', result)
             const { task } = result
             setTasks(t => t.map(x => x.id === id ? task as any : x))
             const wp = await plannerWeekly(false)

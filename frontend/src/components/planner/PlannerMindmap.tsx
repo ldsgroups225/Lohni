@@ -16,7 +16,7 @@ type Props = {
 }
 
 type Pt = { x: number; y: number }
-type CustomNode = { id: string; x: number; y: number; label: string; color: string }
+type CustomNode = { id: string; x: number; y: number; label: string }
 
 export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdateStatus, onUpload, onDelete, onUpdateNotes }: Props) {
     const wrapRef = useRef<HTMLDivElement>(null)
@@ -654,10 +654,8 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     const cy = rect ? rect.height / 2 : 200
                     const worldX = (cx - pan.x) / zoom
                     const worldY = (cy - pan.y) / zoom
-                    const colors = ['var(--color-secondary)', 'var(--color-primary)', 'var(--color-success)', 'var(--color-danger)', 'var(--color-mascot)']
-                    const color = colors[Math.floor(Math.random() * colors.length)]
                     const id = Math.random().toString(36).slice(2, 9)
-                    setCustomNodes(list => [...list, { id, x: worldX, y: worldY, label: "Idée", color }])
+                    setCustomNodes(list => [...list, { id, x: worldX, y: worldY, label: "Idée" }])
                     setEditingId(id)
                 }} className="px-2 py-1 bg-tint rounded">Ajouter une bulle</button>
                 <button onClick={() => {

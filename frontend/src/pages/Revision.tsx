@@ -88,9 +88,7 @@ export default function Revision() {
     setMoreCards(false)
     if (!session?.complete || sync.pending || !sync.online) return
     let active = true
-    revisionAPI.home().then(value => { if (active) setMoreCards(value?.moreCards ?? false) }).catch(error => {
-      if (active) setError(error instanceof Error ? error.message : 'Impossible de charger les cartes restantes.')
-    })
+    revisionAPI.home().then(value => { if (active) setMoreCards(value?.moreCards ?? false) }).catch(() => {})
     revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(error => {
       if (active) setError(error instanceof Error ? error.message : 'Impossible de charger ta progression.')
     })

@@ -38,3 +38,11 @@ test.each([null, 0])('cours : la maîtrise %s est visuellement vide', mastery =>
   const html = render(<Courses />)
   expect(html).toMatch(/<progress[^>]*class="[^"]*mastery-progress[^>]*value="0"/)
 })
+
+test.each([[null, true, ''], [null, false, 'Erreur'], [home, false, '']])('accueil : un titre principal accessible pour chaque état', (data, loading, error) => {
+  state.values = [data, null, loading, error, '', 0]
+  const html = render(<Home />)
+  expect(html).toMatch(/<h1\b/)
+  expect(html).not.toMatch(/<h2[^>]*>Lohni<\/h2>/)
+  if (!data) expect(html).toContain('sr-only lg:not-sr-only')
+})
