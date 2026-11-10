@@ -1,6 +1,9 @@
+import fs from 'fs'
 import path from 'path'
 
-process.loadEnvFile(path.resolve(process.cwd(), '.env'))
+// Containers get their settings as environment variables, without a .env file.
+const envFile = path.resolve(process.cwd(), '.env')
+if (fs.existsSync(envFile)) process.loadEnvFile(envFile)
 
 export const config = {
   db_mode: process.env.db_mode || 'json',
