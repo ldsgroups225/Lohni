@@ -23,6 +23,7 @@ export default function Revision() {
   const [title, setTitle] = useState('')
   const [missed, setMissed] = useState<RevisionCard | null>(null)
   const [feedback, setFeedback] = useState<{ id: number; knew: boolean } | null>(null)
+  const [moreCards, setMoreCards] = useState(false)
   const startedAt = useRef(Date.now())
   const card = session?.cards[session.position]
   const secondaryButton = 'rounded-xl border border-border bg-surface px-4 py-3 text-foreground disabled:opacity-50 disabled:cursor-wait'
@@ -84,13 +85,15 @@ export default function Revision() {
     return () => { active = false }
   }, [])
   useEffect(() => {
-    if (!session?.complete || sync.pending) return
+    setMoreCards(false)
+    if (!session?.complete || sync.pending || !sync.online) return
     let active = true
+    revisionAPI.home().then(value => { if (active) setMoreCards(value?.moreCards ?? false) }).catch(() => {})
     revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(error => {
       if (active) setError(error instanceof Error ? error.message : 'Impossible de charger ta progression.')
     })
     return () => { active = false }
-  }, [session?.id, session?.complete, sync.pending])
+  }, [session?.id, session?.complete, sync.pending, sync.online])
 
   function generate(event: FormEvent) {
     event.preventDefault()
@@ -146,7 +149,7 @@ export default function Revision() {
         </div>}
         {busy && <p role="status">Chargement…</p>}
         {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}
-        {missed && <aside className="space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
+        {missed && !session?.complete && <aside className="space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
           <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
           <Button disabled={busy || !sync.online} onClick={explain}>Explique-moi</Button>
         </aside>}
@@ -194,7 +197,7 @@ export default function Revision() {
             </div>
             {!sync.pending && progress && <p><AnimatedNumber value={progress.xp} /> XP au total</p>}
             <ButtonLink className="w-full" to="/">Revenir à l’accueil</ButtonLink>
-            <button className="text-primary underline disabled:opacity-50" disabled={busy || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer avec les cartes restantes</button>
+            {moreCards && <button className="text-primary underline disabled:opacity-50" disabled={busy || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer avec les cartes restantes</button>}
           </section> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
             {!error && <Mascotte humeur="au repos" taille={112} />}
             <h2 className="text-xl">Aucune carte à réviser pour le moment</h2>
