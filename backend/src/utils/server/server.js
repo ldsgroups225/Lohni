@@ -22,9 +22,9 @@
  * server.js - Application webserver.
  *--------------------------------------------------------------------------------
 **/
-const fs = require('fs');
-const path = require('path');
-const http = require('http');
+const fs = require('node:fs');
+const path = require('node:path');
+const http = require('node:http');
 const WebSocket = require('ws');
 const parseRequestTarget = require('./request-url');
 function server() {
@@ -130,7 +130,7 @@ function server() {
             console.error(`[STATIC] Directory not found or is not a directory: ${a}`);
             return (_req, _res, next) => next();
         }
-        const b = (endpoint.endsWith('/') ? endpoint : endpoint + '/');
+        const b = (endpoint.endsWith('/') ? endpoint : `${endpoint}/`);
         return function staticMiddleware(req, res, next) {
             if (req.method !== 'GET' && req.method !== 'HEAD')
                 return next();

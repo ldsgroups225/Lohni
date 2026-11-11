@@ -1,6 +1,6 @@
-import fs from 'fs'
+import fs from 'node:fs'
 import { randomUUID } from 'node:crypto'
-import path from 'path'
+import path from 'node:path'
 import Busboy from 'busboy'
 import { extractText } from './extract'
 import { embedTextFromFile } from '../ai/embed'

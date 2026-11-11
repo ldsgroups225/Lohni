@@ -26,17 +26,17 @@ priority: 3
 notes: chapters 6-7`
 
     try {
-        const response = await handleAsk(systemPrompt + '\n\nText to parse: ' + text)
+        const response = await handleAsk(`${systemPrompt}\n\nText to parse: ${text}`)
         const parsed = parseKeyValueResponse(response.answer)
         const fallback = heuristicParse(text)
 
         return {
             title: parsed.title || fallback.title,
             dueAt: parsed.dueAt || fallback.dueAt,
-            estMins: parsed.estMins ? parseInt(parsed.estMins) : fallback.estMins,
+            estMins: parsed.estMins ? parseInt(parsed.estMins, 10) : fallback.estMins,
             course: parsed.course || fallback.course,
             type: parsed.type as TaskType || fallback.type,
-            priority: parsed.priority ? parseInt(parsed.priority) as 1 | 2 | 3 | 4 | 5 : fallback.priority,
+            priority: parsed.priority ? parseInt(parsed.priority, 10) as 1 | 2 | 3 | 4 | 5 : fallback.priority,
             notes: parsed.notes || fallback.notes
         }
     } catch (error) {
@@ -99,7 +99,7 @@ function heuristicParse(text: string): Partial<Task> {
     for (const pattern of timePatterns) {
         const match = text.match(pattern)
         if (match) {
-            const num = parseInt(match[1])
+            const num = parseInt(match[1], 10)
             result.estMins = pattern.source.includes('h') ? num * 60 : num
             break
         }
@@ -159,9 +159,9 @@ function parseDateHeuristic(dateStr: string): string {
     let targetDay = -1
     const lowerStr = dateStr.toLowerCase()
 
-    targetDay = weekdays.findIndex(day => day === lowerStr)
+    targetDay = weekdays.indexOf(lowerStr)
     if (targetDay === -1) {
-        targetDay = shortWeekdays.findIndex(day => day === lowerStr)
+        targetDay = shortWeekdays.indexOf(lowerStr)
     }
     // Also check if it starts with the day name (for partial matches)
     if (targetDay === -1) {
@@ -180,8 +180,8 @@ function parseDateHeuristic(dateStr: string): string {
 
     const dateMatch = dateStr.match(/(\d{1,2})[/-](\d{1,2})/)
     if (dateMatch) {
-        const month = parseInt(dateMatch[1]) - 1
-        const day = parseInt(dateMatch[2])
+        const month = parseInt(dateMatch[1], 10) - 1
+        const day = parseInt(dateMatch[2], 10)
         const year = now.getFullYear()
         const targetDate = new Date(year, month, day, 23, 59, 0, 0)
 
@@ -211,7 +211,7 @@ etc.
 Keep steps concise and actionable.`
 
     try {
-        const response = await handleAsk(systemPrompt + (task.notes ? '\nNotes: ' + task.notes : ''))
+        const response = await handleAsk(systemPrompt + (task.notes ? `\nNotes: ${task.notes}` : ''))
         const steps = parseNumberedList(response.answer)
         return steps.length > 0 ? steps : getDefaultSteps(task.type)
     } catch (error) {

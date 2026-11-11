@@ -3,7 +3,7 @@ import { createTask, getTask, updateTask, deleteTask, listTasks } from "./store"
 import { parseTask, generateSteps, replan } from "./ai"
 import { planTask, planTasks, weeklyPlan, defaultPolicy } from "./scheduler"
 import { handleAsk } from "../../lib/ai/ask"
-import crypto from "crypto"
+import crypto from "node:crypto"
 
 export class PlannerService {
     private policy: PlanPolicy
@@ -207,7 +207,7 @@ export class PlannerService {
 
     private async generateSummary(content: string): Promise<string> {
         const prompt = `Create a clear, concise summary of this study material that highlights the key concepts and important points:`
-        const response = await handleAsk(prompt + '\n\n' + content)
+        const response = await handleAsk(`${prompt}\n\n${content}`)
         return response.answer
     }
 
@@ -220,7 +220,7 @@ export class PlannerService {
 
         Format as a structured guide with clear sections:`
 
-        const response = await handleAsk(prompt + '\n\n' + content)
+        const response = await handleAsk(`${prompt}\n\n${content}`)
         return response.answer
     }
 
@@ -236,7 +236,7 @@ export class PlannerService {
         ]`
 
         try {
-            const response = await handleAsk(prompt + '\n\n' + content)
+            const response = await handleAsk(`${prompt}\n\n${content}`)
             return JSON.parse(response.answer)
         } catch {
             console.warn('Failed to parse flashcards JSON, returning default')
@@ -251,7 +251,7 @@ export class PlannerService {
         Include multiple choice and short answer questions.
         Focus on testing understanding of key concepts.`
 
-        const response = await handleAsk(prompt + '\n\n' + content)
+        const response = await handleAsk(`${prompt}\n\n${content}`)
         return response.answer
     }
 
@@ -322,7 +322,7 @@ export class PlannerService {
                 filename: file.filename,
                 originalName: file.filename,
                 mimeType: file.mimeType,
-                size: require('fs').statSync(file.path).size,
+                size: require('node:fs').statSync(file.path).size,
                 uploadedAt: new Date().toISOString()
             }
 

@@ -1,6 +1,6 @@
 import type { ToolIO } from "../types"
 import { generateSectionItems } from "../../services/examlab/generator"
-import crypto from "crypto"
+import crypto from "node:crypto"
 
 export const examTool: ToolIO = {
   name: "exam.generate",

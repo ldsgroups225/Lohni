@@ -14,8 +14,8 @@ function parseDue(s: string): number | null {
     const m = s.match(/\b(mon|tue|wed|thu|fri|sat|sun|today|tomorrow|tmrw|by)\b[^\d]*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i)
     const mf = s.match(/\b(fri|sat|sun|mon|tue|wed|thu)\b/i)
     if (m) {
-        let h = parseInt(m[2])
-        const mm = m[3] ? parseInt(m[3]) : 0
+        let h = parseInt(m[2], 10)
+        const mm = m[3] ? parseInt(m[3], 10) : 0
         const ap = m[4]?.toLowerCase()
         if (ap === "pm" && h < 12) h += 12
         if (ap === "am" && h === 12) h = 0
@@ -32,9 +32,9 @@ function parseDue(s: string): number | null {
     }
     const m2 = s.match(/\b(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?\b/)
     if (m2) {
-        const y = parseInt(m2[1]), mo = parseInt(m2[2]) - 1, da = parseInt(m2[3])
-        const h = m2[4] ? parseInt(m2[4]) : 17
-        const mm = m2[5] ? parseInt(m2[5]) : 0
+        const y = parseInt(m2[1], 10), mo = parseInt(m2[2], 10) - 1, da = parseInt(m2[3], 10)
+        const h = m2[4] ? parseInt(m2[4], 10) : 17
+        const mm = m2[5] ? parseInt(m2[5], 10) : 0
         return new Date(y, mo, da, h, mm, 0, 0).getTime()
     }
     return null

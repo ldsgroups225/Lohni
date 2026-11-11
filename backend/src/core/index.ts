@@ -23,6 +23,6 @@ for (const { route, directory } of publicStorage) {
 
 registerRoutes(app)
 
-app.listen(Number.parseInt(process.env.PORT || '5000'), () => {
+app.listen(Number.parseInt(process.env.PORT || '5000', 10), () => {
   console.log(`[lohni] running on ${process.env.VITE_BACKEND_URL}`)
 })

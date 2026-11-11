@@ -1,5 +1,5 @@
 import db from "../../utils/database/keyv"
-import crypto from "crypto"
+import crypto from "node:crypto"
 import type { Task, TaskFile } from "./types"
 
 const LIST_KEY = "planner:tasks"

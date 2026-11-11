@@ -1,5 +1,5 @@
-import path from "path"
-import fs from "fs"
+import path from "node:path"
+import fs from "node:fs"
 import { makeScript, makeAudio } from "../../services/podcast"
 import { emitToAll } from "../../utils/chat/ws"
 import { config } from "../../config/env"

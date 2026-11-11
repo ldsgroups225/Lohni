@@ -3,7 +3,7 @@ import type { CreateTaskRequest, UpdateTaskRequest, PlannerGenerateRequest, Mate
 import { emitToAll } from "../../utils/chat/ws"
 import { emitLarge } from "../../utils/chat/ws"
 import { parseMultipart } from "../../lib/parser/upload"
-import crypto from "crypto"
+import crypto from "node:crypto"
 
 const rooms = new Map<string, Set<any>>()
 
@@ -318,7 +318,7 @@ setInterval(async () => {
 
         if (hh === 8 && mm < 5 && lastDigest !== today) {
             lastDigest = today
-            const tomorrow = new Date(today + "T23:59:59Z").toISOString()
+            const tomorrow = new Date(`${today}T23:59:59Z`).toISOString()
             const tasks = await plannerService.listTasks({ dueBefore: tomorrow })
             const dueToday = tasks.filter(t => new Date(t.dueAt).toDateString() === new Date(today).toDateString())
             const todaySessions = await plannerService.getTodaySessions()
@@ -350,7 +350,7 @@ setInterval(async () => {
             const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
             const tomorrowTasks = await plannerService.listTasks({
                 status: 'todo',
-                dueBefore: new Date(tomorrow + "T23:59:59Z").toISOString()
+                dueBefore: new Date(`${tomorrow}T23:59:59Z`).toISOString()
             })
 
             emitToAll(rooms.get("default"), {

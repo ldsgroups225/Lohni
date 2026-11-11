@@ -1,8 +1,5 @@
-import Keyv from 'keyv'
-import SQLite from '@keyv/sqlite'
+import { createKeyv } from './keyv-store'
 
-const db = new Keyv({
-  store: new SQLite({ uri: 'sqlite://storage/database.sqlite' })
-})
+const db = createKeyv('sqlite://storage/database.sqlite')
 
 export default db

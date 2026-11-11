@@ -86,7 +86,7 @@ async function ask(topicIn: any, sys: string) {
 }
 
 export async function handleQuiz(topic: string, language: "en" | "fr" = "en"): Promise<QuizItem[]> {
-  const french = (prompt: string) => language === "fr" ? prompt.replace("plain English", "français") + "\nToutes les questions, options et explications doivent être en français." : prompt
+  const french = (prompt: string) => language === "fr" ? `${prompt.replace("plain English", "français")}\nToutes les questions, options et explications doivent être en français.` : prompt
   const parsed = await ask(topic, french(SYS))
   if (validQuiz(parsed)) return normalizeQuiz(parsed)
   const parsed2 = await ask(topic, french(SYS_STRICT))
