@@ -14,7 +14,7 @@ Prérequis : Node.js 21.18 ou plus récent, npm et ffmpeg pour les podcasts.
 git clone https://github.com/ldsgroups225/Lohni.git
 cd Lohni
 npm install
-npm install --prefix frontend --package-lock=false
+npm ci --prefix frontend
 cp .env.example .env
 ```
 

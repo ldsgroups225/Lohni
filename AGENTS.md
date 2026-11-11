@@ -29,7 +29,7 @@ Test through the service interface: a temp SQLite file, an injected clock, a fak
 ## Local setup gotchas
 
 - Run `npm install` at the root after pulling dependency changes (e.g. `ts-fsrs`), or backend tests fail on a missing package.
-- The frontend lockfile is out of sync: install with `npm install --prefix frontend --package-lock=false` and leave `package-lock.json` changes uncommitted.
+- Install the frontend with `npm ci --prefix frontend` (npm only: a `node_modules` made by pnpm breaks npm; delete it first).
 - `nodemon` is not installed: start the backend with `npx tsx backend/src/core/index.ts` (port 5000). Frontend: `npx vite --host 127.0.0.1 --port 5173` from `frontend/`.
 - Frontend tests: `npx vitest run frontend/src` (`npm test` covers `backend/src` only).
 - OpenRouter may refuse `LLM_MAXTOK=16384` for lack of credits (HTTP 402). Override for the run (`LLM_MAXTOK=4000 npx tsx ...`) rather than editing `.env`.
