@@ -159,7 +159,7 @@ export default function Planner() {
             addNotification("success", "Tâche planifiée")
         } catch (error) {
             console.error('Plan task error:', error)
-            addNotification("error", "Impossible de planifier la tâche : " + (error as any)?.message)
+            addNotification("error", `Impossible de planifier la tâche : ${(error as any)?.message}`)
         }
     }
 

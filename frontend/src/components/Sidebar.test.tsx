@@ -11,7 +11,7 @@ test.each([
   expect(html).toContain('aria-label="Navigation principale"')
   for (const [href, label] of [['/', 'Accueil'], ['/courses', 'Cours'], ['/tutor', 'Tuteur'], ['/me', 'Moi']]) {
     expect(html).toMatch(new RegExp(`<a[^>]*href="${href}"[^>]*>${'.*?'}${label}</a>`))
-    expect(html).toMatch(new RegExp(`<a[^>]*${label === active ? 'aria-current="page"' : 'href="' + href + '"'}[^>]*>.*?${label}</a>`))
+    expect(html).toMatch(new RegExp(`<a[^>]*${label === active ? 'aria-current="page"' : `href="${href}"`}[^>]*>.*?${label}</a>`))
   }
   expect(html.match(/aria-current="page"/g)).toHaveLength(1)
 })

@@ -34,7 +34,7 @@ test('un examen affiche la correction avant le résultat et permet de revoir sa 
     await act(async () => { root.render(<MemoryRouter><ExamLabs /></MemoryRouter>) })
     await click('Examen test')
     expect(host.textContent).toContain('Examen test')
-    await act(async () => required(host.querySelectorAll<HTMLInputElement>('input[type="radio"]')[1]).click())
+    await act(async () => required([...host.querySelectorAll<HTMLButtonElement>('#answerOptions button')].find(button => button.textContent?.includes('Non'))).click())
     expect(host.textContent).toContain('Réponse incorrecte')
     expect(host.textContent).toContain('Bonne réponse')
     expect(host.textContent).not.toContain('Quiz terminé')
