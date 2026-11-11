@@ -69,3 +69,18 @@ test('après modification du profil une erreur réseau ne réaffiche pas l’anc
     expect(host.textContent).toContain('Réseau indisponible')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
 })
+
+test('une réponse tardive ne montre pas l’accueil du précédent appareil', async () => {
+  localStorage.setItem('lohni-device-id', 'appareil-ancien')
+  let resolve!: (value: unknown) => void
+  api.home.mockReturnValueOnce(new Promise(r => { resolve = r }))
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Home /> }])
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    localStorage.setItem('lohni-device-id', 'appareil-nouveau')
+    await act(async () => resolve({ profile: { schoolClass: '3e' }, state: 'empty', cardCount: 0, totalCards: 0, daysUntilExam: null }))
+    expect(host.textContent).not.toContain('Salut')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
+})

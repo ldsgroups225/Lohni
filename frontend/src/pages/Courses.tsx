@@ -57,8 +57,10 @@ export default function Courses() {
   const [error, setError] = useState('')
 
   async function load(isActive = () => true) {
+    const requestDevice = cachedDevice()
     const [nextChapters, nextProgress] = await Promise.all([revisionAPI.chapters(), revisionAPI.progress()])
     if (!isActive()) return
+    if (requestDevice && requestDevice !== cachedDevice()) { cachedCourses = null; setChapters([]); setProgress(null); return load(isActive) }
     cachedCourses = { device: cachedDevice(), version: currentRevisionCacheVersion(), chapters: nextChapters, progress: nextProgress }
     setChapters(nextChapters)
     setProgress(nextProgress)

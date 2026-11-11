@@ -29,16 +29,22 @@ export default function Home() {
   useEffect(() => {
     let active = true
     async function load() {
+      const requestDevice = cachedDevice()
       setError('')
       setProgressError('')
       if (!cachedHome) setLoading(true)
       try {
         const data = await revisionAPI.home()
         if (!active) return
+        if (requestDevice && requestDevice !== cachedDevice()) {
+          cachedHome = null; setHome(null); setProgress(null); setChapters(null); setAttempt(value => value + 1)
+          return
+        }
         cachedHome = data ? { device: cachedDevice(), version: currentRevisionCacheVersion(), home: data, progress: cachedHome?.progress ?? null, chapters: cachedHome?.chapters ?? null } : null
         setHome(data)
-        if (data) void revisionAPI.chapters().then(value => { if (active) { if (cachedHome) cachedHome.chapters = value; setChapters(value) } }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
-        if (data) void revisionAPI.progress().then(value => { if (active) { if (cachedHome) cachedHome.progress = value; setProgress(value) } }).catch(cause => {
+        const responseDevice = cachedDevice()
+        if (data) void revisionAPI.chapters().then(value => { if (active && responseDevice === cachedDevice()) { if (cachedHome) cachedHome.chapters = value; setChapters(value) } }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
+        if (data) void revisionAPI.progress().then(value => { if (active && responseDevice === cachedDevice()) { if (cachedHome) cachedHome.progress = value; setProgress(value) } }).catch(cause => {
           if (active && !(cause instanceof Error && cause.message.startsWith('http 404'))) setProgressError('Ta progression est temporairement indisponible.')
         })
       } catch (cause) {
