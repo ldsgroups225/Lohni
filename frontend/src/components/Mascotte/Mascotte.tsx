@@ -45,7 +45,8 @@ export default function Mascotte({ humeur, taille, decorative = false }: { humeu
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
     const { amp, periode } = mouvement[humeur]
     const dort = humeur === 'endormie'
-    let visible = false
+    const box = element.getBoundingClientRect()
+    let visible = box.bottom > 0 && box.top < window.innerHeight // évite une pose de repos le temps du premier callback
     let frame = 0
     let clinDebut = -1
     let clinProchain = 0

@@ -5,7 +5,7 @@ const effects = vi.hoisted(() => [] as Array<() => void | (() => void)>)
 vi.mock('react', async importOriginal => ({
   ...await importOriginal<typeof import('react')>(),
   useEffect: (effect: () => void | (() => void)) => { effects.push(effect) },
-  useRef: (initial?: unknown) => ({ current: initial ?? { style: {} } }),
+  useRef: (initial?: unknown) => ({ current: initial ?? { style: {}, getBoundingClientRect: () => ({ top: 0, bottom: 10 }) } }),
 }))
 import Mascotte from './Mascotte'
 

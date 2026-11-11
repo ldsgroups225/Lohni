@@ -86,6 +86,9 @@ export function spring({ from, to, velocity = 0, stiffness = 260, damping = 0.85
   }
 }
 
+/** Durée de sortie du menu : doit rester égale à --duration-menu dans index.css. */
+export const MENU_EXIT_MS = 160
+
 // Keeps the node mounted while its exit animation plays.
 export function useExitTransition(open: boolean, durationMs: number): { mounted: boolean; state: 'enter' | 'exit' } {
   const [shown, setShown] = useState(open)

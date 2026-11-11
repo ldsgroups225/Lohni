@@ -24,7 +24,7 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
   const card = useRef<HTMLDivElement>(null)
   const x = useRef(0)
   const stop = useRef<(() => void) | null>(null)
-  const drag = useRef<{ origin: number; start: number; points: [number, number][]; moved: boolean } | null>(null)
+  const drag = useRef<{ id: number; origin: number; start: number; points: [number, number][]; moved: boolean } | null>(null)
   const sent = useRef(false)
   const [hint, setHint] = useState(false)
 
@@ -59,14 +59,14 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
   }, [enabled])
 
   function down(e: PointerEvent) {
-    if (!enabled || sent.current) return
+    if (!enabled || sent.current || drag.current) return // un seul doigt à la fois
     stop.current?.()
     e.currentTarget.setPointerCapture(e.pointerId)
-    drag.current = { origin: e.clientX, start: e.clientX - x.current, points: [[e.timeStamp, e.clientX]], moved: false }
+    drag.current = { id: e.pointerId, origin: e.clientX, start: e.clientX - x.current, points: [[e.timeStamp, e.clientX]], moved: false }
   }
   function move(e: PointerEvent) {
     const d = drag.current
-    if (!d) return
+    if (!d || d.id !== e.pointerId) return
     if (!d.moved && Math.abs(e.clientX - d.origin) > TAP_SLOP) d.moved = true
     d.points.push([e.timeStamp, e.clientX])
     while (d.points.length > 2 && e.timeStamp - d.points[0][0] > 100) d.points.shift() // fenêtre glissante de 100 ms
@@ -74,10 +74,11 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
   }
   function up(e: PointerEvent) {
     const d = drag.current
+    if (!d || d.id !== e.pointerId) return
     drag.current = null
-    if (!d) return
-    if (!d.moved) return onToggle()
-    if (!revealed) { setHint(true); return }
+    if (sent.current) return // la sortie est lancée : ne pas la couper
+    if (!d.moved) { if (x.current !== 0) animate(0, 0); return onToggle() }
+    if (!revealed || !enabled) { if (!revealed) setHint(true); animate(0, 0); return }
     // Vitesse réelle du doigt (px/s) ; un doigt immobile avant le lâcher ne garde pas une vitesse ancienne.
     const [t0, x0] = d.points[0]
     const [t1, x1] = d.points[d.points.length - 1]
@@ -87,9 +88,10 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
     if (dx <= -THRESHOLD || (dx < -VELOCITY_DISTANCE && v < -VELOCITY)) return rate(false, v)
     animate(0, v)
   }
-  function cancel() {
+  function cancel(e: PointerEvent) {
+    if (drag.current?.id !== e.pointerId) return
     drag.current = null
-    animate(0, 0)
+    if (!sent.current) animate(0, 0)
   }
   function key(e: KeyboardEvent) {
     if (e.key === 'ArrowRight') rate(true)
@@ -101,11 +103,11 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
 
   const face = 'absolute inset-0 flex touch-pan-y overflow-y-auto rounded-3xl border border-[color:var(--swipe-border)] bg-surface px-6 pb-10 pt-6 [backface-visibility:hidden]'
   return (
-    <div className="flex min-h-[55dvh] flex-1 flex-col">
+    <div className="motion-card flex min-h-[55dvh] flex-1 flex-col">
       <div
         ref={card} role="group" aria-roledescription="carte" aria-label={revealed ? 'Réponse' : 'Question'} aria-describedby="swipe-hint" tabIndex={0}
         onKeyDown={key} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel}
-        className="motion-card relative flex-1 touch-pan-y select-none will-change-transform [perspective:1000px]"
+        className="relative flex-1 touch-pan-y select-none will-change-transform [perspective:1000px]"
       >
         <div className="absolute inset-0 transition-transform duration-[360ms] ease-[var(--ease-lohni)] [transform-style:preserve-3d]" style={{ transform: `rotateY(${revealed ? 180 : 0}deg)` }}>
           <div className={face} aria-hidden={revealed}>

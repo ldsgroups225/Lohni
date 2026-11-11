@@ -6,7 +6,7 @@ import { CheckIcon, CloseIcon } from '../components/ui/NavigationIcons'
 import { Progress } from '../components/ui/Progress'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { confirmDialog } from '../lib/confirm'
-import { useExitTransition } from '../lib/motion'
+import { MENU_EXIT_MS, useExitTransition } from '../lib/motion'
 import { SwipeCard } from '../components/Revision/SwipeCard'
 import { SessionRecap } from '../components/Revision/SessionRecap'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
@@ -31,7 +31,7 @@ export default function Revision() {
   const [menu, setMenu] = useState(false)
   const sending = useRef(false) // une seule réponse par carte, même si un geste et un bouton se suivent
   const menuButton = useRef<HTMLButtonElement>(null)
-  const menuExit = useExitTransition(menu, 160)
+  const menuExit = useExitTransition(menu, MENU_EXIT_MS)
   const continueButton = useRef<HTMLButtonElement>(null)
   const [generating, setGenerating] = useState(false)
   const [slow, setSlow] = useState(false)
