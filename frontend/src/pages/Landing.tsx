@@ -25,11 +25,16 @@ function menuKeys(e: React.KeyboardEvent<HTMLElement>, open: boolean, setOpen: (
   else if (open && e.key === "End") go(-1);
 }
 
+let cachedChats: ChatInfo[] = [];
+
 export default function Landing() {
-  const [chats, setChats] = useState<ChatInfo[]>([]);
+  const [chats, setChats] = useState<ChatInfo[]>(cachedChats);
+  const [chatsOpen, setChatsOpen] = useState(() => {
+    try { return sessionStorage.getItem("lohni-tutor-chats") === "open"; } catch { return false; }
+  });
   useEffect(() => {
     let active = true;
-    getChats().then(result => { if (active) setChats(result.chats); }).catch(() => {});
+    getChats().then(result => { if (active) { cachedChats = result.chats; setChats(result.chats); } }).catch(() => {});
     return () => { active = false; };
   }, []);
   const [prompt, setPrompt] = useState("");
@@ -235,7 +240,11 @@ export default function Landing() {
       </div>
 
       <ExploreTopics />
-      <details className="mx-auto mb-6 w-full max-w-4xl rounded-2xl border border-border p-5">
+      <details className="mx-auto mb-6 w-full max-w-4xl rounded-2xl border border-border p-5" open={chatsOpen} onToggle={event => {
+        const open = event.currentTarget.open;
+        setChatsOpen(open);
+        try { sessionStorage.setItem("lohni-tutor-chats", open ? "open" : "closed"); } catch { /* Storage can be unavailable. */ }
+      }}>
         <summary className="cursor-pointer text-foreground">Mes discussions</summary>
         <ul className="mt-4 space-y-3">{chats.map(chat => <li key={chat.id}><Link to={`/chat?chatId=${encodeURIComponent(chat.id)}`} className="block truncate text-primary underline">{chat.title || 'Discussion sans titre'}</Link></li>)}</ul>
         {!chats.length && <p className="mt-3 text-sm text-muted">Aucune discussion pour le moment.</p>}

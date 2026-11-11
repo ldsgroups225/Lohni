@@ -10,6 +10,8 @@ import { Link } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
 
+let cachedCourses: { chapters: RevisionChapter[]; progress: RevisionProgress } | null = null
+
 const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
 function CardEditor({ card, busy, onSave, onCancel }: {
@@ -43,14 +45,18 @@ function CardEditor({ card, busy, onSave, onCancel }: {
 }
 
 export default function Courses() {
-  const [chapters, setChapters] = useState<RevisionChapter[]>([])
-  const [progress, setProgress] = useState<RevisionProgress | null>(null)
+  const [chapters, setChapters] = useState<RevisionChapter[]>(() => cachedCourses?.chapters ?? [])
+  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedCourses?.progress ?? null)
   const [editing, setEditing] = useState<string | null>(null)
-  const [busy, setBusy] = useState(true)
+  const [busy, setBusy] = useState(!cachedCourses)
+  const [moreOpen, setMoreOpen] = useState(() => {
+    try { return sessionStorage.getItem('lohni-courses-more') === 'open' } catch { return false }
+  })
   const [error, setError] = useState('')
 
   async function load() {
     const [nextChapters, nextProgress] = await Promise.all([revisionAPI.chapters(), revisionAPI.progress()])
+    cachedCourses = { chapters: nextChapters, progress: nextProgress }
     setChapters(nextChapters)
     setProgress(nextProgress)
   }
@@ -64,7 +70,7 @@ export default function Courses() {
   useEffect(() => {
     let active = true
     Promise.all([revisionAPI.chapters(), revisionAPI.progress()]).then(([nextChapters, nextProgress]) => {
-      if (active) { setChapters(nextChapters); setProgress(nextProgress) }
+      if (active) { cachedCourses = { chapters: nextChapters, progress: nextProgress }; setChapters(nextChapters); setProgress(nextProgress) }
     }).catch(error => {
       if (active) setError(error instanceof Error ? error.message : 'Impossible de charger tes cours.')
     }).finally(() => { if (active) setBusy(false) })
@@ -139,7 +145,11 @@ export default function Courses() {
           </article>)}
         </section>
       })}
-      <details className="rounded-2xl border border-border p-5">
+      <details className="rounded-2xl border border-border p-5" open={moreOpen} onToggle={event => {
+        const open = event.currentTarget.open
+        setMoreOpen(open)
+        try { sessionStorage.setItem('lohni-courses-more', open ? 'open' : 'closed') } catch { /* Storage can be unavailable. */ }
+      }}>
         <summary className="cursor-pointer font-semibold text-foreground">Plus</summary>
         <nav aria-label="Autres outils" className="mt-3 space-y-2">
           {[

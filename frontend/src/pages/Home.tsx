@@ -13,30 +13,36 @@ import Onboarding from '../components/Revision/Onboarding'
 import MobileHeader from '../components/MobileHeader'
 import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter } from '../lib/api'
 
+let cachedHome: { home: RevisionHome | null; progress: RevisionProgress | null; chapters: RevisionChapter[] | null } | null = null
+
 export default function Home() {
-  const [home, setHome] = useState<RevisionHome | null>(null)
-  const [progress, setProgress] = useState<RevisionProgress | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [home, setHome] = useState<RevisionHome | null>(() => cachedHome?.home ?? null)
+  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedHome?.progress ?? null)
+  const [loading, setLoading] = useState(!cachedHome)
   const [error, setError] = useState('')
   const [progressError, setProgressError] = useState('')
   const [attempt, setAttempt] = useState(0)
-  const [chapters, setChapters] = useState<RevisionChapter[] | null>(null)
+  const [chapters, setChapters] = useState<RevisionChapter[] | null>(() => cachedHome?.chapters ?? null)
   useEffect(() => {
     let active = true
     async function load() {
       setError('')
       setProgressError('')
-      setLoading(true)
+      if (!cachedHome) setLoading(true)
       try {
         const data = await revisionAPI.home()
         if (!active) return
+        cachedHome = { home: data, progress: data ? cachedHome?.progress ?? null : null, chapters: data ? cachedHome?.chapters ?? null : null }
         setHome(data)
-        if (data) void revisionAPI.chapters().then(value => { if (active) setChapters(value) }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
-        if (data) void revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(cause => {
+        if (data) void revisionAPI.chapters().then(value => { if (active) { if (cachedHome) cachedHome.chapters = value; setChapters(value) } }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
+        if (data) void revisionAPI.progress().then(value => { if (active) { if (cachedHome) cachedHome.progress = value; setProgress(value) } }).catch(cause => {
           if (active && !(cause instanceof Error && cause.message.startsWith('http 404'))) setProgressError('Ta progression est temporairement indisponible.')
         })
       } catch (cause) {
-        if (active) setError(cause instanceof Error ? cause.message : 'Impossible de charger l’accueil.')
+        if (active) {
+          if (cachedHome) setProgressError('La mise à jour de ton accueil est temporairement indisponible.')
+          else setError(cause instanceof Error ? cause.message : 'Impossible de charger l’accueil.')
+        }
       } finally { if (active) setLoading(false) }
     }
     void load()
