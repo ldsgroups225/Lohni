@@ -7,11 +7,15 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import { revisionAPI, type RevisionProfile, type RevisionProgress } from '../lib/api'
-import { invalidateRevisionCache } from '../lib/cachedDevice'
+import { cachedDevice, currentRevisionCacheVersion, invalidateRevisionCache } from '../lib/cachedDevice'
+
+let cachedProfile: { device: string | null; version: number; profile: RevisionProfile | null; progress: RevisionProgress } | null = null
 
 export default function Profile() {
-  const [profile, setProfile] = useState<RevisionProfile | null>(null)
-  const [progress, setProgress] = useState<RevisionProgress | null>(null)
+  const device = cachedDevice()
+  if (cachedProfile && (cachedProfile.device !== device || cachedProfile.version !== currentRevisionCacheVersion())) cachedProfile = null
+  const [profile, setProfile] = useState<RevisionProfile | null>(() => cachedProfile?.profile ?? null)
+  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedProfile?.progress ?? null)
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
@@ -21,9 +25,19 @@ export default function Profile() {
 
   useEffect(() => {
     let active = true
-    Promise.all([revisionAPI.profile(), revisionAPI.progress()]).then(([value, stats]) => {
-      if (active) { setProfile(value); setProgress(stats) }
-    }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Impossible de charger ton profil.') })
+    async function load(): Promise<void> {
+      const requestDevice = cachedDevice()
+      const version = currentRevisionCacheVersion()
+      const [value, stats] = await Promise.all([revisionAPI.profile(), revisionAPI.progress()])
+      if (!active) return
+      if (requestDevice !== cachedDevice() || version !== currentRevisionCacheVersion()) {
+        cachedProfile = null; setProfile(null); setProgress(null)
+        return load()
+      }
+      cachedProfile = { device: requestDevice, version, profile: value, progress: stats }
+      setProfile(value); setProgress(stats)
+    }
+    load().catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Impossible de charger ton profil.') })
       .finally(() => { if (active) setBusy(false) })
     return () => { active = false }
   }, [])
@@ -38,7 +52,18 @@ export default function Profile() {
     setBusy(true)
     setSaved(false)
     setError('')
-    try { setProfile(await revisionAPI.saveProfile(profile)); invalidateRevisionCache(); setSaved(true) }
+    const requestDevice = cachedDevice()
+    try {
+      const value = await revisionAPI.saveProfile(profile)
+      if (requestDevice !== cachedDevice()) {
+        cachedProfile = null; setProfile(null); setProgress(null)
+        throw new Error('L’appareil a changé. Recharge la page avant de continuer.')
+      }
+      setProfile(value)
+      invalidateRevisionCache()
+      cachedProfile = progress ? { device: cachedDevice(), version: currentRevisionCacheVersion(), profile: value, progress } : null
+      setSaved(true)
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer ton profil.') }
     finally { setBusy(false) }
   }

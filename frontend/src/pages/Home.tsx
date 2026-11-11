@@ -6,7 +6,7 @@ import { FlameIcon } from '../components/ui/NavigationIcons'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { Card } from '../components/ui/Card'
 import { Progress } from '../components/ui/Progress'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import Onboarding from '../components/Revision/Onboarding'
@@ -19,6 +19,7 @@ let cachedHome: { device: string | null; version: number; home: RevisionHome | n
 export default function Home() {
   const device = cachedDevice()
   if (cachedHome && (cachedHome.device !== device || cachedHome.version !== currentRevisionCacheVersion())) cachedHome = null
+  const animateEntry = useRef(!cachedHome).current
   const [home, setHome] = useState<RevisionHome | null>(() => cachedHome?.home ?? null)
   const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedHome?.progress ?? null)
   const [loading, setLoading] = useState(!cachedHome)
@@ -102,7 +103,7 @@ export default function Home() {
           const own = chapters?.filter(chapter => chapter.subjectId === subject.subjectId)
           const seen = own?.reduce((sum, chapter) => sum + chapter.seenCards, 0)
           const total = own?.reduce((sum, chapter) => sum + chapter.cards.length, 0)
-          return <article key={subject.subjectId} style={{ animationDelay: listDelay(index) }} className="motion-list rounded-xl border border-border p-4">
+          return <article key={subject.subjectId} style={{ animationDelay: listDelay(index) }} className={`${animateEntry ? 'motion-list ' : ''}rounded-xl border border-border p-4`}>
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><h3>{subject.name}</h3><span className="whitespace-nowrap">{subject.mastery === null ? 'Pas encore révisée' : <>{subject.status} · <AnimatedNumber value={Math.round(subject.mastery)} /> %</>}</span></div>
           {seen !== undefined && <p className="mb-2 text-sm text-muted">{seen} carte{seen > 1 ? 's' : ''} vue{seen > 1 ? 's' : ''} sur {total}</p>}
           <Progress className="mastery-progress w-full" max={100} value={subject.mastery ?? 0} aria-label={`Maîtrise en ${subject.name}`} />
