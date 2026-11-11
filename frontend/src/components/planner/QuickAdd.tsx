@@ -42,7 +42,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                     <input
                         value={text}
                         onChange={e => setText(e.target.value)}
-                        placeholder="Ex. : devoir de maths chapitre 5 pour demain à 20 h, environ 2 h"
+                        placeholder="Ex. : maths demain"
                         className="min-w-0 flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted outline-none focus:ring-1 focus:ring-border"
                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
                     />

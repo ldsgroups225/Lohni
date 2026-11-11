@@ -1,6 +1,9 @@
+import fs from 'fs'
 import path from 'path'
 
-process.loadEnvFile(path.resolve(process.cwd(), '.env'))
+// Containers get their settings as environment variables, without a .env file.
+const envFile = path.resolve(process.cwd(), '.env')
+if (fs.existsSync(envFile)) process.loadEnvFile(envFile)
 
 export const config = {
   db_mode: process.env.db_mode || 'json',
@@ -9,7 +12,7 @@ export const config = {
   provider: process.env.LLM_PROVIDER || 'ollama',
   embeddings_provider: process.env.EMB_PROVIDER || 'openai',
   openrouter: process.env.OPENROUTER_API_KEY || '',
-  openrouter_model: process.env.openrouter_model || '',
+  openrouter_model: process.env.OPENROUTER_MODEL || '',
   requesty: process.env.REQUESTY_API_KEY || '',
   requesty_model: process.env.REQUESTY_MODEL || 'openai/gpt-4o-mini',
   requesty_embed_model: process.env.REQUESTY_EMBED_MODEL || 'openai/text-embedding-3-large',

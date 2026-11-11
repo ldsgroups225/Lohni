@@ -402,7 +402,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     `radial-gradient(1200px 800px at 50% 50%, color-mix(in srgb, var(--color-surface) 6%, transparent), transparent 70%)`
                 ].join(', ')
             }} />
-            <div className="absolute top-3 left-3 z-20 text-[11px] text-muted bg-surface border border-border rounded px-2 py-1 backdrop-blur">
+            <div className="absolute top-3 left-3 right-3 z-20 hidden max-w-[calc(100%-9rem)] text-[11px] text-muted sm:block bg-surface border border-border rounded px-2 py-1 backdrop-blur">
                 Fais glisser pour déplacer la carte, défile pour zoomer. Double-clique sur une bulle pour la centrer.
             </div>
             <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
@@ -647,7 +647,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                 </div>
             ))}
 
-            <div className="absolute top-3 right-3 z-20 bg-surface backdrop-blur border border-border rounded-lg px-2 py-1 flex items-center gap-2 text-xs text-foreground">
+            <div className="absolute top-3 right-3 z-20 bg-surface border border-border rounded-lg px-2 py-1 flex items-center gap-2 text-xs text-foreground">
                 <button onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
                     const cx = rect ? rect.width / 2 : 300

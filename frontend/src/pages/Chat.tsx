@@ -254,20 +254,21 @@ export default function Chat() {
   return (
     <div className="bg-background text-foreground flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
       <div className="mx-auto mt-6 w-full max-w-4xl space-y-3">
-        <Link to="/tutor" className="text-primary underline">Tuteur · Nouvelle discussion et historique</Link>
-        <Link to="/revision" className="ml-4 underline">Reprendre ma session</Link>
-        {profile ? <fieldset className="flex flex-wrap gap-3 rounded-xl border border-border p-3">
-          <legend className="px-2 text-sm">Enregistrer les cartes dans mes révisions</legend>
+        <div className="flex items-center justify-between gap-4 whitespace-nowrap text-sm">
+          <Link to="/tutor" className="text-primary underline">Discussions</Link>
+          <Link to="/revision" className="underline">Reprendre ma session</Link>
+        </div>
+        {profile ? <details className="rounded-xl border border-border p-3"><summary className="cursor-pointer text-sm">Enregistrer les cartes dans mes révisions</summary><fieldset className="mt-3 flex flex-wrap gap-3">
           <label className="min-w-40 flex-1">Matière<select className="mt-1 w-full rounded-lg bg-surface p-2" value={subject} onChange={event => setSubject(event.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
           <label className="min-w-40 flex-1">Chapitre<input className="mt-1 w-full rounded-lg bg-surface p-2" maxLength={revisionPolicy.maxTitleChars} value={noteTitle} placeholder={(topic || 'Notes du Tuteur').slice(0, revisionPolicy.maxTitleChars)} onChange={event => setNoteTitle(event.target.value)} /></label>
-        </fieldset> : <Link to="/" className="block underline">Créer mon profil pour enregistrer des cartes</Link>}
+        </fieldset></details> : <Link to="/" className="block underline">Créer mon profil pour enregistrer des cartes</Link>}
         {saveMessage && <p role="status" className="text-foreground">{saveMessage} <Link to="/courses" className="underline">Voir mes cours</Link></p>}
         {error && <p role="alert" className="text-foreground">{error}</p>}
       </div>
       {!showTopics && (
         <button
           onClick={() => setShowTopics(true)}
-          className="fixed top-5 right-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-surface text-xs font-medium shadow-lg backdrop-blur transition-opacity"
+          className="fixed top-[calc(1.25rem+env(safe-area-inset-top))] right-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-surface text-xs font-medium shadow-lg backdrop-blur transition-opacity"
           title="Afficher les cartes"
           aria-label="Afficher les cartes"
         >
@@ -275,7 +276,7 @@ export default function Chat() {
             <rect width="18" height="18" x="3" y="3" rx="2" />
             <path d="M15 3v18" />
           </svg>
-          <span>Cartes ({cards.length})</span>
+          <span className="max-md:sr-only">Cartes ({cards.length})</span><span aria-hidden="true" className="md:hidden">{cards.length}</span>
         </button>
       )}
 
@@ -285,7 +286,7 @@ export default function Chat() {
         } gap-6 mt-6 mb-36`}
       >
         <div className="flex-1 min-w-0 pr-0 lg:pr-2">
-          <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 pt-2 pb-28">
+          <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 pt-2 pb-[calc(12rem+env(safe-area-inset-bottom))] md:pb-28">
             <div className="space-y-6">
               {list.map((m, i) => {
                 const userBubble = "inline-block max-w-[85%] bg-surface border border-border rounded-2xl px-4 py-3";

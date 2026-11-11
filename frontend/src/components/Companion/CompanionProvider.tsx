@@ -29,7 +29,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
           prev.text !== doc.text ||
           prev.title !== doc.title ||
           prev.filePath !== doc.filePath
-        if (changed) setOpen(true)
+        // Never pop the panel open by itself: it would cover what the student is reading.
+        if (changed) setOpen(false)
       } else {
         setOpen(false)
       }

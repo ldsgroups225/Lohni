@@ -1,4 +1,6 @@
 import { Button, ButtonLink } from '../components/ui/Button'
+import { LoadingState } from '../components/ui/LoadingState'
+import { confirmDialog } from '../lib/confirm'
 import { listDelay } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
@@ -71,17 +73,23 @@ export default function Courses() {
 
   return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-2xl space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">Cours</h1>
-        <div className="flex flex-wrap gap-3"><ButtonLink to="/import">Importer mon cours</ButtonLink><Link to="/revision" className="rounded-xl border border-border px-4 py-3 text-foreground">Session du jour</Link></div>
+      <header className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold text-foreground">Cours</h1>
+          {progress && <p aria-live="polite" className="flex items-center gap-2 text-sm">
+            <span className="rounded-full bg-tint px-3 py-1 font-semibold text-foreground">{progress.xp} XP</span>
+            <span className="rounded-full border border-border px-3 py-1 text-foreground">Série : {progress.streak} j</span>
+          </p>}
+        </div>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <ButtonLink to="/import" aria-label="Importer mon cours" className="py-2.5">Importer</ButtonLink>
+          <Link to="/revision" className="flex items-center justify-center whitespace-nowrap rounded-xl border border-border px-4 py-2.5 text-center text-foreground">Session du jour</Link>
+        </div>
       </header>
-      {progress && <p className="rounded-2xl border border-border p-4" aria-live="polite">
-        <strong className="text-foreground">{progress.xp} XP</strong> · Série : {progress.streak} jour{progress.streak > 1 ? 's' : ''}
-      </p>}
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
         <button className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Réessayer</button>
       </div>}
-      {busy && <p role="status">Chargement…</p>}
+      {busy && chapters.length === 0 && !progress && <LoadingState label="On prépare tes cours…" />}
       {!busy && !error && chapters.length === 0 && <section className="space-y-3 rounded-2xl border border-border p-6">
         <Mascotte humeur="au repos" taille={112} />
         <h2 className="text-xl text-foreground">Tes cours apparaîtront ici</h2>
@@ -115,18 +123,18 @@ export default function Courses() {
                   <div className="flex flex-wrap gap-3">
                     <Button disabled={busy} onClick={() => setEditing(card.id)}>Modifier</Button>
                     <button type="button" className="rounded-xl border border-danger px-4 py-3 text-danger disabled:opacity-50" disabled={busy} onClick={() => {
-                      if (window.confirm('Supprimer cette carte ? Elle ne sera plus proposée en révision.')) void run(async () => { await revisionAPI.deleteCard(card.id); await load() })
+                      void confirmDialog('Supprimer cette carte ? Elle ne sera plus proposée en révision.').then(ok => { if (ok) void run(async () => { await revisionAPI.deleteCard(card.id); await load() }) })
                     }}>Supprimer la carte</button>
                   </div>
                 </>}
               </article>)}</div>
             </details>
             <button className="py-2 text-sm text-foreground underline disabled:opacity-50" disabled={busy} onClick={() => {
-              if (window.confirm(`Supprimer le chapitre « ${chapter.title} » et toutes ses cartes ? Cette action est définitive.`)) void run(async () => {
+              void confirmDialog(`Supprimer le chapitre « ${chapter.title} » et toutes ses cartes ? Cette action est définitive.`).then(ok => { if (ok) void run(async () => {
                 await revisionAPI.deleteChapter(chapter.id)
                 setEditing(null)
                 await load()
-              })
+              }) })
             }}>Supprimer le chapitre</button>
           </article>)}
         </section>

@@ -18,6 +18,17 @@ export default function Landing() {
   const [responseLength, setResponseLength] = useState<"Courte" | "Moyenne" | "Longue">("Moyenne");
   const [showMode, setShowMode] = useState(false);
   const [showLength, setShowLength] = useState(false);
+
+  // Close the dropdowns on Escape or when tapping outside them.
+  useEffect(() => {
+    if (!showMode && !showLength) return;
+    const close = () => { setShowMode(false); setShowLength(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    const onDown = (e: Event) => { if (!(e.target as Element).closest("[data-dropdown]")) close(); };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown);
+    return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("pointerdown", onDown); };
+  }, [showMode, showLength]);
   const [stagedFile, setStagedFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -97,13 +108,13 @@ export default function Landing() {
           />
         </AdaptiveErrorBoundary>
 
-        <div className="w-full md:w-fit flex">
-          <div className="w-full md:w-fit md:min-w-fit p-1.5 rounded-2xl rounded-t-none bg-surface flex flex-col items-start sm:items-center border border-border border-t-0 border-r-0 border-b-0 sm:border-b shadow-[inset_2px_-2px_15px] shadow-border">
+        <div className="mt-3 w-full md:mt-0 md:w-fit flex">
+          <div className="w-full md:w-fit md:min-w-fit p-1.5 rounded-2xl md:rounded-t-none bg-surface flex flex-col items-start sm:items-center border border-border md:border-t-0 md:border-r-0 shadow-[inset_2px_-2px_15px] shadow-border">
             <div className="flex items-start justify-between md:justify-start space-x-1 md:space-x-2 p-1.5 w-full">
-              <div className="relative flex-1 md:flex-none">
+              <div data-dropdown className="relative flex-1 md:flex-none">
                 <div
                   onClick={() => setShowMode(!showMode)}
-                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer"
+                  className="flex items-center space-x-1 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer"
                 >
                   <div className="flex flex-col -space-y-0.5 pr-2">
                     <span className="text-xs text-foreground">Mode</span>
@@ -151,12 +162,12 @@ export default function Landing() {
 
               <div className="w-px h-8 mx-2 bg-tint rounded-full mt-2" />
 
-              <div className="relative flex-1 md:flex-none">
+              <div data-dropdown className="relative flex-1 md:flex-none">
                 <div
                   onClick={() => setShowLength(!showLength)}
-                  className="flex items-center space-x-4 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer">
+                  className="flex items-center space-x-1 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer">
                   <div className="flex flex-col -space-y-0.5 pr-2">
-                    <span className="text-xs text-foreground">Longueur de réponse</span>
+                    <span className="text-xs text-foreground">Longueur</span>
                     <span className="text-sm font-semibold text-foreground">{responseLength}</span>
                   </div>
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-muted">

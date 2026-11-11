@@ -1,20 +1,23 @@
+import { lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import App from "./App";
-import Landing from "./pages/Landing";
 import Home from "./pages/Home";
-import Chat from "./pages/Chat";
-import Quiz from "./pages/Quiz";
-import Tools from "./pages/Tools"
-import Profile from './pages/Profile'
-import ExamLabs from "./pages/examlab.tsx";
-import NotFound from './pages/404.tsx'
-import PlannerPage from './pages/Planner'
-import Debate from './pages/Debate'
-import Revision from './pages/Revision'
-import Courses from './pages/Courses'
-import ImportCourse from './pages/ImportCourse'
 import "./index.css"
+
+// Pages other than Home load on demand: a much smaller first download.
+const Landing = lazy(() => import('./pages/Landing'))
+const Chat = lazy(() => import('./pages/Chat'))
+const Quiz = lazy(() => import('./pages/Quiz'))
+const Tools = lazy(() => import('./pages/Tools'))
+const Profile = lazy(() => import('./pages/Profile'))
+const ExamLabs = lazy(() => import('./pages/examlab.tsx'))
+const NotFound = lazy(() => import('./pages/404.tsx'))
+const PlannerPage = lazy(() => import('./pages/Planner'))
+const Debate = lazy(() => import('./pages/Debate'))
+const Revision = lazy(() => import('./pages/Revision'))
+const Courses = lazy(() => import('./pages/Courses'))
+const ImportCourse = lazy(() => import('./pages/ImportCourse'))
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <BrowserRouter>

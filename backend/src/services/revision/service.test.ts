@@ -87,6 +87,17 @@ async function finish(session: Awaited<ReturnType<RevisionService['getSession']>
   return session
 }
 
+test('la page d’accueil signale une session commencée mais non terminée, puis reprend la même session', async () => {
+  await setup(3)
+  const session = await service.getSession(context())
+  expect(await service.getHome(context())).toMatchObject({ state: 'ready', started: false })
+  const partial = await respond(session, true, session.cards[0].kind === 'mcq' ? 1 : undefined)
+  expect(await service.getHome(context())).toMatchObject({ state: 'ready', started: true, cardCount: session.cards.length - 1 })
+  expect(await service.getSession(context())).toEqual(partial)
+  await finish(partial)
+  expect(await service.getHome(context())).toMatchObject({ started: false })
+})
+
 test('indique les cartes disponibles sans remplacer la session et distingue une série commencée', async () => {
   await setup(2)
   const session = await service.getSession(context())

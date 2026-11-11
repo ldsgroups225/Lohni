@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { companionAsk, type FlashCard } from "../../lib/api"
-import MarkdownView from "../Chat/MarkdownView"
+import { lazy, Suspense, type ComponentProps } from "react"
+
 import { useCompanion } from "./CompanionProvider"
+
+// KaTeX and syntax highlighting are heavy: load them only when the assistant panel shows a message.
+const LazyMarkdown = lazy(() => import("../Chat/MarkdownView"))
+const MarkdownView = (props: ComponentProps<typeof LazyMarkdown>) => (
+  <Suspense fallback={<span className="opacity-60">…</span>}><LazyMarkdown {...props} /></Suspense>
+)
 
 type CompanionMessage = {
   id: string
@@ -37,6 +44,21 @@ export default function CompanionDock() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
+  const [fabHidden, setFabHidden] = useState(false)
+
+  // Hide the floating button while scrolling down so it never covers the text being read.
+  useEffect(() => {
+    let last = window.scrollY
+    let timer: ReturnType<typeof setTimeout>
+    const onScroll = () => {
+      const y = window.scrollY
+      if (Math.abs(y - last) > 4) { setFabHidden(y > last); last = y }
+      clearTimeout(timer)
+      timer = setTimeout(() => setFabHidden(false), 1200) // reappear once scrolling stops
+    }
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => { clearTimeout(timer); window.removeEventListener("scroll", onScroll) }
+  }, [])
 
   const hasDocument = !!document
 
@@ -116,21 +138,25 @@ export default function CompanionDock() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 px-4 py-3 rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg  transition-opacity"
+          className={`fixed bottom-[calc(12.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-28 md:right-6 z-[var(--z-dock)] flex size-12 items-center justify-center md:size-auto md:px-4 md:py-3 rounded-full md:rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg transition-[opacity,transform] ${fabHidden ? "pointer-events-none translate-y-4 opacity-0" : ""}`}
         >
-          Assistant de cours
+          <svg aria-hidden="true" className="size-6 md:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg>
+          <span className="max-md:sr-only">Assistant de cours</span>
         </button>
       )}
 
       <div
+        role="dialog"
+        aria-label="Assistant de cours"
+        inert={!open}
         className={cx(
-          "fixed bottom-44 right-4 md:bottom-28 md:right-6 z-40 w-[min(360px,calc(100vw-2rem))] max-h-[min(85vh,640px)] rounded-3xl border border-border bg-surface backdrop-blur-xl shadow-2xl  transition-[transform,opacity] duration-300",
+          "fixed bottom-[calc(12.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-28 md:right-6 z-[var(--z-dock)] w-[min(360px,calc(100vw-2rem))] max-h-[calc(100dvh-15rem)] md:max-h-[min(70vh,640px)] overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl  transition-[transform,opacity] duration-300",
           open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
         )}
       >
-        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-border">
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-5 pt-5 pb-3 border-b border-border">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-primary mb-1">Assistant IA</div>
+            <div className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-primary mb-1">Assistant IA</div>
             <div className="text-foreground text-base font-medium leading-snug">{headerTitle}</div>
             {document?.filePath && (
               <div className="text-[11px] text-muted mt-1 truncate" title={document.filePath}>
@@ -139,7 +165,7 @@ export default function CompanionDock() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className={cx("inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px]", hasDocument ? "bg-tint text-success" : "bg-border text-muted")}>
+            <span className={cx("inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2 py-1 rounded-full text-[11px]", hasDocument ? "bg-tint text-success" : "bg-border text-muted")}>
               <span className="w-2 h-2 rounded-full bg-current" />
               {hasDocument ? "Document associé" : "Aucun document"}
             </span>
@@ -251,13 +277,13 @@ export default function CompanionDock() {
               }}
               placeholder={hasDocument ? "Pose une question sur ce document…" : "Ouvre un document pour commencer"}
               disabled={disabled && !hasDocument}
-              className="flex-1 px-4 py-2.5 rounded-2xl bg-surface border border-border text-sm text-foreground placeholder-muted focus:border-primary focus:ring-2 focus:ring-primary disabled:opacity-50"
+              className="min-w-0 flex-1 px-4 py-2.5 rounded-2xl bg-surface border border-border text-sm text-foreground placeholder-muted focus:border-primary focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
             <button
               type="button"
               onClick={() => send()}
               disabled={disabled || !input.trim()}
-              className="px-4 py-2.5 rounded-2xl bg-primary hover:bg-primary text-on-primary text-sm font-medium transition-opacity disabled:opacity-50"
+              className="shrink-0 px-4 py-2.5 rounded-2xl bg-primary hover:bg-primary text-on-primary text-sm font-medium transition-opacity disabled:opacity-50"
             >
               Envoyer
             </button>

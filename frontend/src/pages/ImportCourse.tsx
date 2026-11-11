@@ -1,4 +1,5 @@
 import { Button } from '../components/ui/Button'
+import { LoadingState } from '../components/ui/LoadingState'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -54,7 +55,7 @@ export default function ImportCourse() {
         <button className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Actualiser</button>
       </div>}
       {busy && !error && <Mascotte humeur="pensive" taille={112} />}
-      {busy && <p role="status">{profile ? 'Préparation du chapitre… Cela peut prendre un moment.' : 'Chargement…'}</p>}
+      {busy && <LoadingState label={profile ? 'Préparation du chapitre… Cela peut prendre un moment.' : 'On prépare ton import…'} />}
       {quota && <p className="text-sm text-muted" aria-live="polite">
         {quota.remaining === 0 ? `Tu as atteint tes ${revisionPolicy.dailyImports} imports du jour.` : `${quota.remaining} import${quota.remaining > 1 ? 's' : ''} restant${quota.remaining > 1 ? 's' : ''} aujourd’hui.`}
         {' '}Recharge le {new Date(quota.resetsAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} (heure de ton appareil).
@@ -70,7 +71,7 @@ export default function ImportCourse() {
         <button className="block text-sm text-muted underline" disabled={busy} onClick={() => void run(async () => { await revisionAPI.deleteChapter(imported.id); setImported(undefined) })}>Supprimer ce chapitre</button>
       </section> : profile && <form onSubmit={submit} aria-busy={busy}>
         <fieldset disabled={busy || quota?.remaining === 0} className="space-y-4 rounded-2xl border border-border p-6 disabled:opacity-60">
-          <legend className="px-2 text-lg text-foreground">Un cours, un chapitre prêt à réviser</legend>
+          <legend className="px-2 text-base text-foreground">Cours à réviser</legend>
           <label className="block space-y-2"><span>Matière</span><select className={field} required value={subject} onChange={event => setSubject(event.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
           <label className="block space-y-2"><span>Titre du chapitre</span><input className={field} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. : Les fractions" /></label>
           <label className="block space-y-2"><span>Source du cours</span><select className={field} value={mode} onChange={event => { setMode(event.target.value); setFile(undefined) }}><option value="text">Coller du texte</option><option value="file">Choisir un fichier</option><option value="photo">Photo de mon cahier</option></select></label>

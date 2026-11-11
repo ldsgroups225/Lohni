@@ -18,7 +18,7 @@ export default function TopicBar({
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Choisis un sujet pour créer un quiz (ex. : les fractions)"
+          placeholder="Sujet du quiz (ex. : les fractions)"
           className="flex-1 bg-surface border border-border rounded-3xl px-5 py-3 text-foreground placeholder-muted outline-none"
         />
         <button

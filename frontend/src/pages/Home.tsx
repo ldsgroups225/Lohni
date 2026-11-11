@@ -1,4 +1,5 @@
 import { ButtonLink } from '../components/ui/Button'
+import { LoadingState } from '../components/ui/LoadingState'
 import { humeurSerie, listDelay } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { FlameIcon } from '../components/ui/NavigationIcons'
@@ -57,23 +58,23 @@ export default function Home() {
     <div className="mx-auto max-w-xl space-y-6">
       {(!home || loading || error) && <MobileHeader />}
       {(!home || loading || error) && <header className="sr-only lg:not-sr-only"><h1 className="text-2xl font-semibold text-foreground">Lohni</h1></header>}
-      {loading ? <p role="status">Chargement de ta journée…</p> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
+      {loading ? <LoadingState label="On prépare ta journée…" /> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
         <Mascotte humeur="désolée" taille={96} /><p>{error}</p><button className="underline" onClick={() => setAttempt(value => value + 1)}>Réessayer</button>
       </div> : !home ? <Onboarding /> : <>
         <header className="flex items-center gap-3">
-          <Mascotte humeur={humeurSerie(progress?.streak, progress?.streakStarted, home.state === 'done')} taille={92} />
+          <Mascotte humeur={humeurSerie(progress?.streak, progress?.streakStarted, home.state === 'done')} taille={72} />
           <div><h1 className="text-2xl font-bold">Salut !</h1><p className="text-muted">{home.cardCount} carte{home.cardCount > 1 ? 's' : ''} t’attend{home.cardCount > 1 ? 'ent' : ''} aujourd’hui.</p></div>
         </header>
-        <p>{curriculum.find(item => item.schoolClass === home.profile.schoolClass)?.label ?? home.profile.schoolClass}{home.profile.series ? ` · Série ${home.profile.series}` : ''}</p>
-        <div className="flex flex-wrap gap-4">
-          {progress && <p className="flex w-full items-center gap-3 rounded-2xl bg-tint px-4 py-3"><span className="text-primary"><FlameIcon /></span><strong className="text-2xl"><AnimatedNumber value={progress.streak} from={streakFrom} /></strong> jour{progress.streak > 1 ? 's' : ''} de série</p>}
-          {home.daysUntilExam !== null && <p className="rounded-xl border border-border px-4 py-3">{home.daysUntilExam > 0 ? `Examen dans ${home.daysUntilExam} jour${home.daysUntilExam > 1 ? 's' : ''}` : 'Date d’examen atteinte'}</p>}
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <p className="rounded-full border border-border px-3 py-1.5">{curriculum.find(item => item.schoolClass === home.profile.schoolClass)?.label ?? home.profile.schoolClass}{home.profile.series ? ` · Série ${home.profile.series}` : ''}</p>
+          {progress && <p className="flex items-center gap-1.5 rounded-full bg-tint px-3 py-1.5"><span className="text-primary"><FlameIcon /></span><strong className="text-base"><AnimatedNumber value={progress.streak} from={streakFrom} /></strong> jour{progress.streak > 1 ? 's' : ''} de série</p>}
+          {home.daysUntilExam !== null && <p className="rounded-full border border-border px-3 py-1.5">{home.daysUntilExam > 0 ? `Examen dans ${home.daysUntilExam} jour${home.daysUntilExam > 1 ? 's' : ''}` : 'Date d’examen atteinte'}</p>}
         </div>
-        <Card className="space-y-5 p-6">
+        <Card className="space-y-4 p-5">
           <h2 className="text-2xl font-semibold text-foreground">{home.state === 'done' ? 'Session du jour terminée !' : home.state === 'empty' ? 'Aucune carte à réviser' : 'Session du jour'}</h2>
           {home.state === 'ready' ? <>
             <p>{home.cardCount} carte{home.cardCount > 1 ? 's' : ''} · environ {home.estimatedMinutes} min</p>
-            <ButtonLink to="/revision" className="block w-full rounded-2xl p-5 text-xl">Commencer</ButtonLink>
+            <ButtonLink to="/revision" className="block w-full rounded-2xl p-5 text-xl">{home.started ? 'Continuer' : 'Commencer'}</ButtonLink>
           </> : home.state === 'done' ? <>
             <p>Ta journée est faite. Reviens demain pour entretenir ce que tu as appris.</p>
             {home.moreCards && <Link to="/revision" className="block underline">Continuer les cartes restantes</Link>}
@@ -87,7 +88,7 @@ export default function Home() {
           const seen = own?.reduce((sum, chapter) => sum + chapter.seenCards, 0)
           const total = own?.reduce((sum, chapter) => sum + chapter.cards.length, 0)
           return <article key={subject.subjectId} style={{ animationDelay: listDelay(index) }} className="motion-list rounded-xl border border-border p-4">
-          <div className="mb-3 flex justify-between gap-3"><h3>{subject.name}</h3><span>{subject.mastery === null ? 'Pas encore révisée' : <>{subject.status} · <AnimatedNumber value={Math.round(subject.mastery)} /> %</>}</span></div>
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><h3>{subject.name}</h3><span className="whitespace-nowrap">{subject.mastery === null ? 'Pas encore révisée' : <>{subject.status} · <AnimatedNumber value={Math.round(subject.mastery)} /> %</>}</span></div>
           {seen !== undefined && <p className="mb-2 text-sm text-muted">{seen} carte{seen > 1 ? 's' : ''} vue{seen > 1 ? 's' : ''} sur {total}</p>}
           <Progress className="mastery-progress w-full" max={100} value={subject.mastery ?? 0} aria-label={`Maîtrise en ${subject.name}`} />
         </article>})}</section>}

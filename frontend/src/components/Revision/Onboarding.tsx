@@ -1,7 +1,7 @@
 import Mascotte from '../Mascotte/Mascotte'
 import { Button } from '../ui/Button'
 import { Progress } from '../ui/Progress'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import curriculum from '../../data/curriculum-ci.json'
 import { revisionAPI, revisionPolicy } from '../../lib/api'
@@ -19,6 +19,8 @@ export default function Onboarding() {
   const [title, setTitle] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  // Masque la navigation principale (index.css) tant que l'élève n'a pas de profil.
+  useEffect(() => { document.body.dataset.onboarding = ''; return () => { delete document.body.dataset.onboarding } }, [])
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
   async function submit(event: FormEvent) {

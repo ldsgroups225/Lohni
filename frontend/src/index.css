@@ -24,10 +24,18 @@
   --duration-fast: 150ms;
   --duration-normal: 200ms;
   --duration-slow: 250ms;
+  --duration-accordion: 380ms;
 }
 
 :root {
   color-scheme: light dark;
+  /* Stacking scale: content < sticky 10-30 < dock 40 < popup 45 < nav 50 < toast 55 < modal 60 < feedback 70 */
+  --z-dock: 40;
+  --z-popup: 45;
+  --z-nav: 50;
+  --z-toast: 55;
+  --z-modal: 60;
+  --z-feedback: 70;
   --lohni-background: #fff8f1;
   --lohni-surface: #ffffff;
   --lohni-foreground: #2a1d17;
@@ -74,7 +82,7 @@
   transition: transform var(--duration-fast) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni);
 }
 .ui-button:active:not(:disabled) { transform: scale(0.98); }
-.ui-button:disabled { cursor: not-allowed; border: 2px dashed currentColor; }
+.ui-button:disabled { cursor: not-allowed; opacity: 0.55; }
 .ui-button:focus-visible { outline: 3px solid var(--color-secondary); outline-offset: 3px; }
 .ui-card { background: var(--color-surface); color: var(--color-foreground); border: 1px solid var(--color-border); border-radius: var(--radius-card); }
 .ui-progress { appearance: none; width: 100%; height: 0.5rem; border: 0; border-radius: 9999px; overflow: hidden; background: var(--color-border); color: var(--color-primary); }
@@ -198,9 +206,50 @@ body {
 .motion-enter, .motion-list, .loop-screen [role="alert"], .loop-screen [role="status"] { animation: lohni-enter var(--duration-normal) var(--ease-lohni) backwards; }
 .motion-flip { animation: lohni-flip var(--duration-normal) var(--ease-lohni); transform-origin: center; }
 .motion-celebrate { display: inline-flex; animation: lohni-celebrate var(--duration-slow) var(--ease-celebration) both; }
-.motion-feedback { position: fixed; z-index: 60; inset: auto 1rem 1rem auto; pointer-events: none; border-radius: var(--radius-control); padding: .6rem 1rem; color: var(--color-foreground); background: var(--color-tint); animation: lohni-feedback var(--duration-slow) var(--ease-lohni) both; }
+.motion-feedback { position: fixed; z-index: var(--z-feedback); max-width: calc(100vw - 2rem); inset: auto 1rem calc(5rem + env(safe-area-inset-bottom)) auto; pointer-events: none; border-radius: var(--radius-control); padding: .6rem 1rem; color: var(--color-foreground); background: var(--color-tint); animation: lohni-feedback var(--duration-slow) var(--ease-lohni) both; }
 .motion-progress { height: .5rem; border-radius: 9999px; overflow: hidden; background: var(--color-border); }
 .motion-progress > span { display: block; height: 100%; background: var(--color-primary); transform-origin: left; transition: transform var(--duration-normal) var(--ease-lohni); }
-.loop-screen button, .loop-screen a, .loop-screen .ui-card, .loop-screen article { transition: transform var(--duration-fast) var(--ease-lohni); }
-.loop-screen button:active:not(:disabled), .loop-screen a:active, .loop-screen .ui-card:active, .loop-screen article:active { transform: scale(.98); }
+.loop-screen button, .loop-screen a { transition: transform var(--duration-fast) var(--ease-lohni); }
+/* Press feedback only on controls: scaling a whole card made accordions inside it jump on tap. */
+.loop-screen button:active:not(:disabled), .loop-screen a:active { transform: scale(.98); }
 .navigation-indicator { position: absolute; left: 0; top: 0; opacity: 0; pointer-events: none; border-radius: var(--radius-control); background: var(--color-tint); transition: transform var(--duration-normal) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni); }
+
+body[data-onboarding] nav[aria-label="Navigation principale"] { display: none; }
+
+/* Native feel: hidden scrollbars, no tap flash, no UI text selection (content stays selectable) */
+html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; overscroll-behavior-y: none; }
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
+button, a, summary, nav, img, svg, label, [role="tab"], [role="button"] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+img, svg { -webkit-user-drag: none; }
+@media (max-width: 767px) { input, textarea, select { font-size: 16px; } }
+
+/* Smooth interactions everywhere */
+button, a, summary, input, select, textarea { transition: background-color var(--duration-fast) var(--ease-lohni), color var(--duration-fast) var(--ease-lohni), border-color var(--duration-fast) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni), transform var(--duration-fast) var(--ease-lohni); }
+button:active:not(:disabled) { transform: scale(.97); }
+.ui-card, article { transition: border-color var(--duration-fast) var(--ease-lohni), background-color var(--duration-fast) var(--ease-lohni); }
+
+/* Accordions: animated height, rotating chevron */
+details { interpolate-size: allow-keywords; }
+details::details-content { block-size: 0; overflow: hidden; transition: block-size var(--duration-slow) var(--ease-lohni), content-visibility var(--duration-slow) allow-discrete; }
+details[open]::details-content { block-size: auto; }
+summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: ""; flex: none; width: .55rem; height: .55rem; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform var(--duration-accordion) var(--ease-lohni); opacity: .7; }
+details[open] > summary::after { transform: rotate(225deg) translateY(-2px); }
+
+/* Native controls follow the brand color */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--color-primary); }
+
+/* Loading screen (see components/ui/LoadingState.tsx) */
+.ui-glow { position: absolute; width: 9rem; height: 9rem; border-radius: 9999px; background: radial-gradient(circle, var(--color-primary) 0%, transparent 70%); opacity: .22; animation: lohni-glow 2.4s var(--ease-lohni) infinite; }
+.ui-loadbar { height: .5rem; overflow: hidden; border-radius: 9999px; background: var(--color-border); }
+.ui-loadbar > span { display: block; width: 40%; height: 100%; border-radius: inherit; background: var(--color-primary); animation: lohni-load 1.3s var(--ease-lohni) infinite; }
+.ui-pip { width: .55rem; height: .55rem; border-radius: 9999px; background: var(--color-primary); animation: lohni-pip 1.2s var(--ease-lohni) infinite; }
+@keyframes lohni-glow { 0%, 100% { transform: scale(.85); opacity: .14; } 50% { transform: scale(1.1); opacity: .3; } }
+@keyframes lohni-load { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@keyframes lohni-pip { 0%, 100% { transform: scale(.7); opacity: .35; } 50% { transform: scale(1.15); opacity: 1; } }
+
+/* Accordion content fades with the height transition */
+details::details-content { opacity: 0; transition: block-size var(--duration-accordion) var(--ease-lohni), opacity var(--duration-accordion) var(--ease-lohni), content-visibility var(--duration-accordion) allow-discrete; }
+details[open]::details-content { opacity: 1; }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { confirmDialog } from "../lib/confirm";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 type DebateMessage = {
@@ -46,6 +47,13 @@ export default function Debate() {
     const [isDebateEnded, setIsDebateEnded] = useState(false);
     const [analysis, setAnalysis] = useState<DebateAnalysis | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    // Escape closes the analysis dialog, same as its « Fermer » button (the debate itself stays ended).
+    useEffect(() => {
+        if (!isDebateEnded || !analysis) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setIsDebateEnded(false); setAnalysis(null); } };
+        document.addEventListener("keydown", onKey);
+        return () => document.removeEventListener("keydown", onKey);
+    }, [isDebateEnded, analysis]);
 
     const wsRef = useRef<WebSocket | null>(null);
     const analysisWsRef = useRef<WebSocket | null>(null);
@@ -232,7 +240,7 @@ export default function Debate() {
     const handleSurrender = async () => {
         if (!debateId || isDebateEnded) return;
 
-        if (!confirm("Veux-tu terminer ce débat ?")) return;
+        if (!(await confirmDialog("Veux-tu terminer ce débat ?", "Terminer"))) return;
 
         try {
             const response = await fetch(
@@ -357,7 +365,7 @@ export default function Debate() {
                                 type="text"
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}
-                                placeholder="Ex. : les avantages et les limites de l’IA à l’école"
+                                placeholder="Ex. : l’IA à l’école"
                                 className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                                 onKeyDown={(e) => e.key === "Enter" && startDebate()}
                             />
@@ -583,7 +591,7 @@ export default function Debate() {
             </div>
 
             {isDebateEnded && analysis && (
-                <div className="fixed inset-0 bg-background backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-[fadeIn_0.3s_ease-in-out]">
+                <div className="fixed inset-0 bg-background flex items-center justify-center p-4 z-[var(--z-modal)] animate-[fadeIn_0.3s_ease-in-out]" role="dialog" aria-modal="true">
                     <div className="bg-surface border border-border rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto custom-scroll shadow-2xl animate-[scaleIn_0.3s_ease-out]">
                         <div className="p-8 space-y-6">
                             {/* Header */}
@@ -712,7 +720,7 @@ export default function Debate() {
             )}
 
             {isAnalyzing && !analysis && (
-                <div className="fixed inset-0 bg-background backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-background flex items-center justify-center z-[var(--z-modal)]" role="dialog" aria-modal="true">
                     <div className="bg-surface border border-border rounded-2xl p-8 text-center space-y-4 min-w-[300px]">
                         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
                         <p className="text-foreground font-semibold">Analyse du débat…</p>
@@ -724,7 +732,7 @@ export default function Debate() {
             )}
 
             {error && (
-                <div className="fixed bottom-20 right-6 bg-tint border border-primary rounded-xl p-4 text-foreground shadow-lg max-w-md">
+                <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-4 right-4 z-[var(--z-toast)] bg-tint border border-primary rounded-xl p-4 text-foreground shadow-lg md:left-auto md:right-6 md:max-w-md">
                     <div className="flex items-start gap-3">
                         <span className="text-xl">⚠️</span>
                         <div className="flex-1">{error}</div>
