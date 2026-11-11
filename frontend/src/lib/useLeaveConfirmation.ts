@@ -3,7 +3,7 @@ import { useBlocker } from 'react-router-dom'
 import { confirmDialog } from './confirm'
 
 export function useLeaveConfirmation(active: boolean, message: string) {
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => active && currentLocation.pathname !== nextLocation.pathname)
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => active && !nextLocation.state?.allowLeave && currentLocation.pathname !== nextLocation.pathname)
   useEffect(() => {
     if (blocker.state !== 'blocked') return
     let current = true

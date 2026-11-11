@@ -176,7 +176,7 @@ export default function Revision() {
       if (!chapter) throw new Error('Ce chapitre n’est plus disponible.')
       const q = `Explique-moi cette carte que je n’ai pas comprise, en français et à mon niveau.\nClasse : ${profile.schoolClass}${profile.series ? `, série ${profile.series}` : ''}.\nMatière : ${chapter.subject}.\nChapitre : ${chapter.title}.\nQuestion : ${missed.question}\n${missed.options ? `Choix : ${missed.options.join(' ; ')}\n` : ''}Réponse : ${missed.answer}`
       const result = await chatJSON({ q })
-      navigate(`/chat?chatId=${encodeURIComponent(result.chatId)}`, { state: { q, revisionSubject: chapter.subject, revisionTitle: chapter.title } })
+      navigate(`/chat?chatId=${encodeURIComponent(result.chatId)}`, { state: { allowLeave: true, q, revisionSubject: chapter.subject, revisionTitle: chapter.title } })
     })
   }
 

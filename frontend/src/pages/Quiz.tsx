@@ -23,6 +23,7 @@ export default function Quiz() {
   const navigate = useNavigate();
   const location = useLocation() as any;
 
+  const cacheKey = location.state?.quizCacheKey || location.key;
   const passedTopic = (location?.state && location.state.topic) || "";
   const initialTopic = search.get("topic") || passedTopic || "";
 
@@ -54,11 +55,11 @@ export default function Quiz() {
     if (!initialTopic) return;
     if (startedTopicRef.current === initialTopic) { startedTopicRef.current = null; return; }
     try {
-      const cached = sessionStorage.getItem(`quiz:${initialTopic}`);
+      const cached = sessionStorage.getItem(`quiz:${cacheKey}:${initialTopic}`);
       if (cached) { setQs(JSON.parse(cached)); setTopic(initialTopic); return; }
     } catch { /* Le quiz reste utilisable si le stockage est indisponible. */ }
     start(initialTopic);
-  }, [initialTopic]);
+  }, [initialTopic, cacheKey]);
 
   function resetQuestionState() {
     setIdx(0);
@@ -88,7 +89,7 @@ export default function Quiz() {
             correct: typeof q.correct === "number" ? Math.max(0, q.correct - 1) : 0
           }));
           setQs(arr);
-          try { sessionStorage.setItem(`quiz:${trimmed}`, JSON.stringify(arr)); } catch { /* Le stockage est facultatif. */ }
+          try { sessionStorage.setItem(`quiz:${cacheKey}:${trimmed}`, JSON.stringify(arr)); } catch { /* Le stockage est facultatif. */ }
           resetQuestionState();
           setConnecting(false);
         }
@@ -102,7 +103,7 @@ export default function Quiz() {
         if (initialTopic !== trimmed) startedTopicRef.current = trimmed;
         navigate(`/quiz?topic=${encodeURIComponent(trimmed)}`, {
           replace: true,
-          state: { topic: trimmed },
+          state: { topic: trimmed, quizCacheKey: cacheKey },
         });
       }
     } catch {

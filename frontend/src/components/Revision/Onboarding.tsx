@@ -1,16 +1,18 @@
 import Mascotte from '../Mascotte/Mascotte'
 import { Button } from '../ui/Button'
 import { Progress } from '../ui/Progress'
-import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import curriculum from '../../data/curriculum-ci.json'
 import { revisionAPI, revisionPolicy } from '../../lib/api'
 
 export default function Onboarding() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [search, setSearch] = useSearchParams()
+  const depth = typeof location.state?.onboardingDepth === 'number' ? location.state.onboardingDepth : 0
   const step = Math.min(4, Math.max(1, Number(search.get('etape')) || 1))
-  const setStep = (next: number) => { const params = new URLSearchParams(search); params.set('etape', String(next)); setSearch(params) }
+  const setStep = (next: number) => { const params = new URLSearchParams(search); params.set('etape', String(next)); setSearch(params, { state: { ...location.state, onboardingDepth: depth + 1 } }) }
   const [schoolClass, setSchoolClass] = useState('3e')
   const [series, setSeries] = useState('')
   const entry = curriculum.find(item => item.schoolClass === schoolClass)!
@@ -19,6 +21,12 @@ export default function Onboarding() {
   const [examDate, setExamDate] = useState('')
   const [subject, setSubject] = useState('Mathématiques')
   const [title, setTitle] = useState('')
+  const finishing = useRef(false)
+  useEffect(() => {
+    if (!finishing.current || depth) return
+    finishing.current = false
+    void (async () => { await navigate('/', { replace: true }); await navigate('/revision') })()
+  }, [location.key, depth, navigate])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   // Masque la navigation principale (index.css) tant que l'élève n'a pas de profil.
@@ -37,7 +45,9 @@ export default function Onboarding() {
     try {
       await revisionAPI.saveProfile({ schoolClass, series: series || undefined, subjects, examDate: examDate || undefined })
       await revisionAPI.generateChapter({ subject, title: title.trim() })
-      navigate('/revision', { replace: true })
+      finishing.current = true
+      if (depth) void navigate(-depth)
+      else void navigate('/', { replace: true })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Impossible de préparer tes cartes. Réessaie.')
     } finally { setBusy(false) }

@@ -4,8 +4,8 @@ import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 vi.mock('../lib/api', () => ({
-  revisionAPI: { profile: async () => ({ subjects: ['Mathématiques'] }), session: async () => ({ id: '1', complete: false, position: 0, cards: [{ id: '1', kind: 'basic', question: 'Question ?', answer: 'Oui' }] }) },
-  revisionPolicy: {}, revisionSyncStatus: () => ({ online: true, pending: 0 }), syncRevisionAnswers: () => {}, chatJSON: () => {},
+  revisionAPI: { profile: async () => ({ schoolClass: '3e', subjects: ['Mathématiques'] }), session: async () => ({ id: '1', complete: false, position: 0, cards: [{ id: '1', chapterId: 'c', kind: 'basic', question: 'Question ?', answer: 'Oui' }, { id: '2', chapterId: 'c', kind: 'basic', question: 'Autre ?', answer: 'Oui' }] }), answer: async () => ({ id: '1', complete: false, position: 1, cards: [{ id: '1', chapterId: 'c', kind: 'basic', question: 'Question ?', answer: 'Oui' }, { id: '2', chapterId: 'c', kind: 'basic', question: 'Autre ?', answer: 'Oui' }] }), chapters: async () => [{ id: 'c', subject: 'Mathématiques', title: 'Fractions' }] },
+  revisionPolicy: {}, revisionSyncStatus: () => ({ online: true, pending: 0 }), syncRevisionAnswers: () => {}, chatJSON: async () => ({ chatId: "1" }),
 }))
 import Revision from './Revision'
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -30,5 +30,19 @@ test('le menu se ferme au retour et la sortie de session demande confirmation', 
     await act(async () => { await router.navigate(-1) })
     await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')!.click())
     expect(host.textContent).toContain('Accueil')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
+})
+
+test('expliquer une carte ratée ouvre le tuteur sans confirmation de sortie', async () => {
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/revision', element: <Revision /> }, { path: '/chat', element: <p>Tuteur ouvert</p> }], { initialEntries: ['/revision'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => host.querySelector<HTMLElement>('[aria-label="Question"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })))
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Je ne savais pas')!.click())
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Explique-moi')!.click())
+    expect(host.textContent).toContain('Tuteur ouvert')
+    expect(document.querySelector('dialog')).toBeNull()
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
 })
