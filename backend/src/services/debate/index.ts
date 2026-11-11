@@ -120,8 +120,9 @@ Présente des arguments solides et logiques, étayés d’exemples et de preuves
     const response = await llm.call(messages);
     const fullResponse = toText(response).trim();
 
-    if (fullResponse.startsWith("[CONCEDE]")) {
-        const concedeReason = fullResponse.replace("[CONCEDE]", "").trim();
+    const concession = fullResponse.match(/^[\s«»“”"']*\[\s*CONCEDE\s*\][\s«»“”"']*/i);
+    if (concession) {
+        const concedeReason = fullResponse.slice(concession[0].length).trim();
         session.status = "ai_conceded";
         session.winner = "user";
         await db.set(`debate:session:${sessionId}`, session);
@@ -207,7 +208,7 @@ Donne une analyse complète sous la forme exacte de cet objet JSON, sans Markdow
   "keyMoments": ["moments clés"],
   "overallAssessment": "bilan du débat"
 }
-Garde "winner" tel quel ("user", "ai" ou "draw"). Rédige toutes les autres valeurs en français, en t’adressant à l’élève avec « tu » et en appelant l’IA « l’IA ».`;
+Garde "winner" tel quel ("user", "ai" ou "draw"). Rédige toutes les autres valeurs en français, sans traductions anglaises ni termes techniques sur l’état du débat, en t’adressant à l’élève avec « tu » et en appelant l’IA « l’IA ».`;
 
     const messages = [
         { role: "system" as const, content: "Tu es juge de débat. Donne une analyse juste et équilibrée, uniquement en JSON valide." },

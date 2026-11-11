@@ -4,9 +4,9 @@ import { createRoot } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 
-const stream = vi.hoisted(() => ({ emit: (_event: unknown) => {} }))
+const stream = vi.hoisted(() => ({ emit: (_event: unknown) => {}, fail: false }))
 vi.mock('../../lib/api', () => ({
-  podcastStart: async () => ({ pid: '1' }),
+  podcastStart: async () => { if (stream.fail) throw new Error('Failed to fetch'); return { pid: '1' } },
   connectPodcastStream: (_id: string, emit: (event: unknown) => void) => { stream.emit = emit; return { close: () => {} } },
 }))
 import PodcastGenerator from './PodcastGenerator'
@@ -26,4 +26,31 @@ test('un podcast terminé ne devient pas une erreur après le délai maximal', a
   } finally {
     act(() => root.unmount()); host.remove(); vi.useRealTimers()
   }
+})
+
+
+test('une panne du fournisseur est expliquée et permet de réessayer', async () => {
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<MemoryRouter initialEntries={[{ pathname: '/tools', state: { podcastPid: '1', podcastTopic: 'Fractions' } }]}><PodcastGenerator /></MemoryRouter>))
+    await act(async () => { stream.emit({ type: 'error', error: 'provider HTTP 403' }) })
+    expect(host.textContent).toContain('Impossible de créer le podcast. Réessaie.')
+    expect(host.textContent).not.toContain('403')
+    expect(host.querySelector('button')?.disabled).toBe(false)
+  } finally { act(() => root.unmount()); host.remove() }
+})
+
+test('une panne réseau est expliquée en français', async () => {
+  stream.fail = true
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<MemoryRouter initialEntries={[{ pathname: '/tools', state: { podcastPid: '1', podcastTopic: 'Fractions' } }]}><PodcastGenerator /></MemoryRouter>))
+    await act(async () => { stream.emit({ type: 'error', error: 'stream_error' }) })
+    await act(async () => { host.querySelector('button')!.click() })
+    expect(host.textContent).toContain('Impossible de créer le podcast. Réessaie.')
+    expect(host.textContent).not.toContain('Failed to fetch')
+    expect(host.querySelector('button')?.disabled).toBe(false)
+  } finally { stream.fail = false; act(() => root.unmount()); host.remove() }
 })

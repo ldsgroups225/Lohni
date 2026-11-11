@@ -279,13 +279,23 @@ export async function startExam(examId: string) {
 export function connectExamStream(runId: string, onEvent: (ev: ExamEvent) => void) {
   const url = wsURL(`/ws/exams?runId=${encodeURIComponent(runId)}`)
   const ws = new WebSocket(url)
+  let finished = false
+  const fail = () => {
+    if (!finished) {
+      finished = true
+      onEvent({ type: "error", error: "stream_error" })
+    }
+  }
   ws.onmessage = (m) => {
     try {
-      onEvent(JSON.parse(m.data as string) as ExamEvent)
+      const event = JSON.parse(m.data as string) as ExamEvent
+      if (event.type === "done" || event.type === "error") finished = true
+      onEvent(event)
     } catch { }
   }
-  ws.onerror = () => onEvent({ type: "error", error: "stream_error" })
-  return { ws, close: () => { try { ws.close() } catch { } } }
+  ws.onerror = fail
+  ws.onclose = fail
+  return { ws, close: () => { finished = true; try { ws.close() } catch { } } }
 }
 
 export async function smartnotesStart(input: { topic?: string; notes?: string; filePath?: string }) {

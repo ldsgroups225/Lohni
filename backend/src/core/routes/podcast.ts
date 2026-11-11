@@ -21,7 +21,8 @@ async function startJobIfReady(pid: string) {
     try {
       await job()
     } catch (err) {
-      emit(pid, { type: "error", error: String(err) })
+      console.error("[Podcast] Échec de création :", err)
+      emit(pid, { type: "error", error: "Impossible de créer le podcast. Réessaie." })
     }
   }
 }
@@ -99,7 +100,8 @@ export function podcastRoutes(app: any) {
           
           emit(pid, { type: "done" })
         } catch (e: any) {
-          emit(pid, { type: "error", error: e?.message || "failed" })
+          console.error("[Podcast] Échec de création :", e)
+          emit(pid, { type: "error", error: "Impossible de créer le podcast. Réessaie." })
         }
       }
       

@@ -45,7 +45,7 @@ export default function PodcastGenerator() {
         }
         if (ev.type === "error") {
           clearTimeout(timeout)
-          setStatus(`Erreur : ${ev.error}`)
+          setStatus("Impossible de créer le podcast. Réessaie.")
           close()
           setBusy(false)
         }
@@ -104,7 +104,7 @@ export default function PodcastGenerator() {
         }
         if (ev.type === "error") {
           clearTimeout(timeout)
-          setStatus(`Erreur : ${ev.error}`)
+          setStatus("Impossible de créer le podcast. Réessaie.")
           close()
           setBusy(false)
         }
@@ -123,8 +123,8 @@ export default function PodcastGenerator() {
       }
 
       return { close: closeWithCleanup }
-    } catch (e: unknown) {
-      setStatus((e as Error).message || "Échec")
+    } catch {
+      setStatus("Impossible de créer le podcast. Réessaie.")
       setBusy(false)
     }
   }

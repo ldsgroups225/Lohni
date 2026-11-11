@@ -329,11 +329,12 @@ export default function Chat() {
                 }}
                 onCreatePodcast={async () => {
                   try {
+                    setError("");
                     const topicContent = latestAssistantContent || topic || "Créé depuis le Tuteur";
                     const response = await podcastStart({ topic: topicContent });
                     navigate("/tools", { state: { podcastPid: response.pid, podcastTopic: topicContent } });
-                  } catch (error) {
-                    console.error("Failed to create podcast:", error);
+                  } catch {
+                    setError("Impossible de créer le podcast. Réessaie.");
                   }
                 }}
               />
