@@ -423,7 +423,7 @@ export default function Debate() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] md:h-screen w-full md:pl-28 bg-background text-foreground">
+        <div className="flex flex-col h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] md:h-dvh w-full md:pl-28 bg-background text-foreground">
             <div className="flex-shrink-0 border-b border-border bg-surface backdrop-blur-sm">
                 <div className="px-6 py-4">
                     <div className="flex items-center justify-between">
