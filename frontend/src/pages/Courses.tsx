@@ -1,20 +1,28 @@
 import { usePersistentDetails } from '../lib/usePersistentDetails'
-import { cachedDevice, currentRevisionCacheVersion } from '../lib/cachedDevice'
+import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 import { Button, ButtonLink } from '../components/ui/Button'
-import { LoadingState } from '../components/ui/LoadingState'
+import { PendingRead } from '../components/ui/PendingRead'
 import { confirmDialog } from '../lib/confirm'
 import { listDelay } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { Progress } from '../components/ui/Progress'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
 
-let cachedCourses: { device: string | null; version: number; chapters: RevisionChapter[]; progress: RevisionProgress } | null = null
+let cachedCourses: { device: string | null; version: number; day: string; chapters: RevisionChapter[]; progress: RevisionProgress } | null = null
 
 const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
+
+function DeferredDetails({ summary, children }: { summary: ReactNode; children: ReactNode }) {
+  const [opened, setOpened] = useState(false)
+  return <details onToggle={event => { if (event.currentTarget.open) setOpened(true) }}>
+    <summary className="cursor-pointer py-2 text-foreground">{summary}</summary>
+    {opened && children}
+  </details>
+}
 
 function CardEditor({ card, busy, onSave, onCancel }: {
   card: RevisionCard; busy: boolean; onSave: (value: RevisionCardInput) => void; onCancel: () => void
@@ -48,23 +56,39 @@ function CardEditor({ card, busy, onSave, onCancel }: {
 
 export default function Courses() {
   const device = cachedDevice()
-  if (cachedCourses && (cachedCourses.device !== device || cachedCourses.version !== currentRevisionCacheVersion())) cachedCourses = null
+  if (cachedCourses && (cachedCourses.device !== device || cachedCourses.day !== new Date().toDateString())) cachedCourses = null
+  const sharedChapters = revisionSnapshot<RevisionChapter[]>('/chapters')
+  const sharedProgress = revisionSnapshot<RevisionProgress>('/progress')
   const animateEntry = useRef(!cachedCourses).current
-  const [chapters, setChapters] = useState<RevisionChapter[]>(() => cachedCourses?.chapters ?? [])
-  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedCourses?.progress ?? null)
+  const [chapters, setChapters] = useState<RevisionChapter[]>(() => cachedCourses?.chapters ?? sharedChapters ?? [])
+  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedCourses?.progress ?? sharedProgress ?? null)
   const [editing, setEditing] = useState<string | null>(null)
-  const [busy, setBusy] = useState(!cachedCourses)
+  const [stale, setStale] = useState(!!cachedCourses && cachedCourses.version !== currentRevisionCacheVersion())
+  const [busy, setBusy] = useState((!cachedCourses && !sharedChapters) || stale)
   const more = usePersistentDetails('lohni-courses-more')
   const [error, setError] = useState('')
 
   async function load(isActive = () => true) {
     const requestDevice = cachedDevice()
-    const [nextChapters, nextProgress] = await Promise.all([revisionAPI.chapters(), revisionAPI.progress()])
+    const version = currentRevisionCacheVersion()
+    let nextChapters: RevisionChapter[], nextProgress: RevisionProgress
+    try { [nextChapters, nextProgress] = await Promise.all([revisionAPI.chapters(), revisionAPI.progress()]) }
+    catch (cause) {
+      if (isActive() && requestDevice && requestDevice !== cachedDevice()) {
+        cachedCourses = null; setChapters([]); setProgress(null); setBusy(true); setStale(true)
+        return load(isActive)
+      }
+      throw cause
+    }
     if (!isActive()) return
-    if (requestDevice && requestDevice !== cachedDevice()) { cachedCourses = null; setChapters([]); setProgress(null); return load(isActive) }
-    cachedCourses = { device: cachedDevice(), version: currentRevisionCacheVersion(), chapters: nextChapters, progress: nextProgress }
+    if ((requestDevice && requestDevice !== cachedDevice()) || version !== currentRevisionCacheVersion()) {
+      if (requestDevice && requestDevice !== cachedDevice()) { cachedCourses = null; setChapters([]); setProgress(null); setBusy(true); setStale(true) }
+      return load(isActive)
+    }
+    cachedCourses = { device: cachedDevice(), version: currentRevisionCacheVersion(), day: new Date().toDateString(), chapters: nextChapters, progress: nextProgress }
     setChapters(nextChapters)
     setProgress(nextProgress)
+    setStale(false)
   }
   async function run(operation: () => Promise<void>) {
     setBusy(true)
@@ -99,7 +123,7 @@ export default function Courses() {
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
         <button className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Réessayer</button>
       </div>}
-      {busy && chapters.length === 0 && !progress && <LoadingState label="On prépare tes cours…" />}
+      {busy && chapters.length === 0 && <PendingRead title="Mes cours" label="On prépare tes cours…" />}
       {!busy && !error && chapters.length === 0 && <section className="space-y-3 rounded-2xl border border-border p-6">
         <Mascotte humeur="au repos" taille={112} />
         <h2 className="text-xl text-foreground">Tes cours apparaîtront ici</h2>
@@ -119,10 +143,10 @@ export default function Courses() {
             <p>{chapter.mastery === null ? 'Aucune carte vue' : <><AnimatedNumber value={Math.round(chapter.mastery)} /> % de rappel estimé</>} · {chapter.seenCards}/{chapter.cards.length} cartes vues</p>
             <Progress className="mastery-progress w-full" value={chapter.mastery ?? 0} max={100} aria-label={`Maîtrise du chapitre ${chapter.title}`} />
             {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && <p className="text-sm text-muted">Révise au moins {Math.round(revisionPolicy.minimumSeenRatio * 100)} % des cartes pour faire évoluer la maîtrise.</p>}
-            <details><summary className="cursor-pointer py-2 text-foreground">Relire le résumé</summary><MarkdownView md={chapter.summary} /></details>
-            <details><summary className="cursor-pointer py-2 text-foreground">Voir les cartes ({chapter.cards.length})</summary>
+            <DeferredDetails summary="Relire le résumé"><MarkdownView md={chapter.summary} /></DeferredDetails>
+            <DeferredDetails summary={`Voir les cartes (${chapter.cards.length})`}>
               <div className="mt-3 space-y-4">{chapter.cards.map(card => <article key={card.id} className="space-y-3 rounded-xl border border-border p-4">
-                {editing === card.id ? <CardEditor key={card.id} card={card} busy={busy} onCancel={() => setEditing(null)} onSave={value => void run(async () => {
+                {editing === card.id ? <CardEditor key={card.id} card={card} busy={busy || stale} onCancel={() => setEditing(null)} onSave={value => void run(async () => {
                   await revisionAPI.updateCard(card.id, value)
                   setEditing(null)
                   await load()
@@ -131,15 +155,15 @@ export default function Courses() {
                   {card.kind === 'mcq' && <ol className="list-decimal space-y-1 pl-5">{card.options?.map((option, i) => <li key={i}><MarkdownView md={option} inline />{i + 1 === card.correct && <span className="text-foreground"> — Bonne réponse</span>}</li>)}</ol>}
                   <MarkdownView md={card.answer} />
                   <div className="flex flex-wrap gap-3">
-                    <Button disabled={busy} onClick={() => setEditing(card.id)}>Modifier</Button>
-                    <button type="button" className="rounded-xl border border-danger px-4 py-3 text-danger disabled:opacity-50" disabled={busy} onClick={() => {
+                    <Button disabled={busy || stale} onClick={() => setEditing(card.id)}>Modifier</Button>
+                    <button type="button" className="rounded-xl border border-danger px-4 py-3 text-danger disabled:opacity-50" disabled={busy || stale} onClick={() => {
                       void confirmDialog('Supprimer cette carte ? Elle ne sera plus proposée en révision.').then(ok => { if (ok) void run(async () => { await revisionAPI.deleteCard(card.id); await load() }) })
                     }}>Supprimer la carte</button>
                   </div>
                 </>}
               </article>)}</div>
-            </details>
-            <button className="min-h-11 py-2 text-sm text-foreground underline disabled:opacity-50" disabled={busy} onClick={() => {
+            </DeferredDetails>
+            <button className="min-h-11 py-2 text-sm text-foreground underline disabled:opacity-50" disabled={busy || stale} onClick={() => {
               void confirmDialog(`Supprimer le chapitre « ${chapter.title} » et toutes ses cartes ? Cette action est définitive.`).then(ok => { if (ok) void run(async () => {
                 await revisionAPI.deleteChapter(chapter.id)
                 setEditing(null)

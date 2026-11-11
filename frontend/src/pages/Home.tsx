@@ -1,5 +1,5 @@
 import { ButtonLink } from '../components/ui/Button'
-import { LoadingState } from '../components/ui/LoadingState'
+import { PendingRead } from '../components/ui/PendingRead'
 import { humeurSerie, listDelay } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { FlameIcon } from '../components/ui/NavigationIcons'
@@ -11,18 +11,22 @@ import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import Onboarding from '../components/Revision/Onboarding'
 import MobileHeader from '../components/MobileHeader'
-import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter } from '../lib/api'
-import { cachedDevice, currentRevisionCacheVersion } from '../lib/cachedDevice'
+import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter, type RevisionProfile } from '../lib/api'
+import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 
-let cachedHome: { device: string | null; version: number; home: RevisionHome | null; progress: RevisionProgress | null; chapters: RevisionChapter[] | null } | null = null
+let cachedHome: { device: string | null; version: number; day: string; home: RevisionHome | null; progress: RevisionProgress | null; chapters: RevisionChapter[] | null } | null = null
 
 export default function Home() {
   const device = cachedDevice()
-  if (cachedHome && (cachedHome.device !== device || cachedHome.version !== currentRevisionCacheVersion())) cachedHome = null
+  if (cachedHome && (cachedHome.device !== device || cachedHome.day !== new Date().toDateString())) cachedHome = null
   const animateEntry = useRef(!cachedHome).current
-  const [home, setHome] = useState<RevisionHome | null>(() => cachedHome?.home ?? null)
-  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedHome?.progress ?? null)
-  const [loading, setLoading] = useState(!cachedHome)
+  const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
+  const sharedHome = revisionSnapshot<RevisionHome | null>('/home')
+  const sharedProgress = revisionSnapshot<RevisionProgress>('/progress')
+  if (!cachedHome && sharedHome) cachedHome = { device, version: currentRevisionCacheVersion(), day: new Date().toDateString(), home: sharedHome, progress: sharedProgress ?? null, chapters: null }
+  const [home, setHome] = useState<RevisionHome | null>(() => (cachedHome?.home ?? sharedHome) ? { ...(cachedHome?.home ?? sharedHome)!, profile: sharedProfile ?? (cachedHome?.home ?? sharedHome)!.profile } : null)
+  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedHome?.progress ?? sharedProgress ?? null)
+  const [loading, setLoading] = useState(!cachedHome && sharedHome === undefined)
   const [error, setError] = useState('')
   const [progressError, setProgressError] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -31,29 +35,35 @@ export default function Home() {
     let active = true
     async function load() {
       const requestDevice = cachedDevice()
+      const version = currentRevisionCacheVersion()
       setError('')
       setProgressError('')
-      if (!cachedHome) setLoading(true)
+      if (!cachedHome && sharedHome === undefined) setLoading(true)
       try {
         const data = await revisionAPI.home()
         if (!active) return
-        if (requestDevice && requestDevice !== cachedDevice()) {
-          cachedHome = null; setHome(null); setProgress(null); setChapters(null); setAttempt(value => value + 1)
+        if ((requestDevice && requestDevice !== cachedDevice()) || version !== currentRevisionCacheVersion()) {
+          if (requestDevice && requestDevice !== cachedDevice()) { cachedHome = null; setHome(null); setProgress(null); setChapters(null) }
+          setAttempt(value => value + 1)
           return
         }
-        cachedHome = data ? { device: cachedDevice(), version: currentRevisionCacheVersion(), home: data, progress: cachedHome?.progress ?? null, chapters: cachedHome?.chapters ?? null } : null
+        cachedHome = data ? { device: cachedDevice(), version: currentRevisionCacheVersion(), day: new Date().toDateString(), home: data, progress: cachedHome?.progress ?? null, chapters: cachedHome?.chapters ?? null } : null
         setHome(data)
         const responseDevice = cachedDevice()
-        if (data) void revisionAPI.chapters().then(value => { if (active && responseDevice === cachedDevice()) { if (cachedHome) cachedHome.chapters = value; setChapters(value) } }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
-        if (data) void revisionAPI.progress().then(value => { if (active && responseDevice === cachedDevice()) { if (cachedHome) cachedHome.progress = value; setProgress(value) } }).catch(cause => {
+        if (data) void revisionAPI.chapters().then(value => { if (active && responseDevice === cachedDevice() && version === currentRevisionCacheVersion()) { if (cachedHome) cachedHome.chapters = value; setChapters(value) } }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
+        if (data) void revisionAPI.progress().then(value => { if (active && responseDevice === cachedDevice() && version === currentRevisionCacheVersion()) { if (cachedHome) cachedHome.progress = value; setProgress(value) } }).catch(cause => {
           if (active && !(cause instanceof Error && cause.message.startsWith('http 404'))) setProgressError('Ta progression est temporairement indisponible.')
         })
       } catch (cause) {
         if (active) {
+          if (requestDevice && requestDevice !== cachedDevice()) {
+            cachedHome = null; setHome(null); setProgress(null); setChapters(null); setLoading(true); setAttempt(value => value + 1)
+            return
+          }
           if (cachedHome) setProgressError('La mise à jour de ton accueil est temporairement indisponible.')
           else setError(cause instanceof Error ? cause.message : 'Impossible de charger l’accueil.')
         }
-      } finally { if (active) setLoading(false) }
+      } finally { if (active && (!requestDevice || requestDevice === cachedDevice())) setLoading(false) }
     }
     void load()
     return () => { active = false }
@@ -74,7 +84,7 @@ export default function Home() {
     <div className="mx-auto max-w-xl space-y-6">
       {(!home || loading || error) && <MobileHeader />}
       {(!home || loading || error) && <header className="sr-only lg:not-sr-only"><h1 className="text-2xl font-semibold text-foreground">Lohni</h1></header>}
-      {loading ? <LoadingState label="On prépare ta journée…" /> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
+      {loading ? <PendingRead title="Session du jour" label="On prépare ta journée…" /> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
         <Mascotte humeur="désolée" taille={96} /><p>{error}</p><button className="underline" onClick={() => setAttempt(value => value + 1)}>Réessayer</button>
       </div> : !home ? <Onboarding /> : <>
         <header className="flex items-center gap-3">

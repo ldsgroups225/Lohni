@@ -1,22 +1,29 @@
 import { Button } from '../components/ui/Button'
-import { LoadingState } from '../components/ui/LoadingState'
+import { PendingRead } from '../components/ui/PendingRead'
 import { humeurSerie } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import { revisionAPI, type RevisionProfile, type RevisionProgress } from '../lib/api'
-import { cachedDevice, currentRevisionCacheVersion, invalidateRevisionCache } from '../lib/cachedDevice'
+import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 
-let cachedProfile: { device: string | null; version: number; profile: RevisionProfile | null; progress: RevisionProgress } | null = null
+let cachedProfile: { device: string | null; version: number; day: string; profile: RevisionProfile | null; progress: RevisionProgress } | null = null
+
+let profileSave: Promise<RevisionProfile> | null = null
 
 export default function Profile() {
   const device = cachedDevice()
-  if (cachedProfile && (cachedProfile.device !== device || cachedProfile.version !== currentRevisionCacheVersion())) cachedProfile = null
-  const [profile, setProfile] = useState<RevisionProfile | null>(() => cachedProfile?.profile ?? null)
-  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedProfile?.progress ?? null)
-  const [busy, setBusy] = useState(true)
+  if (cachedProfile && (cachedProfile.device !== device || cachedProfile.day !== new Date().toDateString())) cachedProfile = null
+  const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
+  const sharedProgress = revisionSnapshot<RevisionProgress>('/progress')
+  const [profile, setProfile] = useState<RevisionProfile | null>(() => sharedProfile ?? cachedProfile?.profile ?? null)
+  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedProfile?.progress ?? sharedProgress ?? null)
+  const [busy, setBusy] = useState((!cachedProfile && sharedProfile === undefined) || !!profileSave)
+  const dirty = useRef(false)
+  const edits = useRef(0)
+  const saving = useRef(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
   const entry = curriculum.find(item => item.schoolClass === profile?.schoolClass)
@@ -26,46 +33,67 @@ export default function Profile() {
   useEffect(() => {
     let active = true
     async function load(): Promise<void> {
+      const pending = profileSave
+      if (pending) await pending.catch(() => {})
+      if (!active) return
       const requestDevice = cachedDevice()
       const version = currentRevisionCacheVersion()
-      const [value, stats] = await Promise.all([revisionAPI.profile(), revisionAPI.progress()])
+      const requestEdits = edits.current
+      let value: RevisionProfile | null, stats: RevisionProgress
+      try { [value, stats] = await Promise.all([revisionAPI.profile(), revisionAPI.progress()]) }
+      catch (cause) {
+        if (active && requestDevice !== cachedDevice()) {
+          cachedProfile = null; setProfile(null); setProgress(null); dirty.current = false; setBusy(true)
+          return load()
+        }
+        throw cause
+      }
       if (!active) return
       if (requestDevice !== cachedDevice() || version !== currentRevisionCacheVersion()) {
-        cachedProfile = null; setProfile(null); setProgress(null)
+        cachedProfile = null
+        if (requestDevice !== cachedDevice()) { setProfile(null); setProgress(null); dirty.current = false; setBusy(true) }
         return load()
       }
-      cachedProfile = { device: requestDevice, version, profile: value, progress: stats }
-      setProfile(value); setProgress(stats)
+      if (requestEdits === edits.current && !saving.current) {
+        cachedProfile = { device: requestDevice, version, day: new Date().toDateString(), profile: value, progress: stats }
+        if (!dirty.current) setProfile(value)
+      }
+      setProgress(stats)
     }
     load().catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Impossible de charger ton profil.') })
-      .finally(() => { if (active) setBusy(false) })
+      .finally(() => { if (active && !saving.current) setBusy(false) })
     return () => { active = false }
   }, [])
 
   function update(values: Partial<RevisionProfile>) {
+    edits.current++
+    dirty.current = true
     setProfile(current => current && { ...current, ...values })
     setSaved(false)
   }
   async function save(event: FormEvent) {
     event.preventDefault()
-    if (!profile) return
+    if (!profile || profileSave) return
+    saving.current = true
     setBusy(true)
     setSaved(false)
     setError('')
     const requestDevice = cachedDevice()
     try {
-      const value = await revisionAPI.saveProfile(profile)
+      const promise = revisionAPI.saveProfile(profile)
+      profileSave = promise
+      const value = await promise
       if (requestDevice !== cachedDevice()) {
         cachedProfile = null; setProfile(null); setProgress(null)
         throw new Error('L’appareil a changé. Recharge la page avant de continuer.')
       }
       setProfile(value)
-      invalidateRevisionCache()
-      cachedProfile = progress ? { device: cachedDevice(), version: currentRevisionCacheVersion(), profile: value, progress } : null
+      dirty.current = false
+      cachedProfile = progress ? { device: cachedDevice(), version: currentRevisionCacheVersion(), day: new Date().toDateString(), profile: value, progress } : null
       setSaved(true)
     }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer ton profil.') }
-    finally { setBusy(false) }
+    finally { profileSave = null; saving.current = false; setBusy(false) }
   }
 
   return <main className="loop-screen min-h-dvh px-4 pt-8 pb-36 md:pl-28">
@@ -75,7 +103,7 @@ export default function Profile() {
         {!error && progress && <Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={64} />}
         {!error && !busy && !profile && !progress && <Mascotte humeur="au repos" taille={64} />}
       </header>
-      {busy && !profile && !progress && <LoadingState label="On récupère ton parcours…" />}
+      {busy && !profile && <PendingRead title="Mon parcours" label="On récupère ton parcours…" />}
       {error && <div role="alert"><Mascotte humeur="désolée" taille={96} /><p>{error}</p></div>}
       {progress && <dl className="grid grid-cols-3 gap-2 rounded-2xl border border-border p-3 text-center text-sm">
         <div><dt>XP</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.xp} /></dd></div>

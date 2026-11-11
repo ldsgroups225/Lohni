@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import MarkdownView from './MarkdownView'
+import MarkdownView from './MarkdownContent'
+import DeferredMarkdown from './MarkdownView'
 
 test('le résumé affiche Markdown, tableaux GFM et formules LaTeX', () => {
   const html = renderToStaticMarkup(<MarkdownView md={String.raw`## Les fractions
@@ -53,4 +54,10 @@ test('un nombre seul entouré de $ s’affiche en texte, pas en formule', () => 
   const html = renderToStaticMarkup(<MarkdownView md="$1$ g de glucides fournit $4$ kcal, soit $\frac{1}{2}$." inline />)
   expect(html).toContain('1 g de glucides fournit 4 kcal')
   expect(html.match(/class="katex"/g)?.length).toBe(1)
+})
+
+
+test('le texte reste visible pendant le chargement du rendu Markdown', () => {
+  const html = renderToStaticMarkup(<DeferredMarkdown md="Une réponse utile" />)
+  expect(html).toContain('Une réponse utile')
 })

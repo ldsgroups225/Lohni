@@ -49,7 +49,7 @@ test('Moi ne restaure pas le cache d’un autre appareil', async () => {
   const { host, close } = await setup('profil-autre')
   try {
     expect(host.querySelector('form')).toBeNull()
-    expect(host.textContent).toContain('On récupère ton parcours')
+    expect(host.textContent).toContain('Mon parcours')
   } finally { close() }
 })
 
@@ -63,7 +63,7 @@ test('une réponse tardive du précédent appareil ne remplit pas le cache du no
     localStorage.setItem('lohni-device-id', 'profil-nouveau')
     await act(async () => resolve(profile))
     expect(host.querySelector('form')).toBeNull()
-    expect(host.textContent).toContain('On récupère ton parcours')
+    expect(host.textContent).toContain('Mon parcours')
   } finally { close() }
 })
 
@@ -108,5 +108,72 @@ test('un enregistrement tardif ne conserve pas le profil pour un autre appareil'
     await act(async () => resolve(profile))
     expect(host.querySelector('form')).toBeNull()
     expect(host.textContent).toContain('L’appareil a changé')
+  } finally { close() }
+})
+
+test('une modification du profil reste intacte pendant la revalidation', async () => {
+  api.profile.mockResolvedValueOnce(profile)
+  api.progress.mockResolvedValue(progress)
+  const { router, host, close } = await setup('profil-modification-revalidation')
+  try {
+    await act(async () => { await router.navigate('/tutor') })
+    let resolve!: (value: typeof profile) => void
+    api.profile.mockReturnValueOnce(new Promise(r => { resolve = r }))
+    await act(async () => { await router.navigate('/me') })
+    const select = host.querySelector('select')!
+    expect(select.disabled).toBe(false)
+    await act(async () => { select.value = '5e'; select.dispatchEvent(new Event('change', { bubbles: true })) })
+    await act(async () => resolve(profile))
+    expect(select.value).toBe('5e')
+  } finally { close() }
+})
+
+test('un enregistrement pendant la revalidation ne peut pas être remplacé par la réponse ancienne', async () => {
+  api.profile.mockResolvedValueOnce(profile)
+  api.progress.mockResolvedValue(progress)
+  const { router, host, close } = await setup('profil-enregistrement-revalidation')
+  try {
+    await act(async () => { await router.navigate('/tutor') })
+    let resolve!: (value: typeof profile) => void
+    api.profile.mockReturnValueOnce(new Promise(r => { resolve = r })).mockResolvedValue({ ...profile, schoolClass: '5e' })
+    api.saveProfile.mockResolvedValue({ ...profile, schoolClass: '5e' })
+    await act(async () => { await router.navigate('/me') })
+    const select = host.querySelector('select')!
+    await act(async () => { select.value = '5e'; select.dispatchEvent(new Event('change', { bubbles: true })) })
+    await act(async () => host.querySelector('form')!.requestSubmit())
+    await act(async () => resolve(profile))
+    expect(host.querySelector('select')!.value).toBe('5e')
+  } finally { close() }
+})
+
+test('le retour pendant un enregistrement attend sa fin avant de réactiver le formulaire', async () => {
+  api.profile.mockResolvedValue(profile)
+  api.progress.mockResolvedValue(progress)
+  let resolve!: (value: typeof profile) => void
+  api.saveProfile.mockReturnValue(new Promise(r => { resolve = r }))
+  const { router, host, close } = await setup('profil-retour-enregistrement')
+  try {
+    await act(async () => host.querySelector('form')!.requestSubmit())
+    await act(async () => { await router.navigate('/tutor') })
+    await act(async () => { await router.navigate('/me') })
+    expect(host.querySelector('select')!.disabled).toBe(true)
+    await act(async () => resolve(profile))
+    expect(host.querySelector('select')!.disabled).toBe(false)
+  } finally { close() }
+})
+
+test('un changement d’appareil pendant une revalidation échouée masque aussitôt le profil précédent', async () => {
+  api.profile.mockResolvedValueOnce(profile)
+  api.progress.mockResolvedValue(progress)
+  const { router, host, close } = await setup('profil-avant-changement')
+  try {
+    await act(async () => { await router.navigate('/tutor') })
+    let reject!: (error: Error) => void
+    api.profile.mockReturnValueOnce(new Promise((_resolve, fail) => { reject = fail })).mockReturnValue(new Promise(() => {}))
+    await act(async () => { await router.navigate('/me') })
+    localStorage.setItem('lohni-device-id', 'profil-apres-changement')
+    await act(async () => reject(new Error('Les données ont changé. Actualise la page.')))
+    expect(host.querySelector('form')).toBeNull()
+    expect(host.textContent).not.toContain('Les données ont changé')
   } finally { close() }
 })
