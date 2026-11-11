@@ -17,6 +17,9 @@ RUN npm run build
 # runtime
 FROM base AS runtime
 
+# Podcasts join their audio segments with ffmpeg.
+RUN apk add --no-cache ffmpeg
+
 COPY --from=builder /app/backend/dist ./backend/dist
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
