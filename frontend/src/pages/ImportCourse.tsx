@@ -1,3 +1,4 @@
+import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 import { Button } from '../components/ui/Button'
 import { BackButton } from '../components/ui/BackButton'
 import { LoadingState } from '../components/ui/LoadingState'
@@ -7,17 +8,22 @@ import { Link, useNavigate } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { revisionAPI, revisionPolicy, type RevisionProfile, type RevisionImportedChapter, type RevisionImportQuota } from '../lib/api'
 
+let cachedImport: { device: string | null; version: number; day: string; profile: RevisionProfile | null; quota: RevisionImportQuota } | null = null
+
 export default function ImportCourse() {
+  if (cachedImport && (cachedImport.device !== cachedDevice() || cachedImport.version !== currentRevisionCacheVersion() || cachedImport.day !== new Date().toDateString())) cachedImport = null
+  const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
   const navigate = useNavigate()
-  const [profile, setProfile] = useState<RevisionProfile | null>(null)
-  const [quota, setQuota] = useState<RevisionImportQuota>()
+  const [profile, setProfile] = useState<RevisionProfile | null>(() => cachedImport?.profile ?? sharedProfile ?? null)
+  const [quota, setQuota] = useState<RevisionImportQuota | undefined>(() => cachedImport?.quota)
   const [imported, setImported] = useState<RevisionImportedChapter>()
-  const [subject, setSubject] = useState('')
+  const [subject, setSubject] = useState(() => (cachedImport?.profile ?? sharedProfile)?.subjects[0] ?? '')
   const [title, setTitle] = useState('')
   const [mode, setMode] = useState('text')
   const [text, setText] = useState('')
   const [file, setFile] = useState<File>()
-  const [busy, setBusy] = useState(true)
+  const [busy, setBusy] = useState(!cachedImport && sharedProfile === undefined)
+  const [checking, setChecking] = useState(true)
   const [error, setError] = useState('')
   const field = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
@@ -28,19 +34,30 @@ export default function ImportCourse() {
     catch (error) { setError(error instanceof Error ? error.message : 'Impossible d’importer le cours. Réessaie.') }
     finally { setBusy(false) }
   }
-  async function load() {
+  async function load(isActive = () => true) {
+    const device = cachedDevice()
+    const version = currentRevisionCacheVersion()
     const [saved, currentQuota] = await Promise.all([revisionAPI.profile(), revisionAPI.importQuota()])
+    if (!isActive()) return
+    if (device !== cachedDevice() || version !== currentRevisionCacheVersion()) return load(isActive)
+    cachedImport = { device, version, day: new Date().toDateString(), profile: saved, quota: currentQuota }
     setProfile(saved)
-    setSubject(saved?.subjects[0] ?? '')
+    setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
     setQuota(currentQuota)
   }
-  useEffect(() => { void run(load) }, [])
+  useEffect(() => {
+    let active = true
+    load(() => active).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Impossible de charger ton import.') })
+      .finally(() => { if (active) { setBusy(false); setChecking(false) } })
+    return () => { active = false }
+  }, [])
 
   function submit(event: FormEvent) {
     event.preventDefault()
     void run(async () => {
       if (mode !== 'text' && (!file || file.size > revisionPolicy.maxUploadMB * 1024 * 1024)) throw new Error(`Choisis un fichier de ${revisionPolicy.maxUploadMB} Mo maximum.`)
       const chapter = await revisionAPI.importChapter({ title, subject, ...(mode !== 'text' ? { file } : { text }) })
+      cachedImport = null
       setImported(chapter)
       setQuota(await revisionAPI.importQuota())
     })
@@ -53,9 +70,9 @@ export default function ImportCourse() {
         <Link to="/revision" className="underline">Révision</Link>
       </header>
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
-        <button className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Actualiser</button>
+        <button className="ml-3 underline" disabled={busy} onClick={() => void run(() => load())}>Actualiser</button>
       </div>}
-      {busy && !error && <Mascotte humeur="pensive" taille={112} />}
+      {busy && !profile && !error && <Mascotte humeur="pensive" taille={112} />}
       {busy && <LoadingState label={profile ? 'Préparation du chapitre… Cela peut prendre un moment.' : 'On prépare ton import…'} />}
       {quota && <p className="text-sm text-muted" aria-live="polite">
         {quota.remaining === 0 ? `Tu as atteint tes ${revisionPolicy.dailyImports} imports du jour.` : `${quota.remaining} import${quota.remaining > 1 ? 's' : ''} restant${quota.remaining > 1 ? 's' : ''} aujourd’hui.`}
@@ -80,7 +97,7 @@ export default function ImportCourse() {
             ? <label className="block space-y-2"><span>Texte du cours</span><textarea className={field} rows={10} required maxLength={revisionPolicy.maxTextChars} value={text} onChange={event => setText(event.target.value)} /></label>
             : <label className="block space-y-2"><span>{mode === 'photo' ? `Photo nette et bien éclairée (JPEG, PNG, WebP) · ${revisionPolicy.maxUploadMB} Mo maximum` : `Fichier texte, PDF, Word (.docx) ou Markdown · ${revisionPolicy.maxUploadMB} Mo maximum`}</span><input key={mode} className={field} type="file" required accept={mode === 'photo' ? 'image/jpeg,image/png,image/webp' : '.txt,.pdf,.docx,.md,.markdown'} onChange={event => setFile(event.target.files?.[0])} /></label>}
           <p className="text-sm text-muted">Le résumé, les cartes et les QCM sont créés automatiquement.</p>
-          <Button type="submit">Importer et créer mon chapitre</Button>
+          <Button disabled={checking} type="submit">Importer et créer mon chapitre</Button>
         </fieldset>
       </form>}
     </div>

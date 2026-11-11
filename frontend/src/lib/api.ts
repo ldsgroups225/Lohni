@@ -1,3 +1,4 @@
+import { cachedDevice, currentRevisionCacheVersion, invalidateRevisionCache, rememberRevisionSnapshot } from "./cachedDevice";
 import { env } from "../config/env";
 import { REVISION_POLICY as revisionPolicy } from "../../../backend/src/services/revision/policy";
 import { advanceSession } from "../../../backend/src/services/revision/session";
@@ -715,10 +716,11 @@ export function revisionSyncStatus() {
 }
 export function syncRevisionAnswers(): Promise<void> {
   if (syncing) return syncing;
+  const device = cachedDevice();
   syncing = Promise.resolve().then(async () => {
     syncError = '';
     try {
-      while (navigator.onLine) {
+      while (navigator.onLine && cachedDevice() === device) {
         const queued = readOffline().pending[0];
         if (!queued) break;
         let session: RevisionSession | undefined;
@@ -726,7 +728,9 @@ export function syncRevisionAnswers(): Promise<void> {
         catch (error) {
           if (!(error instanceof APIError && error.status === 400 && error.code === 'REVISION_LOCAL_DATE_OUT_OF_RANGE')) throw error;
         }
+        if (cachedDevice() !== device) break;
         await updateOffline(state => {
+          if (cachedDevice() !== device) return;
           state.pending = state.pending.filter(item => item.answer.answerId !== queued.answer.answerId);
           if (session && !state.pending.length && (!state.session || state.session.id !== session.id || state.session.position <= session.position)) state.session = session;
         });
@@ -740,21 +744,47 @@ export function syncRevisionAnswers(): Promise<void> {
   });
   return syncing;
 }
-async function cachedRevisionRead<T>(path: string): Promise<T> {
-  await syncRevisionAnswers();
-  const cached = readOffline().cache[path];
-  try {
-    if (!navigator.onLine) throw new RevisionConnectionError('Hors ligne. Connecte-toi pour charger ces données.');
-    const result = await revisionRequest<T>(path, 'GET', undefined, undefined, 8000);
-    await updateOffline(state => { state.cache[path] = result; });
-    return result;
-  } catch (error) {
-    if (error instanceof RevisionConnectionError && cached !== undefined) return cached as T;
-    throw error;
-  }
+const revisionReads = new Map<string, Promise<unknown>>()
+async function sharedRevisionRead<T>(path: string, read: () => Promise<T>): Promise<T> {
+  const device = revisionDeviceId()
+  const version = currentRevisionCacheVersion()
+  const day = revisionLocalDate()
+  const key = JSON.stringify([device, version, day, path])
+  const pending = revisionReads.get(key)
+  if (pending) return pending as Promise<T>
+  const request = read().then(value => {
+    if (cachedDevice() !== device || currentRevisionCacheVersion() !== version || revisionLocalDate() !== day) {
+      throw new Error('Les données ont changé. Actualise la page.')
+    }
+    rememberRevisionSnapshot(path, value)
+    return value
+  }).finally(() => { revisionReads.delete(key) })
+  revisionReads.set(key, request)
+  return request
+}
+function cachedRevisionRead<T>(path: string): Promise<T> {
+  return sharedRevisionRead(path, async () => {
+    await syncRevisionAnswers()
+    const device = cachedDevice()
+    const version = currentRevisionCacheVersion()
+    const day = revisionLocalDate()
+    const cached = readOffline().cache[path]
+    try {
+      if (!navigator.onLine) throw new RevisionConnectionError('Hors ligne. Connecte-toi pour charger ces données.')
+      const result = await revisionRequest<T>(path, 'GET', undefined, undefined, 8000)
+      await updateOffline(state => {
+        if (cachedDevice() === device && currentRevisionCacheVersion() === version && revisionLocalDate() === day) state.cache[path] = result
+      })
+      return result
+    } catch (error) {
+      if (error instanceof RevisionConnectionError && cached !== undefined) return cached as T
+      throw error
+    }
+  })
 }
 async function revisionSession(continueSession = false): Promise<RevisionSession> {
   await syncRevisionAnswers();
+  const device = revisionDeviceId();
   const saved = readOffline();
   if (saved.pending.length && saved.session) {
     if (continueSession) throw new Error('Tes réponses doivent être envoyées avant de continuer. Reconnecte-toi puis réessaie.');
@@ -763,9 +793,11 @@ async function revisionSession(continueSession = false): Promise<RevisionSession
   try {
     if (!navigator.onLine) throw new RevisionConnectionError('Hors ligne. Charge une session avec le réseau pour commencer.');
     const next = await revisionRequest<RevisionSession>(continueSession ? '/session/continue' : '/session', continueSession ? 'POST' : 'GET', undefined, undefined, 8000);
+    if (cachedDevice() !== device) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
     await updateOffline(state => {
-      if (!state.pending.length && (!state.session || state.session.id !== next.id || state.session.position <= next.position)) state.session = next;
+      if (cachedDevice() === device && !state.pending.length && (!state.session || state.session.id !== next.id || state.session.position <= next.position)) state.session = next;
     });
+    if (cachedDevice() !== device) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
     return readOffline().session!;
   } catch (error) {
     if (!continueSession && error instanceof RevisionConnectionError && saved.session) return saved.session;
@@ -787,14 +819,19 @@ async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<
     delete session.summary; // périmé : le récap le recharge une fois les réponses envoyées
     next = session;
   });
+  invalidateRevisionCache('/home', '/progress');
   void syncRevisionAnswers();
   return next!;
 }
 async function revisionMutation<T>(path: string, method: string, body?: unknown): Promise<T> {
   await syncRevisionAnswers();
   if (readOffline().pending.length) throw new Error('Reconnecte-toi pour envoyer tes réponses avant de modifier tes cours ou ton profil.');
+  const device = revisionDeviceId();
   const result = await revisionRequest<T>(path, method, body);
-  if (path === '/profile') await updateOffline(state => { state.cache['/profile'] = result; delete state.cache['/home']; });
+  if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
+  if (path === '/profile') invalidateRevisionCache()
+  else invalidateRevisionCache('/home', '/progress', '/chapters')
+  if (path === '/profile') await updateOffline(state => { if (device === cachedDevice()) { state.cache['/profile'] = result; delete state.cache['/home']; } });
   return result;
 }
 
@@ -816,6 +853,7 @@ export const revisionAPI = {
       home = { profile, daysUntilExam: profile.examDate ? Math.max(0, (Date.parse(profile.examDate) - Date.parse(revisionLocalDate())) / 86400000) : null,
         totalCards: saved.session.cards.length, cardCount: 0, estimatedMinutes: 0, moreCards: false, started: false, state: 'empty' };
     }
+    if (home) rememberRevisionSnapshot('/profile', home.profile);
     const session = readOffline().session;
     if (home && session && (session.localDate === revisionLocalDate() || readOffline().pending.length) && (!navigator.onLine || readOffline().pending.length)) {
       const cardCount = session.complete ? 0 : session.cards.length - session.position;
@@ -825,7 +863,7 @@ export const revisionAPI = {
   },
   progress: () => cachedRevisionRead<RevisionProgress>('/progress'),
   profile: () => cachedRevisionRead<RevisionProfile | null>('/profile'),
-  chapters: () => revisionRequest<RevisionChapter[]>('/chapters'),
+  chapters: () => sharedRevisionRead('/chapters', () => revisionRequest<RevisionChapter[]>('/chapters')),
   deleteChapter: (id: string) => revisionMutation<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),
   updateCard: (id: string, card: RevisionCardInput) => revisionMutation<null>(`/cards/${encodeURIComponent(id)}`, 'PUT', card),
   saveProfile: (profile: RevisionProfile) => revisionMutation<RevisionProfile>('/profile', 'PUT', profile),
@@ -840,7 +878,7 @@ export const revisionAPI = {
     return revisionMutation<RevisionImportedChapter>('/import', 'POST', form);
   },
   session: () => revisionSession(),
-  continue: () => revisionSession(true),
+  continue: async () => { const session = await revisionSession(true); invalidateRevisionCache('/home', '/progress'); return session; },
   answer: revisionAnswer,
   deleteCard: (id: string) => revisionMutation<null>(`/cards/${encodeURIComponent(id)}`, 'DELETE'),
 };

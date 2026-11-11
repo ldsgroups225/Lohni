@@ -1,21 +1,21 @@
 import { lazy } from "react";
 import { createRoutesFromElements, Navigate, Route } from "react-router-dom";
 import App from "./App";
-import Home from "./pages/Home";
+import Home from "./pages/Home"
+import Landing from './pages/Landing'
+import Profile from './pages/Profile'
+import Revision from './pages/Revision'
+import Courses from './pages/Courses'
+import ImportCourse from './pages/ImportCourse' ;
 
-// Pages other than Home load on demand: a much smaller first download.
-const Landing = lazy(() => import('./pages/Landing'))
+// Secondary tools load on demand.
 const Chat = lazy(() => import('./pages/Chat'))
 const Quiz = lazy(() => import('./pages/Quiz'))
 const Tools = lazy(() => import('./pages/Tools'))
-const Profile = lazy(() => import('./pages/Profile'))
 const ExamLabs = lazy(() => import('./pages/examlab.tsx'))
 const NotFound = lazy(() => import('./pages/404.tsx'))
 const PlannerPage = lazy(() => import('./pages/Planner'))
 const Debate = lazy(() => import('./pages/Debate'))
-const Revision = lazy(() => import('./pages/Revision'))
-const Courses = lazy(() => import('./pages/Courses'))
-const ImportCourse = lazy(() => import('./pages/ImportCourse'))
 
 export const routes = createRoutesFromElements(
   <Route path="/" element={<App />}>

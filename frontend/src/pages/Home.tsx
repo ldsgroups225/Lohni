@@ -14,11 +14,11 @@ import MobileHeader from '../components/MobileHeader'
 import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter } from '../lib/api'
 import { cachedDevice, currentRevisionCacheVersion } from '../lib/cachedDevice'
 
-let cachedHome: { device: string | null; version: number; home: RevisionHome | null; progress: RevisionProgress | null; chapters: RevisionChapter[] | null } | null = null
+let cachedHome: { device: string | null; version: number; day: string; home: RevisionHome | null; progress: RevisionProgress | null; chapters: RevisionChapter[] | null } | null = null
 
 export default function Home() {
   const device = cachedDevice()
-  if (cachedHome && (cachedHome.device !== device || cachedHome.version !== currentRevisionCacheVersion())) cachedHome = null
+  if (cachedHome && (cachedHome.device !== device || cachedHome.version !== currentRevisionCacheVersion() || cachedHome.day !== new Date().toDateString())) cachedHome = null
   const animateEntry = useRef(!cachedHome).current
   const [home, setHome] = useState<RevisionHome | null>(() => cachedHome?.home ?? null)
   const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedHome?.progress ?? null)
@@ -31,21 +31,22 @@ export default function Home() {
     let active = true
     async function load() {
       const requestDevice = cachedDevice()
+      const version = currentRevisionCacheVersion()
       setError('')
       setProgressError('')
       if (!cachedHome) setLoading(true)
       try {
         const data = await revisionAPI.home()
         if (!active) return
-        if (requestDevice && requestDevice !== cachedDevice()) {
+        if ((requestDevice && requestDevice !== cachedDevice()) || version !== currentRevisionCacheVersion()) {
           cachedHome = null; setHome(null); setProgress(null); setChapters(null); setAttempt(value => value + 1)
           return
         }
-        cachedHome = data ? { device: cachedDevice(), version: currentRevisionCacheVersion(), home: data, progress: cachedHome?.progress ?? null, chapters: cachedHome?.chapters ?? null } : null
+        cachedHome = data ? { device: cachedDevice(), version: currentRevisionCacheVersion(), day: new Date().toDateString(), home: data, progress: cachedHome?.progress ?? null, chapters: cachedHome?.chapters ?? null } : null
         setHome(data)
         const responseDevice = cachedDevice()
-        if (data) void revisionAPI.chapters().then(value => { if (active && responseDevice === cachedDevice()) { if (cachedHome) cachedHome.chapters = value; setChapters(value) } }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
-        if (data) void revisionAPI.progress().then(value => { if (active && responseDevice === cachedDevice()) { if (cachedHome) cachedHome.progress = value; setProgress(value) } }).catch(cause => {
+        if (data) void revisionAPI.chapters().then(value => { if (active && responseDevice === cachedDevice() && version === currentRevisionCacheVersion()) { if (cachedHome) cachedHome.chapters = value; setChapters(value) } }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
+        if (data) void revisionAPI.progress().then(value => { if (active && responseDevice === cachedDevice() && version === currentRevisionCacheVersion()) { if (cachedHome) cachedHome.progress = value; setProgress(value) } }).catch(cause => {
           if (active && !(cause instanceof Error && cause.message.startsWith('http 404'))) setProgressError('Ta progression est temporairement indisponible.')
         })
       } catch (cause) {

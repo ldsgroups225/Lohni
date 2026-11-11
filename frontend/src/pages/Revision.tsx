@@ -7,6 +7,7 @@ import { CheckIcon, CloseIcon } from '../components/ui/NavigationIcons'
 import { Progress } from '../components/ui/Progress'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { useOverlayNavigation } from '../lib/useOverlayNavigation'
+import { cachedDevice, currentRevisionCacheVersion } from '../lib/cachedDevice'
 import { useLeaveConfirmation } from '../lib/useLeaveConfirmation'
 import { confirmDialog } from '../lib/confirm'
 import { MENU_EXIT_MS, prefersReducedMotion, useExitTransition } from '../lib/motion'
@@ -16,17 +17,21 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { chatJSON, revisionAPI, revisionPolicy, revisionSyncStatus, syncRevisionAnswers, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress } from '../lib/api'
 
+let cachedRevision: { device: string | null; version: number; day: string; profile: RevisionProfile; session: RevisionSession } | null = null
+
 export default function Revision() {
+  const day = new Date().toDateString()
+  if (cachedRevision && (cachedRevision.device !== cachedDevice() || cachedRevision.version !== currentRevisionCacheVersion() || cachedRevision.day !== day)) cachedRevision = null
   const navigate = useNavigate()
-  const [profile, setProfile] = useState<RevisionProfile | null>(null)
-  const [session, setSession] = useState<RevisionSession | null>(null)
+  const [profile, setProfile] = useState<RevisionProfile | null>(() => cachedRevision?.profile ?? null)
+  const [session, setSession] = useState<RevisionSession | null>(() => cachedRevision?.session ?? null)
   const [progress, setProgress] = useState<RevisionProgress | null>(null)
   const [busy, setBusy] = useState(true)
   const [sync, setSync] = useState(revisionSyncStatus)
   const [error, setError] = useState('')
   const [revealed, setRevealed] = useState(false)
   const [choice, setChoice] = useState<number>()
-  const [subject, setSubject] = useState('')
+  const [subject, setSubject] = useState(() => cachedRevision?.profile.subjects[0] ?? '')
   const [title, setTitle] = useState('')
   const [missed, setMissed] = useState<RevisionCard | null>(null)
   const [feedback, setFeedback] = useState<{ id: number; knew: boolean } | null>(null)
@@ -41,6 +46,9 @@ export default function Revision() {
   // QCM: la réponse est enregistrée au choix ; la carte suivante n’apparaît qu’au clic sur « Continuer ».
   const [verdict, setVerdict] = useState<{ choice: number; next: RevisionSession } | null>(null)
   const startedAt = useRef(Date.now())
+  useEffect(() => {
+    if (profile && session) cachedRevision = { device: cachedDevice(), version: currentRevisionCacheVersion(), day, profile, session }
+  }, [profile, session, day])
   const card = session?.cards[session.position]
   useLeaveConfirmation(!!session && !session.complete && !!card, 'Quitter la session ? Ta progression est enregistrée.')
   // Après un QCM : fait défiler jusqu'à l'indice et « Continuer », avec une marge sous le bouton.
@@ -101,11 +109,19 @@ export default function Revision() {
     let active = true
     async function load() {
       try {
+        const requestDevice = cachedDevice()
+        const version = currentRevisionCacheVersion()
         const saved = await revisionAPI.profile()
         const current = saved ? await revisionAPI.session() : null
         if (!active) return
+        if (requestDevice !== cachedDevice() || version !== currentRevisionCacheVersion()) {
+          cachedRevision = null
+          setProfile(null); setSession(null)
+          await load()
+          return
+        }
         setProfile(saved)
-        setSubject(saved?.subjects[0] ?? '')
+        setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
         if (current) display(current)
       } catch (e) {
         if (active) setError(e instanceof Error ? e.message : 'Impossible de charger la révision.')
@@ -203,7 +219,7 @@ export default function Revision() {
           <button className="ml-3 underline" disabled={busy} onClick={() => void run(async () => {
             const saved = await revisionAPI.profile()
             setProfile(saved)
-            setSubject(saved?.subjects[0] ?? '')
+            setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
             if (saved) display(await revisionAPI.session())
             setProgress(await revisionAPI.progress())
           })}>Réessayer</button>
@@ -244,7 +260,7 @@ export default function Revision() {
             </article>}
             {verdict && <Button ref={continueButton} className="w-full scroll-mb-8" onClick={next}>Continuer</Button>}
           </section>
-        ) : !busy && <>
+        ) : (!busy || !!session) && <>
           {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} pending={sync.pending} moreCards={moreCards} busy={busy} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onContinue={() => void run(async () => display(await revisionAPI.continue()))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
             {!error && <Mascotte humeur="au repos" taille={112} />}
             <h2 className="text-xl">Aucune carte à réviser pour le moment</h2>

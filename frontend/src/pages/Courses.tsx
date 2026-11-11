@@ -1,5 +1,5 @@
 import { usePersistentDetails } from '../lib/usePersistentDetails'
-import { cachedDevice, currentRevisionCacheVersion } from '../lib/cachedDevice'
+import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { LoadingState } from '../components/ui/LoadingState'
 import { confirmDialog } from '../lib/confirm'
@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
 
-let cachedCourses: { device: string | null; version: number; chapters: RevisionChapter[]; progress: RevisionProgress } | null = null
+let cachedCourses: { device: string | null; version: number; day: string; chapters: RevisionChapter[]; progress: RevisionProgress } | null = null
 
 const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
@@ -48,21 +48,24 @@ function CardEditor({ card, busy, onSave, onCancel }: {
 
 export default function Courses() {
   const device = cachedDevice()
-  if (cachedCourses && (cachedCourses.device !== device || cachedCourses.version !== currentRevisionCacheVersion())) cachedCourses = null
+  if (cachedCourses && (cachedCourses.device !== device || cachedCourses.version !== currentRevisionCacheVersion() || cachedCourses.day !== new Date().toDateString())) cachedCourses = null
+  const sharedChapters = revisionSnapshot<RevisionChapter[]>('/chapters')
+  const sharedProgress = revisionSnapshot<RevisionProgress>('/progress')
   const animateEntry = useRef(!cachedCourses).current
-  const [chapters, setChapters] = useState<RevisionChapter[]>(() => cachedCourses?.chapters ?? [])
-  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedCourses?.progress ?? null)
+  const [chapters, setChapters] = useState<RevisionChapter[]>(() => cachedCourses?.chapters ?? sharedChapters ?? [])
+  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedCourses?.progress ?? sharedProgress ?? null)
   const [editing, setEditing] = useState<string | null>(null)
-  const [busy, setBusy] = useState(!cachedCourses)
+  const [busy, setBusy] = useState(!cachedCourses && !sharedChapters)
   const more = usePersistentDetails('lohni-courses-more')
   const [error, setError] = useState('')
 
   async function load(isActive = () => true) {
     const requestDevice = cachedDevice()
+    const version = currentRevisionCacheVersion()
     const [nextChapters, nextProgress] = await Promise.all([revisionAPI.chapters(), revisionAPI.progress()])
     if (!isActive()) return
-    if (requestDevice && requestDevice !== cachedDevice()) { cachedCourses = null; setChapters([]); setProgress(null); return load(isActive) }
-    cachedCourses = { device: cachedDevice(), version: currentRevisionCacheVersion(), chapters: nextChapters, progress: nextProgress }
+    if ((requestDevice && requestDevice !== cachedDevice()) || version !== currentRevisionCacheVersion()) { cachedCourses = null; setChapters([]); setProgress(null); return load(isActive) }
+    cachedCourses = { device: cachedDevice(), version: currentRevisionCacheVersion(), day: new Date().toDateString(), chapters: nextChapters, progress: nextProgress }
     setChapters(nextChapters)
     setProgress(nextProgress)
   }
