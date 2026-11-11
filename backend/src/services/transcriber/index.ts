@@ -97,7 +97,7 @@ async function transcribeWithGoogle(filePath: string): Promise<TranscriptionResu
         const audioConfig = {
             encoding: 'WEBM_OPUS' as any,
             sampleRateHertz: 48000,
-            languageCode: 'en-US',
+            languageCode: 'fr-FR',
             enableAutomaticPunctuation: true,
         };
 
