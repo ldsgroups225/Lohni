@@ -38,6 +38,31 @@ function tryParse<T = unknown>(s: string): T | null {
   try { return JSON.parse(s) as T } catch { return null }
 }
 
+// A reply cut off by the token limit is invalid JSON; keep the readable answer and the complete cards instead of showing raw JSON.
+export function salvageTruncatedJson(draft: string, fallbackTopic: string): AskPayload | null {
+  const head = /"answer"\s*:\s*"/.exec(draft)
+  if (!head) return null
+  let i = head.index + head[0].length
+  let raw = ""
+  for (; i < draft.length; i++) {
+    const ch = draft[i]
+    if (ch === "\\") { raw += ch + (draft[i + 1] ?? ""); i++; continue }
+    if (ch === '"') break
+    raw += ch
+  }
+  let answer: string | null = null
+  for (let cut = 0; cut < 7 && answer === null && raw.length >= cut; cut++) {
+    // Drop a dangling escape (\ or a partial \uXXXX) left by the cut.
+    answer = tryParse<string>(`"${raw.slice(0, raw.length - cut).replace(/\n/g, "\\n")}"`)
+  }
+  if (!answer || !answer.trim()) return null
+  const topic = tryParse<string>(`"${/"topic"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(draft)?.[1] ?? ""}"`) || fallbackTopic
+  const cardsAt = draft.indexOf('"flashcards"')
+  const flashcards = cardsAt < 0 ? [] : (draft.slice(cardsAt).match(/\{[^{}]*"q"[^{}]*\}/g) ?? [])
+    .map(c => tryParse<AskCard>(c)).filter((c): c is AskCard => !!c && typeof c.q === "string" && typeof c.a === "string")
+  return { topic, answer, flashcards }
+}
+
 export const BASE_SYSTEM_PROMPT = `
 Réponds en français : titre, explications et cartes de révision. Conserve les clés JSON demandées ci-dessous.
 Consider [[ ]] as section start/end and {{ }} as data places to insert;
@@ -309,7 +334,7 @@ export async function askWithContext(opts: AskWithContextOptions): Promise<AskPa
         answer: typeof parsed.answer === "string" ? parsed.answer : "",
         flashcards: Array.isArray(parsed.flashcards) ? (parsed.flashcards as AskCard[]) : [],
       }
-      : { topic, answer: draft, flashcards: [] }
+      : salvageTruncatedJson(draft, topic) ?? { topic, answer: draft, flashcards: [] }
 
   writeCache(ck, out)
   return out
