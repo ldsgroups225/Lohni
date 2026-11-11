@@ -48,3 +48,9 @@ test('le contenu Markdown reste lisible et conserve ses liens et sa structure', 
   expect(html).toContain('<blockquote')
   expect(html).toContain('Une citation')
 })
+
+test('un nombre seul entouré de $ s’affiche en texte, pas en formule', () => {
+  const html = renderToStaticMarkup(<MarkdownView md="$1$ g de glucides fournit $4$ kcal, soit $\frac{1}{2}$." inline />)
+  expect(html).toContain('1 g de glucides fournit 4 kcal')
+  expect(html.match(/class="katex"/g)?.length).toBe(1)
+})

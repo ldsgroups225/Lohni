@@ -49,6 +49,9 @@ const components: Components = {
   },
 };
 
+// The model often wraps plain numbers in LaTeX ($1$); KaTeX would render them in a serif font mid-sentence.
+const plainNumbers = (md: string) => md.replace(/\$\s*(-?\d+(?:[.,]\d+)?)\s*\$/g, "$1");
+
 export default function MarkdownView({ md, inline = false }: Props) {
   const Wrapper = inline ? "span" : "div";
   return (
@@ -61,7 +64,7 @@ export default function MarkdownView({ md, inline = false }: Props) {
         disallowedElements={inline ? blockElements : undefined}
         unwrapDisallowed={inline}
       >
-        {md || ""}
+        {plainNumbers(md || "")}
       </ReactMarkdown>
     </Wrapper>
   );
