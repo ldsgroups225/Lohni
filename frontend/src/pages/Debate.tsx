@@ -100,10 +100,10 @@ export default function Debate() {
                 setSession(data.session);
                 setMessages(data.session.messages);
             } else {
-                setError(data.error || "Impossible de charger le débat");
+                setError("Impossible de charger le débat");
             }
-        } catch (err: any) {
-            setError(err.message || "Impossible de charger le débat");
+        } catch {
+            setError("Impossible de charger le débat");
         }
     };
 
@@ -160,7 +160,7 @@ export default function Debate() {
                     break;
 
                 case "error":
-                    setError(data.error);
+                    setError("Erreur de connexion");
                     setIsStreaming(false);
                     setStreamingContent("");
                     break;
@@ -190,10 +190,10 @@ export default function Debate() {
                 setMessages([]);
                 navigate(`/debate?debateId=${data.debateId}`);
             } else {
-                setError(data.error || "Impossible de démarrer le débat");
+                setError("Impossible de démarrer le débat");
             }
-        } catch (err: any) {
-            setError(err.message || "Impossible de démarrer le débat");
+        } catch {
+            setError("Impossible de démarrer le débat");
         }
     };
 
@@ -210,10 +210,10 @@ export default function Debate() {
         try {
             const data = await api.submitDebateArgument(debateId, userArgument);
             if (!data.ok) {
-                setError(data.error || "Impossible d’envoyer ton argument");
+                setError("Impossible d’envoyer ton argument");
             }
-        } catch (err: any) {
-            setError(err.message || "Impossible d’envoyer ton argument");
+        } catch {
+            setError("Impossible d’envoyer ton argument");
         }
     };
 
@@ -241,10 +241,10 @@ export default function Debate() {
                 setAnalysisState("loading");
                 fetchAnalysis();
             } else {
-                setError(data.error || "Impossible de terminer le débat");
+                setError("Impossible de terminer le débat");
             }
-        } catch (err: any) {
-            setError(err.message || "Impossible de terminer le débat");
+        } catch {
+            setError("Impossible de terminer le débat");
         }
     };
 
@@ -252,16 +252,16 @@ export default function Debate() {
         try {
             const data = await api.analyzeDebate(id);
             if (analysisWsRef.current !== analysisWs) return;
-            if (!data.ok && data.error) {
-                setError(data.error);
+            if (!data.ok) {
+                setError("Impossible de lancer l’analyse");
                 setAnalysisOpen(false);
                 setAnalysisState(null);
                 setAnalysisPhase("");
                 analysisWs.close();
             }
-        } catch (err: any) {
+        } catch {
             if (analysisWsRef.current !== analysisWs) return;
-            setError(err.message || "Impossible de lancer l’analyse");
+            setError("Impossible de lancer l’analyse");
             setAnalysisOpen(false);
             setAnalysisState(null);
             setAnalysisPhase("");
@@ -305,7 +305,7 @@ export default function Debate() {
                     break;
 
                 case "error":
-                    setError(data.error);
+                    setError("Erreur de connexion à l’analyse");
                     setAnalysisState(null);
                     setAnalysisOpen(false);
                     setAnalysisPhase("");

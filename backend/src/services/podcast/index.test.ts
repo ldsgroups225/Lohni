@@ -27,3 +27,13 @@ test('un script toujours invalide échoue avec un message en français', async (
   vi.mocked(llm.invoke).mockResolvedValue({ content: 'pas de JSON' } as any)
   await expect(makeScript('La photosynthèse', 'La photosynthèse')).rejects.toThrow(/podcast/i)
 })
+
+test('une panne du modèle est journalisée et expliquée en français', async () => {
+  const cause = new Error('provider HTTP 402')
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    vi.mocked(llm.invoke).mockRejectedValue(cause)
+    await expect(makeScript('Sujet')).rejects.toThrow('Le script du podcast n’a pas pu être généré. Réessaie.')
+    expect(log).toHaveBeenCalledWith(expect.any(String), cause)
+  } finally { log.mockRestore() }
+})

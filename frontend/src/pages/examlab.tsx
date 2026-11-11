@@ -95,7 +95,7 @@ export default function ExamLabs() {
           setIdx(0)
           setConnecting(false)
         }
-        if (ev.type === "error") setFailure(ev.error)
+        if (ev.type === "error") setFailure(ev.error === "stream_error" ? "Impossible de préparer l’examen. Réessaie." : ev.error)
         if (ev.type === "done" || ev.type === "error") {
           setConnecting(false)
         }

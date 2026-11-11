@@ -64,7 +64,13 @@ export async function makeScript(input: string, topic?: string): Promise<POut> {
 
   // Models sometimes cut the JSON short: ask once more before giving up.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const r = await llm.invoke(m)
+    let r
+    try {
+      r = await llm.invoke(m)
+    } catch (error) {
+      console.error("Échec de génération du script du podcast :", error)
+      throw new Error("Le script du podcast n’a pas pu être généré. Réessaie.")
+    }
     const t = (typeof r === "string" ? r : String((r as any)?.content || "")).trim()
     try {
       const o = JSON.parse(j1(t) || t)

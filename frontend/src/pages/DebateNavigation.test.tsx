@@ -48,3 +48,25 @@ test('retour ferme le bilan et permet de relire le debat', async () => {
     expect(host.querySelector('textarea')?.disabled).toBe(false)
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove(); vi.unstubAllGlobals() }
 })
+
+test('les erreurs de transport du débat restent compréhensibles', async () => {
+  let socket: { onmessage: ((event: { data: string }) => void) | null; close: () => void }
+  class FakeSocket {
+    onmessage: ((event: { data: string }) => void) | null = null
+    constructor() { socket = this }
+    close() {}
+  }
+  vi.stubGlobal('WebSocket', FakeSocket)
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('http 500: provider failure')))
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/debate', element: <Debate /> }], { initialEntries: ['/debate?debateId=1'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.textContent).toContain('Impossible de charger le débat')
+    expect(host.textContent).not.toContain('http 500')
+    await act(async () => socket.onmessage?.({ data: JSON.stringify({ type: 'error', error: 'provider failure' }) }))
+    expect(host.textContent).toContain('Erreur de connexion')
+    expect(host.textContent).not.toContain('provider failure')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); vi.unstubAllGlobals() }
+})

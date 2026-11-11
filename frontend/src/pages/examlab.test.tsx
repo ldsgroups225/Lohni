@@ -64,3 +64,20 @@ test('un échec de préparation est expliqué et permet de revenir à la liste',
     host.remove()
   }
 })
+
+test('une panne de connexion invite à réessayer sans afficher une erreur technique', async () => {
+  stream.event = { type: 'error', error: 'stream_error' }
+  const host = document.createElement('div')
+  document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => { root.render(<MemoryRouter><ExamLabs /></MemoryRouter>) })
+    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Examen test'))!.click() })
+    expect(host.textContent).toContain('Impossible de préparer l’examen. Réessaie.')
+    expect(host.textContent).not.toContain('stream_error')
+  } finally {
+    stream.event = null
+    act(() => root.unmount())
+    host.remove()
+  }
+})
