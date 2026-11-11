@@ -1,5 +1,5 @@
-import fs from "fs"
-import path from "path"
+import fs from "node:fs"
+import path from "node:path"
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
 import fontkit from "@pdf-lib/fontkit"
 import llm from "../../utils/llm/llm"
@@ -24,11 +24,11 @@ function wrap(s: string, max = 90) {
       const out: string[] = []
       let cur = ""
       for (const w of line.split(/\s+/)) {
-        if ((cur + " " + w).trim().length > max) {
+        if ((`${cur} ${w}`).trim().length > max) {
           out.push(cur)
           cur = w
         } else {
-          cur = (cur ? cur + " " : "") + w
+          cur = (cur ? `${cur} ` : "") + w
         }
       }
       if (cur) out.push(cur)
@@ -86,7 +86,7 @@ RULES
 - For each question, the corresponding answer must be in the same index in answers.
 `.trim()
 
-  const r1 = await llm.invoke([{ role: "user", content: prompt + "\n\nINPUT:\n" + text }] as any)
+  const r1 = await llm.invoke([{ role: "user", content: `${prompt}\n\nINPUT:\n${text}` }] as any)
   const raw1 = typeof r1 === "string" ? r1 : String((r1 as any)?.content ?? "")
   const parsed1 = safeParse<any>(extractFirstJsonObject(raw1) || raw1)
   if (parsed1 && typeof parsed1 === "object") return parsed1
@@ -94,7 +94,7 @@ RULES
   const retrySys = `Return only a JSON object matching the schema. No markdown. No extra text.`
   const r2 = await llm.invoke([
     { role: "system", content: retrySys },
-    { role: "user", content: prompt + "\n\nINPUT:\n" + text }
+    { role: "user", content: `${prompt}\n\nINPUT:\n${text}` }
   ] as any)
   const raw2 = typeof r2 === "string" ? r2 : String((r2 as any)?.content ?? "")
   const parsed2 = safeParse<any>(extractFirstJsonObject(raw2) || raw2)

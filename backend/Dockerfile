@@ -6,6 +6,8 @@ WORKDIR /app
 # builder
 FROM base AS builder
 
+RUN apk add --no-cache python3 make g++
+
 COPY package*.json ./
 
 RUN npm ci --legacy-peer-deps

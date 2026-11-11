@@ -1,5 +1,5 @@
 import "./agents"
-import { randomBytes } from "crypto"
+import { randomBytes } from "node:crypto"
 import { get } from "./registry"
 import type { ExecIn, ExecOut } from "./types"
 

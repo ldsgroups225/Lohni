@@ -1,5 +1,5 @@
 import { OpenAI } from 'openai';
-import fs from 'fs';
+import fs from 'node:fs';
 import { config } from '../../config/env';
 
 export type TranscriptionProvider = 'openai' | 'google' | 'assemblyai' | 'elevenlabs';

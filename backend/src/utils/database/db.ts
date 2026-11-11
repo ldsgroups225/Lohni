@@ -1,5 +1,5 @@
-import fs from "fs"
-import path from "path"
+import fs from "node:fs"
+import path from "node:path"
 import { Chroma } from "@langchain/community/vectorstores/chroma"
 import { Document } from "@langchain/core/documents"
 import type { EmbeddingsInterface } from "@langchain/core/embeddings"

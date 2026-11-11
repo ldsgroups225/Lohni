@@ -1,4 +1,4 @@
-import fs from "fs"
+import fs from "node:fs"
 import llm from "../../utils/llm/llm"
 import { tts, type TSeg } from "../../utils/tts"
 import { normalizeTopic } from "../../utils/text/normalize"

@@ -1,6 +1,6 @@
 import sqlite3 from 'sqlite3'
-import path from 'path'
-import { mkdirSync } from 'fs'
+import path from 'node:path'
+import { mkdirSync } from 'node:fs'
 
 export class SQLiteDatabase {
     private db: sqlite3.Database

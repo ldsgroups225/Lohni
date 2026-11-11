@@ -1,7 +1,7 @@
 import { handleQuiz } from "../../services/quiz";
 import { emitToAll } from "../../utils/chat/ws";
 import { withTimeout } from "../../utils/quiz/promise";
-import crypto from "crypto";
+import crypto from "node:crypto";
 
 const qs = new Map<string, Set<any>>();
 const qlog = (...a: any) => console.log("[quiz]", ...a);

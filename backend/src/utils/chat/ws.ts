@@ -1,4 +1,4 @@
-import zlib from "zlib"
+import zlib from "node:zlib"
 
 export function emitToAll(set: Set<any> | undefined, payload: any) {
   if (!set || set.size === 0) return

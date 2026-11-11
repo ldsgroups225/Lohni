@@ -1,7 +1,7 @@
 import { transcribeAudio, type TranscriptionProvider } from "../../services/transcriber";
 import { config } from "../../config/env";
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import Busboy from 'busboy';
 
 type ParsedTranscriptionRequest = {

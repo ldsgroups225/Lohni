@@ -1,4 +1,4 @@
-import crypto from "crypto"
+import crypto from "node:crypto"
 import { withTimeout } from "../../utils/quiz/promise"
 import { handleExam } from "../../services/examlab/generate"
 import { loadAllExams } from "../../services/examlab/loader"

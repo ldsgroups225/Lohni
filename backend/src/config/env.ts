@@ -1,5 +1,5 @@
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 
 // Containers get their settings as environment variables, without a .env file.
 const envFile = path.resolve(process.cwd(), '.env')

@@ -2,8 +2,8 @@ import { handleSmartNotes } from "../../services/smartnotes";
 import { emitToAll } from "../../utils/chat/ws";
 import { withTimeout } from "../../utils/quiz/promise";
 import { config } from "../../config/env";
-import crypto from "crypto";
-import path from "path";
+import crypto from "node:crypto";
+import path from "node:path";
 
 const ns = new Map<string, Set<any>>();
 const nlog = (...a: any) => console.log("[smartnotes]", ...a);

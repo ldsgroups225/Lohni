@@ -1,5 +1,5 @@
-import fs from "fs"
-import path from "path"
+import fs from "node:fs"
+import path from "node:path"
 import { publicStorage } from '../../config/storage'
 import { askWithContext, BASE_SYSTEM_PROMPT } from "../../lib/ai/ask"
 
