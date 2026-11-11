@@ -7,6 +7,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import { revisionAPI, type RevisionProfile, type RevisionProgress } from '../lib/api'
+import { invalidateRevisionCache } from '../lib/cachedDevice'
 
 export default function Profile() {
   const [profile, setProfile] = useState<RevisionProfile | null>(null)
@@ -37,7 +38,7 @@ export default function Profile() {
     setBusy(true)
     setSaved(false)
     setError('')
-    try { setProfile(await revisionAPI.saveProfile(profile)); setSaved(true) }
+    try { setProfile(await revisionAPI.saveProfile(profile)); invalidateRevisionCache(); setSaved(true) }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer ton profil.') }
     finally { setBusy(false) }
   }

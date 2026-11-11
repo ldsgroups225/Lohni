@@ -1,5 +1,5 @@
 import { usePersistentDetails } from '../lib/usePersistentDetails'
-import { cachedDevice } from '../lib/cachedDevice'
+import { cachedDevice, currentRevisionCacheVersion } from '../lib/cachedDevice'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { LoadingState } from '../components/ui/LoadingState'
 import { confirmDialog } from '../lib/confirm'
@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
 
-let cachedCourses: { device: string | null; chapters: RevisionChapter[]; progress: RevisionProgress } | null = null
+let cachedCourses: { device: string | null; version: number; chapters: RevisionChapter[]; progress: RevisionProgress } | null = null
 
 const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
@@ -48,7 +48,7 @@ function CardEditor({ card, busy, onSave, onCancel }: {
 
 export default function Courses() {
   const device = cachedDevice()
-  if (cachedCourses && cachedCourses.device !== device) cachedCourses = null
+  if (cachedCourses && (cachedCourses.device !== device || cachedCourses.version !== currentRevisionCacheVersion())) cachedCourses = null
   const [chapters, setChapters] = useState<RevisionChapter[]>(() => cachedCourses?.chapters ?? [])
   const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedCourses?.progress ?? null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -59,7 +59,7 @@ export default function Courses() {
   async function load(isActive = () => true) {
     const [nextChapters, nextProgress] = await Promise.all([revisionAPI.chapters(), revisionAPI.progress()])
     if (!isActive()) return
-    cachedCourses = { device: cachedDevice(), chapters: nextChapters, progress: nextProgress }
+    cachedCourses = { device: cachedDevice(), version: currentRevisionCacheVersion(), chapters: nextChapters, progress: nextProgress }
     setChapters(nextChapters)
     setProgress(nextProgress)
   }

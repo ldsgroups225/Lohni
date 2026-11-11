@@ -12,13 +12,13 @@ import curriculum from '../data/curriculum-ci.json'
 import Onboarding from '../components/Revision/Onboarding'
 import MobileHeader from '../components/MobileHeader'
 import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter } from '../lib/api'
-import { cachedDevice } from '../lib/cachedDevice'
+import { cachedDevice, currentRevisionCacheVersion } from '../lib/cachedDevice'
 
-let cachedHome: { device: string | null; home: RevisionHome | null; progress: RevisionProgress | null; chapters: RevisionChapter[] | null } | null = null
+let cachedHome: { device: string | null; version: number; home: RevisionHome | null; progress: RevisionProgress | null; chapters: RevisionChapter[] | null } | null = null
 
 export default function Home() {
   const device = cachedDevice()
-  if (cachedHome && cachedHome.device !== device) cachedHome = null
+  if (cachedHome && (cachedHome.device !== device || cachedHome.version !== currentRevisionCacheVersion())) cachedHome = null
   const [home, setHome] = useState<RevisionHome | null>(() => cachedHome?.home ?? null)
   const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedHome?.progress ?? null)
   const [loading, setLoading] = useState(!cachedHome)
@@ -35,7 +35,7 @@ export default function Home() {
       try {
         const data = await revisionAPI.home()
         if (!active) return
-        cachedHome = data ? { device: cachedDevice(), home: data, progress: cachedHome?.progress ?? null, chapters: cachedHome?.chapters ?? null } : null
+        cachedHome = data ? { device: cachedDevice(), version: currentRevisionCacheVersion(), home: data, progress: cachedHome?.progress ?? null, chapters: cachedHome?.chapters ?? null } : null
         setHome(data)
         if (data) void revisionAPI.chapters().then(value => { if (active) { if (cachedHome) cachedHome.chapters = value; setChapters(value) } }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
         if (data) void revisionAPI.progress().then(value => { if (active) { if (cachedHome) cachedHome.progress = value; setProgress(value) } }).catch(cause => {
