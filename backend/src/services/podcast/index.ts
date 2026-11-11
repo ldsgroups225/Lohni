@@ -44,7 +44,7 @@ export async function makeScript(input: string, topic?: string): Promise<POut> {
     const t = (typeof r === "string" ? r : String((r as any)?.content || "")).trim()
     try {
       const o = JSON.parse(j1(t) || t)
-      if (Array.isArray(o?.segments) && o.segments.length) return o as POut
+      if (typeof o?.title === "string" && o.title.trim() && typeof o.summary === "string" && Array.isArray(o.segments) && o.segments.length && o.segments.every((segment: any) => segment && ["A", "B"].includes(segment.spk) && typeof segment.md === "string" && segment.md.trim())) return o as POut
     } catch { /* retried below */ }
   }
   throw new Error("Le script du podcast n’a pas pu être généré. Réessaie.")

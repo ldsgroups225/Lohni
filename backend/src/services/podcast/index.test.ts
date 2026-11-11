@@ -37,3 +37,8 @@ test('une panne du modèle est journalisée et expliquée en français', async (
     expect(log).toHaveBeenCalledWith(expect.any(String), cause)
   } finally { log.mockRestore() }
 })
+
+test('un script sans texte parlé valide est refusé', async () => {
+  vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify({ title: 'Sujet', summary: 'Résumé', segments: [{ spk: 'A' }] }) } as any)
+  await expect(makeScript('Sujet')).rejects.toThrow('Le script du podcast n’a pas pu être généré. Réessaie.')
+})
