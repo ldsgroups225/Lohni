@@ -21,6 +21,7 @@ test('au retour les cours et Plus ouvert sont affichés avant la revalidation', 
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
     expect(host.textContent).toContain('Les suites')
+    expect(host.querySelector('.motion-list')).not.toBeNull()
     const details = [...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Plus')!
     await act(async () => { details.open = true; details.dispatchEvent(new Event('toggle')) })
     await act(async () => { await router.navigate('/quiz') })
@@ -28,6 +29,7 @@ test('au retour les cours et Plus ouvert sont affichés avant la revalidation', 
     expect(host.textContent).toContain('Les suites')
     expect([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Plus')?.open).toBe(true)
     expect(host.textContent).not.toContain('On prépare tes cours…')
+    expect(host.querySelector('.motion-list')).toBeNull()
   } finally {
     act(() => root.unmount()); router.dispose(); host.remove(); sessionStorage.clear()
   }

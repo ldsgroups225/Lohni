@@ -7,7 +7,7 @@ import { listDelay } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { Progress } from '../components/ui/Progress'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
@@ -49,6 +49,7 @@ function CardEditor({ card, busy, onSave, onCancel }: {
 export default function Courses() {
   const device = cachedDevice()
   if (cachedCourses && (cachedCourses.device !== device || cachedCourses.version !== currentRevisionCacheVersion())) cachedCourses = null
+  const animateEntry = useRef(!cachedCourses).current
   const [chapters, setChapters] = useState<RevisionChapter[]>(() => cachedCourses?.chapters ?? [])
   const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedCourses?.progress ?? null)
   const [editing, setEditing] = useState<string | null>(null)
@@ -107,9 +108,9 @@ export default function Courses() {
       </section>}
       {[...new Set(chapters.map(chapter => chapter.subject))].map((subject, subjectIndex) => {
         const own = chapters.filter(chapter => chapter.subject === subject)
-        return <section key={subject} style={{ animationDelay: listDelay(subjectIndex) }} className="motion-list space-y-4" aria-busy={busy}>
+        return <section key={subject} style={{ animationDelay: listDelay(subjectIndex) }} className={`${animateEntry ? 'motion-list ' : ''}space-y-4`} aria-busy={busy}>
           <h2 className="text-xl font-semibold text-foreground">{subject}</h2>
-          {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: listDelay(index) }} className="motion-list space-y-4 rounded-2xl border border-border bg-surface p-5">
+          {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: listDelay(index) }} className={`${animateEntry ? 'motion-list ' : ''}space-y-4 rounded-2xl border border-border bg-surface p-5`}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <h3 className="text-lg font-semibold text-foreground">{chapter.title}</h3>
               <span className={chapter.status === 'En cours' ? 'text-primary' : 'text-foreground'}>{chapter.status}</span>

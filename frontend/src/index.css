@@ -212,7 +212,6 @@ body {
 @keyframes lohni-menu-in { from { opacity: 0; transform: translateY(-4px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes lohni-menu-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-4px) scale(.96); } }
 @keyframes lohni-feedback { 0% { opacity: 0; transform: translateY(4px) scale(.6); animation-timing-function: var(--ease-pop); } 15% { opacity: 1; transform: translateY(0) scale(1); } 25%, 70% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-4px); } }
-.motion-route { animation: lohni-fade var(--duration-fast) var(--ease-lohni); }
 .motion-enter, .motion-list, .loop-screen [role="alert"], .loop-screen [role="status"] { animation: lohni-enter var(--duration-normal) var(--ease-lohni) backwards; }
 .motion-flip { animation: lohni-flip var(--duration-normal) var(--ease-lohni); transform-origin: center; }
 .motion-pop, .motion-celebrate { display: inline-flex; animation: lohni-pop var(--duration-pop) var(--ease-pop) both; }
@@ -272,7 +271,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--color-primary)
 
 @media (prefers-reduced-motion: no-preference) {
   nav[aria-label="Navigation principale"] { view-transition-name: navigation; }
-  html:active-view-transition .motion-route { animation: none; }
   ::view-transition-old(navigation), ::view-transition-new(navigation) { animation: none; }
   html[data-nav="push"]::view-transition-old(root) { animation: nav-push-old var(--duration-slow) var(--ease-lohni) both; }
   html[data-nav="push"]::view-transition-new(root) { animation: nav-push-new var(--duration-slow) var(--ease-lohni) both; }
