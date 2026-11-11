@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useRef } from "react";
 import MarkdownView from "../Chat/MarkdownView";
 import { prefersReducedMotion } from "../../lib/motion";
 import type { Question } from "../../pages/Quiz";
@@ -14,7 +14,6 @@ export default function QuestionCard({
   onSelect:(i:number)=>void; onHint:()=>void; onNext:()=>void; isLast:boolean;
 }) {
   const next = useRef<HTMLButtonElement>(null);
-  const answerName = useId();
   // Après la réponse : défiler jusqu'à l'explication et « Continuer », avec une marge sous le bouton.
   // Second passage : le Markdown se charge à la demande et peut allonger la page.
   useEffect(() => {
@@ -39,16 +38,19 @@ export default function QuestionCard({
             const isWrongSel = showExp && isSel && i !== q.correct;
             const tone = isCorrect ? "border-success bg-success/10" : isWrongSel ? "border-danger bg-danger/10" : showExp ? "border-border opacity-60" : "border-border";
             return (
-              <label
+              <button
                 key={key}
-                className={`flex min-h-14 w-full items-start gap-3 rounded-xl border p-3 text-left text-foreground focus-within:outline-2 focus-within:outline-primary ${tone}`}
+                type="button"
+                aria-pressed={isSel}
+                disabled={showExp}
+                onClick={() => onSelect(i)}
+                className={`flex min-h-14 w-full items-start gap-3 rounded-xl border p-3 text-left text-foreground focus-visible:outline-2 focus-visible:outline-primary ${tone}`}
               >
-                <input className="sr-only" type="radio" name={answerName} checked={isSel} disabled={showExp} onChange={() => onSelect(i)} />
                 <span className="grid size-7 shrink-0 place-items-center rounded-full border border-border text-xs font-bold">{String.fromCharCode(65 + i)}</span>
                 <span className="flex-1 pt-0.5"><MarkdownView md={opt} inline /></span>
                 {isCorrect && <span className="flex items-center gap-1 pt-0.5 text-sm"><Check />Bonne réponse</span>}
                 {isWrongSel && <span className="flex items-center gap-1 pt-0.5 text-sm"><Cross />Ta réponse</span>}
-              </label>
+              </button>
             );
           })}
         </fieldset>

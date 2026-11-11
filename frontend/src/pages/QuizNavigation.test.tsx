@@ -18,7 +18,7 @@ test('choisir un nouveau sujet retire l’ancien sujet de l’adresse', async ()
   const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }], { initialEntries: ['/quiz?topic=maths'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => required(host.querySelector<HTMLInputElement>('input[type="radio"]')).click())
+    await act(async () => required([...host.querySelectorAll<HTMLButtonElement>('#answerOptions button')].find(button => button.textContent?.includes('Un'))).click())
     await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))).click())
     await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Nouveau sujet'))).click())
     expect(router.state.location.search).toBe('')
@@ -37,7 +37,7 @@ test('reprendre un quiz relancé sur le même sujet garde la nouvelle progressio
   const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }, { path: '/courses', element: <p>Cours</p> }], { initialEntries: ['/quiz?topic=maths'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => required(host.querySelector<HTMLInputElement>('input[type="radio"]')).click())
+    await act(async () => required([...host.querySelectorAll<HTMLButtonElement>('#answerOptions button')].find(button => button.textContent?.includes('Un'))).click())
     await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))).click())
     await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Nouveau sujet'))).click())
     const input = required(host.querySelector('input'))
@@ -132,7 +132,7 @@ test('retrouver un quiz termine conserve ses resultats sans confirmation', async
   const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }, { path: '/courses', element: <p>Cours</p> }], { initialEntries: ['/quiz?topic=maths'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => required(host.querySelector<HTMLInputElement>('input[type="radio"]')).click())
+    await act(async () => required([...host.querySelectorAll<HTMLButtonElement>('#answerOptions button')].find(button => button.textContent?.includes('Un'))).click())
     await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))).click())
     await act(async () => { await router.navigate('/courses') })
     await act(async () => { await router.navigate(-1) })
