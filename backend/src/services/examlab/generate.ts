@@ -1,19 +1,7 @@
-import fs from "fs"
-import path from "path"
-import crypto from "crypto"
 import { StateGraph, Annotation } from "@langchain/langgraph"
 import { loadExam } from "./loader"
 import { ExamPayload, ExamSpec, QuizLikeItem } from "./types"
 import { generateSectionItems } from "./generator"
-
-const cacheDir = path.join(process.cwd(), "storage", "cache", "exam")
-if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true })
-const keyOf = (x: string) => crypto.createHash("sha256").update(x).digest("hex")
-const readCache = (k: string) => {
-  const f = path.join(cacheDir, k + ".json")
-  return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")) : null
-}
-const writeCache = (k: string, v: any) => fs.writeFileSync(path.join(cacheDir, k + ".json"), JSON.stringify(v))
 
 const log = (...a: any[]) => console.log("[examlab/generate]", new Date().toISOString(), ...a)
 
@@ -40,23 +28,7 @@ const nLoad = async (s: Ctx) => {
   return { ...s, spec }
 }
 
-const nCache = async (s: Ctx) => {
-  log("nCache:start")
-  const k = keyOf(s.examId)
-  const c = readCache(k)
-  if (c) {
-    log("nCache:hit", { bytes: JSON.stringify(c).length })
-    return { ...s, payload: c }
-  }
-  log("nCache:miss")
-  return s
-}
-
 const nGen = async (s: Ctx) => {
-  if (s.payload) {
-    log("nGen:skip:already-have-payload")
-    return s
-  }
   const spec = s.spec!
   log("nGen:start", { sections: spec.sections.length })
   const sections: { id: string; title: string; durationSec: number; items: QuizLikeItem[] }[] = []
@@ -89,28 +61,16 @@ const nValidate = async (s: Ctx) => {
   return s
 }
 
-const nSave = async (s: Ctx) => {
-  log("nSave:start")
-  const k = keyOf(s.examId)
-  writeCache(k, s.payload)
-  log("nSave:ok", { bytes: JSON.stringify(s.payload).length })
-  return s
-}
-
 const g = new StateGraph(S)
 g.addNode("load", nLoad)
-g.addNode("cache", nCache)
 g.addNode("gen", nGen)
 g.addNode("validate", nValidate)
-g.addNode("save", nSave)
 
 const edge = (a: string, b: string) => (g as any).addEdge(a as any, b as any)
 edge("__start__", "load")
-edge("load", "cache")
-edge("cache", "gen")
+edge("load", "gen")
 edge("gen", "validate")
-edge("validate", "save")
-edge("save", "__end__")
+edge("validate", "__end__")
 
 const compiled = g.compile()
 
