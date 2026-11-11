@@ -1,6 +1,7 @@
 // Styled replacement for window.confirm: native <dialog> gives focus trap, Escape and backdrop for free.
-export function confirmDialog(message: string, confirmLabel = 'Supprimer'): Promise<boolean> {
+export function confirmDialog(message: string, confirmLabel = 'Supprimer', signal?: AbortSignal): Promise<boolean> {
   return new Promise(resolve => {
+    if (signal?.aborted) { resolve(false); return }
     const dialog = document.createElement('dialog')
     dialog.setAttribute('role', 'alertdialog')
     dialog.className = 'm-auto w-[calc(100vw-2rem)] max-w-sm rounded-2xl border border-border bg-surface p-6 text-foreground shadow-2xl backdrop:bg-black/50'
@@ -18,7 +19,9 @@ export function confirmDialog(message: string, confirmLabel = 'Supprimer'): Prom
     }
     row.append(make('Annuler', false, 'border border-border'), make(confirmLabel, true, 'bg-danger text-on-danger font-semibold'))
     dialog.append(text, row)
-    dialog.addEventListener('close', () => { resolve(dialog.returnValue === 'true'); dialog.remove() })
+    const abort = () => dialog.close('false')
+    signal?.addEventListener('abort', abort, { once: true })
+    dialog.addEventListener('close', () => { signal?.removeEventListener('abort', abort); resolve(dialog.returnValue === 'true'); dialog.remove() })
     document.body.append(dialog)
     dialog.showModal()
   })

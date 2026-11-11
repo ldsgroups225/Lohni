@@ -11,13 +11,14 @@ export function useLeaveConfirmation(active: boolean, message: string) {
   useEffect(() => {
     if (blocker.state !== 'blocked') return
     let current = true
-    void confirmDialog(message, 'Quitter').then(confirmed => {
+    const controller = new AbortController()
+    void confirmDialog(message, 'Quitter', controller.signal).then(confirmed => {
       if (!current) return
       const currentBlocker = latestBlocker.current
       if (currentBlocker.state !== 'blocked') return
       if (confirmed) currentBlocker.proceed()
       else { currentBlocker.reset(); window.dispatchEvent(new Event(navigationCancelled)) }
     })
-    return () => { current = false }
+    return () => { current = false; controller.abort() }
   }, [blocker.state, message])
 }

@@ -40,6 +40,23 @@ test('une permission de départ ancienne ne désactive pas la confirmation au re
     expect(document.querySelector('dialog')?.textContent).toContain('Quitter')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelectorAll('dialog').forEach(dialog => dialog.remove()) }
 })
+test('un départ autorisé ferme une confirmation déjà ouverte', async () => {
+  HTMLDialogElement.prototype.showModal = function () { this.open = true }
+  HTMLDialogElement.prototype.close = function (value = '') { this.returnValue = value; this.open = false; this.dispatchEvent(new Event('close')) }
+  window.history.replaceState(null, '', '/')
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = navigationTransitions(createBrowserRouter([{ path: '/', element: <p>Accueil</p> }, { path: '/chat', element: <p>Chat</p> }, { path: '/quiz', element: <Guard /> }]))
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => { await router.navigate('/quiz') })
+    await act(async () => { await router.navigate(-1); await tick() })
+    expect(document.querySelector('dialog')).not.toBeNull()
+    await act(async () => { await router.navigate('/chat', { state: { allowLeave: true } }) })
+    expect(host.textContent).toContain('Chat')
+    expect(document.querySelector('dialog')).toBeNull()
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelectorAll('dialog').forEach(dialog => dialog.remove()) }
+})
 test('deux touchers rapides ne font qu’un saut depuis un écran enfant', async () => {
   window.history.replaceState(null, '', '/')
   const host = document.createElement('div'); document.body.append(host)
