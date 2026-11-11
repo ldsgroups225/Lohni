@@ -21,20 +21,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
     
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v6
-      with:
-        version: 10.13.1
-    
     - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v7
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          frontend/package-lock.json
     
     # Backend validation
     - name: Install backend dependencies
-      run: npm install
+      run: npm ci
       working-directory: ./
     
     - name: Build backend
@@ -43,21 +41,33 @@ jobs:
     
     # Frontend validation
     - name: Install frontend dependencies
-      run: pnpm install
+      run: npm ci
       working-directory: ./frontend
     
     - name: Build frontend
-      run: pnpm run build
+      run: npm run build
       working-directory: ./frontend
     
+    - name: Run tests
+      run: npm test
+
+    - name: Type-check frontend tests
+      run: npx tsc -p frontend/tsconfig.json
+
+    - name: Lint backend
+      run: npm run lint
+
+    - name: Lint frontend
+      run: npm run lint --prefix frontend
+
     # Security and dependency checks
     - name: Run npm audit (backend)
       run: npm audit --audit-level=moderate
       working-directory: ./
       continue-on-error: true
     
-    - name: Run pnpm audit (frontend)
-      run: pnpm audit --audit-level=moderate
+    - name: Run npm audit (frontend)
+      run: npm audit --audit-level=moderate
       working-directory: ./frontend
       continue-on-error: true
 
@@ -101,18 +111,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
       
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v6
-      with:
-        version: 10.13.1
-    
     - name: Setup Node.js
       uses: actions/setup-node@v7
       with:
         node-version: '26.x'
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          frontend/package-lock.json
     
     - name: Install dependencies (backend)
-      run: npm install
+      run: npm ci
       working-directory: ./
     
     - name: Check for known vulnerabilities (backend)
@@ -121,11 +130,11 @@ jobs:
       continue-on-error: false
     
     - name: Install dependencies (frontend)
-      run: pnpm install
+      run: npm ci
       working-directory: ./frontend
     
     - name: Check for known vulnerabilities (frontend)
-      run: pnpm audit --audit-level=high
+      run: npm audit --audit-level=high
       working-directory: ./frontend
       continue-on-error: false
 

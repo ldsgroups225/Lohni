@@ -25,17 +25,16 @@ jobs:
       uses: actions/setup-node@v7
       with:
         node-version: '26.x'
-    
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v6
-      with:
-        version: 10.13.1
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          frontend/package-lock.json
     
     - name: Install backend dependencies
-      run: npm install
+      run: npm ci
     
     - name: Install frontend dependencies
-      run: pnpm install
+      run: npm ci
       working-directory: ./frontend
     
     - name: Run backend security audit
@@ -46,7 +45,7 @@ jobs:
     - name: Run frontend security audit
       run: |
         echo "## Frontend Security Audit" >> $GITHUB_STEP_SUMMARY
-        cd frontend && pnpm audit --audit-level=moderate --json | jq -r '.advisories | to_entries[] | "- \(.key): \(.value.severity)"' >> $GITHUB_STEP_SUMMARY || true
+        cd frontend && npm audit --audit-level=moderate --json | jq -r '.vulnerabilities | to_entries[] | "- \(.key): \(.value.severity)"' >> $GITHUB_STEP_SUMMARY || true
     
     - name: Create issue for high/critical vulnerabilities
       if: failure()
@@ -61,8 +60,8 @@ jobs:
           
           **Actions to take:**
           1. Run \`npm audit\` in the root directory for backend issues
-          2. Run \`pnpm audit\` in the frontend directory for frontend issues
-          3. Update vulnerable packages using \`npm audit fix\` or \`pnpm update\`
+          2. Run \`npm audit\` in the frontend directory for frontend issues
+          3. Update vulnerable packages using \`npm audit fix\` or \`npm update\`
           4. Test the application after updates
           
           This issue was automatically created by the security audit workflow.
@@ -88,12 +87,16 @@ jobs:
       uses: actions/setup-node@v7
       with:
         node-version: '26.x'
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          frontend/package-lock.json
     
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v6
-      with:
-        version: 10.13.1
-    
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm ci --prefix frontend
+
     - name: Check for backend updates
       run: |
         npm outdated --json > backend_outdated.json || true
@@ -105,7 +108,7 @@ jobs:
     - name: Check for frontend updates
       run: |
         cd frontend
-        pnpm outdated --json > ../frontend_outdated.json || true
+        npm outdated --json > ../frontend_outdated.json || true
         cd ..
         if [ -s frontend_outdated.json ]; then
           echo "## Frontend Dependencies with Updates Available" >> $GITHUB_STEP_SUMMARY

@@ -31,12 +31,12 @@ Test through the service interface: a temp SQLite file, an injected clock, a fak
 - Run `npm install` at the root after pulling dependency changes (e.g. `ts-fsrs`), or backend tests fail on a missing package.
 - Install the frontend with `npm ci --prefix frontend` (npm only: a `node_modules` made by pnpm breaks npm; delete it first).
 - `nodemon` is not installed: start the backend with `npx tsx backend/src/core/index.ts` (port 5000). Frontend: `npx vite --host 127.0.0.1 --port 5173` from `frontend/`.
-- Frontend tests: `npx vitest run frontend/src` (`npm test` covers `backend/src` only).
+- Frontend tests: `npx vitest run frontend/src` (`npm test` covers `backend/src` and `frontend/src`).
 - OpenRouter may refuse `LLM_MAXTOK=16384` for lack of credits (HTTP 402). Override for the run (`LLM_MAXTOK=4000 npx tsx ...`) rather than editing `.env`.
 
 ## Done means
 
-`npm test`, `npx vitest run frontend/src`, `npm run build` and `npm run build --prefix frontend` all pass. For UI changes, also walk the flow in Orca's built-in browser at phone size:
+`npm test`, `npx vitest run frontend/src`, `npm run build`, `npm run build --prefix frontend`, `npm run lint` and `npm run lint --prefix frontend` all pass. For UI changes, also walk the flow in Orca's built-in browser at phone size:
 
 - Use `viewport --width 390 --height 844 --scale 1 --mobile`; `set device` produces tiled screenshots.
 - When a click reports it is covered by `#__orca-grab-host` (Orca's overlay), `focus` the element and press Enter.

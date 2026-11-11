@@ -1,19 +1,14 @@
 # base
 FROM node:26.13.1-alpine AS base
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-
-RUN npm i -g pnpm@10.13.1
-
 WORKDIR /app/frontend
 
 # deps
 FROM base AS deps
 
-COPY frontend/package*.json frontend/pnpm*.yaml ./
+COPY frontend/package.json frontend/package-lock.json ./
 
-RUN pnpm i --frozen-lockfile
+RUN npm ci
 
 # build
 FROM base AS build
@@ -27,7 +22,7 @@ COPY --from=deps /app/frontend/node_modules ./node_modules
 COPY frontend/ ./
 COPY backend/src/services/revision/policy.ts backend/src/services/revision/session.ts /app/backend/src/services/revision/
 
-RUN pnpm build
+RUN npm run build
 
 # runtime
 FROM base AS runtime
