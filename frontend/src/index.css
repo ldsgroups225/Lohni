@@ -268,3 +268,20 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--color-primary)
 /* Points de saisie : cycle 1,2 s, décalage 160 ms, montée de 4 px (Dots Hermes) */
 @keyframes lohni-dot { 0%, 60%, 100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-4px); opacity: 1; } }
 
+
+@media (prefers-reduced-motion: no-preference) {
+  nav[aria-label="Navigation principale"] { view-transition-name: navigation; }
+  html:active-view-transition .motion-route { animation: none; }
+  ::view-transition-old(navigation), ::view-transition-new(navigation) { animation: none; }
+  html[data-nav="push"]::view-transition-old(root) { animation: nav-push-old var(--duration-slow) var(--ease-lohni) both; }
+  html[data-nav="push"]::view-transition-new(root) { animation: nav-push-new var(--duration-slow) var(--ease-lohni) both; }
+  html[data-nav="pop"]::view-transition-old(root) { animation: nav-pop-old var(--duration-slow) var(--ease-lohni) both; }
+  html[data-nav="pop"]::view-transition-new(root) { animation: nav-pop-new var(--duration-slow) var(--ease-lohni) both; }
+  html[data-nav="tab"]::view-transition-old(root) { animation: nav-fade-out var(--duration-fast) var(--ease-lohni) both; }
+  html[data-nav="tab"]::view-transition-new(root) { animation: lohni-fade var(--duration-fast) var(--ease-lohni) both; }
+}
+@keyframes nav-push-old { to { transform: translateX(-25%); } }
+@keyframes nav-push-new { from { transform: translateX(100%); } }
+@keyframes nav-pop-old { to { transform: translateX(100%); } }
+@keyframes nav-pop-new { from { transform: translateX(-25%); } }
+@keyframes nav-fade-out { to { opacity: 0; } }
