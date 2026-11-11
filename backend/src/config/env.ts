@@ -6,7 +6,6 @@ const envFile = path.resolve(process.cwd(), '.env')
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile)
 
 export const config = {
-  db_mode: process.env.db_mode || 'json',
   url: process.env.VITE_BACKEND_URL || '',
   timeout: Number(process.env.VITE_TIMEOUT || 90000),
   provider: process.env.LLM_PROVIDER || 'ollama',
