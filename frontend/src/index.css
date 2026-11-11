@@ -229,3 +229,6 @@ summary { list-style: none; display: flex; align-items: center; justify-content:
 summary::-webkit-details-marker { display: none; }
 summary::after { content: ""; flex: none; width: .55rem; height: .55rem; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform var(--duration-normal) var(--ease-lohni); opacity: .7; }
 details[open] > summary::after { transform: rotate(225deg) translateY(-2px); }
+
+/* Native controls follow the brand color */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--color-primary); }
