@@ -1,4 +1,5 @@
 import { Button } from '../components/ui/Button'
+import { BackButton } from '../components/ui/BackButton'
 import { LoadingState } from '../components/ui/LoadingState'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { useEffect, useState, type FormEvent } from 'react'
@@ -48,7 +49,7 @@ export default function ImportCourse() {
   return <main className="loop-screen min-h-dvh px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
       <header className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">Importer mon cours</h1>
+        <BackButton fallback="/courses" /><h1 className="flex-1 text-2xl font-semibold text-foreground">Importer mon cours</h1>
         <Link to="/revision" className="underline">Révision</Link>
       </header>
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}

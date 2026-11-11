@@ -1,4 +1,5 @@
 import { Button } from '../components/ui/Button'
+import { BackButton } from '../components/ui/BackButton'
 import { LoadingState } from '../components/ui/LoadingState'
 import { revisionCardVisibility } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
@@ -181,7 +182,7 @@ export default function Revision() {
   return (
     <main className={`loop-screen flex min-h-dvh flex-col px-4 md:pl-28 ${session && !session.complete && card ? `pt-1 ${verdict ? 'pb-[max(2rem,env(safe-area-inset-bottom))]' : 'pb-[max(.5rem,env(safe-area-inset-bottom))]'}` : 'pt-8 pb-36'}`}>
       <div className={`mx-auto flex w-full max-w-xl flex-1 flex-col ${session && !session.complete && card ? 'space-y-2' : 'space-y-6'}`}>
-        {session && !session.complete && card ? <header className="flex items-center gap-3"><h1 className="sr-only">Session de révision</h1><Link to="/" aria-label="Quitter la session" className="press-icon -ml-3 inline-grid size-11 place-items-center rounded-xl text-muted"><CloseIcon /></Link>{session && <div className="flex-1"><div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div><Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" /></div>}{session && <span className="text-sm tabular-nums text-muted">{session.position + 1}/{session.cards.length}</span>}
+        {session && !session.complete && card ? <header className="flex items-center gap-3"><h1 className="sr-only">Session de révision</h1><BackButton fallback="/" label="Quitter la session" className="press-icon -ml-3 inline-grid size-11 place-items-center rounded-xl text-muted"><CloseIcon /></BackButton>{session && <div className="flex-1"><div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div><Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" /></div>}{session && <span className="text-sm tabular-nums text-muted">{session.position + 1}/{session.cards.length}</span>}
           <div className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
             <button ref={menuButton} type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(value => !value)} className="press-icon -mr-2 grid size-11 place-items-center rounded-xl text-xl leading-none text-muted">⋯</button>
             {menuExit.mounted && <div role="menu" data-state={menuExit.state} className="motion-menu absolute right-0 top-full z-10 mt-1 rounded-xl border border-border bg-surface p-1 shadow-lg">
