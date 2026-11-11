@@ -13,7 +13,7 @@ export default function App() {
       <AdaptiveToastProvider
         theme="system"
       />
-      <div className="bg-background text-foreground min-h-screen flex flex-col">
+      <div className="bg-background text-foreground min-h-dvh flex flex-col">
         <Sidebar />
         <div key={pathname} className="motion-route flex-1 relative">
           <Suspense fallback={<LoadingState fullPage />}>

@@ -252,7 +252,7 @@ export default function Chat() {
   const list = Array.isArray(messages) ? messages : [];
 
   return (
-    <div className="bg-background text-foreground flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
+    <div className="bg-background text-foreground flex flex-col min-h-dvh w-full px-4 md:pl-28 lg:pr-4">
       <div className="mx-auto mt-6 w-full max-w-4xl space-y-3">
         <div className="flex items-center justify-between gap-4 whitespace-nowrap text-sm">
           <Link to="/tutor" className="text-primary underline">Discussions</Link>

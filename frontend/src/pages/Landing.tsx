@@ -95,7 +95,7 @@ export default function Landing() {
   };
 
   return (
-    <div className="bg-background text-foreground flex flex-col min-h-screen w-full px-4 pb-28 md:pb-4 md:pl-28 lg:pr-4">
+    <div className="bg-background text-foreground flex flex-col min-h-dvh w-full px-4 pb-28 md:pb-4 md:pl-28 lg:pr-4">
       <div className="flex-1 flex flex-col justify-center max-w-4xl mx-auto pt-8 md:pt-0 my-4 w-full px-0 md:px-2">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl text-foreground font-semibold pl-3 border-l-2 border-primary mb-5 md:mb-8">
           Que veux-tu comprendre aujourd’hui ?

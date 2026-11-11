@@ -71,7 +71,7 @@ export default function Courses() {
     return () => { active = false }
   }, [])
 
-  return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
+  return <main className="loop-screen min-h-dvh px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="space-y-3">
         <div className="flex items-center justify-between gap-3">

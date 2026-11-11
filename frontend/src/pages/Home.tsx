@@ -54,7 +54,7 @@ export default function Home() {
     } catch { setStreakFrom(null) }
   }, [progress])
 
-  return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
+  return <main className="loop-screen min-h-dvh px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
       {(!home || loading || error) && <MobileHeader />}
       {(!home || loading || error) && <header className="sr-only lg:not-sr-only"><h1 className="text-2xl font-semibold text-foreground">Lohni</h1></header>}

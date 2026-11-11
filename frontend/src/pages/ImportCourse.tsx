@@ -45,7 +45,7 @@ export default function ImportCourse() {
     })
   }
 
-  return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
+  return <main className="loop-screen min-h-dvh px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
       <header className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-foreground">Importer mon cours</h1>
