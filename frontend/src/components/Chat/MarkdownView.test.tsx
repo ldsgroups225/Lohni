@@ -24,7 +24,7 @@ $$
 
 test('une option QCM reste inline dans son label radio, même avec du Markdown de bloc', () => {
   const html = renderToStaticMarkup(<label><input type="radio" name="answer" value="1" />
-    <MarkdownView inline md={String.raw`**Un demi** : $\frac{1}{2}$
+    <MarkdownView inline md={`${String.raw`**Un demi** : $\frac{1}{2}$
 
 # Une formule
 
@@ -32,7 +32,7 @@ $$\frac{2}{4}$$
 
 - Un choix
 
-` + "\n\n```\ncode\n```"} />
+`}\n\n\`\`\`\ncode\n\`\`\``} />
   </label>)
   expect(html).toContain('<label><input type="radio" name="answer"')
   expect(html).toContain('<strong>Un demi</strong>')

@@ -13,7 +13,7 @@ export default function Composer({ disabled, onSend }: Props) {
     if (!el) return;
     const onInput = () => {
       el.style.height = "auto";
-      el.style.height = Math.min(el.scrollHeight, 256) + "px";
+      el.style.height = `${Math.min(el.scrollHeight, 256)}px`;
     };
     el.addEventListener("input", onInput);
     onInput();

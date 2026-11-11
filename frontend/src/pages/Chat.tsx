@@ -142,7 +142,7 @@ export default function Chat() {
 
   useEffect(() => {
     if (!chatId) return;
-    const wsUrl = (env.backend || window.location.origin).replace(/^http/, "ws") + `/ws/chat?chatId=${encodeURIComponent(chatId)}`;
+    const wsUrl = `${(env.backend || window.location.origin).replace(/^http/, "ws")}/ws/chat?chatId=${encodeURIComponent(chatId)}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
     ws.onopen = () => setConnecting(false);
