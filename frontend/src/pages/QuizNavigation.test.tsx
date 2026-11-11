@@ -25,6 +25,31 @@ test('choisir un nouveau sujet retire l’ancien sujet de l’adresse', async ()
   } finally { act(() => root.unmount()); router.dispose(); host.remove() }
 })
 
+test('reprendre un quiz relancé sur le même sujet garde la nouvelle progression', async () => {
+  sessionStorage.clear()
+  Element.prototype.scrollIntoView = vi.fn()
+  window.scrollTo = vi.fn()
+  HTMLDialogElement.prototype.showModal = function () { this.open = true }
+  HTMLDialogElement.prototype.close = function (value = '') { this.returnValue = value; this.open = false; this.dispatchEvent(new Event('close')) }
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }, { path: '/courses', element: <p>Cours</p> }], { initialEntries: ['/quiz?topic=maths'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Un'))!.click())
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))!.click())
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Nouveau sujet'))!.click())
+    const input = host.querySelector('input')!
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'maths'); input.dispatchEvent(new Event('input', { bubbles: true })) })
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Commencer le quiz'))!.click())
+    await act(async () => { await router.navigate('/courses') })
+    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')!.click())
+    await act(async () => { await router.navigate(-1) })
+    expect(host.textContent).toContain('Combien ?')
+    expect(host.textContent).not.toContain('Quiz terminé')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
+})
+
 test('retrouver le quiz conserve les questions sans nouvelle génération', async () => {
   api.start.mockClear(); sessionStorage.clear()
   const host = document.createElement('div'); document.body.append(host)
