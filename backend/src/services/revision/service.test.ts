@@ -556,3 +556,39 @@ test('une connexion SQLite attend la libération du verrou par une autre connexi
     expect(await result).toMatchObject({ value: { title: 'Cours' } })
   } finally { await other.close() }
 })
+
+const mixed = (): GeneratedChapter => ({ summary: 'Mixte', notes: [
+  { content: 'A', cards: [{ kind: 'basic', question: 'Basique 0', answer: 'R0' }] },
+  { content: 'B', cards: [{ kind: 'basic', question: 'Basique 1', answer: 'R1' }] },
+  { content: 'C', cards: [{ kind: 'mcq', question: 'QCM 0', answer: 'A', options: ['A', 'B', 'C', 'D'], correct: 1 }] },
+] })
+
+test('le bilan sépare le quiz objectif des fiches auto-évaluées et liste les cartes ratées', async () => {
+  generated = mixed()
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'] })
+  await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Mixte' })
+  let session = await service.getSession(context())
+  expect(session.summary).toEqual({ quiz: { total: 0, correct: 0 }, flashcards: { total: 0, knew: 0 }, missed: [] })
+  const order = session.cards.map(c => c.kind)
+  expect(order).toEqual(['basic', 'basic', 'mcq'])
+  session = await respond(session, true)
+  session = await respond(session, false)
+  session = await respond(session, true, 2)
+  expect(session.summary?.flashcards).toEqual({ total: 2, knew: 1 })
+  expect(session.summary?.quiz).toEqual({ total: 1, correct: 0 })
+  expect(session.summary?.missed).toEqual([
+    { cardId: session.cards[1].id, question: 'Basique 1', kind: 'basic' },
+    { cardId: session.cards[2].id, question: 'QCM 0', kind: 'mcq' },
+  ])
+  expect((await service.getSession(context(), true)).summary).toBeDefined()
+})
+
+test('une carte ratée puis réussie à sa reprise quitte la liste des ratées mais compte à chaque réponse', async () => {
+  await setup(1)
+  let session = await service.getSession(context())
+  session = await respond(session, false)
+  expect(session.summary?.missed).toHaveLength(1)
+  session = await respond(session, true)
+  expect(session.complete).toBe(true)
+  expect(session.summary).toEqual({ quiz: { total: 0, correct: 0 }, flashcards: { total: 2, knew: 1 }, missed: [] })
+})

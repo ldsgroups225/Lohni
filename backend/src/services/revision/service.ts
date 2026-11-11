@@ -20,7 +20,11 @@ export type GeneratedCard = { kind: 'basic'; question: string; answer: string } 
 export type GeneratedChapter = { summary: string; notes: { content: string; cards: GeneratedCard[] }[] }
 export type ProfileInput = { schoolClass: string; series?: string; subjects: string[]; examDate?: string }
 export type RevisionCard = GeneratedCard & { id: string; chapterId: string; origin: 'ai' | 'import'; due: string; reviews: number }
-export type RevisionSession = { id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number }
+export type RevisionSession = { id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number; summary?: RevisionSummary }
+export type RevisionSummary = {
+  quiz: { total: number; correct: number }; flashcards: { total: number; knew: number };
+  missed: { cardId: string; question: string; kind: 'basic' | 'mcq' }[]
+}
 export type RevisionAnswer = { answerId?: string; sessionId: string; cardId: string; position: number; knew: boolean; choice?: number; durationMs: number }
 export type MasteryStatus = 'Fragile' | 'En cours' | 'Solide'
 export type RevisionChapter = {
@@ -314,7 +318,7 @@ export class RevisionService {
       const cards = await this.selectSessionCards(context, profile)
       const session: RevisionSession = { id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: cards.length === 0, repeated: [], elapsedMs: 0, earnedXP: 0 }
       await db.run('INSERT INTO revision_sessions VALUES (?, ?, ?, ?)', [session.id, context.deviceId, context.localDate, JSON.stringify(session)])
-      return session
+      return this.sessionResult(session)
     })
   }
   private async selectSessionCards(context: RevisionContext, profile: ProfileInput): Promise<RevisionCard[]> {
@@ -344,8 +348,27 @@ export class RevisionService {
     return selected.map(revisionCard)
   }
   private async sessionResult(session: RevisionSession): Promise<RevisionSession> {
-    const rows = await this.dependencies.db.all('SELECT knew, session_complete FROM revision_journal WHERE session_id = ?', [session.id])
-    return { ...session, earnedXP: journalXP(rows) }
+    const rows = await this.dependencies.db.all('SELECT knew, session_complete, position FROM revision_journal WHERE session_id = ? ORDER BY position', [session.id])
+    const summary: RevisionSummary = { quiz: { total: 0, correct: 0 }, flashcards: { total: 0, knew: 0 }, missed: [] }
+    const lastKnew = new Map<string, boolean>()
+    for (const row of rows) {
+      const card = session.cards[row.position]
+      if (!card) continue
+      const part = card.kind === 'mcq' ? summary.quiz : summary.flashcards
+      part.total++
+      if (row.knew) card.kind === 'mcq' ? summary.quiz.correct++ : summary.flashcards.knew++
+      lastKnew.set(card.id, Boolean(row.knew))
+    }
+    // Ordre de première réponse ratée ; une carte réussie ensuite sort de la liste.
+    const seen = new Set<string>()
+    for (const row of rows) {
+      const card = session.cards[row.position]
+      if (card && !row.knew && !lastKnew.get(card.id) && !seen.has(card.id)) {
+        seen.add(card.id)
+        summary.missed.push({ cardId: card.id, question: card.question, kind: card.kind })
+      }
+    }
+    return { ...session, earnedXP: journalXP(rows), summary }
   }
   async answer(context: RevisionContext, input: RevisionAnswer): Promise<RevisionSession> {
     return this.execute(context, async () => {

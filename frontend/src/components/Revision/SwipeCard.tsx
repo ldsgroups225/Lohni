@@ -24,7 +24,9 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
   const [hint, setHint] = useState(false)
   const drag = useRef<{ x: number; y: number; t: number; v: number; moved: boolean } | null>(null)
   const sent = useRef(false)
+  const timer = useRef<number | undefined>(undefined)
 
+  useEffect(() => () => window.clearTimeout(timer.current), [])
   useEffect(() => {
     if (!enabled) return
     sent.current = false
@@ -36,7 +38,7 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
     sent.current = true
     setSettling(true)
     setDx((knew ? 1 : -1) * window.innerWidth * 1.2)
-    window.setTimeout(() => onSwipe(knew), 150)
+    timer.current = window.setTimeout(() => onSwipe(knew), 150)
   }
   function down(e: PointerEvent) {
     if (!enabled || sent.current) return
@@ -86,11 +88,11 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
     '--swipe-border': `color-mix(in srgb, ${tone} ${strength * 100}%, var(--color-border))`,
     transition: settling ? 'transform var(--duration-slow) var(--ease-lohni), opacity var(--duration-slow) var(--ease-lohni)' : 'none',
   } as CSSProperties
-  const face = 'absolute inset-0 flex overflow-y-auto rounded-3xl border border-[color:var(--swipe-border)] bg-surface p-6 [backface-visibility:hidden]'
+  const face = 'absolute inset-0 flex overflow-y-auto rounded-3xl border border-[color:var(--swipe-border)] bg-surface px-6 pb-10 pt-6 [backface-visibility:hidden]'
   return (
-    <div className="flex min-h-[55dvh] flex-1 flex-col gap-3">
+    <div className="flex min-h-[55dvh] flex-1 flex-col">
       <div
-        role="button" tabIndex={0} aria-pressed={revealed} aria-label={revealed ? 'Réponse. Touche pour revenir à la question.' : 'Question. Touche pour voir la réponse.'}
+        role="group" aria-roledescription="carte" aria-label={revealed ? 'Réponse' : 'Question'} aria-describedby="swipe-hint" tabIndex={0}
         onKeyDown={key} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel}
         className="relative flex-1 touch-pan-y select-none [perspective:1000px]" style={style}
       >
@@ -108,10 +110,10 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
             </div>
           </div>
         </div>
-      </div>
-      <p className="text-center text-xs text-muted" aria-live="polite">
+        <p id="swipe-hint" className="pointer-events-none absolute inset-x-0 bottom-3 text-center text-xs text-muted">
         {!revealed ? 'Touche la carte pour voir la réponse' : hint ? 'Glisse la carte à gauche ou à droite' : '← Je ne savais pas · Je savais →'}
       </p>
+      </div>
     </div>
   )
 }

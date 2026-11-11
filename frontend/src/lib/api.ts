@@ -624,6 +624,11 @@ export type RevisionCard = {
 };
 export type RevisionSession = {
   id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number;
+  summary?: {
+    quiz: { total: number; correct: number };
+    flashcards: { total: number; knew: number };
+    missed: { cardId: string; question: string; kind: 'basic' | 'mcq' }[];
+  };
 };
 export type MasteryStatus = 'Fragile' | 'En cours' | 'Solide';
 export type RevisionProgress = {
@@ -779,6 +784,7 @@ async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<
     const answer = { ...input, answerId: crypto.randomUUID() };
     state.pending.push({ answer, localDate: session.localDate });
     advanceSession(session, knew, input.durationMs);
+    delete session.summary; // périmé : le récap le recharge une fois les réponses envoyées
     next = session;
   });
   void syncRevisionAnswers();
