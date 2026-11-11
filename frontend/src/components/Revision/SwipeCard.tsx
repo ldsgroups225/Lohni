@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { memo, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import MarkdownView from '../Chat/MarkdownView'
 import { spring } from '../../lib/motion'
+
+const CardMarkdown = memo(MarkdownView)
 
 // Valeurs reprises de la carte à glisser de KnowUnityFork.
 const THRESHOLD = 80
@@ -113,13 +115,13 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
           <div className={face} aria-hidden={revealed}>
             <div className="m-auto w-full text-center">
               <p className="mb-3 text-xs uppercase tracking-wide text-muted">Question</p>
-              <div className="text-2xl font-semibold leading-snug text-foreground"><MarkdownView md={question} inline /></div>
+              <div className="text-2xl font-semibold leading-snug text-foreground"><CardMarkdown md={question} inline /></div>
             </div>
           </div>
           <div className={face} style={{ transform: 'rotateY(180deg)' }} aria-hidden={!revealed}>
             <div className="m-auto w-full text-center">
               <p className="mb-3 text-xs uppercase tracking-wide text-muted">Réponse</p>
-              <div className="text-xl leading-relaxed text-foreground"><MarkdownView md={answer} /></div>
+              <div className="text-xl leading-relaxed text-foreground"><CardMarkdown md={answer} /></div>
             </div>
           </div>
         </div>
