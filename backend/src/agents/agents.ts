@@ -6,7 +6,6 @@ import { quizTool } from "./tools/quiz"
 import { examTool } from "./tools/examlab"
 import { Ragsearch } from "./tools/Ragsearch"
 import { nopTool } from "./tools/nop"
-import { podcastScriptTool, podcastTtsTool } from "./tools/podcast"
 
 const tutor: Agent = reg({
   id: "tutor",
@@ -27,13 +26,6 @@ const examiner: Agent = reg({
   name: "Examiner",
   sys: "You design assessments.",
   tools: [nopTool, examTool, quizTool],
-})
-
-const podcaster: Agent = reg({
-  id: "podcaster",
-  name: "Podcaster",
-  sys: "You turn materials into podcast scripts and synthesize audio.",
-  tools: [nopTool, podcastScriptTool, podcastTtsTool],
 })
 
 export const Agents = { tutor, researcher, examiner }

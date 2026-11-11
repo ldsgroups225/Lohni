@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useOverlayNavigation } from "../lib/useOverlayNavigation";
 import { confirmDialog } from "../lib/confirm";
 import { ToolPage } from "../components/ui/ToolPage";
+import * as api from "../lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 type DebateMessage = {
@@ -94,21 +95,20 @@ export default function Debate() {
 
     const fetchDebateSession = async (id: string) => {
         try {
-            const response = await fetch(`http://localhost:5000/debate/${id}`);
-            const data = await response.json();
+            const data = await api.getDebateSession(id);
             if (data.ok) {
                 setSession(data.session);
                 setMessages(data.session.messages);
             } else {
-                setError(data.error || "Impossible de charger le débat");
+                setError("Impossible de charger le débat");
             }
-        } catch (err: any) {
-            setError(err.message || "Impossible de charger le débat");
+        } catch {
+            setError("Impossible de charger le débat");
         }
     };
 
     const connectWebSocket = (id: string) => {
-        const ws = new WebSocket(`ws://localhost:5000/ws/debate?debateId=${id}`);
+        const ws = new WebSocket(api.wsURL(`/ws/debate?debateId=${encodeURIComponent(id)}`));
 
         ws.onopen = () => {
             console.log("WebSocket connected");
@@ -150,7 +150,7 @@ export default function Debate() {
                 case "ai_concede":
                     setMessages((prev) => [
                         ...prev,
-                        { role: "assistant", content: `I must concede this debate. ${data.reason}`, timestamp: Date.now() },
+                        { role: "assistant", content: `Je m’avoue vaincue : ${data.reason}`, timestamp: Date.now() },
                     ]);
                     setIsStreaming(false);
                     setStreamingContent("");
@@ -160,7 +160,7 @@ export default function Debate() {
                     break;
 
                 case "error":
-                    setError(data.error);
+                    setError("L’IA n’a pas pu répondre. Réessaie.");
                     setIsStreaming(false);
                     setStreamingContent("");
                     break;
@@ -183,23 +183,17 @@ export default function Debate() {
         if (!topic.trim()) return;
 
         try {
-            const response = await fetch("http://localhost:5000/debate/start", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ topic: topic.trim(), position }),
-            });
-
-            const data = await response.json();
+            const data = await api.startDebate(topic.trim(), position);
             if (data.ok) {
                 setDebateId(data.debateId);
-                setSession(data.session);
+                setSession({ ...data.session, messages: [] });
                 setMessages([]);
                 navigate(`/debate?debateId=${data.debateId}`);
             } else {
-                setError(data.error || "Impossible de démarrer le débat");
+                setError("Impossible de démarrer le débat");
             }
-        } catch (err: any) {
-            setError(err.message || "Impossible de démarrer le débat");
+        } catch {
+            setError("Impossible de démarrer le débat");
         }
     };
 
@@ -214,21 +208,12 @@ export default function Debate() {
         }
 
         try {
-            const response = await fetch(
-                `http://localhost:5000/debate/${debateId}/argue`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ argument: userArgument }),
-                }
-            );
-
-            const data = await response.json();
+            const data = await api.submitDebateArgument(debateId, userArgument);
             if (!data.ok) {
-                setError(data.error || "Impossible d’envoyer ton argument");
+                setError("Impossible d’envoyer ton argument");
             }
-        } catch (err: any) {
-            setError(err.message || "Impossible d’envoyer ton argument");
+        } catch {
+            setError("Impossible d’envoyer ton argument");
         }
     };
 
@@ -251,23 +236,36 @@ export default function Debate() {
         if (!(await confirmDialog("Veux-tu terminer ce débat ?", "Terminer"))) return;
 
         try {
-            const response = await fetch(
-                `http://localhost:5000/debate/${debateId}/surrender`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                }
-            );
-
-            const data = await response.json();
+            const data = await api.surrenderDebate(debateId);
             if (data.ok) {
                 setAnalysisState("loading");
                 fetchAnalysis();
             } else {
-                setError(data.error || "Impossible de terminer le débat");
+                setError("Impossible de terminer le débat");
             }
-        } catch (err: any) {
-            setError(err.message || "Impossible de terminer le débat");
+        } catch {
+            setError("Impossible de terminer le débat");
+        }
+    };
+
+    const requestAnalysis = async (id: string, analysisWs: WebSocket) => {
+        try {
+            const data = await api.analyzeDebate(id);
+            if (analysisWsRef.current !== analysisWs) return;
+            if (!data.ok) {
+                setError("Impossible de lancer l’analyse");
+                setAnalysisOpen(false);
+                setAnalysisState(null);
+                setAnalysisPhase("");
+                analysisWs.close();
+            }
+        } catch {
+            if (analysisWsRef.current !== analysisWs) return;
+            setError("Impossible de lancer l’analyse");
+            setAnalysisOpen(false);
+            setAnalysisState(null);
+            setAnalysisPhase("");
+            analysisWs.close();
         }
     };
 
@@ -279,7 +277,7 @@ export default function Debate() {
         setAnalysisPhase("Début de l’analyse…");
 
         // Connect to analysis WebSocket first
-        const analysisWs = new WebSocket(`ws://localhost:5000/ws/debate/analyze?debateId=${debateId}`);
+        const analysisWs = new WebSocket(api.wsURL(`/ws/debate/analyze?debateId=${encodeURIComponent(debateId)}`));
 
         analysisWs.onopen = () => {
             console.log("Analysis WebSocket connected");
@@ -291,7 +289,8 @@ export default function Debate() {
 
             switch (data.type) {
                 case "ready":
-                    console.log("Analysis WebSocket ready");
+                    // The server streams only to sockets registered before the request.
+                    void requestAnalysis(debateId, analysisWs);
                     break;
 
                 case "phase":
@@ -306,7 +305,7 @@ export default function Debate() {
                     break;
 
                 case "error":
-                    setError(data.error);
+                    setError("L’analyse du débat a échoué. Réessaie.");
                     setAnalysisState(null);
                     setAnalysisOpen(false);
                     setAnalysisPhase("");
@@ -330,33 +329,6 @@ export default function Debate() {
 
         analysisWsRef.current = analysisWs;
 
-        // Trigger analysis on backend
-        try {
-            const response = await fetch(
-                `http://localhost:5000/debate/${debateId}/analyze`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                }
-            );
-
-            const data = await response.json();
-            if (analysisWsRef.current !== analysisWs) return;
-            if (!data.ok && data.error) {
-                setError(data.error);
-                setAnalysisOpen(false);
-                setAnalysisState(null);
-                setAnalysisPhase("");
-                analysisWs.close();
-            }
-        } catch (err: any) {
-            if (analysisWsRef.current !== analysisWs) return;
-            setError(err.message || "Impossible de lancer l’analyse");
-            setAnalysisOpen(false);
-            setAnalysisState(null);
-            setAnalysisPhase("");
-            analysisWs.close();
-        }
     };
 
     if (!debateId) {
@@ -570,7 +542,7 @@ export default function Debate() {
                                     ? "Le débat est terminé"
                                     : isStreaming
                                         ? "L’IA prépare sa réponse…"
-                                        : "Écris ton argument… (Maj+Entrée pour une nouvelle ligne)"
+                                        : "Écris ton argument…"
                             }
                             disabled={isStreaming || isDebateEnded}
                             className="flex-1 px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed custom-scroll"

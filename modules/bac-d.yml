@@ -1,0 +1,54 @@
+id: "bac-d"
+name: "BAC blanc série D"
+scoring: "right-only"
+sections:
+  - id: "maths"
+    title: "Mathématiques"
+    durationSec: 1500
+    gen:
+      type: "mcq"
+      count: 5
+      difficulty: "moyenne à difficile"
+      topic: "Mathématiques, Terminale D"
+      prompt: |
+        QCM de mathématiques pour le BAC série D, programme ivoirien de Terminale : limites et continuité, dérivées, logarithme et exponentielle, suites, probabilités, nombres complexes.
+  - id: "physique-chimie"
+    title: "Physique-Chimie"
+    durationSec: 1200
+    gen:
+      type: "mcq"
+      count: 5
+      difficulty: "moyenne à difficile"
+      topic: "Physique-Chimie, Terminale D"
+      prompt: |
+        QCM de physique-chimie pour le BAC série D, programme ivoirien de Terminale : mécanique, électromagnétisme, circuits RLC, cinétique chimique, acides et bases, chimie organique.
+  - id: "svt"
+    title: "SVT"
+    durationSec: 1200
+    gen:
+      type: "mcq"
+      count: 5
+      difficulty: "moyenne à difficile"
+      topic: "SVT, Terminale D"
+      prompt: |
+        QCM de SVT pour le BAC série D, programme ivoirien de Terminale : génétique, immunologie, système nerveux, reproduction, régulation de la glycémie.
+  - id: "philosophie"
+    title: "Philosophie"
+    durationSec: 900
+    gen:
+      type: "mcq"
+      count: 5
+      difficulty: "moyenne"
+      topic: "Philosophie, Terminale"
+      prompt: |
+        QCM de philosophie pour le BAC, programme ivoirien de Terminale : notions, auteurs et méthode de la dissertation.
+  - id: "francais"
+    title: "Français"
+    durationSec: 900
+    gen:
+      type: "mcq"
+      count: 5
+      difficulty: "moyenne"
+      topic: "Français, Terminale"
+      prompt: |
+        QCM de français pour le BAC, programme ivoirien de Terminale : méthodologie du commentaire et de la dissertation, figures de style, courants littéraires, auteurs africains et français.

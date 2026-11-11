@@ -12,7 +12,7 @@ export default function ActionRow({
   onCreatePodcast?: () => void;
 }) {
   return (
-    <div className="w-full max-w-4xl mx-auto mt-6 flex flex-wrap justify-center gap-3 sm:gap-4">
+    <div className="w-full max-w-4xl mx-auto mt-6 flex flex-wrap justify-center gap-3 sm:gap-4 pr-16 md:pr-52">
       {[
         {
           label: "Résumer la réponse",

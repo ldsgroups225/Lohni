@@ -5,17 +5,18 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
 type SpringOpts = { from: number; to: number; velocity?: number; onUpdate: (x: number) => void; onDone?: () => void }
 const springs = vi.hoisted(() => [] as { opts: SpringOpts; cancelled: boolean }[])
+const markdown = vi.hoisted(() => vi.fn())
 vi.mock('../../lib/motion', () => ({
   spring: (opts: SpringOpts) => { const s = { opts, cancelled: false }; springs.push(s); return () => { s.cancelled = true } },
 }))
-vi.mock('../Chat/MarkdownView', () => ({ default: ({ md }: { md: string }) => <span>{md}</span> }))
+vi.mock('../Chat/MarkdownView', () => ({ default: ({ md }: { md: string }) => { markdown(md); return <span>{md}</span> } }))
 import { SwipeCard } from './SwipeCard'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 let root: Root, host: HTMLElement
 const onSwipe = vi.fn(), onToggle = vi.fn()
 beforeEach(() => {
-  springs.length = 0; onSwipe.mockReset(); onToggle.mockReset()
+  springs.length = 0; onSwipe.mockReset(); onToggle.mockReset(); markdown.mockClear()
   Object.defineProperty(window, 'innerWidth', { value: 400, configurable: true })
   Element.prototype.setPointerCapture = vi.fn()
   host = document.createElement('div'); document.body.append(host); root = createRoot(host)
@@ -35,6 +36,14 @@ const drag = (from: number, steps: [number, number][], end: number, pointerId = 
   for (const [dx, t] of steps) fire('pointermove', from + dx, t, pointerId)
   fire('pointerup', from + steps.at(-1)![0], end, pointerId)
 }
+
+test('retourner la carte ne recalcule pas ses deux faces', async () => {
+  await render({ revealed: false })
+  expect(markdown).toHaveBeenCalledTimes(2)
+  await render({ revealed: true })
+  expect(markdown).toHaveBeenCalledTimes(2)
+  expect(card().getAttribute('aria-label')).toBe('Réponse')
+})
 
 test('un toucher sans déplacement retourne la carte et ne répond pas', async () => {
   await render()

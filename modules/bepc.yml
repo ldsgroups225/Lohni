@@ -1,0 +1,54 @@
+id: "bepc"
+name: "BEPC blanc"
+scoring: "right-only"
+sections:
+  - id: "francais"
+    title: "Français"
+    durationSec: 900
+    gen:
+      type: "mcq"
+      count: 5
+      difficulty: "moyenne"
+      topic: "Français, classe de 3e"
+      prompt: |
+        QCM de français pour le BEPC, programme ivoirien de 3e : grammaire, conjugaison, orthographe, vocabulaire et compréhension d’un court extrait cité dans la question.
+  - id: "maths"
+    title: "Mathématiques"
+    durationSec: 1200
+    gen:
+      type: "mcq"
+      count: 5
+      difficulty: "moyenne"
+      topic: "Mathématiques, classe de 3e"
+      prompt: |
+        QCM de mathématiques pour le BEPC, programme ivoirien de 3e : calcul littéral, équations et inéquations, théorèmes de Thalès et de Pythagore, statistiques, fonctions affines.
+  - id: "physique-chimie"
+    title: "Physique-Chimie"
+    durationSec: 900
+    gen:
+      type: "mcq"
+      count: 5
+      difficulty: "moyenne"
+      topic: "Physique-Chimie, classe de 3e"
+      prompt: |
+        QCM de physique-chimie pour le BEPC, programme ivoirien de 3e : électricité, mécanique, optique, atomes et ions, solutions acides et basiques.
+  - id: "svt"
+    title: "SVT"
+    durationSec: 900
+    gen:
+      type: "mcq"
+      count: 5
+      difficulty: "moyenne"
+      topic: "SVT, classe de 3e"
+      prompt: |
+        QCM de SVT pour le BEPC, programme ivoirien de 3e : reproduction humaine, immunité et maladies, nutrition, sols et environnement.
+  - id: "histoire-geo"
+    title: "Histoire-Géographie"
+    durationSec: 900
+    gen:
+      type: "mcq"
+      count: 5
+      difficulty: "moyenne"
+      topic: "Histoire-Géographie, classe de 3e"
+      prompt: |
+        QCM d’histoire-géographie pour le BEPC, programme ivoirien de 3e : décolonisation, Côte d’Ivoire indépendante, relations internationales, géographie de la Côte d’Ivoire et de l’Afrique.
