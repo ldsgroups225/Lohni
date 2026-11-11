@@ -5,7 +5,7 @@ import { confirmDialog } from './confirm'
 export const navigationCancelled = 'lohni-navigation-cancelled'
 
 export function useLeaveConfirmation(active: boolean, message: string) {
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => active && !nextLocation.state?.allowLeave && currentLocation.pathname !== nextLocation.pathname)
+  const blocker = useBlocker(({ currentLocation, nextLocation, historyAction }) => active && !(historyAction !== 'POP' && nextLocation.state?.allowLeave) && currentLocation.pathname !== nextLocation.pathname)
   const latestBlocker = useRef(blocker)
   latestBlocker.current = blocker
   useEffect(() => {
