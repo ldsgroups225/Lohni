@@ -73,13 +73,19 @@ export default function Courses() {
 
   return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-2xl space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">Cours</h1>
-        <div className="flex flex-wrap gap-3"><ButtonLink to="/import">Importer mon cours</ButtonLink><Link to="/revision" className="rounded-xl border border-border px-4 py-3 text-foreground">Session du jour</Link></div>
+      <header className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold text-foreground">Cours</h1>
+          {progress && <p aria-live="polite" className="flex items-center gap-2 text-sm">
+            <span className="rounded-full bg-tint px-3 py-1 font-semibold text-foreground">{progress.xp} XP</span>
+            <span className="rounded-full border border-border px-3 py-1 text-foreground">Série : {progress.streak} j</span>
+          </p>}
+        </div>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <ButtonLink to="/import" aria-label="Importer mon cours" className="py-2.5">Importer</ButtonLink>
+          <Link to="/revision" className="flex items-center justify-center whitespace-nowrap rounded-xl border border-border px-4 py-2.5 text-center text-foreground">Session du jour</Link>
+        </div>
       </header>
-      {progress && <p className="rounded-2xl border border-border p-4" aria-live="polite">
-        <strong className="text-foreground">{progress.xp} XP</strong> · Série : {progress.streak} jour{progress.streak > 1 ? 's' : ''}
-      </p>}
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
         <button className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Réessayer</button>
       </div>}
