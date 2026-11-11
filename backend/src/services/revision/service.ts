@@ -31,7 +31,7 @@ export type RevisionProgress = {
   streak: number; streakStarted: boolean; xp: number; learnedCards: number;
   subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[]
 }
-export type RevisionHome = { profile: ProfileInput; daysUntilExam: number | null; totalCards: number; cardCount: number; estimatedMinutes: number; moreCards: boolean; state: 'ready' | 'done' | 'empty' }
+export type RevisionHome = { profile: ProfileInput; daysUntilExam: number | null; totalCards: number; cardCount: number; estimatedMinutes: number; moreCards: boolean; started: boolean; state: 'ready' | 'done' | 'empty' }
 type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; series?: string; text?: string }) => Promise<GeneratedChapter>; transcribePhoto?: (file: UpFile) => Promise<string> }
 const validDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
@@ -159,6 +159,7 @@ export class RevisionService {
         moreCards: !session.complete || (await this.selectSessionCards(context, profile)).length > 0,
         daysUntilExam: profile.examDate ? Math.max(0, (Date.parse(profile.examDate) - Date.parse(context.localDate)) / 86400000) : null,
         estimatedMinutes: Math.ceil(cardCount * policy.sessionMinutes / policy.sessionCards),
+        started: !session.complete && session.position > 0,
         state: session.complete ? (completed ? 'done' : 'empty') : 'ready',
       }
     })

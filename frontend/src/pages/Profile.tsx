@@ -1,4 +1,5 @@
 import { Button } from '../components/ui/Button'
+import { LoadingState } from '../components/ui/LoadingState'
 import { humeurSerie } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
@@ -44,7 +45,7 @@ export default function Profile() {
   return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
       <h1 className="text-2xl font-semibold text-foreground">Moi</h1>
-      {busy && <p role="status">Chargement…</p>}
+      {busy && !profile && !progress && <LoadingState />}
       {error && <div role="alert"><Mascotte humeur="désolée" taille={96} /><p>{error}</p></div>}
       {!error && progress && <Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={112} />}
       {!error && !busy && !profile && !progress && <Mascotte humeur="au repos" taille={112} />}

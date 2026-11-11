@@ -26,7 +26,7 @@ export default function PromptBox({
 
   return (
     <div
-      className="rounded-3xl bg-surface border border-border shadow-[inset_0_3px_15px] shadow-border flex flex-col md:flex-row md:items-start rounded-bl-none rounded-br-none md:rounded-br-3xl"
+      className="rounded-3xl bg-surface border border-border shadow-[inset_0_3px_15px] shadow-border flex flex-col md:flex-row md:items-start md:rounded-bl-none"
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
@@ -50,7 +50,7 @@ export default function PromptBox({
 
         <textarea
           rows={1}
-          placeholder="Que veux-tu comprendre ?"
+          placeholder="Une question, un sujet, un exercice…"
           className="w-full text-foreground bg-transparent rounded-2xl p-2.5 outline-none resize-none leading-6 min-h-[72px] md:min-h-[40px] text-base"
           value={value}
           onChange={(e) => onChange(e.target.value)}

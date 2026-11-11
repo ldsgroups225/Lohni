@@ -1,4 +1,5 @@
 import { ButtonLink } from '../components/ui/Button'
+import { LoadingState } from '../components/ui/LoadingState'
 import { humeurSerie, listDelay } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { FlameIcon } from '../components/ui/NavigationIcons'
@@ -57,7 +58,7 @@ export default function Home() {
     <div className="mx-auto max-w-xl space-y-6">
       {(!home || loading || error) && <MobileHeader />}
       {(!home || loading || error) && <header className="sr-only lg:not-sr-only"><h1 className="text-2xl font-semibold text-foreground">Lohni</h1></header>}
-      {loading ? <p role="status">Chargement de ta journée…</p> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
+      {loading ? <LoadingState label="Chargement de ta journée…" /> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
         <Mascotte humeur="désolée" taille={96} /><p>{error}</p><button className="underline" onClick={() => setAttempt(value => value + 1)}>Réessayer</button>
       </div> : !home ? <Onboarding /> : <>
         <header className="flex items-center gap-3">
@@ -73,7 +74,7 @@ export default function Home() {
           <h2 className="text-2xl font-semibold text-foreground">{home.state === 'done' ? 'Session du jour terminée !' : home.state === 'empty' ? 'Aucune carte à réviser' : 'Session du jour'}</h2>
           {home.state === 'ready' ? <>
             <p>{home.cardCount} carte{home.cardCount > 1 ? 's' : ''} · environ {home.estimatedMinutes} min</p>
-            <ButtonLink to="/revision" className="block w-full rounded-2xl p-5 text-xl">Commencer</ButtonLink>
+            <ButtonLink to="/revision" className="block w-full rounded-2xl p-5 text-xl">{home.started ? 'Continuer' : 'Commencer'}</ButtonLink>
           </> : home.state === 'done' ? <>
             <p>Ta journée est faite. Reviens demain pour entretenir ce que tu as appris.</p>
             {home.moreCards && <Link to="/revision" className="block underline">Continuer les cartes restantes</Link>}

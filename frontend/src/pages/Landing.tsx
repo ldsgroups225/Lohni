@@ -108,8 +108,8 @@ export default function Landing() {
           />
         </AdaptiveErrorBoundary>
 
-        <div className="w-full md:w-fit flex">
-          <div className="w-full md:w-fit md:min-w-fit p-1.5 rounded-2xl rounded-t-none bg-surface flex flex-col items-start sm:items-center border border-border border-t-0 border-r-0 border-b-0 sm:border-b shadow-[inset_2px_-2px_15px] shadow-border">
+        <div className="mt-3 w-full md:mt-0 md:w-fit flex">
+          <div className="w-full md:w-fit md:min-w-fit p-1.5 rounded-2xl md:rounded-t-none bg-surface flex flex-col items-start sm:items-center border border-border md:border-t-0 md:border-r-0 shadow-[inset_2px_-2px_15px] shadow-border">
             <div className="flex items-start justify-between md:justify-start space-x-1 md:space-x-2 p-1.5 w-full">
               <div data-dropdown className="relative flex-1 md:flex-none">
                 <div

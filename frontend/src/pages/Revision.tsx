@@ -1,4 +1,5 @@
 import { Button, ButtonLink } from '../components/ui/Button'
+import { LoadingState } from '../components/ui/LoadingState'
 import { revisionCardVisibility } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { CheckIcon, CloseIcon, FlameIcon } from '../components/ui/NavigationIcons'
@@ -153,7 +154,7 @@ export default function Revision() {
             setProgress(await revisionAPI.progress())
           })}>Réessayer</button>
         </div>}
-        {busy && <p role="status">Chargement…</p>}
+        {busy && !session && <LoadingState />}
         {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}
         {missed && !session?.complete && <aside className="space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
           <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
