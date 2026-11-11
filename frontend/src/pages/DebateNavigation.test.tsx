@@ -30,6 +30,7 @@ test('retour ferme le bilan et permet de relire le debat', async () => {
   const router = createMemoryRouter([{ path: '/debate', element: <Debate /> }], { initialEntries: ['/debate?debateId=1'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.querySelector('textarea')?.placeholder).toBe('Écris ton argument…')
     await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Terminer le débat'))!.click())
     await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Terminer')!.click())
     expect(host.textContent).toContain('Analyse du débat')

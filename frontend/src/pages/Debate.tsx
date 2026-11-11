@@ -542,7 +542,7 @@ export default function Debate() {
                                     ? "Le débat est terminé"
                                     : isStreaming
                                         ? "L’IA prépare sa réponse…"
-                                        : "Écris ton argument… (Maj+Entrée pour une nouvelle ligne)"
+                                        : "Écris ton argument…"
                             }
                             disabled={isStreaming || isDebateEnded}
                             className="flex-1 px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed custom-scroll"
