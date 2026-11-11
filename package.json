@@ -29,6 +29,7 @@
     "@langchain/textsplitters": "^1.0.2",
     "@pdf-lib/fontkit": "^1.1.1",
     "@speech-sdk/core": "^0.38.0",
+    "better-sqlite3": "^13.1.1",
     "busboy": "^1.6.0",
     "cors": "^2.8.6",
     "d3-force": "^3.0.1",
@@ -43,7 +44,6 @@
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
     "pizzip": "^3.3.0",
-    "sqlite3": "^6.0.1",
     "ts-fsrs": "^6.0.0",
     "ws": "^8.22.2",
     "youtube-transcript": "^1.3.1"
@@ -66,12 +66,12 @@
     "make-fetch-happen": "^16.0.1",
     "node-gyp": "^13.1.0",
     "tar": "^7.5.23",
-    "@napi-rs/canvas": "^1.1.0"
+    "@napi-rs/canvas": "^1.1.0",
+    "node-domexception": "npm:@profoundlogic/node-domexception@^1.0.2"
   },
   "allowScripts": {
-    "better-sqlite3@13.1.1": true,
-    "esbuild@0.28.2": true,
-    "protobufjs@7.6.6": true,
-    "sqlite3@6.0.1": true
+    "better-sqlite3": true,
+    "esbuild": true,
+    "protobufjs": true
   }
 }

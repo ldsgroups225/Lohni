@@ -1,50 +1,44 @@
-import sqlite3 from 'sqlite3'
+const Database = require('better-sqlite3')
 import path from 'node:path'
 import { mkdirSync } from 'node:fs'
+import { keyvReady } from './keyv'
 
 export class SQLiteDatabase {
-    private db: sqlite3.Database
-    private pending: Promise<unknown> = Promise.resolve()
+    private db: any
+    private pending: Promise<unknown>
 
-    constructor(dbPath: string) {
-        this.db = new sqlite3.Database(dbPath)
-        this.db.configure('busyTimeout', 5000)
+    constructor(dbPath: string, ready: Promise<unknown> = Promise.resolve()) {
+        this.pending = ready
+        this.db = new Database(dbPath, { timeout: 0 })
     }
 
-    async run(sql: string, params: any[] = []): Promise<sqlite3.RunResult> {
-        return new Promise((resolve, reject) => {
-            this.db.run(sql, params, function (err) {
-                if (err) reject(err)
-                else resolve(this)
-            })
+    private async execute<T>(operation: () => T): Promise<T> {
+        const deadline = Date.now() + 5000
+        for (;;) {
+            try { return operation() } catch (error: any) {
+                if (error.code !== 'SQLITE_BUSY' || Date.now() >= deadline) throw error
+                await new Promise(resolve => setTimeout(resolve, 25))
+            }
+        }
+    }
+
+    async run(sql: string, params: any[] = []): Promise<{ lastID: number | bigint; changes: number }> {
+        return this.execute(() => {
+            const result = this.db.prepare(sql).run(...params)
+            return { lastID: result.lastInsertRowid, changes: result.changes }
         })
     }
 
     async get(sql: string, params: any[] = []): Promise<any> {
-        return new Promise((resolve, reject) => {
-            this.db.get(sql, params, (err, row) => {
-                if (err) reject(err)
-                else resolve(row)
-            })
-        })
+        return this.execute(() => this.db.prepare(sql).get(...params))
     }
 
     async all(sql: string, params: any[] = []): Promise<any[]> {
-        return new Promise((resolve, reject) => {
-            this.db.all(sql, params, (err, rows) => {
-                if (err) reject(err)
-                else resolve(rows || [])
-            })
-        })
+        return this.execute(() => this.db.prepare(sql).all(...params))
     }
 
-    close(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            this.db.close((err) => {
-                if (err) reject(err)
-                else resolve()
-            })
-        })
+    async close(): Promise<void> {
+        this.db.close()
     }
 
     transaction<T>(operation: () => Promise<T>): Promise<T> {
@@ -66,4 +60,4 @@ export class SQLiteDatabase {
 
 const dbPath = path.join(process.cwd(), 'storage', 'database.sqlite')
 mkdirSync(path.dirname(dbPath), { recursive: true })
-export const sqlite = new SQLiteDatabase(dbPath)
+export const sqlite = new SQLiteDatabase(dbPath, keyvReady)
