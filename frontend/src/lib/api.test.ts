@@ -142,6 +142,42 @@ test('une synchronisation tardive ne déplace pas la file vers un autre appareil
   expect(entries.get(otherKey)).toBeUndefined()
 })
 
+test('au démarrage les données locales du jour sont immédiatement disponibles et la lecture est partagée', async () => {
+  const day = new Date(); const date = [day.getFullYear(), String(day.getMonth() + 1).padStart(2, '0'), String(day.getDate()).padStart(2, '0')].join('-')
+  const home = { profile: { schoolClass: '3e', subjects: [] }, state: 'ready', cardCount: 2 }
+  entries.set(offlineKey, JSON.stringify({ pending: [], cache: { '/home': home }, cacheDates: { '/home': date } }))
+  vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+  api.prepareRevisionStartup()
+  const { revisionSnapshot } = await import('./cachedDevice')
+  expect(revisionSnapshot('/home')).toEqual(home)
+  void api.revisionAPI.home()
+  void api.revisionAPI.home()
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+})
+
+test('le démarrage ignore les données quotidiennes anciennes et celles d’un autre appareil', async () => {
+  const { invalidateRevisionCache, revisionSnapshot } = await import('./cachedDevice')
+  invalidateRevisionCache()
+  entries.set(offlineKey, JSON.stringify({ pending: [], cache: { '/home': { state: 'done' } }, cacheDates: { '/home': '2000-01-01' } }))
+  api.prepareRevisionStartup()
+  expect(revisionSnapshot('/home')).toBeUndefined()
+  entries.set('lohni-device-id', '22222222-2222-4222-8222-222222222222')
+  api.prepareRevisionStartup()
+  expect(revisionSnapshot('/home')).toBeUndefined()
+})
+
+test('le démarrage et les lectures partagent la synchronisation des réponses', async () => {
+  queueTwoAnswers()
+  let finish!: (response: Response) => void
+  vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { finish = resolve })))
+  api.prepareRevisionStartup()
+  void api.revisionAPI.home().catch(() => {})
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+  expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain('/session/answer')
+  finish(new Response(JSON.stringify({ error: 'Réessaie' }), { status: 500, headers: { 'Content-Type': 'application/json' } }))
+  await vi.waitFor(() => expect(api.revisionSyncStatus().pending).toBe(2))
+})
+
 test('un contexte non sécurisé affiche le message HTTPS avant toute requête', async () => {
   entries.clear()
   vi.stubGlobal('crypto', {})

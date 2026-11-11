@@ -21,9 +21,12 @@ export default function Home() {
   if (cachedHome && (cachedHome.device !== device || cachedHome.day !== new Date().toDateString())) cachedHome = null
   const animateEntry = useRef(!cachedHome).current
   const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
-  const [home, setHome] = useState<RevisionHome | null>(() => cachedHome?.home ? { ...cachedHome.home, profile: sharedProfile ?? cachedHome.home.profile } : null)
-  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedHome?.progress ?? null)
-  const [loading, setLoading] = useState(!cachedHome)
+  const sharedHome = revisionSnapshot<RevisionHome | null>('/home')
+  const sharedProgress = revisionSnapshot<RevisionProgress>('/progress')
+  if (!cachedHome && sharedHome) cachedHome = { device, version: currentRevisionCacheVersion(), day: new Date().toDateString(), home: sharedHome, progress: sharedProgress ?? null, chapters: null }
+  const [home, setHome] = useState<RevisionHome | null>(() => (cachedHome?.home ?? sharedHome) ? { ...(cachedHome?.home ?? sharedHome)!, profile: sharedProfile ?? (cachedHome?.home ?? sharedHome)!.profile } : null)
+  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedHome?.progress ?? sharedProgress ?? null)
+  const [loading, setLoading] = useState(!cachedHome && sharedHome === undefined)
   const [error, setError] = useState('')
   const [progressError, setProgressError] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -35,7 +38,7 @@ export default function Home() {
       const version = currentRevisionCacheVersion()
       setError('')
       setProgressError('')
-      if (!cachedHome) setLoading(true)
+      if (!cachedHome && sharedHome === undefined) setLoading(true)
       try {
         const data = await revisionAPI.home()
         if (!active) return

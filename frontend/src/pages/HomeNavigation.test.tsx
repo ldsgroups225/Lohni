@@ -116,3 +116,18 @@ test('un chargement lent est signalé sans écran plein', async () => {
     expect(host.textContent).toContain('Session du jour')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id'); vi.useRealTimers() }
 })
+
+test('un accueil local du jour reste visible pendant la mise à jour', async () => {
+  localStorage.setItem('lohni-device-id', 'accueil-local')
+  invalidateRevisionCache()
+  rememberRevisionSnapshot('/home', { profile: { schoolClass: '3e', subjects: [] }, state: 'ready', cardCount: 2, totalCards: 2, estimatedMinutes: 1, daysUntilExam: null })
+  api.home.mockReturnValueOnce(new Promise(() => {}))
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Home /> }])
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.textContent).toContain('2 cartes')
+    expect(host.textContent).not.toContain('Onboarding')
+  } finally { act(() => root.unmount()); host.remove(); router.dispose(); localStorage.removeItem('lohni-device-id'); invalidateRevisionCache() }
+})

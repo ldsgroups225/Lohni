@@ -687,7 +687,7 @@ async function revisionRequest<T>(path: string, method = 'GET', body?: unknown, 
 
 type RevisionAnswer = { answerId: string; sessionId: string; cardId: string; position: number; knew: boolean; choice?: number; durationMs: number };
 type QueuedAnswer = { answer: RevisionAnswer; localDate: string };
-type OfflineRevision = { session?: RevisionSession; pending: QueuedAnswer[]; cache: Record<string, unknown> };
+type OfflineRevision = { session?: RevisionSession; pending: QueuedAnswer[]; cache: Record<string, unknown>; cacheDates?: Record<string, string> };
 let syncError = '';
 let syncing: Promise<void> | undefined;
 const offlineKey = () => `lohni-revision-offline:${revisionDeviceId()}`;
@@ -770,12 +770,13 @@ function cachedRevisionRead<T>(path: string): Promise<T> {
     const device = cachedDevice()
     const version = currentRevisionCacheVersion()
     const day = revisionLocalDate()
-    const cached = readOffline().cache[path]
+    const saved = readOffline()
+    const cached = path === '/profile' || (saved.cacheDates?.[path] === day && !saved.pending.length) ? saved.cache[path] : undefined
     try {
       if (!navigator.onLine) throw new RevisionConnectionError('Hors ligne. Connecte-toi pour charger ces données.')
       const result = await revisionRequest<T>(path, 'GET', undefined, undefined, 8000)
       await updateOffline(state => {
-        if (cachedDevice() === device && currentRevisionCacheVersion() === version && revisionLocalDate() === day) state.cache[path] = result
+        if (cachedDevice() === device && currentRevisionCacheVersion() === version && revisionLocalDate() === day) { state.cache[path] = result; (state.cacheDates ??= {})[path] = day }
       })
       return result
     } catch (error) {
@@ -817,6 +818,7 @@ async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<
     const knew = input.knew && (card.kind !== 'mcq' || input.choice === card.correct);
     const answer = { ...input, answerId: crypto.randomUUID() };
     state.pending.push({ answer, localDate: session.localDate });
+    if (state.cacheDates) { delete state.cacheDates['/home']; delete state.cacheDates['/progress']; }
     advanceSession(session, knew, input.durationMs);
     delete session.summary; // périmé : le récap le recharge une fois les réponses envoyées
     next = session;
@@ -833,8 +835,11 @@ async function revisionMutation<T>(path: string, method: string, body?: unknown)
   if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
   if (path === '/profile') invalidateRevisionCache()
   else invalidateRevisionCache('/home', '/progress', '/chapters')
+  await updateOffline(state => { if (device === cachedDevice()) {
+    if (state.cacheDates) { delete state.cacheDates['/home']; delete state.cacheDates['/progress']; }
+    if (path === '/profile') { state.cache['/profile'] = result; delete state.cache['/home']; }
+  } });
   if (path === '/profile') {
-    await updateOffline(state => { if (device === cachedDevice()) { state.cache['/profile'] = result; delete state.cache['/home']; } });
     if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
     rememberRevisionSnapshot('/profile', result);
   }
@@ -888,3 +893,16 @@ export const revisionAPI = {
   answer: revisionAnswer,
   deleteCard: (id: string) => revisionMutation<null>(`/cards/${encodeURIComponent(id)}`, 'DELETE'),
 };
+
+// Restore only snapshots whose device and local day are known before React renders.
+export function prepareRevisionStartup() {
+  try {
+    revisionDeviceId()
+    const saved = readOffline()
+    if (saved.cache['/profile'] !== undefined) rememberRevisionSnapshot('/profile', saved.cache['/profile'])
+    if (!saved.pending.length) for (const key of ['/home', '/progress']) {
+      if (saved.cacheDates?.[key] === revisionLocalDate() && saved.cache[key] !== undefined) rememberRevisionSnapshot(key, saved.cache[key])
+    }
+    void syncRevisionAnswers()
+  } catch { /* The page reports unavailable storage or device support. */ }
+}
