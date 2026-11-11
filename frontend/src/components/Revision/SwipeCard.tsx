@@ -127,6 +127,11 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
           {!revealed ? 'Touche la carte pour voir la réponse' : hint ? 'Glisse la carte à gauche ou à droite' : '← Je ne savais pas · Je savais →'}
         </p>
       </div>
+      {/* Sans geste : flèches du clavier ou ces boutons, masqués à l'écran mais lus et focalisables. */}
+      {revealed && <div className="sr-only focus-within:not-sr-only focus-within:mt-2 focus-within:grid focus-within:grid-cols-2 focus-within:gap-3">
+        <button type="button" disabled={!enabled} onClick={() => rate(false)} className="rounded-xl border border-border bg-surface px-2 py-3 text-foreground disabled:opacity-50">Je ne savais pas</button>
+        <button type="button" disabled={!enabled} onClick={() => rate(true)} className="rounded-xl bg-success px-2 py-3 font-semibold text-on-success disabled:opacity-50">Je savais</button>
+      </div>}
     </div>
   )
 }

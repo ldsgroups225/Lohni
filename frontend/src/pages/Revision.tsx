@@ -6,7 +6,7 @@ import { CheckIcon, CloseIcon } from '../components/ui/NavigationIcons'
 import { Progress } from '../components/ui/Progress'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { confirmDialog } from '../lib/confirm'
-import { MENU_EXIT_MS, useExitTransition } from '../lib/motion'
+import { MENU_EXIT_MS, prefersReducedMotion, useExitTransition } from '../lib/motion'
 import { SwipeCard } from '../components/Revision/SwipeCard'
 import { SessionRecap } from '../components/Revision/SessionRecap'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
@@ -39,7 +39,15 @@ export default function Revision() {
   const [verdict, setVerdict] = useState<{ choice: number; next: RevisionSession } | null>(null)
   const startedAt = useRef(Date.now())
   const card = session?.cards[session.position]
-  useEffect(() => { if (verdict) continueButton.current?.scrollIntoView({ block: 'nearest' }) }, [verdict])
+  // Après un QCM : fait défiler jusqu'à l'indice et « Continuer », avec une marge sous le bouton.
+  // Deuxième passage : le Markdown se charge à la demande et peut allonger la page après le premier.
+  useEffect(() => {
+    if (!verdict) return
+    const go = () => continueButton.current?.scrollIntoView({ block: 'end', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+    go()
+    const timer = window.setTimeout(go, 350)
+    return () => window.clearTimeout(timer)
+  }, [verdict])
   const secondaryButton = 'rounded-xl border border-border bg-surface px-4 py-3 text-foreground disabled:opacity-50 disabled:cursor-wait'
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
@@ -58,6 +66,7 @@ export default function Revision() {
   }, [feedback])
 
   function display(next: RevisionSession) {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' }) // pas de saut : on repart du haut avant d'afficher la carte suivante
     setSession(next)
     setRevealed(false)
     setChoice(undefined)
@@ -170,7 +179,7 @@ export default function Revision() {
   if (!busy && !error && !profile) return <Navigate to="/" replace />
 
   return (
-    <main className={`loop-screen flex min-h-dvh flex-col px-4 md:pl-28 ${session && !session.complete && card ? 'pt-1 pb-[max(.5rem,env(safe-area-inset-bottom))]' : 'pt-8 pb-36'}`}>
+    <main className={`loop-screen flex min-h-dvh flex-col px-4 md:pl-28 ${session && !session.complete && card ? `pt-1 ${verdict ? 'pb-[max(2rem,env(safe-area-inset-bottom))]' : 'pb-[max(.5rem,env(safe-area-inset-bottom))]'}` : 'pt-8 pb-36'}`}>
       <div className={`mx-auto flex w-full max-w-xl flex-1 flex-col ${session && !session.complete && card ? 'space-y-2' : 'space-y-6'}`}>
         {session && !session.complete && card ? <header className="flex items-center gap-3"><h1 className="sr-only">Session de révision</h1><Link to="/" aria-label="Quitter la session" className="press-icon -ml-3 inline-grid size-11 place-items-center rounded-xl text-muted"><CloseIcon /></Link>{session && <div className="flex-1"><div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div><Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" /></div>}{session && <span className="text-sm tabular-nums text-muted">{session.position + 1}/{session.cards.length}</span>}
           <div className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
@@ -229,11 +238,7 @@ export default function Revision() {
                                 <MarkdownView md={card.answer} />
               </div> : <Button disabled={busy} onClick={() => setRevealed(true)}>Révéler la réponse</Button>}
             </article>}
-            {verdict && <Button ref={continueButton} className="w-full" onClick={next}>Continuer</Button>}
-            {card.kind === 'basic' && <div className={`grid grid-cols-2 gap-3 ${revealed ? '' : 'invisible'}`} aria-hidden={!revealed}>
-              <button className="flex items-center justify-center gap-1 whitespace-nowrap rounded-xl border border-border bg-surface px-2 py-3 [&>svg]:shrink-0 text-sm text-foreground disabled:cursor-wait disabled:opacity-50 sm:text-base" disabled={busy || !revealed} onClick={() => answer(false)}><CloseIcon />Je ne savais pas</button>
-              <button className="flex items-center justify-center gap-2 rounded-xl bg-success px-2 py-3 [&>svg]:shrink-0 text-sm font-semibold text-on-success disabled:opacity-50 sm:text-base" disabled={busy || !revealed} onClick={() => answer(true)}><CheckIcon />Je savais</button>
-            </div>}
+            {verdict && <Button ref={continueButton} className="w-full scroll-mb-8" onClick={next}>Continuer</Button>}
           </section>
         ) : !busy && <>
           {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} pending={sync.pending} moreCards={moreCards} busy={busy} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onContinue={() => void run(async () => display(await revisionAPI.continue()))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
