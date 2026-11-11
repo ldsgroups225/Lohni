@@ -27,7 +27,7 @@ export function LoadingState({ label = 'On prépare ta page…', fullPage = fals
         <p className="text-lg font-semibold text-foreground">{label}</p>
         <div aria-hidden="true" className="ui-loadbar"><span /></div>
         <div aria-hidden="true" className="flex justify-center gap-2">
-          <span className="ui-pip" /><span className="ui-pip" style={{ animationDelay: '0.2s' }} /><span className="ui-pip" style={{ animationDelay: '0.4s' }} />
+          <span className="ui-pip" /><span className="ui-pip" style={{ animationDelay: '0.16s' }} /><span className="ui-pip" style={{ animationDelay: '0.32s' }} />
         </div>
       </div>
       <div aria-hidden="true" className="w-full rounded-2xl border border-border bg-surface p-4 text-left">
