@@ -86,3 +86,20 @@ test('ouvrir et fermer une surcouche ne lance aucune transition d’écran', asy
     act(() => root.unmount()); unsubscribe(); router.dispose(); host.remove(); vi.unstubAllGlobals(); delete (document as Partial<Document>).startViewTransition
   }
 })
+
+test('le routeur declenche la transition native lors du changement de page', async () => {
+  const start = vi.fn((callback: () => void) => {
+    callback()
+    return { finished: Promise.resolve(), ready: Promise.resolve(), updateCallbackDone: Promise.resolve(), skipTransition() {} }
+  })
+  Object.defineProperty(document, 'startViewTransition', { configurable: true, value: start })
+  vi.stubGlobal('matchMedia', () => ({ matches: false }))
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = navigationTransitions(createMemoryRouter([{ path: '*', element: <Link to="/quiz">Quiz</Link> }]))
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => host.querySelector('a')!.click())
+    expect(start).toHaveBeenCalledTimes(1)
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); vi.unstubAllGlobals(); delete (document as Partial<Document>).startViewTransition }
+})

@@ -32,7 +32,7 @@ export default function Home() {
       try {
         const data = await revisionAPI.home()
         if (!active) return
-        cachedHome = { home: data, progress: data ? cachedHome?.progress ?? null : null, chapters: data ? cachedHome?.chapters ?? null : null }
+        cachedHome = data ? { home: data, progress: cachedHome?.progress ?? null, chapters: cachedHome?.chapters ?? null } : null
         setHome(data)
         if (data) void revisionAPI.chapters().then(value => { if (active) { if (cachedHome) cachedHome.chapters = value; setChapters(value) } }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
         if (data) void revisionAPI.progress().then(value => { if (active) { if (cachedHome) cachedHome.progress = value; setProgress(value) } }).catch(cause => {

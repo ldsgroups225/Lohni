@@ -6,10 +6,9 @@ import { transcribeAudio, type StudyMaterials } from "../../lib/api";
 export default function Transcriber() {
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [showSiriUI, setShowSiriUI] = useOverlayNavigation("transcriber");
+  const [showSiriUI, setShowSiriUI] = useOverlayNavigation("transcriber", () => { if (recordingActive.current) cancelRecording(); });
   const recordingRun = useRef(0);
-  const wasOpenRef = useRef(false);
-  const closedNormallyRef = useRef(false);
+  const recordingActive = useRef(false);
   const [transcription, setTranscription] = useState<string | null>(null);
   const [studyMaterials, setStudyMaterials] = useState<StudyMaterials | null>(null);
   const [status, setStatus] = useState("");
@@ -63,7 +62,7 @@ export default function Transcriber() {
   const startRecording = async () => {
     try {
       const run = ++recordingRun.current;
-      closedNormallyRef.current = false;
+      recordingActive.current = true;
       setShowSiriUI(true);
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -120,7 +119,7 @@ export default function Transcriber() {
         if (recordingRun.current !== run) return;
         await handleFileUpload(audioFile);
         if (recordingRun.current !== run) return;
-        closedNormallyRef.current = true;
+        recordingActive.current = false;
         setShowSiriUI(false);
       };
 
@@ -129,7 +128,7 @@ export default function Transcriber() {
       setStatus("Écoute…");
     } catch (error) {
       setStatus("Impossible d’accéder au microphone");
-      closedNormallyRef.current = true;
+      recordingActive.current = false;
       setShowSiriUI(false);
     }
   };
@@ -146,6 +145,7 @@ export default function Transcriber() {
 
   const cancelRecording = () => {
     recordingRun.current++;
+    recordingActive.current = false;
     if (mediaRecorderRef.current && recording) {
       mediaRecorderRef.current.stop();
       setRecording(false);
@@ -165,14 +165,6 @@ export default function Transcriber() {
     setShowSiriUI(false);
     setStatus("Enregistrement annulé");
   };
-
-  useEffect(() => {
-    if (wasOpenRef.current && !showSiriUI) {
-      if (!closedNormallyRef.current) cancelRecording();
-      closedNormallyRef.current = false;
-    }
-    wasOpenRef.current = showSiriUI;
-  }, [showSiriUI]);
 
   const copyToClipboard = () => {
     if (transcription) {

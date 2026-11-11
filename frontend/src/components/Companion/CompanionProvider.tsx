@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react"
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react"
 
 export type CompanionDocument = {
   id: string
@@ -10,42 +10,15 @@ export type CompanionDocument = {
 type CompanionContextValue = {
   document: CompanionDocument | null
   setDocument: (doc: CompanionDocument | null) => void
-  open: boolean
-  setOpen: (open: boolean) => void
 }
 
 const CompanionContext = createContext<CompanionContextValue | undefined>(undefined)
 
 export function CompanionProvider({ children }: { children: ReactNode }) {
   const [document, setDocumentState] = useState<CompanionDocument | null>(null)
-  const [open, setOpen] = useState(false)
-
-  const setDocument = useCallback((doc: CompanionDocument | null) => {
-    setDocumentState(prev => {
-      if (doc) {
-        const changed =
-          !prev ||
-          prev.id !== doc.id ||
-          prev.text !== doc.text ||
-          prev.title !== doc.title ||
-          prev.filePath !== doc.filePath
-        // Never pop the panel open by itself: it would cover what the student is reading.
-        if (changed) setOpen(false)
-      } else {
-        setOpen(false)
-      }
-      return doc
-    })
-  }, [setOpen])
-
   const value = useMemo<CompanionContextValue>(
-    () => ({
-      document,
-      setDocument,
-      open,
-      setOpen
-    }),
-    [document, open, setDocument]
+    () => ({ document, setDocument: setDocumentState }),
+    [document]
   )
 
   return <CompanionContext.Provider value={value}>{children}</CompanionContext.Provider>

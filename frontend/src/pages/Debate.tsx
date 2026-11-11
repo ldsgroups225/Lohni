@@ -49,17 +49,12 @@ export default function Debate() {
     const [isDebateEnded, setIsDebateEnded] = useState(false);
     const [analysis, setAnalysis] = useState<DebateAnalysis | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [analysisOpen, setAnalysisOpen] = useOverlayNavigation("debate-analysis");
-    const wasAnalysisOpen = useRef(false);
-    useEffect(() => {
-        if (wasAnalysisOpen.current && !analysisOpen) {
-            analysisWsRef.current?.close();
-            setIsAnalyzing(false);
-            setIsDebateEnded(false);
-            setAnalysis(null);
-        }
-        wasAnalysisOpen.current = analysisOpen;
-    }, [analysisOpen]);
+    const [analysisOpen, setAnalysisOpen] = useOverlayNavigation("debate-analysis", () => {
+        analysisWsRef.current?.close();
+        setIsAnalyzing(false);
+        setIsDebateEnded(false);
+        setAnalysis(null);
+    });
     // Escape closes the analysis dialog, same as its « Fermer » button (the debate itself stays ended).
     useEffect(() => {
         if (!isDebateEnded || !analysis) return;
@@ -716,8 +711,6 @@ export default function Debate() {
                                         setSession(null);
                                         setMessages([]);
                                         setAnalysisOpen(false);
-                                        setIsDebateEnded(false);
-                                        setAnalysis(null);
                                         navigate("/debate");
                                     }}
                                     className="flex-1 py-3 bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary text-on-primary font-bold rounded-xl transition-[transform,opacity] shadow-lg"
@@ -727,8 +720,6 @@ export default function Debate() {
                                 <button
                                     onClick={() => {
                                         setAnalysisOpen(false);
-                                        setIsDebateEnded(false);
-                                        setAnalysis(null);
                                     }}
                                     className="px-6 py-3 bg-surface border border-border hover:bg-tint text-foreground font-semibold rounded-xl transition-opacity"
                                 >

@@ -2,6 +2,7 @@ import type { createBrowserRouter } from 'react-router-dom'
 import { prefersReducedMotion } from './lib/motion'
 
 export function navigationTransitions<T extends ReturnType<typeof createBrowserRouter>>(router: T): T {
+  // Supply transition options to RouterProvider for every screen navigation.
   const subscribe = router.subscribe.bind(router)
   router.subscribe = subscriber => {
     let previous = router.state.location

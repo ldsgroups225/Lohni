@@ -56,10 +56,24 @@ export default function Quiz() {
     if (startedTopicRef.current === initialTopic) { startedTopicRef.current = null; return; }
     try {
       const cached = sessionStorage.getItem(`quiz:${cacheKey}:${initialTopic}`);
-      if (cached) { setQs(JSON.parse(cached)); setTopic(initialTopic); return; }
-    } catch { /* Le quiz reste utilisable si le stockage est indisponible. */ }
+      if (cached) {
+        setQs(JSON.parse(cached)); setTopic(initialTopic);
+        const progress = sessionStorage.getItem(`quiz-progress:${cacheKey}:${initialTopic}`);
+        if (progress) {
+          const saved = JSON.parse(progress);
+          setIdx(saved.idx); setScore(saved.score); setSelected(saved.selected);
+          setShowHint(saved.showHint); setShowExp(saved.showExp); setDone(saved.done); setAnswers(saved.answers);
+        }
+        return;
+      }
+    } catch { /* Storage is optional. */ }
     start(initialTopic);
   }, [initialTopic, cacheKey]);
+
+  useEffect(() => {
+    if (!qs.length || !initialTopic) return;
+    try { sessionStorage.setItem(`quiz-progress:${cacheKey}:${initialTopic}`, JSON.stringify({ idx, score, selected, showHint, showExp, done, answers })); } catch { /* Storage is optional. */ }
+  }, [cacheKey, initialTopic, qs, idx, score, selected, showHint, showExp, done, answers]);
 
   function resetQuestionState() {
     setIdx(0);
@@ -89,7 +103,7 @@ export default function Quiz() {
             correct: typeof q.correct === "number" ? Math.max(0, q.correct - 1) : 0
           }));
           setQs(arr);
-          try { sessionStorage.setItem(`quiz:${cacheKey}:${trimmed}`, JSON.stringify(arr)); } catch { /* Le stockage est facultatif. */ }
+          try { sessionStorage.setItem(`quiz:${cacheKey}:${trimmed}`, JSON.stringify(arr)); } catch { /* Storage is optional. */ }
           resetQuestionState();
           setConnecting(false);
         }
@@ -111,7 +125,7 @@ export default function Quiz() {
     }
   }
 
-  // Comme en révision : la réponse est enregistrée au choix, le retour s'affiche tout de suite, « Continuer » passe à la suite.
+  // Record the answer immediately; continue advances to the next question.
   const onSelect = (i: number) => {
     if (showExp || !q) return;
     const correct = i === q.correct;
@@ -126,7 +140,7 @@ export default function Quiz() {
 
   const onNext = () => {
     if (!showExp) return;
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" }); // repartir du haut : pas de saut à l'affichage de la question suivante
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" }); // Start the next question at the top.
     if (idx === total - 1) setDone(true);
     else {
       setIdx(n => n + 1);

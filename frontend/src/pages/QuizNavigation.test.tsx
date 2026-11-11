@@ -79,3 +79,22 @@ test('un quiz choisi sur place reste disponible après la mise à jour de son ad
     expect(api.start).toHaveBeenCalledTimes(1)
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
 })
+
+test('retrouver un quiz termine conserve ses resultats sans confirmation', async () => {
+  sessionStorage.clear()
+  Element.prototype.scrollIntoView = vi.fn()
+  window.scrollTo = vi.fn()
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }, { path: '/courses', element: <p>Cours</p> }], { initialEntries: ['/quiz?topic=maths'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Un'))!.click())
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))!.click())
+    await act(async () => { await router.navigate('/courses') })
+    await act(async () => { await router.navigate(-1) })
+    expect(host.textContent).toContain('Quiz terminé')
+    await act(async () => { await router.navigate('/courses') })
+    expect(document.querySelector('dialog')).toBeNull()
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
+})

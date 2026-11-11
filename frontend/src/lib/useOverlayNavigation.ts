@@ -1,17 +1,34 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
-export function useOverlayNavigation(id: string): [boolean, (open: boolean) => void] {
+export function useOverlayNavigation(id: string, onClose?: () => void): [boolean, (open: boolean) => void] {
   const location = useLocation()
   const navigate = useNavigate()
-  const open = location.state?.overlay === id
+  const opened = useRef(false)
+  const open = opened.current && location.state?.overlay === id
   const current = useRef({ open, location })
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  const wasOpen = useRef(false)
   current.current = { open, location }
+  useEffect(() => {
+    if (location.state?.overlay === id && !opened.current) {
+      if (location.key !== 'default' && (window.history.state?.idx ?? 1) > 0) navigate(-1)
+      else {
+        const { overlay: _overlay, ...state } = location.state
+        navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state })
+      }
+    }
+    if (wasOpen.current && !open) onCloseRef.current?.()
+    wasOpen.current = open
+  }, [id, location, navigate, open])
   return [open, next => {
     if (next === current.current.open) return
     current.current.open = next
     const { location } = current.current
-    if (next) navigate(`${location.pathname}${location.search}${location.hash}`, { state: { ...location.state, overlay: id } })
-    else navigate(-1)
+    if (next) {
+      opened.current = true
+      navigate(`${location.pathname}${location.search}${location.hash}`, { state: { ...location.state, overlay: id } })
+    } else navigate(-1)
   }]
 }
