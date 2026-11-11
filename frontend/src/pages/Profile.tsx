@@ -44,12 +44,14 @@ export default function Profile() {
 
   return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold text-foreground">Moi</h1>
+      <header className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-foreground">Moi</h1>
+        {!error && progress && <Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={64} />}
+        {!error && !busy && !profile && !progress && <Mascotte humeur="au repos" taille={64} />}
+      </header>
       {busy && !profile && !progress && <LoadingState label="On récupère ton parcours…" />}
       {error && <div role="alert"><Mascotte humeur="désolée" taille={96} /><p>{error}</p></div>}
-      {!error && progress && <Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={112} />}
-      {!error && !busy && !profile && !progress && <Mascotte humeur="au repos" taille={112} />}
-      {progress && <dl className="grid grid-cols-3 gap-3 rounded-2xl border border-border p-5 text-center">
+      {progress && <dl className="grid grid-cols-3 gap-2 rounded-2xl border border-border p-3 text-center text-sm">
         <div><dt>XP</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.xp} /></dd></div>
         <div><dt>Série</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.streak} /></dd></div>
         <div><dt>Cartes</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.learnedCards} /></dd></div>
