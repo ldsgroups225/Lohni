@@ -29,10 +29,10 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
 
     return (
         <div className="rounded-xl border border-border bg-surface p-4">
-            <div className="text-foreground font-medium mb-4 flex items-center gap-2">
-                <span>🎯</span>
+            <h2 className="text-foreground font-medium mb-3 flex items-center gap-2">
+                <span aria-hidden="true">🎯</span>
                 Priorités du jour
-            </div>
+            </h2>
 
             <div className="space-y-4">
                 {/* Active Sessions */}
@@ -42,8 +42,8 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                         <div className="space-y-2">
                             {activeTasks.map(task => (
                                 <div key={task.id} className="bg-tint border border-primary rounded-lg p-3">
-                                    <div className="flex items-center justify-between">
-                                        <div>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="min-w-0">
                                             <div className="text-primary font-medium">{task.title}</div>
                                             <div className="text-primary text-xs">
                                                 {task.course} • {task.estMins} mins • Échéance : {fmtTime(task.dueAt)}
@@ -51,7 +51,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                         </div>
                                         <button
                                             onClick={() => onCompleteTask(task.id)}
-                                            className="px-3 py-1 rounded bg-secondary text-on-secondary text-xs hover:bg-secondary"
+                                            className="min-h-10 shrink-0 rounded-lg bg-secondary px-3 text-sm text-on-secondary"
                                         >
                                             Terminer
                                         </button>
@@ -69,8 +69,8 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                         <div className="space-y-2">
                             {todayTasks.slice(0, 3).map(task => (
                                 <div key={task.id} className="bg-surface border border-border rounded-lg p-3">
-                                    <div className="flex items-center justify-between">
-                                        <div>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="min-w-0">
                                             <div className="text-foreground font-medium">{task.title}</div>
                                             <div className="text-muted text-xs">
                                                 {task.course} • {task.estMins} mins • P{task.priority}
@@ -78,7 +78,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                         </div>
                                         <button
                                             onClick={() => onStartSession(task.id)}
-                                            className="px-3 py-1 rounded bg-primary text-on-primary text-xs hover:bg-primary"
+                                            className="min-h-10 shrink-0 rounded-lg bg-primary px-3 text-sm text-on-primary"
                                         >
                                             Commencer
                                         </button>
@@ -103,8 +103,8 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                 const hoursLeft = Math.max(0, (task.dueAt - Date.now()) / (1000 * 60 * 60))
                                 return (
                                     <div key={task.id} className="bg-tint border border-border rounded-lg p-3">
-                                        <div className="flex items-center justify-between">
-                                            <div>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="min-w-0">
                                                 <div className="text-foreground font-medium">{task.title}</div>
                                                 <div className="text-foreground text-xs">
                                                     {task.course} • Dans {Math.round(hoursLeft)}h • {task.estMins} min
@@ -112,7 +112,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                             </div>
                                             <button
                                                 onClick={() => onStartSession(task.id)}
-                                                className="px-3 py-1 rounded bg-primary text-on-primary text-xs hover:bg-primary"
+                                                className="min-h-10 shrink-0 rounded-lg bg-primary px-3 text-sm text-on-primary"
                                             >
                                                 Commencer
                                             </button>
@@ -126,10 +126,9 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
 
                 {/* Empty State */}
                 {todayTasks.length === 0 && urgentTasks.length === 0 && activeTasks.length === 0 && (
-                    <div className="text-center py-8 text-muted">
-                        <div className="text-2xl mb-2">🎉</div>
-                        <div className="text-sm">Rien d’urgent aujourd’hui !</div>
-                        <div className="text-xs text-muted">Continue à avancer à ton rythme.</div>
+                    <div className="flex items-center gap-3 rounded-xl bg-tint p-3 text-muted">
+                        <span aria-hidden="true" className="text-2xl">🎉</span>
+                        <p className="text-sm"><span className="font-medium text-foreground">Rien d’urgent aujourd’hui.</span> Continue à ton rythme ou ajoute une tâche.</p>
                     </div>
                 )}
             </div>

@@ -129,7 +129,7 @@ export default function Courses() {
                 </>}
               </article>)}</div>
             </details>
-            <button className="py-2 text-sm text-foreground underline disabled:opacity-50" disabled={busy} onClick={() => {
+            <button className="min-h-11 py-2 text-sm text-foreground underline disabled:opacity-50" disabled={busy} onClick={() => {
               void confirmDialog(`Supprimer le chapitre « ${chapter.title} » et toutes ses cartes ? Cette action est définitive.`).then(ok => { if (ok) void run(async () => {
                 await revisionAPI.deleteChapter(chapter.id)
                 setEditing(null)
@@ -141,8 +141,18 @@ export default function Courses() {
       })}
       <details className="rounded-2xl border border-border p-5">
         <summary className="cursor-pointer font-semibold text-foreground">Plus</summary>
-        <nav aria-label="Autres outils" className="mt-4 grid grid-cols-2 gap-3">
-          {[['/exam', 'Examen'], ['/debate', 'Débat'], ['/tools', 'Podcast et autres outils'], ['/planner', 'Planning'], ['/quiz', 'Quiz libre']].map(([to, label]) => <ButtonLink key={to} to={to}>{label}</ButtonLink>)}
+        <nav aria-label="Autres outils" className="mt-3 space-y-2">
+          {[
+            ['/exam', '📝', 'Examens', 'Entraîne-toi sur des sujets d’examen'],
+            ['/debate', '🗣️', 'Débat', 'Défends ton point de vue face à l’IA'],
+            ['/tools', '🎧', 'Podcast et outils', 'Podcast, fiches de cours, audio en texte'],
+            ['/planner', '🗓️', 'Planning', 'Organise tes devoirs et tes priorités'],
+            ['/quiz', '❓', 'Quiz libre', 'Teste-toi sur le sujet de ton choix'],
+          ].map(([to, icon, label, hint]) => <Link key={to} to={to} className="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-foreground">
+            <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-lg bg-tint text-xl">{icon}</span>
+            <span className="min-w-0 flex-1"><span className="block font-semibold">{label}</span><span className="block text-sm text-muted">{hint}</span></span>
+            <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="m9 5 7 7-7 7" /></svg>
+          </Link>)}
         </nav>
       </details>
     </div>

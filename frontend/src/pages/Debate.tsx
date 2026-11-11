@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { confirmDialog } from "../lib/confirm";
+import { ToolPage } from "../components/ui/ToolPage";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 type DebateMessage = {
@@ -345,23 +346,22 @@ export default function Debate() {
 
     if (!debateId) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen w-full px-4 md:pl-28 lg:pr-4 bg-background text-foreground">
-                <div className="max-w-2xl w-full space-y-8">
-                    <div className="text-center space-y-4">
-                        <h1 className="text-4xl lg:text-5xl font-bold text-foreground">
-                            Commencer un débat
-                        </h1>
-                        <p className="text-lg text-muted">
+            <ToolPage title="Débat">
+                <div className="w-full space-y-4">
+                    <div className="space-y-1">
+                        <h2 className="text-xl font-semibold text-foreground">Commencer un débat</h2>
+                        <p className="text-sm text-muted">
                             Défends ton point de vue dans un débat avec l’IA
                         </p>
                     </div>
 
-                    <div className="bg-surface backdrop-blur-sm border border-border rounded-2xl p-8 space-y-6">
+                    <div className="bg-surface border border-border rounded-2xl p-5 space-y-5">
                         <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
+                            <label htmlFor="debate-topic" className="block text-sm font-medium text-foreground mb-2">
                                 Sujet du débat
                             </label>
                             <input
+                                id="debate-topic"
                                 type="text"
                                 value={topic}
                                 onChange={(e) => setTopic(e.target.value)}
@@ -375,10 +375,11 @@ export default function Debate() {
                             <label className="block text-sm font-medium text-foreground mb-3">
                                 Ton point de vue
                             </label>
-                            <div className="flex gap-4">
+                            <div className="flex gap-2">
                                 <button
                                     onClick={() => setPosition("for")}
-                                    className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-[transform,opacity] ${position === "for"
+                                    aria-pressed={position === "for"}
+                                    className={`min-w-0 flex-1 py-4 px-2 rounded-xl font-semibold transition-[transform,opacity] ${position === "for"
                                         ? "bg-secondary text-on-secondary shadow-lg"
                                         : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
@@ -389,7 +390,8 @@ export default function Debate() {
                                 </button>
                                 <button
                                     onClick={() => setPosition("against")}
-                                    className={`flex-1 py-4 px-6 rounded-xl font-semibold transition-[transform,opacity] ${position === "against"
+                                    aria-pressed={position === "against"}
+                                    className={`min-w-0 flex-1 py-4 px-2 rounded-xl font-semibold transition-[transform,opacity] ${position === "against"
                                         ? "bg-primary text-on-primary shadow-lg"
                                         : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
@@ -416,7 +418,7 @@ export default function Debate() {
                         </div>
                     )}
                 </div>
-            </div>
+            </ToolPage>
         );
     }
 

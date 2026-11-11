@@ -36,6 +36,7 @@ export default function PodcastGenerator() {
           setStatus("Ton podcast est prêt !")
         }
         if (ev.type === "done") {
+          clearTimeout(timeout)
           setStatus("Terminé")
           setBusy(false)
           setTimeout(() => {
@@ -43,6 +44,7 @@ export default function PodcastGenerator() {
           }, 1000)
         }
         if (ev.type === "error") {
+          clearTimeout(timeout)
           setStatus(`Erreur : ${ev.error}`)
           close()
           setBusy(false)
@@ -93,6 +95,7 @@ export default function PodcastGenerator() {
           setStatus("Ton podcast est prêt !")
         }
         if (ev.type === "done") {
+          clearTimeout(timeout)
           setStatus("Terminé")
           setBusy(false)
           setTimeout(() => {
@@ -100,6 +103,7 @@ export default function PodcastGenerator() {
           }, 1000)
         }
         if (ev.type === "error") {
+          clearTimeout(timeout)
           setStatus(`Erreur : ${ev.error}`)
           close()
           setBusy(false)
@@ -126,42 +130,42 @@ export default function PodcastGenerator() {
   }
 
   return (
-    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-[transform,opacity] duration-300  ">
+    <section className="rounded-2xl bg-surface border border-border p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <div className="text-xs uppercase tracking-wide text-foreground font-semibold">créateur de podcast</div>
-            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-primary to-primary animate-pulse"></div>
+            <div className="text-xs uppercase tracking-wide text-muted font-semibold">Écouter pour réviser</div>
           </div>
-          <div className="text-foreground font-semibold text-xl mb-2">Podcast IA</div>
-          <div className="text-foreground text-sm leading-relaxed">
+          <h2 className="text-foreground font-semibold text-xl mb-2">Podcast IA</h2>
+          <div className="text-muted text-sm leading-relaxed">
             Transforme un sujet ou tes notes en podcast pour réviser où tu veux.
           </div>
         </div>
       </div>
 
       <div className="mt-6 space-y-3">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="min-w-0 flex-1">
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Sujet ou notes…"
-              className="w-full px-4 py-3 pr-16 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:border-border focus:ring-2 focus:ring-primary outline-none transition-[transform,opacity] duration-300"
+              aria-label="Sujet ou notes du podcast"
+              className="min-h-11 w-full px-4 py-3 rounded-xl bg-surface border border-border text-foreground placeholder-muted focus:ring-2 focus:ring-primary outline-none"
               onKeyDown={(e) => e.key === "Enter" && onGenerate()}
             />
           </div>
           <button
             onClick={onGenerate}
             disabled={busy || !topic.trim()}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed text-on-primary font-medium transition-[transform,opacity] duration-300"
+            className="ui-button min-h-11 px-6 disabled:opacity-50"
           >
-            {busy ? "Création…" : "Créer"}
+            {busy ? "Création…" : "Créer le podcast"}
           </button>
         </div>
 
         {status && (
-          <div className="p-4 rounded-xl bg-tint border border-border text-foreground font-medium">
+          <div role="status" className="p-4 rounded-xl bg-tint border border-border text-foreground font-medium">
             {status}
 
           </div>
@@ -190,12 +194,7 @@ export default function PodcastGenerator() {
           </div>
         )}
 
-        {!audioFile && !busy && (
-          <div className="text-xs text-muted text-center p-2">
-            Clique sur Créer pour préparer ton podcast
-          </div>
-        )}
       </div>
-    </div>
+    </section>
   )
 }

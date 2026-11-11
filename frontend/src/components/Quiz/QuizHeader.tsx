@@ -1,17 +1,13 @@
 export default function QuizHeader({ topic, idx, total, score }:{ topic:string; idx:number; total:number; score:number }) {
-  const pct = Math.round(((idx + 1) / total) * 100);
+  const current = Math.min(idx + 1, total);
   return (
-    <div id="quizHeader" className="text-center mb-8">
-      <h1 className="text-3xl font-bold text-foreground mb-2">{topic}</h1>
-      <p className="text-muted">Teste tes connaissances avec {total} questions</p>
-      <div className="mt-4 bg-surface rounded-2xl p-4 inline-block">
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-foreground">Question <span id="currentQuestion">{Math.min(idx + 1, total)}</span> sur <span id="totalQuestions">{total}</span></span>
-          <div className="w-48 bg-tint rounded-full h-2">
-            <div id="progressBar" className="bg-primary h-2 rounded-full origin-left transition-transform duration-300" style={{ transform: `scaleX(${pct / 100})` }} />
-          </div>
-          <span className="text-foreground">Score : <span id="currentScore">{score}</span></span>
-        </div>
+    <div id="quizHeader" className="space-y-2">
+      <div className="flex items-baseline justify-between gap-3 text-sm">
+        <p className="min-w-0 truncate font-semibold text-foreground">{topic}</p>
+        <p className="shrink-0 tabular-nums text-muted">Question {current}/{total} · Score {score}</p>
+      </div>
+      <div className="motion-progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={idx} aria-label="Progression du quiz">
+        <span style={{ transform: `scaleX(${total ? idx / total : 0})` }} />
       </div>
     </div>
   );

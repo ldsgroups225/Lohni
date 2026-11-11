@@ -32,41 +32,44 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
 
     return (
         <div className="rounded-xl border border-border bg-surface p-4">
-            <div className="text-foreground font-medium mb-3 flex items-center gap-2">
-                <span>⚡</span>
+            <h2 className="text-foreground font-medium mb-3 flex items-center gap-2">
+                <span aria-hidden="true">⚡</span>
                 Ajouter une tâche
-            </div>
+            </h2>
 
             <div className="space-y-3">
+                <input
+                    value={text}
+                    onChange={e => setText(e.target.value)}
+                    placeholder="Ex. : maths demain"
+                    aria-label="Nouvelle tâche"
+                    enterKeyHint="send"
+                    className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-foreground placeholder:text-muted outline-none focus:ring-2 focus:ring-primary"
+                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+                />
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                    onChange={e => handleFileSelect(e.target.files)}
+                    className="hidden"
+                />
                 <div className="flex gap-2">
-                    <input
-                        value={text}
-                        onChange={e => setText(e.target.value)}
-                        placeholder="Ex. : maths demain"
-                        className="min-w-0 flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-foreground placeholder:text-muted outline-none focus:ring-1 focus:ring-border"
-                        onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
-                    />
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        multiple
-                        accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
-                        onChange={e => handleFileSelect(e.target.files)}
-                        className="hidden"
-                    />
                     <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="px-3 py-2 rounded-lg bg-tint text-foreground border border-border hover:bg-tint"
+                        className="press-icon grid size-11 shrink-0 place-items-center rounded-xl border border-border bg-tint text-foreground"
                         title="Ajouter les fichiers du devoir"
+                        aria-label="Joindre des fichiers au devoir"
                     >
-                        📎
+                        <span aria-hidden="true">📎</span>
                     </button>
                     <button
                         onClick={handleSubmit}
                         disabled={loading || (!text.trim() && selectedFiles.length === 0)}
-                        className="px-4 py-2 rounded-lg bg-primary text-on-primary disabled:opacity-60 hover:bg-primary"
+                        className="min-h-11 flex-1 rounded-xl bg-primary px-4 font-semibold text-on-primary disabled:bg-tint disabled:text-muted"
                     >
-                        {loading ? "Ajout…" : "Ajouter"}
+                        {loading ? "Ajout…" : "Ajouter la tâche"}
                     </button>
                 </div>
 
@@ -88,22 +91,22 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
 
                 {/* Quick Templates */}
                 <div className="flex flex-wrap gap-2">
-                    <div className="text-muted text-xs">Exemples :</div>
+                    <div className="w-full text-xs text-muted">Exemples</div>
                     <button
                         onClick={() => setText("Devoir de maths pour demain à 20 h, environ 1 h 30")}
-                        className="text-xs px-2 py-1 rounded bg-tint text-foreground hover:bg-tint"
+                        className="min-h-10 rounded-xl bg-tint px-3 text-sm text-foreground"
                     >
                         Devoir de maths
                     </button>
                     <button
                         onClick={() => setText("Lire le chapitre d’anglais pour vendredi, environ 30 min")}
-                        className="text-xs px-2 py-1 rounded bg-tint text-foreground hover:bg-tint"
+                        className="min-h-10 rounded-xl bg-tint px-3 text-sm text-foreground"
                     >
                         Lecture
                     </button>
                     <button
                         onClick={() => setText("Réviser le contrôle de la semaine prochaine, environ 2 h")}
-                        className="text-xs px-2 py-1 rounded bg-tint text-foreground hover:bg-tint"
+                        className="min-h-10 rounded-xl bg-tint px-3 text-sm text-foreground"
                     >
                         Révision
                     </button>

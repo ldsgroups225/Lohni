@@ -1,4 +1,5 @@
 import MarkdownView from "../Chat/MarkdownView"
+import { confirmDialog } from "../../lib/confirm"
 import { useEffect, useMemo, useRef, useState } from "react"
 import PlannerMindmap from "./PlannerMindmap"
 import TodayFocus from "./TodayFocus"
@@ -202,21 +203,31 @@ export default function Planner() {
         setTasks(t => t.map(x => x.id === id ? task : x))
     }
 
+    const views = [["today", "Aujourd’hui", "Aujourd’hui"], ["list", "Liste", "Liste"], ["mindmap", "Carte", "Carte mentale"]] as const
+    const onTabKey = (e: React.KeyboardEvent) => {
+        const i = views.findIndex(v => v[0] === view)
+        const next = e.key === "ArrowRight" ? (i + 1) % views.length : e.key === "ArrowLeft" ? (i + views.length - 1) % views.length : -1
+        if (next < 0) return
+        e.preventDefault()
+        setView(views[next][0])
+        ;(e.currentTarget.querySelectorAll('[role="tab"]')[next] as HTMLElement | undefined)?.focus()
+    }
+
     return (
-        <div className="rounded-2xl border border-border bg-surface">
-            <div className="px-4 py-3 border-b border-border flex flex-wrap gap-2 items-center justify-between">
-                <div className="sr-only">Planning des devoirs</div>
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <div className="text-xs bg-surface border border-border rounded flex whitespace-nowrap">
-                        <button onClick={() => setView("today")} className={`px-2 py-1 ${view === 'today' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Aujourd’hui</button>
-                        <button onClick={() => setView("list")} className={`px-2 py-1 ${view === 'list' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Liste</button>
-                        <button onClick={() => setView("mindmap")} className={`px-2 py-1 ${view === 'mindmap' ? 'bg-tint text-foreground' : 'text-foreground'}`}>Carte mentale</button>
-                    </div>
-                    <button onClick={reload} className="text-xs px-2 py-1 rounded bg-tint text-foreground">Actualiser</button>
+        <div className="space-y-4">
+            <div className="flex items-center gap-2">
+                <div role="tablist" aria-label="Vue du planning" onKeyDown={onTabKey} className="grid min-w-0 flex-1 grid-cols-3 gap-1 rounded-xl border border-border bg-surface p-1">
+                    {views.map(([id, label, full]) => (
+                        <button key={id} role="tab" aria-selected={view === id} aria-label={full} tabIndex={view === id ? 0 : -1} onClick={() => setView(id)}
+                            className={`min-h-10 rounded-lg px-2 text-sm font-medium ${view === id ? 'bg-primary text-on-primary' : 'text-foreground'}`}>{label}</button>
+                    ))}
                 </div>
+                <button onClick={reload} aria-label="Actualiser" title="Actualiser" className="press-icon grid size-11 shrink-0 place-items-center rounded-xl border border-border bg-surface text-foreground">
+                    <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992V4.356M20.5 9.5A8.25 8.25 0 0 0 5.4 7.4M7.977 14.652H2.985v4.992M3.5 14.5a8.25 8.25 0 0 0 15.1 2.1" /></svg>
+                </button>
             </div>
 
-            <div className="p-4 space-y-6">
+            <div role="tabpanel" className="space-y-4">
                 {/* Notifications */}
                 {notifications.length > 0 && (
                     <div className="space-y-2">
@@ -234,15 +245,15 @@ export default function Planner() {
                 )}
 
                 {view === 'today' ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <div className="order-2 lg:order-1 lg:col-span-2">
                             <TodayFocus
                                 tasks={tasks}
                                 onStartSession={startNow}
                                 onCompleteTask={(id) => mark(id, "done")}
                             />
                         </div>
-                        <div>
+                        <div className="order-1 lg:order-2">
                             <QuickAdd onAdd={add} loading={loading} />
                         </div>
                     </div>
@@ -261,28 +272,27 @@ export default function Planner() {
                     </div>
                 ) : (
                     <div className="grid gap-3">
+                        {tasks.length === 0 && <p className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">Aucune tâche pour le moment. Ajoute-en une depuis « Aujourd’hui ».</p>}
                         {tasks.map(t => (
                             <div key={t.id} className="rounded-xl border border-border bg-surface p-3">
-                                <div className="flex items-center justify-between">
-                                    <div className="min-w-0">
-                                        <div className="text-foreground font-medium truncate">{t.title}</div>
-                                        <div className="text-muted text-xs">
-                                            Échéance : {fmtTime(t.dueAt)} · {t.estMins} mins · P{t.priority}
-                                            {t.files && t.files.length > 0 && ` · ${t.files.length} fichier(s)`}
-                                        </div>
+                                <div className="min-w-0">
+                                    <div className="text-foreground font-medium">{t.title}</div>
+                                    <div className="text-muted text-xs">
+                                        Échéance : {fmtTime(t.dueAt)} · {t.estMins} mins · P{t.priority}
+                                        {t.files && t.files.length > 0 && ` · ${t.files.length} fichier(s)`}
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <select value={t.status} onChange={e => mark(t.id, e.target.value as any)} className="bg-surface border border-border text-foreground text-xs rounded px-2 py-1">
-                                            <option value="todo">À faire</option>
-                                            <option value="doing">En cours</option>
-                                            <option value="done">Terminé</option>
-                                            <option value="blocked">Bloqué</option>
-                                        </select>
-                                        <button onClick={() => planTask(t.id)} className="text-xs px-2 py-1 rounded bg-tint text-foreground">Planifier</button>
-                                        <button onClick={() => gen(t.id, "summary")} className="text-xs px-2 py-1 rounded bg-tint text-foreground">Résumé</button>
-                                        <button onClick={() => gen(t.id, "flashcards")} className="text-xs px-2 py-1 rounded bg-tint text-foreground">Cartes</button>
-                                        <button onClick={() => del(t.id)} className="text-xs px-2 py-1 rounded bg-primary text-on-primary">Supprimer</button>
-                                    </div>
+                                </div>
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                    <select value={t.status} onChange={e => mark(t.id, e.target.value as any)} aria-label={`Statut de ${t.title}`} className="min-h-10 rounded-lg border border-border bg-surface px-2 text-sm text-foreground">
+                                        <option value="todo">À faire</option>
+                                        <option value="doing">En cours</option>
+                                        <option value="done">Terminé</option>
+                                        <option value="blocked">Bloqué</option>
+                                    </select>
+                                    <button onClick={() => planTask(t.id)} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Planifier</button>
+                                    <button onClick={() => gen(t.id, "summary")} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Résumé</button>
+                                    <button onClick={() => gen(t.id, "flashcards")} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Cartes</button>
+                                    <button onClick={() => { void confirmDialog(`Supprimer la tâche « ${t.title} » ?`).then(ok => { if (ok) void del(t.id) }) }} className="ml-auto min-h-10 rounded-lg border border-danger px-3 text-sm text-danger">Supprimer</button>
                                 </div>
 
                                 {/* Task Files */}

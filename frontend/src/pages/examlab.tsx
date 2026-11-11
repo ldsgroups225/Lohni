@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useNavigate } from "react-router-dom"
 import { getExams, startExam, connectExamStream, type ExamEvent } from "../lib/api"
 import LoadingIndicator from "../components/Chat/LoadingIndicator"
+import { ToolPage } from "../components/ui/ToolPage"
 import QuizHeader from "../components/Quiz/QuizHeader"
 import QuestionCard from "../components/Quiz/QuestionCard"
 import ResultsPanel from "../components/Quiz/ResultsPanel"
-import ReviewModal from "../components/Quiz/ReviewModal"
 
 export type Question = {
   id: number
@@ -39,13 +38,11 @@ export default function ExamLabs() {
   const [showExp, setShowExp] = useState(false)
   const [done, setDone] = useState(false)
   const [answers, setAnswers] = useState<UA[]>([])
-  const [reviewOpen, setReviewOpen] = useState(false)
 
   const [connecting, setConnecting] = useState(false)
   const [activeExam, setActiveExam] = useState<string | null>(null)
 
   const closeRef = useRef<null | (() => void)>(null)
-  const navigate = useNavigate()
 
   const total = qs.length
   const q = qs[idx]
@@ -82,6 +79,8 @@ export default function ExamLabs() {
     setDone(false)
     setAnswers([])
     setSelected(null)
+    setShowHint(false)
+    setShowExp(false)
     setActiveExam(id)
     setConnecting(true)
 
@@ -104,74 +103,49 @@ export default function ExamLabs() {
     }
   }
 
-  const onSelect = (i: number) => { if (!showExp) setSelected(i) }
-  const onNext = () => {
-    if (selected == null || !q) return
-    const correct = selected === q.correct
+  const onSelect = (i: number) => {
+    if (showExp || !q) return
+    const correct = i === q.correct
+    setSelected(i)
     const ua: UA = {
       questionId: q.id,
-      selectedAnswer: selected,
+      selectedAnswer: i,
       correct,
       question: q.question,
-      selectedOption: q.options[selected],
+      selectedOption: q.options[i],
       correctOption: q.options[q.correct],
       explanation: q.explanation,
     }
     setAnswers(a => [...a, ua])
     setShowExp(true)
     if (correct) setScore(s => s + 1)
-    setTimeout(() => {
-      if (idx === total - 1) setDone(true)
-      else {
-        setIdx(n => n + 1)
-        setSelected(null)
-        setShowHint(false)
-        setShowExp(false)
-      }
-    }, 350)
+  }
+  const onNext = () => {
+    if (!showExp) return
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" })
+    if (idx === total - 1) setDone(true)
+    else {
+      setIdx(n => n + 1)
+      setSelected(null)
+      setShowHint(false)
+      setShowExp(false)
+    }
   }
 
   // --- UI: Exam List ---
   if (!activeExam) {
     return (
-  <div className="bg-background text-foreground min-h-screen w-full px-4 md:pl-28 lg:pr-4">
-    <div className="max-w-5xl mx-auto pt-10 pb-28 md:pb-14">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 rounded-xl bg-surface border border-border hover:bg-surface transition-opacity"
-            aria-label="Retour"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="size-5 text-foreground"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 19.5 8.25 12l7.5-7.5"
-              />
-            </svg>
-          </button>
-          <h1 className="text-2xl font-semibold text-foreground">Examens</h1>
-        </div>
-        <div className="px-3 py-1 rounded-full bg-tint border border-border text-foreground text-xs font-medium">
-          BÊTA
-        </div>
-      </div>
+  <ToolPage title="Examens">
 
       {loadingExams && <LoadingIndicator label="Chargement des examens…" />}
 
       <div className="grid gap-6">
         {exams.map((ex) => (
-          <div
+          <button
+            type="button"
             key={ex.id}
             onClick={() => start(ex.id)}
-            className="group rounded-2xl bg-surface border border-border p-5 cursor-pointer hover:border-primary transition-[transform,opacity] duration-300 hover:shadow-lg hover:shadow-primary/10"
+            className="w-full rounded-2xl bg-surface border border-border p-5 text-left hover:border-primary"
           >
             <div className="flex items-center justify-between mb-2">
               <div className="text-lg font-semibold text-foreground">
@@ -182,9 +156,9 @@ export default function ExamLabs() {
               </div>
             </div>
             <div className="text-sm text-muted">
-              Clique pour commencer cet examen
+              Commencer cet examen
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -193,15 +167,13 @@ export default function ExamLabs() {
           Aucun examen disponible.
         </div>
       )}
-    </div>
-  </div>
+  </ToolPage>
     )
   }
 
   // --- UI: Exam Taking ---
   return (
-    <div className="bg-background text-foreground flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
-      <div className="w-full max-w-4xl mx-auto p-4 pt-8 pb-24 my-auto">
+    <ToolPage title="Examen">
         {connecting && (
           <div className="mt-10">
             <LoadingIndicator label="Préparation de ton examen…" />
@@ -232,15 +204,10 @@ export default function ExamLabs() {
             visual={resultVisual}
             answers={answers}
             onRetake={() => start(activeExam)}
-            onReview={() => setReviewOpen(true)}
             onNewTopic={() => setActiveExam(null)}
           />
         )}
 
-        {reviewOpen && (
-          <ReviewModal answers={answers} onClose={() => setReviewOpen(false)} />
-        )}
-      </div>
-    </div>
+    </ToolPage>
   )
 }
