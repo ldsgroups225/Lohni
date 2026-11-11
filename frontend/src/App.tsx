@@ -1,6 +1,6 @@
 import Sidebar from "./components/Sidebar";
 import { Suspense } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, ScrollRestoration, useLocation } from "react-router-dom";
 import { LoadingState } from "./components/ui/LoadingState";
 import { AdaptiveToastProvider } from '@cognicatch/react';
 import { CompanionProvider } from "./components/Companion/CompanionProvider";
@@ -22,6 +22,7 @@ export default function App() {
         </div>
       </div>
       <CompanionDock />
+      <ScrollRestoration />
     </CompanionProvider>
   );
 }
