@@ -1,0 +1,43 @@
+import { beforeEach, expect, test, vi } from 'vitest'
+import { loadAllExams } from './loader'
+import { generateSectionItems } from './generator'
+import llm from '../../utils/llm/llm'
+
+vi.mock('../../utils/llm/llm', () => ({ default: { invoke: vi.fn() } }))
+
+beforeEach(() => { vi.mocked(llm.invoke).mockReset() })
+
+test('les examens livrés sont des examens blancs ivoiriens en français', () => {
+  const exams = loadAllExams()
+  expect(exams.map(e => e.id).sort()).toEqual(['bac-d', 'bepc'])
+  for (const exam of exams) {
+    expect(exam.sections.length).toBeGreaterThan(0)
+    for (const section of exam.sections) expect(section.gen.prompt).toMatch(/programme ivoirien/)
+  }
+})
+
+test('les questions sont demandées en français et gardent leurs accents', async () => {
+  const item = { id: 1, question: 'Quelle est la dérivée de x² ?', options: ['A) 2x', 'B) x', 'C) x²', 'D) 2'], correct: 1, hint: 'Règle de la puissance.', explanation: 'On abaisse l’exposant : 2x.' }
+  vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify([item]) } as any)
+  const [out] = await generateSectionItems({ type: 'mcq', count: 1, prompt: `Mathématiques, programme ivoirien ${Math.random()}` }, 'seed')
+  const system = String((vi.mocked(llm.invoke).mock.calls[0][0] as any)[0].content)
+  expect(system).toMatch(/French/)
+  expect(system).not.toMatch(/ASCII|plain English/)
+  expect(out.question).toBe(item.question)
+  expect(out.explanation).toBe(item.explanation)
+})
+
+test('une réponse vide du modèle échoue sans inventer ni mettre en cache de fausses questions', async () => {
+  const gen = { type: 'mcq' as const, count: 2, prompt: `SVT, programme ivoirien ${Math.random()}` }
+  vi.mocked(llm.invoke).mockResolvedValue({ content: '' } as any)
+  await expect(generateSectionItems(gen, 'seed')).rejects.toThrow()
+
+  const items = [1, 2].map(id => ({ id, question: `Quel organe filtre le sang ? (${id})`, options: ['A) Le rein', 'B) Le cœur', 'C) Le foie', 'D) La peau'], correct: 1, hint: 'Pense à l’urine.', explanation: 'Le rein filtre le sang et produit l’urine.' }))
+  vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify(items) } as any)
+  expect((await generateSectionItems(gen, 'seed')).map(q => q.question)).toEqual(items.map(q => q.question))
+})
+
+test('un QCM incomplet n’est pas complété par des options inventées', async () => {
+  vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify([{ id: 1, question: 'Quelle est la capitale de la Côte d’Ivoire ?', options: ['A) Yamoussoukro', 'B) Abidjan'], correct: 1, hint: 'Capitale politique.', explanation: 'Yamoussoukro est la capitale politique.' }]) } as any)
+  await expect(generateSectionItems({ type: 'mcq', count: 1, prompt: `Géographie ${Math.random()}` }, 'seed')).rejects.toThrow()
+})

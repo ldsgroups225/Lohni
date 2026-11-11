@@ -41,6 +41,7 @@ export default function ExamLabs() {
 
   const [connecting, setConnecting] = useState(false)
   const [activeExam, setActiveExam] = useState<string | null>(null)
+  const [failure, setFailure] = useState("")
 
   const closeRef = useRef<null | (() => void)>(null)
 
@@ -82,6 +83,7 @@ export default function ExamLabs() {
     setShowHint(false)
     setShowExp(false)
     setActiveExam(id)
+    setFailure("")
     setConnecting(true)
 
     try {
@@ -93,12 +95,14 @@ export default function ExamLabs() {
           setIdx(0)
           setConnecting(false)
         }
+        if (ev.type === "error") setFailure(ev.error)
         if (ev.type === "done" || ev.type === "error") {
           setConnecting(false)
         }
       })
       closeRef.current = close
     } catch {
+      setFailure("Impossible de lancer l’examen. Vérifie ta connexion et réessaie.")
       setConnecting(false)
     }
   }
@@ -180,9 +184,16 @@ export default function ExamLabs() {
           </div>
         )}
 
+        {failure && !qs.length && (
+          <div role="alert" className="mt-10 space-y-4 text-center">
+            <p className="text-foreground">{failure}</p>
+            <button type="button" onClick={() => setActiveExam(null)} className="ui-button min-h-11">Retour aux examens</button>
+          </div>
+        )}
+
         {qs.length > 0 && !done && q && (
           <>
-            <QuizHeader topic={activeExam || "Exam"} idx={idx} total={total} score={score} />
+            <QuizHeader topic={exams.find(e => e.id === activeExam)?.name ?? activeExam} idx={idx} total={total} score={score} />
             <QuestionCard
               q={q}
               selected={selected}

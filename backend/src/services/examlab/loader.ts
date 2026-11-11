@@ -1,6 +1,6 @@
 import fs from "fs"
 import path from "path"
-import yaml from "js-yaml"
+import { load } from "js-yaml"
 import { ExamSpec } from "./types"
 
 const modulesDir = path.join(process.cwd(), "modules")
@@ -9,7 +9,7 @@ export function loadExam(id: string): ExamSpec | null {
   const file = path.join(modulesDir, `${id}.yml`)
   if (!fs.existsSync(file)) return null
   const raw = fs.readFileSync(file, "utf8")
-  const data = yaml.load(raw)
+  const data = load(raw)
   return normalizeExam(data)
 }
 
@@ -19,7 +19,7 @@ export function loadAllExams(): ExamSpec[] {
   return files.map(f => {
     try {
       const raw = fs.readFileSync(path.join(modulesDir, f), "utf8")
-      const data = yaml.load(raw)
+      const data = load(raw)
       return normalizeExam(data)
     } catch {
       return null

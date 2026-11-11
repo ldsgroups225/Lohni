@@ -20,6 +20,8 @@ FROM base AS runtime
 COPY --from=builder /app/backend/dist ./backend/dist
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
+# Exam definitions, read from the working directory at runtime.
+COPY modules/ ./modules/
 
 EXPOSE 5000
 

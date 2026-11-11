@@ -24,14 +24,14 @@ No markdown, no code fences, no prose outside the JSON.
 
 SCHEMA
 "id": 1..${count}
-"question": plain English, 12..160 chars, unambiguous
+"question": French, 12..160 chars, unambiguous
 "options": array of exactly 4 distinct strings; each 6..80 chars; each prefixed with A) , B) , C) , D)  OR  1) , 2) , 3) , 4)
 "correct": 1|2|3|4 (1-based index into options)
 "hint": 6..120 chars
 "explanation": 12..200 chars
 
 STYLE
-Plain text only. ASCII. No LaTeX. No extra keys or nesting.
+Plain text only, written in French with its accents, addressing the student as « tu ». No LaTeX. No extra keys or nesting.
 ${style ? `Style: ${style}` : ""} ${difficulty ? `Difficulty: ${difficulty}` : ""} ${topic ? `Topic: ${topic}` : ""}`.trim()
 
 const SYS_STRICT = (count: number) => `RETRY: STRICT FORMAT ONLY
@@ -88,28 +88,21 @@ function cleanOptions(v: any) {
     out.push(x)
     if (out.length === 4) break
   }
-  while (out.length < 4) out.push(`Option ${out.length + 1}`)
+  if (out.length < 4) return []
   const pref = Math.random() < 0.5 ? ["A) ", "B) ", "C) ", "D) "] : ["1) ", "2) ", "3) ", "4) "]
   return out.slice(0, 4).map((t, i) => (pref[i] + t).trim())
 }
+// Drops unusable items instead of inventing them: validation then rejects a short list.
 function coerce(items: any, count: number): QuizItem[] {
   const arr = Array.isArray(items) ? items : []
-  const out = arr.slice(0, count).map((o: any, i: number): QuizItem => {
-    const q = nstr(o?.question, 12, 160) || `Question ${i + 1}`
-    const opts = cleanOptions(o?.options)
-    const correct = to1_4(o?.correct)
-    const hint = nstr(o?.hint, 6, 120) || "Use the core idea."
-    const explanation = nstr(o?.explanation, 12, 200) || "The correct option matches the main idea; others do not."
-    return { id: i + 1, question: q, options: opts, correct, hint, explanation }
-  })
-  while (out.length < count) {
-    const i = out.length
-    const src = out[i - 1] || { question: `Question ${i + 1}`, options: cleanOptions([]), correct: 1, hint: "Use the core idea.", explanation: "The correct option matches the main idea; others do not." }
-    const rot = src.options.map((_, k) => src.options[(k + 1) % 4])
-    const corr = (src.correct % 4) + 1
-    out.push({ id: i + 1, question: src.question, options: rot, correct: corr, hint: src.hint, explanation: src.explanation })
-  }
-  return out
+  return arr.flatMap((o: any): QuizItem[] => {
+    const question = nstr(o?.question, 12, 160)
+    const options = cleanOptions(o?.options)
+    if (!question || !options.length) return []
+    const hint = nstr(o?.hint, 6, 120) || "Reviens à l’idée principale du cours."
+    const explanation = nstr(o?.explanation, 12, 200) || "La bonne réponse correspond à l’idée principale ; les autres non."
+    return [{ id: 0, question, options, correct: to1_4(o?.correct), hint, explanation }]
+  }).slice(0, count).map((q, i) => ({ ...q, id: i + 1 }))
 }
 function validItem(x: any) {
   return x
