@@ -22,7 +22,7 @@ test('les questions sont demandées en français et gardent leurs accents', asyn
   vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify([item]) } as any)
   const [out] = await generateSectionItems({ type: 'mcq', count: 1, prompt: `Mathématiques, programme ivoirien ${Math.random()}` }, 'seed')
   const system = String((vi.mocked(llm.invoke).mock.calls[0][0] as any)[0].content)
-  expect(system).toMatch(/French/)
+  expect(system).toMatch(/en français/)
   expect(system).not.toMatch(/ASCII|plain English/)
   expect(out.question).toBe(item.question)
   expect(out.explanation).toBe(item.explanation)
@@ -56,7 +56,7 @@ test('chaque génération de section demande de nouvelles questions au modèle',
 test('chaque lancement du même examen génère un nouvel examen blanc', async () => {
   let generation = 0
   vi.mocked(llm.invoke).mockImplementation(async (messages: any) => {
-    const count = Number(String(messages[0].content).match(/exactly (\d+) multiple-choice/)![1])
+    const count = Number(String(messages[0].content).match(/exactement (\d+) questions/)![1])
     generation++
     return { content: JSON.stringify(Array.from({ length: count }, (_, i) => ({
       id: i + 1, question: `Quelle est la réponse de la génération ${generation} ?`,
@@ -67,4 +67,18 @@ test('chaque lancement du même examen génère un nouvel examen blanc', async (
   const first = await handleExam('bepc')
   const second = await handleExam('bepc')
   expect(second.sections[0].items[0].question).not.toBe(first.sections[0].items[0].question)
+})
+
+test('un QCM sans réponse correcte identifiable est rejeté', async () => {
+  const item = { question: 'Quelle est la capitale de la Côte d’Ivoire ?', options: ['A) Yamoussoukro', 'B) Abidjan', 'C) Bouaké', 'D) Korhogo'], hint: 'Capitale politique.', explanation: 'Yamoussoukro est la capitale politique.' }
+  for (const correct of [undefined, 'inconnue', 2.5]) {
+    vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify([{ ...item, correct }]) } as any)
+    await expect(generateSectionItems({ type: 'mcq', count: 1, prompt: 'Géographie' }, 'seed')).rejects.toThrow()
+  }
+})
+
+test('un QCM aux options répétées ne décale pas la réponse correcte', async () => {
+  const item = { question: 'Quelle est la capitale de la Côte d’Ivoire ?', options: ['A) Abidjan', 'B) Abidjan', 'C) Yamoussoukro', 'D) Bouaké', 'E) Korhogo'], correct: 3, hint: 'Capitale politique.', explanation: 'Yamoussoukro est la capitale politique.' }
+  vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify([item]) } as any)
+  await expect(generateSectionItems({ type: 'mcq', count: 1, prompt: 'Géographie' }, 'seed')).rejects.toThrow()
 })

@@ -46,6 +46,10 @@ test('retour ferme le bilan et permet de relire le debat', async () => {
     expect(host.querySelector('textarea')?.disabled).toBe(false)
     await act(async () => sockets[1].sendEvent({ type: 'complete', analysis: { winner: 'user' } }))
     expect(host.querySelector('textarea')?.disabled).toBe(false)
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Terminer le débat'))!.click())
+    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Terminer')!.click())
+    await act(async () => sockets[2].sendEvent({ type: 'error', error: 'provider failure' }))
+    expect(host.textContent).toContain('L’analyse du débat a échoué. Réessaie.')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove(); vi.unstubAllGlobals() }
 })
 
@@ -66,7 +70,7 @@ test('les erreurs de transport du débat restent compréhensibles', async () => 
     expect(host.textContent).toContain('Impossible de charger le débat')
     expect(host.textContent).not.toContain('http 500')
     await act(async () => socket.onmessage?.({ data: JSON.stringify({ type: 'error', error: 'provider failure' }) }))
-    expect(host.textContent).toContain('Erreur de connexion')
+    expect(host.textContent).toContain('L’IA n’a pas pu répondre. Réessaie.')
     expect(host.textContent).not.toContain('provider failure')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); vi.unstubAllGlobals() }
 })

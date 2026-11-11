@@ -160,7 +160,7 @@ export default function Debate() {
                     break;
 
                 case "error":
-                    setError("Erreur de connexion");
+                    setError("L’IA n’a pas pu répondre. Réessaie.");
                     setIsStreaming(false);
                     setStreamingContent("");
                     break;
@@ -305,7 +305,7 @@ export default function Debate() {
                     break;
 
                 case "error":
-                    setError("Erreur de connexion à l’analyse");
+                    setError("L’analyse du débat a échoué. Réessaie.");
                     setAnalysisState(null);
                     setAnalysisOpen(false);
                     setAnalysisPhase("");

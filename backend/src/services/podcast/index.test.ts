@@ -19,7 +19,7 @@ test('le script est demandé en français, en texte parlé sans Markdown', async
   vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify(script) } as any)
   await makeScript('La photosynthèse', 'La photosynthèse')
   const system = String((vi.mocked(llm.invoke).mock.calls[0][0] as any)[0].content)
-  expect(system).toMatch(/in French/)
+  expect(system).toMatch(/en français/)
   expect(system).not.toMatch(/Use markdown/)
 })
 

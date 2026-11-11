@@ -102,37 +102,19 @@ export async function* streamDebateResponse(
     // Check if AI should concede (after 3+ exchanges, detect weak position)
     const shouldCheckConcede = session.messages.length >= 6; // 3+ exchanges
 
-    const systemPrompt = `You are an expert debater participating in a formal debate about: "${session.topic}"
-
-Your position: You are arguing ${opposingPosition.toUpperCase()} the topic.
-User's position: They are arguing ${session.position.toUpperCase()} the topic.
-
-${shouldCheckConcede ? `IMPORTANT: If you find that you have run out of strong arguments, or if the user has made overwhelmingly convincing points that you cannot reasonably counter, you MUST start your response with exactly "[CONCEDE]" followed by a brief explanation of why you are conceding. This shows intellectual honesty and good sportsmanship.
-
-` : ""}Guidelines for your responses:
-1. Present strong, logical arguments ${opposingPosition} the topic
-2. Use evidence, examples, and reasoning to support your points
-3. Address and counter the user's arguments directly
-4. Be respectful but assertive in your debate style
-5. Keep responses focused, concise, well-structured and short (1-2 paragraphs)
-6. Use rhetorical techniques like ethos, pathos, and logos
-7. Structure your arguments clearly with transitions
-8. Challenge weak points in the user's reasoning
-9. Anticipate counterarguments and preemptively address them
-10. Be savage, competitive, persuiasive, assertive and to the point
-11. Exceed the paragraphs limit if needed to make a strong argument
-${shouldCheckConcede ? "12. If you genuinely cannot provide a strong counterargument, CONCEDE rather than making weak arguments\n" : ""}
-Remember: You are in a debate, so be persuasive and competitive while remaining intellectually honest.
-Réponds toujours en français, en tutoyant l’élève.`;
+    const systemPrompt = `Tu es un spécialiste du débat sur le sujet « ${session.topic} ».
+Tu défends la position ${opposingPosition === "for" ? "pour" : "contre"} et l’élève défend la position ${session.position === "for" ? "pour" : "contre"}.
+${shouldCheckConcede ? `Si tu n’as plus d’argument solide ou si tu ne peux raisonnablement réfuter l’élève, commence exactement par « [CONCEDE] », suivi d’une brève explication.\n` : ""}
+Présente des arguments solides et logiques, étayés d’exemples et de preuves. Réponds directement aux arguments de l’élève, relève les faiblesses de son raisonnement et anticipe les objections. Sois respectueux, persuasif, affirmé et intellectuellement honnête. Structure ta réponse en un ou deux paragraphes, davantage si nécessaire pour un argument solide. Réponds en français en tutoyant l’élève.`;
 
     const conversationHistory = session.messages
         .slice(-6)
-        .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.content}`)
+        .map((m) => `${m.role === "user" ? "Élève" : "IA"}: ${m.content}`)
         .join("\n\n");
 
     const messages = [
         { role: "system" as const, content: systemPrompt },
-        { role: "user" as const, content: `Previous exchanges:\n${conversationHistory}\n\nUser's latest argument:\n${userArgument}\n\nYour counter-argument (respond with a strong rebuttal${shouldCheckConcede ? ", or start with [CONCEDE] if you have no strong arguments left" : ""}):` }
+        { role: "user" as const, content: `Échanges précédents :\n${conversationHistory}\n\nDernier argument de l’élève :\n${userArgument}\n\nTon contre-argument : réponds avec une réfutation solide${shouldCheckConcede ? ", ou commence par [CONCEDE] si tu n’as plus d’argument solide" : ""}.` }
     ];
 
     const response = await llm.call(messages);
@@ -207,33 +189,28 @@ export async function* streamDebateAnalysis(sessionId: string): AsyncGenerator<
 
     yield { type: "phase", value: "Analyzing arguments..." };
 
-    const analysisPrompt = `You are an expert debate judge analyzing a completed debate on the topic: "${session.topic}"
-
-User's position: ${session.position.toUpperCase()}
-AI's position: ${session.position === "for" ? "AGAINST" : "FOR"}
-
-${session.status === "user_surrendered" ? "NOTE: The user surrendered this debate.\n" : ""}${session.status === "ai_conceded" ? "NOTE: The AI conceded this debate due to lack of strong counterarguments.\n" : ""}
-User's arguments:
+    const analysisPrompt = `Tu es juge expert d’un débat terminé sur le sujet « ${session.topic} ».
+Position de l’élève : ${session.position === "for" ? "pour" : "contre"} ; position de l’IA : ${session.position === "for" ? "contre" : "pour"}.
+${session.status === "user_surrendered" ? "L’élève a abandonné le débat.\n" : ""}${session.status === "ai_conceded" ? "L’IA a concédé le débat faute d’arguments solides.\n" : ""}
+Arguments de l’élève :
 ${userMessages.map((msg, i) => `${i + 1}. ${msg}`).join("\n\n")}
-
-AI's arguments:
+Arguments de l’IA :
 ${aiMessages.map((msg, i) => `${i + 1}. ${msg}`).join("\n\n")}
-
-Provide a comprehensive analysis in this EXACT JSON format (no markdown, just JSON):
+Donne une analyse complète sous la forme exacte de cet objet JSON, sans Markdown :
 {
   "winner": "user",
-  "reason": "Brief explanation of why this party won",
-  "userStrengths": ["strength 1", "strength 2", "strength 3"],
-  "aiStrengths": ["strength 1", "strength 2", "strength 3"],
-  "userWeaknesses": ["weakness 1", "weakness 2"],
-  "aiWeaknesses": ["weakness 1", "weakness 2"],
-  "keyMoments": ["moment 1", "moment 2", "moment 3"],
-  "overallAssessment": "A paragraph summarizing the debate quality and outcome"
+  "reason": "raison de la victoire",
+  "userStrengths": ["points forts de l’élève"],
+  "aiStrengths": ["points forts de l’IA"],
+  "userWeaknesses": ["points faibles de l’élève"],
+  "aiWeaknesses": ["points faibles de l’IA"],
+  "keyMoments": ["moments clés"],
+  "overallAssessment": "bilan du débat"
 }
-Garde "winner" tel quel ("user", "ai" ou "draw"). Rédige toutes les autres valeurs en français, en t’adressant à l’élève avec « tu » (« Tu as… ») et en appelant l’IA « l’IA ».`;
+Garde "winner" tel quel ("user", "ai" ou "draw"). Rédige toutes les autres valeurs en français, en t’adressant à l’élève avec « tu » et en appelant l’IA « l’IA ».`;
 
     const messages = [
-        { role: "system" as const, content: "You are an expert debate judge. Provide fair, balanced analysis. Respond with valid JSON only." },
+        { role: "system" as const, content: "Tu es juge de débat. Donne une analyse juste et équilibrée, uniquement en JSON valide." },
         { role: "user" as const, content: analysisPrompt }
     ];
 
