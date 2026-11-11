@@ -41,7 +41,12 @@ export default function Sidebar() {
   return <nav aria-label="Navigation principale" className="fixed inset-x-0 bottom-0 z-[var(--z-nav)] border-t border-border bg-surface px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:inset-x-auto md:left-3 md:top-4 md:bottom-4 md:w-20 md:rounded-card md:border md:px-1 md:py-6">
     <div ref={nav} className="relative flex justify-around md:h-full md:flex-col md:justify-center md:gap-5">
       <span ref={indicator} aria-hidden="true" className="navigation-indicator" />
-      {tabs.map(tab => <Link key={tab.to} to={tab.to} aria-current={active === tab.to ? 'page' : undefined}
+      {tabs.map(tab => <Link key={tab.to} to={tab.to} replace={pathname !== '/'} onClick={event => {
+        if (active === tab.to) {
+          event.preventDefault()
+          window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+        }
+      }} aria-current={active === tab.to ? 'page' : undefined}
         className={`relative flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-control p-2 text-xs focus-visible:outline-2 focus-visible:outline-secondary ${active === tab.to ? 'text-foreground' : 'text-muted hover:bg-tint hover:text-foreground'}`}>
         <span className={active === tab.to ? 'text-primary' : undefined}><tab.icon /></span>
         {tab.label}

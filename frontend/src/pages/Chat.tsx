@@ -1,3 +1,4 @@
+import { BackButton } from "../components/ui/BackButton";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { env } from "../config/env";
@@ -255,7 +256,7 @@ export default function Chat() {
     <div className="bg-background text-foreground flex flex-col min-h-screen w-full px-4 md:pl-28 lg:pr-4">
       <div className="mx-auto mt-6 w-full max-w-4xl space-y-3">
         <div className="flex items-center justify-between gap-4 whitespace-nowrap text-sm">
-          <Link to="/tutor" className="text-primary underline">Discussions</Link>
+          <BackButton fallback="/tutor" />
           <Link to="/revision" className="underline">Reprendre ma session</Link>
         </div>
         {profile ? <details className="rounded-xl border border-border p-3"><summary className="cursor-pointer text-sm">Enregistrer les cartes dans mes révisions</summary><fieldset className="mt-3 flex flex-wrap gap-3">
