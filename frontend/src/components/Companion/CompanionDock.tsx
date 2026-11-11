@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { companionAsk, type FlashCard } from "../../lib/api"
-import MarkdownView from "../Chat/MarkdownView"
+import { lazy, Suspense, type ComponentProps } from "react"
+
 import { useCompanion } from "./CompanionProvider"
+
+// KaTeX and syntax highlighting are heavy: load them only when the assistant panel shows a message.
+const LazyMarkdown = lazy(() => import("../Chat/MarkdownView"))
+const MarkdownView = (props: ComponentProps<typeof LazyMarkdown>) => (
+  <Suspense fallback={<span className="opacity-60">…</span>}><LazyMarkdown {...props} /></Suspense>
+)
 
 type CompanionMessage = {
   id: string

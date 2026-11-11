@@ -45,7 +45,7 @@ export default function Profile() {
   return <main className="loop-screen min-h-screen px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
       <h1 className="text-2xl font-semibold text-foreground">Moi</h1>
-      {busy && !profile && !progress && <LoadingState />}
+      {busy && !profile && !progress && <LoadingState label="On récupère ton parcours…" />}
       {error && <div role="alert"><Mascotte humeur="désolée" taille={96} /><p>{error}</p></div>}
       {!error && progress && <Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={112} />}
       {!error && !busy && !profile && !progress && <Mascotte humeur="au repos" taille={112} />}

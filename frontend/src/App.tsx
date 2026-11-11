@@ -1,5 +1,7 @@
 import Sidebar from "./components/Sidebar";
+import { Suspense } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import { LoadingState } from "./components/ui/LoadingState";
 import { AdaptiveToastProvider } from '@cognicatch/react';
 import { CompanionProvider } from "./components/Companion/CompanionProvider";
 import CompanionDock from "./components/Companion/CompanionDock";
@@ -14,7 +16,9 @@ export default function App() {
       <div className="bg-background text-foreground min-h-screen flex flex-col">
         <Sidebar />
         <div key={pathname} className="motion-route flex-1 relative">
-          <Outlet />
+          <Suspense fallback={<LoadingState fullPage />}>
+            <Outlet />
+          </Suspense>
         </div>
       </div>
       <CompanionDock />

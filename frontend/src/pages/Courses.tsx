@@ -83,7 +83,7 @@ export default function Courses() {
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
         <button className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Réessayer</button>
       </div>}
-      {busy && chapters.length === 0 && !progress && <LoadingState />}
+      {busy && chapters.length === 0 && !progress && <LoadingState label="On prépare tes cours…" />}
       {!busy && !error && chapters.length === 0 && <section className="space-y-3 rounded-2xl border border-border p-6">
         <Mascotte humeur="au repos" taille={112} />
         <h2 className="text-xl text-foreground">Tes cours apparaîtront ici</h2>

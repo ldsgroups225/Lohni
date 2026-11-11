@@ -154,7 +154,7 @@ export default function Revision() {
             setProgress(await revisionAPI.progress())
           })}>Réessayer</button>
         </div>}
-        {busy && !session && <LoadingState />}
+        {busy && !session && <LoadingState label="On prépare ta session…" />}
         {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}
         {missed && !session?.complete && <aside className="space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
           <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
