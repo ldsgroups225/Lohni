@@ -1,3 +1,4 @@
+import { usePersistentDetails } from '../lib/usePersistentDetails'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { LoadingState } from '../components/ui/LoadingState'
 import { confirmDialog } from '../lib/confirm'
@@ -49,13 +50,12 @@ export default function Courses() {
   const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedCourses?.progress ?? null)
   const [editing, setEditing] = useState<string | null>(null)
   const [busy, setBusy] = useState(!cachedCourses)
-  const [moreOpen, setMoreOpen] = useState(() => {
-    try { return sessionStorage.getItem('lohni-courses-more') === 'open' } catch { return false }
-  })
+  const more = usePersistentDetails('lohni-courses-more')
   const [error, setError] = useState('')
 
-  async function load() {
+  async function load(isActive = () => true) {
     const [nextChapters, nextProgress] = await Promise.all([revisionAPI.chapters(), revisionAPI.progress()])
+    if (!isActive()) return
     cachedCourses = { chapters: nextChapters, progress: nextProgress }
     setChapters(nextChapters)
     setProgress(nextProgress)
@@ -69,9 +69,7 @@ export default function Courses() {
   }
   useEffect(() => {
     let active = true
-    Promise.all([revisionAPI.chapters(), revisionAPI.progress()]).then(([nextChapters, nextProgress]) => {
-      if (active) { cachedCourses = { chapters: nextChapters, progress: nextProgress }; setChapters(nextChapters); setProgress(nextProgress) }
-    }).catch(error => {
+    load(() => active).catch(error => {
       if (active) setError(error instanceof Error ? error.message : 'Impossible de charger tes cours.')
     }).finally(() => { if (active) setBusy(false) })
     return () => { active = false }
@@ -145,11 +143,7 @@ export default function Courses() {
           </article>)}
         </section>
       })}
-      <details className="rounded-2xl border border-border p-5" open={moreOpen} onToggle={event => {
-        const open = event.currentTarget.open
-        setMoreOpen(open)
-        try { sessionStorage.setItem('lohni-courses-more', open ? 'open' : 'closed') } catch { /* Storage can be unavailable. */ }
-      }}>
+      <details className="rounded-2xl border border-border p-5" {...more}>
         <summary className="cursor-pointer font-semibold text-foreground">Plus</summary>
         <nav aria-label="Autres outils" className="mt-3 space-y-2">
           {[

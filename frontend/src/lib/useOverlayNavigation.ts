@@ -19,7 +19,10 @@ export function useOverlayNavigation(id: string, onClose?: () => void): [boolean
         navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state })
       }
     }
-    if (wasOpen.current && !open) onCloseRef.current?.()
+    if (wasOpen.current && !open) {
+      opened.current = false
+      onCloseRef.current?.()
+    }
     wasOpen.current = open
   }, [id, location, navigate, open])
   return [open, next => {

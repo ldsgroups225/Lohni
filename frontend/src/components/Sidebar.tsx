@@ -1,7 +1,8 @@
 import { revisionCardVisibility } from './ui/revisionPresentation'
+import { navigationCancelled } from '../lib/useLeaveConfirmation'
 import { prefersReducedMotion } from '../lib/motion'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { CoursesIcon, HomeIcon, ProfileIcon, TutorIcon } from './ui/NavigationIcons'
 
 const tabs = [
@@ -12,7 +13,26 @@ const tabs = [
 ]
 
 export default function Sidebar() {
-  const { pathname } = useLocation()
+  const location = useLocation()
+  const { pathname } = location
+  const navigate = useNavigate()
+  const homeIndex = useRef<number | null>(pathname === '/' && typeof window !== 'undefined' ? window.history.state?.idx ?? null : null)
+  const pendingTab = useRef<{ to: string; index: number } | null>(null)
+  useEffect(() => {
+    const cancel = () => { pendingTab.current = null }
+    window.addEventListener(navigationCancelled, cancel)
+    return () => window.removeEventListener(navigationCancelled, cancel)
+  }, [])
+  useEffect(() => {
+    const index = window.history.state?.idx
+    if (pendingTab.current && index === pendingTab.current.index) {
+      const { to } = pendingTab.current
+      pendingTab.current = null
+      if (to !== '/') navigate(to, { replace: true, state: { navigationTab: true } })
+    } else if (pathname === '/' && typeof index === 'number' && homeIndex.current === null) {
+      homeIndex.current = index
+    }
+  }, [location, navigate, pathname])
   const [cardVisible, setCardVisible] = useState(false)
   const nav = useRef<HTMLDivElement>(null)
   const indicator = useRef<HTMLSpanElement>(null)
@@ -35,7 +55,7 @@ export default function Sidebar() {
     window.addEventListener('resize', move)
     return () => window.removeEventListener('resize', move)
   }, [pathname, cardVisible])
-  if ((pathname === '/revision' && cardVisible) || pathname === '/quiz') return null
+  if ((pathname === '/revision' && cardVisible)) return null
   const active = pathname === '/chat' ? '/tutor'
     : ['/import', '/cards', '/exam', '/debate', '/tools', '/planner', '/quiz'].includes(pathname) ? '/courses'
     : pathname === '/revision' ? '/' : pathname
@@ -43,7 +63,14 @@ export default function Sidebar() {
     <div ref={nav} className="relative flex justify-around md:h-full md:flex-col md:justify-center md:gap-5">
       <span ref={indicator} aria-hidden="true" className="navigation-indicator" />
       {tabs.map(tab => <Link key={tab.to} to={tab.to} state={{ navigationTab: true }} replace={pathname !== '/'} onClick={event => {
-        if (pathname === tab.to) {
+        const index = window.history.state?.idx
+        const home = homeIndex.current
+        if (home !== null && typeof index === 'number' && index > home && (tab.to === '/' || index > home + 1)) {
+          event.preventDefault()
+          const destination = tab.to === '/' ? home : home + 1
+          pendingTab.current = { to: tab.to, index: destination }
+          navigate(destination - index)
+        } else if (pathname === tab.to) {
           event.preventDefault()
           window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
         }

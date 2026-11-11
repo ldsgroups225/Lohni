@@ -1,3 +1,4 @@
+import { usePersistentDetails } from '../lib/usePersistentDetails'
 import React, { useEffect, useRef, useState } from "react";
 import { AdaptiveErrorBoundary, adaptiveToast } from '@cognicatch/react'
 import { Link, useNavigate } from "react-router-dom";
@@ -29,9 +30,7 @@ let cachedChats: ChatInfo[] = [];
 
 export default function Landing() {
   const [chats, setChats] = useState<ChatInfo[]>(cachedChats);
-  const [chatsOpen, setChatsOpen] = useState(() => {
-    try { return sessionStorage.getItem("lohni-tutor-chats") === "open"; } catch { return false; }
-  });
+  const chatsDetails = usePersistentDetails("lohni-tutor-chats");
   useEffect(() => {
     let active = true;
     getChats().then(result => { if (active) { cachedChats = result.chats; setChats(result.chats); } }).catch(() => {});
@@ -240,11 +239,7 @@ export default function Landing() {
       </div>
 
       <ExploreTopics />
-      <details className="mx-auto mb-6 w-full max-w-4xl rounded-2xl border border-border p-5" open={chatsOpen} onToggle={event => {
-        const open = event.currentTarget.open;
-        setChatsOpen(open);
-        try { sessionStorage.setItem("lohni-tutor-chats", open ? "open" : "closed"); } catch { /* Storage can be unavailable. */ }
-      }}>
+      <details className="mx-auto mb-6 w-full max-w-4xl rounded-2xl border border-border p-5" {...chatsDetails}>
         <summary className="cursor-pointer text-foreground">Mes discussions</summary>
         <ul className="mt-4 space-y-3">{chats.map(chat => <li key={chat.id}><Link to={`/chat?chatId=${encodeURIComponent(chat.id)}`} className="block truncate text-primary underline">{chat.title || 'Discussion sans titre'}</Link></li>)}</ul>
         {!chats.length && <p className="mt-3 text-sm text-muted">Aucune discussion pour le moment.</p>}

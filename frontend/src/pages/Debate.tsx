@@ -46,14 +46,14 @@ export default function Debate() {
     const [isStreaming, setIsStreaming] = useState(false);
     const [streamingContent, setStreamingContent] = useState("");
     const [error, setError] = useState<string | null>(null);
-    const [isDebateEnded, setIsDebateEnded] = useState(false);
-    const [analysis, setAnalysis] = useState<DebateAnalysis | null>(null);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [analysisState, setAnalysisState] = useState<"loading" | DebateAnalysis | null>(null);
+    const isDebateEnded = analysisState !== null;
+    const analysis = typeof analysisState === "object" ? analysisState : null;
     const [analysisOpen, setAnalysisOpen] = useOverlayNavigation("debate-analysis", () => {
-        analysisWsRef.current?.close();
-        setIsAnalyzing(false);
-        setIsDebateEnded(false);
-        setAnalysis(null);
+        const socket = analysisWsRef.current;
+        analysisWsRef.current = null;
+        socket?.close();
+        setAnalysisState(null);
     });
     // Escape closes the analysis dialog, same as its « Fermer » button (the debate itself stays ended).
     useEffect(() => {
@@ -154,7 +154,7 @@ export default function Debate() {
                     ]);
                     setIsStreaming(false);
                     setStreamingContent("");
-                    setIsDebateEnded(true);
+                    setAnalysisState("loading");
                     // Automatically fetch analysis
                     setTimeout(() => fetchAnalysis(), 1000);
                     break;
@@ -261,7 +261,7 @@ export default function Debate() {
 
             const data = await response.json();
             if (data.ok) {
-                setIsDebateEnded(true);
+                setAnalysisState("loading");
                 fetchAnalysis();
             } else {
                 setError(data.error || "Impossible de terminer le débat");
@@ -275,7 +275,7 @@ export default function Debate() {
         if (!debateId) return;
 
         setAnalysisOpen(true);
-        setIsAnalyzing(true);
+        setAnalysisState("loading");
         setAnalysisPhase("Début de l’analyse…");
 
         // Connect to analysis WebSocket first
@@ -286,6 +286,7 @@ export default function Debate() {
         };
 
         analysisWs.onmessage = (event) => {
+            if (analysisWsRef.current !== analysisWs) return;
             const data = JSON.parse(event.data);
 
             switch (data.type) {
@@ -298,17 +299,16 @@ export default function Debate() {
                     break;
 
                 case "complete":
-                    setAnalysis(data.analysis);
+                    setAnalysisState(data.analysis);
                     setSession(data.session);
-                    setIsAnalyzing(false);
                     setAnalysisPhase("");
                     analysisWs.close();
                     break;
 
                 case "error":
                     setError(data.error);
+                    setAnalysisState(null);
                     setAnalysisOpen(false);
-                    setIsAnalyzing(false);
                     setAnalysisPhase("");
                     analysisWs.close();
                     break;
@@ -316,10 +316,11 @@ export default function Debate() {
         };
 
         analysisWs.onerror = (error) => {
+            if (analysisWsRef.current !== analysisWs) return;
             console.error("Analysis WebSocket error:", error);
             setError("Erreur de connexion à l’analyse");
             setAnalysisOpen(false);
-            setIsAnalyzing(false);
+            setAnalysisState(null);
             setAnalysisPhase("");
         };
 
@@ -340,17 +341,19 @@ export default function Debate() {
             );
 
             const data = await response.json();
+            if (analysisWsRef.current !== analysisWs) return;
             if (!data.ok && data.error) {
                 setError(data.error);
                 setAnalysisOpen(false);
-                setIsAnalyzing(false);
+                setAnalysisState(null);
                 setAnalysisPhase("");
                 analysisWs.close();
             }
         } catch (err: any) {
+            if (analysisWsRef.current !== analysisWs) return;
             setError(err.message || "Impossible de lancer l’analyse");
             setAnalysisOpen(false);
-            setIsAnalyzing(false);
+            setAnalysisState(null);
             setAnalysisPhase("");
             analysisWs.close();
         }
@@ -731,7 +734,7 @@ export default function Debate() {
                 </div>
             )}
 
-            {analysisOpen && isAnalyzing && !analysis && (
+            {analysisOpen && analysisState === "loading" && (
                 <div className="fixed inset-0 bg-background flex items-center justify-center z-[var(--z-modal)]" role="dialog" aria-modal="true">
                     <div className="bg-surface border border-border rounded-2xl p-8 text-center space-y-4 min-w-[300px]">
                         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
