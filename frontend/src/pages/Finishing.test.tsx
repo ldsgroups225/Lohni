@@ -1,3 +1,4 @@
+vi.mock('../lib/useLeaveConfirmation', () => ({ useLeaveConfirmation: () => {} }))
 import { beforeEach, expect, test, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'

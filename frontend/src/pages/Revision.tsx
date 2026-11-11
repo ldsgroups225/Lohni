@@ -6,6 +6,8 @@ import Mascotte from '../components/Mascotte/Mascotte'
 import { CheckIcon, CloseIcon } from '../components/ui/NavigationIcons'
 import { Progress } from '../components/ui/Progress'
 import MarkdownView from '../components/Chat/MarkdownView'
+import { useOverlayNavigation } from '../lib/useOverlayNavigation'
+import { useLeaveConfirmation } from '../lib/useLeaveConfirmation'
 import { confirmDialog } from '../lib/confirm'
 import { MENU_EXIT_MS, prefersReducedMotion, useExitTransition } from '../lib/motion'
 import { SwipeCard } from '../components/Revision/SwipeCard'
@@ -29,7 +31,7 @@ export default function Revision() {
   const [missed, setMissed] = useState<RevisionCard | null>(null)
   const [feedback, setFeedback] = useState<{ id: number; knew: boolean } | null>(null)
   const [moreCards, setMoreCards] = useState(false)
-  const [menu, setMenu] = useState(false)
+  const [menu, setMenu] = useOverlayNavigation('revision-menu')
   const sending = useRef(false) // une seule réponse par carte, même si un geste et un bouton se suivent
   const menuButton = useRef<HTMLButtonElement>(null)
   const menuExit = useExitTransition(menu, MENU_EXIT_MS)
@@ -40,6 +42,7 @@ export default function Revision() {
   const [verdict, setVerdict] = useState<{ choice: number; next: RevisionSession } | null>(null)
   const startedAt = useRef(Date.now())
   const card = session?.cards[session.position]
+  useLeaveConfirmation(!!session && !session.complete && !!card, 'Quitter la session ? Ta progression est enregistrée.')
   // Après un QCM : fait défiler jusqu'à l'indice et « Continuer », avec une marge sous le bouton.
   // Deuxième passage : le Markdown se charge à la demande et peut allonger la page après le premier.
   useEffect(() => {
@@ -184,7 +187,7 @@ export default function Revision() {
       <div className={`mx-auto flex w-full max-w-xl flex-1 flex-col ${session && !session.complete && card ? 'space-y-2' : 'space-y-6'}`}>
         {session && !session.complete && card ? <header className="flex items-center gap-3"><h1 className="sr-only">Session de révision</h1><BackButton fallback="/" label="Quitter la session" className="press-icon -ml-3 inline-grid size-11 place-items-center rounded-xl text-muted"><CloseIcon /></BackButton>{session && <div className="flex-1"><div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div><Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" /></div>}{session && <span className="text-sm tabular-nums text-muted">{session.position + 1}/{session.cards.length}</span>}
           <div className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
-            <button ref={menuButton} type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(value => !value)} className="press-icon -mr-2 grid size-11 place-items-center rounded-xl text-xl leading-none text-muted">⋯</button>
+            <button ref={menuButton} type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} className="press-icon -mr-2 grid size-11 place-items-center rounded-xl text-xl leading-none text-muted">⋯</button>
             {menuExit.mounted && <div role="menu" data-state={menuExit.state} className="motion-menu absolute right-0 top-full z-10 mt-1 rounded-xl border border-border bg-surface p-1 shadow-lg">
               <button role="menuitem" autoFocus disabled={busy || !!verdict || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte</button>
             </div>}

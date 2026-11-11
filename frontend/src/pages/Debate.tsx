@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useOverlayNavigation } from "../lib/useOverlayNavigation";
 import { confirmDialog } from "../lib/confirm";
 import { ToolPage } from "../components/ui/ToolPage";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -48,10 +49,21 @@ export default function Debate() {
     const [isDebateEnded, setIsDebateEnded] = useState(false);
     const [analysis, setAnalysis] = useState<DebateAnalysis | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [analysisOpen, setAnalysisOpen] = useOverlayNavigation("debate-analysis");
+    const wasAnalysisOpen = useRef(false);
+    useEffect(() => {
+        if (wasAnalysisOpen.current && !analysisOpen) {
+            analysisWsRef.current?.close();
+            setIsAnalyzing(false);
+            setIsDebateEnded(false);
+            setAnalysis(null);
+        }
+        wasAnalysisOpen.current = analysisOpen;
+    }, [analysisOpen]);
     // Escape closes the analysis dialog, same as its « Fermer » button (the debate itself stays ended).
     useEffect(() => {
         if (!isDebateEnded || !analysis) return;
-        const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setIsDebateEnded(false); setAnalysis(null); } };
+        const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setAnalysisOpen(false); } };
         document.addEventListener("keydown", onKey);
         return () => document.removeEventListener("keydown", onKey);
     }, [isDebateEnded, analysis]);
@@ -267,6 +279,7 @@ export default function Debate() {
     const fetchAnalysis = async () => {
         if (!debateId) return;
 
+        setAnalysisOpen(true);
         setIsAnalyzing(true);
         setAnalysisPhase("Début de l’analyse…");
 
@@ -299,6 +312,7 @@ export default function Debate() {
 
                 case "error":
                     setError(data.error);
+                    setAnalysisOpen(false);
                     setIsAnalyzing(false);
                     setAnalysisPhase("");
                     analysisWs.close();
@@ -309,6 +323,7 @@ export default function Debate() {
         analysisWs.onerror = (error) => {
             console.error("Analysis WebSocket error:", error);
             setError("Erreur de connexion à l’analyse");
+            setAnalysisOpen(false);
             setIsAnalyzing(false);
             setAnalysisPhase("");
         };
@@ -332,12 +347,14 @@ export default function Debate() {
             const data = await response.json();
             if (!data.ok && data.error) {
                 setError(data.error);
+                setAnalysisOpen(false);
                 setIsAnalyzing(false);
                 setAnalysisPhase("");
                 analysisWs.close();
             }
         } catch (err: any) {
             setError(err.message || "Impossible de lancer l’analyse");
+            setAnalysisOpen(false);
             setIsAnalyzing(false);
             setAnalysisPhase("");
             analysisWs.close();
@@ -592,7 +609,7 @@ export default function Debate() {
                 </div>
             </div>
 
-            {isDebateEnded && analysis && (
+            {analysisOpen && isDebateEnded && analysis && (
                 <div className="fixed inset-0 bg-background flex items-center justify-center p-4 z-[var(--z-modal)] animate-[fadeIn_0.3s_ease-in-out]" role="dialog" aria-modal="true">
                     <div className="bg-surface border border-border rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto custom-scroll shadow-2xl animate-[scaleIn_0.3s_ease-out]">
                         <div className="p-8 space-y-6">
@@ -698,6 +715,7 @@ export default function Debate() {
                                         setDebateId(null);
                                         setSession(null);
                                         setMessages([]);
+                                        setAnalysisOpen(false);
                                         setIsDebateEnded(false);
                                         setAnalysis(null);
                                         navigate("/debate");
@@ -708,6 +726,7 @@ export default function Debate() {
                                 </button>
                                 <button
                                     onClick={() => {
+                                        setAnalysisOpen(false);
                                         setIsDebateEnded(false);
                                         setAnalysis(null);
                                     }}
@@ -721,7 +740,7 @@ export default function Debate() {
                 </div>
             )}
 
-            {isAnalyzing && !analysis && (
+            {analysisOpen && isAnalyzing && !analysis && (
                 <div className="fixed inset-0 bg-background flex items-center justify-center z-[var(--z-modal)]" role="dialog" aria-modal="true">
                     <div className="bg-surface border border-border rounded-2xl p-8 text-center space-y-4 min-w-[300px]">
                         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>

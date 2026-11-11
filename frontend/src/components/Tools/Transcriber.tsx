@@ -1,11 +1,15 @@
 import MarkdownView from "../Chat/MarkdownView"
 import { useState, useRef, useEffect } from "react";
+import { useOverlayNavigation } from "../../lib/useOverlayNavigation";
 import { transcribeAudio, type StudyMaterials } from "../../lib/api";
 
 export default function Transcriber() {
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [showSiriUI, setShowSiriUI] = useState(false);
+  const [showSiriUI, setShowSiriUI] = useOverlayNavigation("transcriber");
+  const recordingRun = useRef(0);
+  const wasOpenRef = useRef(false);
+  const closedNormallyRef = useRef(false);
   const [transcription, setTranscription] = useState<string | null>(null);
   const [studyMaterials, setStudyMaterials] = useState<StudyMaterials | null>(null);
   const [status, setStatus] = useState("");
@@ -58,9 +62,12 @@ export default function Transcriber() {
 
   const startRecording = async () => {
     try {
+      const run = ++recordingRun.current;
+      closedNormallyRef.current = false;
       setShowSiriUI(true);
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (recordingRun.current !== run) { stream.getTracks().forEach(track => track.stop()); return; }
       
       const audioContext = new AudioContext();
       const analyser = audioContext.createAnalyser();
@@ -110,7 +117,10 @@ export default function Transcriber() {
         
         stream.getTracks().forEach(track => track.stop());
         
+        if (recordingRun.current !== run) return;
         await handleFileUpload(audioFile);
+        if (recordingRun.current !== run) return;
+        closedNormallyRef.current = true;
         setShowSiriUI(false);
       };
 
@@ -119,6 +129,7 @@ export default function Transcriber() {
       setStatus("Écoute…");
     } catch (error) {
       setStatus("Impossible d’accéder au microphone");
+      closedNormallyRef.current = true;
       setShowSiriUI(false);
     }
   };
@@ -134,6 +145,7 @@ export default function Transcriber() {
   };
 
   const cancelRecording = () => {
+    recordingRun.current++;
     if (mediaRecorderRef.current && recording) {
       mediaRecorderRef.current.stop();
       setRecording(false);
@@ -154,6 +166,14 @@ export default function Transcriber() {
     setStatus("Enregistrement annulé");
   };
 
+  useEffect(() => {
+    if (wasOpenRef.current && !showSiriUI) {
+      if (!closedNormallyRef.current) cancelRecording();
+      closedNormallyRef.current = false;
+    }
+    wasOpenRef.current = showSiriUI;
+  }, [showSiriUI]);
+
   const copyToClipboard = () => {
     if (transcription) {
       navigator.clipboard.writeText(transcription);
@@ -163,6 +183,8 @@ export default function Transcriber() {
 
   useEffect(() => {
     return () => {
+      recordingRun.current++;
+      mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
@@ -205,6 +227,7 @@ export default function Transcriber() {
           <div className="absolute bottom-16 sm:bottom-20 flex items-center gap-6 sm:gap-8">
             <button
               onClick={cancelRecording}
+              aria-label="Annuler l’enregistrement"
               className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border border-border text-foreground hover:text-foreground hover:border-border transition-[transform,opacity] duration-300 flex items-center justify-center"
               style={{
                 background: 'var(--color-surface)',
@@ -219,6 +242,7 @@ export default function Transcriber() {
 
             <button
               onClick={recording ? stopRecording : undefined}
+              aria-label="Terminer l’enregistrement"
               className="w-16 h-16 sm:w-18 sm:h-18 rounded-full border border-border text-foreground hover:text-foreground hover:border-border transition-[transform,opacity] duration-300 flex items-center justify-center"
               style={{
                 background: 'var(--color-tint)',

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { quizStart, connectQuizStream, type QuizEvent } from "../lib/api";
+import { useLeaveConfirmation } from "../lib/useLeaveConfirmation";
 import { LoadingState } from "../components/ui/LoadingState";
 import { ToolPage } from "../components/ui/ToolPage";
 import TopicBar from "../components/Quiz/TopicBar";
@@ -40,6 +41,8 @@ export default function Quiz() {
   const closeRef = useRef<null | (() => void)>(null);
   const startedTopicRef = useRef<string | null>(null);
 
+  useLeaveConfirmation((connecting || qs.length > 0) && !done, "Quitter le quiz ? Ta progression sera perdue.");
+
   const total = qs.length;
   const q = qs[idx];
 
@@ -50,6 +53,10 @@ export default function Quiz() {
   useEffect(() => {
     if (!initialTopic) return;
     if (startedTopicRef.current === initialTopic) { startedTopicRef.current = null; return; }
+    try {
+      const cached = sessionStorage.getItem(`quiz:${initialTopic}`);
+      if (cached) { setQs(JSON.parse(cached)); setTopic(initialTopic); return; }
+    } catch { /* Le quiz reste utilisable si le stockage est indisponible. */ }
     start(initialTopic);
   }, [initialTopic]);
 
@@ -81,6 +88,7 @@ export default function Quiz() {
             correct: typeof q.correct === "number" ? Math.max(0, q.correct - 1) : 0
           }));
           setQs(arr);
+          try { sessionStorage.setItem(`quiz:${trimmed}`, JSON.stringify(arr)); } catch { /* Le stockage est facultatif. */ }
           resetQuestionState();
           setConnecting(false);
         }

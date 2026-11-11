@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { MemoryRouter } from 'react-router-dom'
+import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 import Revision from './Revision'
 
@@ -21,7 +21,7 @@ Object.defineProperty(window, 'matchMedia', { value: () => ({ matches: true, add
 test('la célébration reste visible si le chargement des cartes restantes échoue', async () => {
   const container = document.createElement('div')
   const root = createRoot(container)
-  await act(async () => { root.render(<MemoryRouter><Revision /></MemoryRouter>) })
+  await act(async () => { root.render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <Revision /> }])} />) })
   expect(container.textContent).toContain('Session terminée !')
   expect(container.querySelector('.motion-celebrate')).toBeTruthy()
   expect(container.textContent).not.toContain('Impossible de charger les cartes restantes.')

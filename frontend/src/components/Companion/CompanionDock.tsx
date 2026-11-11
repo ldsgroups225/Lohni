@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { companionAsk, type FlashCard } from "../../lib/api"
 import { lazy, Suspense, type ComponentProps } from "react"
 
+import { useOverlayNavigation } from "../../lib/useOverlayNavigation"
 import { useCompanion } from "./CompanionProvider"
 
 // KaTeX and syntax highlighting are heavy: load them only when the assistant panel shows a message.
@@ -38,7 +39,13 @@ function toHistoryPayload(messages: CompanionMessage[]) {
 }
 
 export default function CompanionDock() {
-  const { document, open, setOpen } = useCompanion()
+  const { document } = useCompanion()
+  const [open, setOpen] = useOverlayNavigation("companion")
+  const previousDocument = useRef(document)
+  useEffect(() => {
+    if (previousDocument.current && previousDocument.current !== document && open) setOpen(false)
+    previousDocument.current = document
+  }, [document])
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<CompanionMessage[]>([])
   const [busy, setBusy] = useState(false)

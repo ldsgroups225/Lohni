@@ -2,13 +2,15 @@ import Mascotte from '../Mascotte/Mascotte'
 import { Button } from '../ui/Button'
 import { Progress } from '../ui/Progress'
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import curriculum from '../../data/curriculum-ci.json'
 import { revisionAPI, revisionPolicy } from '../../lib/api'
 
 export default function Onboarding() {
   const navigate = useNavigate()
-  const [step, setStep] = useState(1)
+  const [search, setSearch] = useSearchParams()
+  const step = Math.min(4, Math.max(1, Number(search.get('etape')) || 1))
+  const setStep = (next: number) => { const params = new URLSearchParams(search); params.set('etape', String(next)); setSearch(params) }
   const [schoolClass, setSchoolClass] = useState('3e')
   const [series, setSeries] = useState('')
   const entry = curriculum.find(item => item.schoolClass === schoolClass)!
@@ -26,7 +28,6 @@ export default function Onboarding() {
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (step < 4) {
-      if (step === 1) setSubjects(available)
       if (step === 2 && !subjects.includes(subject)) setSubject(subjects[0])
       setStep(step + 1)
       return
@@ -54,9 +55,11 @@ export default function Onboarding() {
       <label className="block space-y-2"><span>Ta classe</span><select className={input} value={schoolClass} onChange={event => {
         setSchoolClass(event.target.value)
         const next = curriculum.find(item => item.schoolClass === event.target.value)!
-        setSeries(Object.keys(next.series)[0])
+        const nextSeries = Object.keys(next.series)[0]
+        setSeries(nextSeries)
+        setSubjects((next.series as Record<string, string[] | undefined>)[nextSeries] ?? [])
       }}>{curriculum.map(item => <option key={item.schoolClass} value={item.schoolClass}>{item.label}</option>)}</select></label>
-      {Object.keys(entry.series)[0] !== '' && <label className="block space-y-2"><span>Ta série</span><select className={input} value={series} onChange={event => setSeries(event.target.value)}>
+      {Object.keys(entry.series)[0] !== '' && <label className="block space-y-2"><span>Ta série</span><select className={input} value={series} onChange={event => { setSeries(event.target.value); setSubjects((entry.series as Record<string, string[] | undefined>)[event.target.value] ?? []) }}>
         {Object.keys(entry.series).map(name => <option key={name}>{name}</option>)}
       </select></label>}
     </>}
@@ -84,7 +87,7 @@ export default function Onboarding() {
     {error && <p role="alert" className="text-foreground">{error}</p>}
     {busy && <p role="status">Préparation de tes {revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes… Cela peut prendre un instant.</p>}
     <div className="flex flex-wrap items-center gap-4">
-      {step > 1 && <button type="button" disabled={busy} className="rounded-xl border border-border px-4 py-3" onClick={() => setStep(step - 1)}>Retour</button>}
+      {step > 1 && <button type="button" disabled={busy} className="rounded-xl border border-border px-4 py-3" onClick={() => navigate(-1)}>Retour</button>}
       <Button type="submit" disabled={busy || (step === 2 && !subjects.length) || (step === 4 && !title.trim())}>{step === 4 ? 'Créer mes cartes et commencer' : 'Continuer'}</Button>
     </div>
   </form>

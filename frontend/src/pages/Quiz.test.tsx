@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { MemoryRouter } from 'react-router-dom'
+import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 
 const api = vi.hoisted(() => ({ start: vi.fn(async () => ({ quizId: '1' })) }))
@@ -15,7 +15,7 @@ test('choisir un sujet lance une seule génération malgré la mise à jour de l
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
   try {
-    await act(async () => root.render(<MemoryRouter initialEntries={['/quiz']}><Quiz /></MemoryRouter>))
+    await act(async () => root.render(<RouterProvider router={createMemoryRouter([{ path: '/quiz', element: <Quiz /> }], { initialEntries: ['/quiz'] })} />))
     const click = async (text: string) => {
       const button = [...host.querySelectorAll('button')].find(b => b.textContent?.includes(text))!
       await act(async () => button.click())
