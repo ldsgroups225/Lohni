@@ -8,6 +8,47 @@ vi.mock('../../lib/api', () => ({ revisionAPI: { saveProfile: async () => { api.
 import Onboarding from './Onboarding'
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
+test('une étape invalide dans l’adresse affiche le début du parcours', async () => {
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Onboarding /> }], { initialEntries: ['/?etape=2.5'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.textContent).toContain('Étape 1 sur 4')
+    expect(host.textContent).toContain('Dans quelle classe es-tu')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove() }
+})
+
+test('retour depuis une étape ouverte directement affiche l’étape précédente', async () => {
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/outside', element: <p>Hors application</p> }, { path: '/', element: <Onboarding /> }], { initialEntries: ['/outside', '/?etape=2'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => [...host.querySelectorAll('button')].find(button => button.textContent === 'Retour')!.click())
+    expect(host.textContent).toContain('Étape 1 sur 4')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove() }
+})
+
+test('recharger en cours de parcours conserve la classe choisie', async () => {
+  sessionStorage.clear()
+  const host = document.createElement('div'); document.body.append(host)
+  let root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Onboarding /> }])
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    const select = host.querySelector('select')!
+    const chosen = select.options[1].value
+    await act(async () => { select.value = chosen; select.dispatchEvent(new Event('change', { bubbles: true })) })
+    await act(async () => host.querySelector('form')!.requestSubmit())
+    act(() => root.unmount())
+    root = createRoot(host)
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => { await router.navigate(-1) })
+    expect(host.querySelector('select')!.value).toBe(chosen)
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); sessionStorage.clear() }
+})
+
 test('le retour retrouve l’étape précédente et les réponses', async () => {
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)

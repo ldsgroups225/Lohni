@@ -1,8 +1,8 @@
 import { revisionCardVisibility } from './ui/revisionPresentation'
 import { jumpToTab } from '../navigationTransitions'
 import { prefersReducedMotion } from '../lib/motion'
-import { useContext, useEffect, useRef, useState } from 'react'
-import { Link, UNSAFE_DataRouterContext, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { CoursesIcon, HomeIcon, ProfileIcon, TutorIcon } from './ui/NavigationIcons'
 
 const tabs = [
@@ -17,7 +17,6 @@ export default function Sidebar() {
   const { pathname } = location
   const navigate = useNavigate()
   const homeIndex = useRef<number | null>(pathname === '/' && typeof window !== 'undefined' ? window.history.state?.idx ?? null : null)
-  const router = useContext(UNSAFE_DataRouterContext)?.router
   useEffect(() => {
     const index = window.history.state?.idx
     if (pathname === '/' && typeof index === 'number' && homeIndex.current === null) homeIndex.current = index
@@ -57,7 +56,7 @@ export default function Sidebar() {
         if (home !== null && typeof index === 'number' && index > home && (tab.to === '/' || index > home + 1)) {
           event.preventDefault()
           const destination = tab.to === '/' ? home : home + 1
-          if (!router || !jumpToTab(router, destination - index, tab.to)) navigate(destination - index)
+          if (!jumpToTab(destination - index, tab.to)) navigate(destination - index)
         } else if (pathname === tab.to) {
           event.preventDefault()
           window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'instant' : 'smooth' })

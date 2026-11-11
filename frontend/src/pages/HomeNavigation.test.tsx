@@ -26,3 +26,22 @@ test('le retour apres onboarding attend le profil au lieu de montrer onboarding'
     expect(host.textContent).toContain('Salut')
   } finally { act(() => root.unmount()); router.dispose(); host.remove() }
 })
+
+test('un autre appareil ne voit pas l’accueil en cache', async () => {
+  localStorage.setItem('lohni-device-id', 'appareil-a')
+  api.home.mockResolvedValueOnce({ profile: { schoolClass: '3e' }, state: 'empty', cardCount: 0, totalCards: 0, daysUntilExam: null })
+  api.progress.mockResolvedValue(null)
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Home /> }, { path: '/other', element: <p>Autre</p> }])
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.textContent).toContain('Salut')
+    await act(async () => { await router.navigate('/other') })
+    localStorage.setItem('lohni-device-id', 'appareil-b')
+    api.home.mockReturnValueOnce(new Promise(() => {}))
+    await act(async () => { await router.navigate(-1) })
+    expect(host.textContent).not.toContain('Salut')
+    expect(host.textContent).toContain('On prépare ta journée')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
+})

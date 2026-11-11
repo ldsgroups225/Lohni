@@ -4,11 +4,14 @@ import { navigationCancelled } from './lib/useLeaveConfirmation'
 
 type Router = ReturnType<typeof createBrowserRouter>
 type PendingTab = { to: string; index: number; origin: string }
-const pendingTabs = new WeakMap<Router, { current: PendingTab | null }>()
+let currentRouter: Router | undefined
+let currentPending: { current: PendingTab | null } | undefined
 
-export function jumpToTab(router: Router, delta: number, to: string) {
-  const pending = pendingTabs.get(router)
-  if (!pending) return false
+export function jumpToTab(delta: number, to: string) {
+  const router = currentRouter
+  const pending = currentPending
+  if (!router || !pending) return false
+  if (pending.current) return true
   pending.current = { to, index: window.history.state.idx + delta, origin: router.state.location.key }
   void router.navigate(delta)
   return true
@@ -16,7 +19,6 @@ export function jumpToTab(router: Router, delta: number, to: string) {
 
 export function navigationTransitions<T extends Router>(router: T): T {
   const pending = { current: null as PendingTab | null }
-  pendingTabs.set(router, pending)
   const subscribe = router.subscribe.bind(router)
   type Subscriber = Parameters<typeof router.subscribe>[0]
   const subscribers = new Set<Subscriber>()
@@ -26,6 +28,8 @@ export function navigationTransitions<T extends Router>(router: T): T {
   router.subscribe = subscriber => {
     subscribers.add(subscriber)
     if (!stop) {
+      currentRouter = router
+      currentPending = pending
       window.addEventListener(navigationCancelled, cancel)
       // Intercept the intermediate POP before React sees it and starts a transition.
       stop = subscribe((state, options) => {
@@ -54,7 +58,10 @@ export function navigationTransitions<T extends Router>(router: T): T {
     }
     return () => {
       subscribers.delete(subscriber)
-      if (!subscribers.size) { stop?.(); stop = undefined; window.removeEventListener(navigationCancelled, cancel) }
+      if (!subscribers.size) {
+        stop?.(); stop = undefined; window.removeEventListener(navigationCancelled, cancel)
+        if (currentRouter === router) { currentRouter = undefined; currentPending = undefined }
+      }
     }
   }
   return router

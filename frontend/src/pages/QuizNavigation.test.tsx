@@ -8,6 +8,23 @@ vi.mock('../lib/api', () => ({ quizStart: api.start, connectQuizStream: (_id: st
 import Quiz from './Quiz'
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
+test('choisir un nouveau sujet retire l’ancien sujet de l’adresse', async () => {
+  sessionStorage.clear()
+  Element.prototype.scrollIntoView = vi.fn()
+  window.scrollTo = vi.fn()
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }], { initialEntries: ['/quiz?topic=maths'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Un'))!.click())
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))!.click())
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Nouveau sujet'))!.click())
+    expect(router.state.location.search).toBe('')
+    expect(host.querySelector('input')).not.toBeNull()
+  } finally { act(() => root.unmount()); router.dispose(); host.remove() }
+})
+
 test('retrouver le quiz conserve les questions sans nouvelle génération', async () => {
   api.start.mockClear(); sessionStorage.clear()
   const host = document.createElement('div'); document.body.append(host)

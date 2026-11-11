@@ -5,7 +5,7 @@ export function useOverlayNavigation(id: string, onClose?: () => void): [boolean
   const location = useLocation()
   const navigate = useNavigate()
   const opened = useRef(false)
-  const open = opened.current && location.state?.overlay === id
+  const open = opened.current && (location.state?.overlays ?? [location.state?.overlay]).includes(id)
   const current = useRef({ open, location })
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -15,7 +15,7 @@ export function useOverlayNavigation(id: string, onClose?: () => void): [boolean
     if (location.state?.overlay === id && !opened.current) {
       if (location.key !== 'default' && (window.history.state?.idx ?? 1) > 0) navigate(-1)
       else {
-        const { overlay: _overlay, ...state } = location.state
+        const { overlay: _overlay, overlays: _overlays, ...state } = location.state
         navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state })
       }
     }
@@ -31,7 +31,8 @@ export function useOverlayNavigation(id: string, onClose?: () => void): [boolean
     const { location } = current.current
     if (next) {
       opened.current = true
-      navigate(`${location.pathname}${location.search}${location.hash}`, { state: { ...location.state, overlay: id } })
+      const overlays = location.state?.overlays ?? (location.state?.overlay ? [location.state.overlay] : [])
+      navigate(`${location.pathname}${location.search}${location.hash}`, { state: { ...location.state, overlay: id, overlays: [...overlays, id] } })
     } else navigate(-1)
   }]
 }

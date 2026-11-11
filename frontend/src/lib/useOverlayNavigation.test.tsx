@@ -9,6 +9,24 @@ function Page() {
   const [open, setOpen] = useOverlayNavigation('menu')
   return <><p>Révision</p><button onClick={() => setOpen(!open)}>Menu</button>{open && <p>Options</p>}</>
 }
+test('le retour ferme seulement la dernière de deux surcouches', async () => {
+  function Screen() {
+    const [first, setFirst] = useOverlayNavigation('first')
+    const [second, setSecond] = useOverlayNavigation('second')
+    return <><button onClick={() => setFirst(true)}>Première</button><button onClick={() => setSecond(true)}>Deuxième</button>{first && <p>Première ouverte</p>}{second && <p>Deuxième ouverte</p>}</>
+  }
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Screen /> }])
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => host.querySelectorAll('button')[0].click())
+    await act(async () => host.querySelectorAll('button')[1].click())
+    await act(async () => { await router.navigate(-1) })
+    expect(host.textContent).toContain('Première ouverte')
+    expect(host.textContent).not.toContain('Deuxième ouverte')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove() }
+})
 test('retour et fermeture du menu conservent la page sans entrée orpheline', async () => {
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)

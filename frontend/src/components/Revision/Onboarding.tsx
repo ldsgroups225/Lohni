@@ -11,16 +11,26 @@ export default function Onboarding() {
   const location = useLocation()
   const [search, setSearch] = useSearchParams()
   const depth = typeof location.state?.onboardingDepth === 'number' ? location.state.onboardingDepth : 0
-  const step = Math.min(4, Math.max(1, Number(search.get('etape')) || 1))
+  const requestedStep = Number(search.get('etape'))
+  const step = Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 4 ? requestedStep : 1
   const setStep = (next: number) => { const params = new URLSearchParams(search); params.set('etape', String(next)); setSearch(params, { state: { ...location.state, onboardingDepth: depth + 1 } }) }
-  const [schoolClass, setSchoolClass] = useState('3e')
-  const [series, setSeries] = useState('')
+  const [saved] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('lohni-onboarding') ?? '{}') ?? {} } catch { return {} }
+  })
+  const [schoolClass, setSchoolClass] = useState(() => curriculum.some(item => item.schoolClass === saved.schoolClass) ? saved.schoolClass as string : '3e')
+  const [series, setSeries] = useState(() => {
+    const choices = curriculum.find(item => item.schoolClass === schoolClass)!.series
+    return typeof saved.series === 'string' && saved.series in choices ? saved.series as string : Object.keys(choices)[0]
+  })
   const entry = curriculum.find(item => item.schoolClass === schoolClass)!
   const available = (entry.series as Record<string, string[] | undefined>)[series] ?? []
-  const [subjects, setSubjects] = useState<string[]>(available)
-  const [examDate, setExamDate] = useState('')
-  const [subject, setSubject] = useState('Mathématiques')
-  const [title, setTitle] = useState('')
+  const [subjects, setSubjects] = useState<string[]>(() => Array.isArray(saved.subjects) ? saved.subjects.filter((name: unknown): name is string => typeof name === 'string' && available.includes(name)) : available)
+  const [examDate, setExamDate] = useState(() => typeof saved.examDate === 'string' ? saved.examDate as string : '')
+  const [subject, setSubject] = useState(() => typeof saved.subject === 'string' ? saved.subject as string : 'Mathématiques')
+  const [title, setTitle] = useState(() => typeof saved.title === 'string' ? saved.title as string : '')
+  useEffect(() => {
+    try { sessionStorage.setItem('lohni-onboarding', JSON.stringify({ schoolClass, series, subjects, examDate, subject, title })) } catch { /* Storage is optional. */ }
+  }, [schoolClass, series, subjects, examDate, subject, title])
   const finishing = useRef(false)
   useEffect(() => {
     if (!finishing.current || depth) return
@@ -45,6 +55,7 @@ export default function Onboarding() {
     try {
       await revisionAPI.saveProfile({ schoolClass, series: series || undefined, subjects, examDate: examDate || undefined })
       await revisionAPI.generateChapter({ subject, title: title.trim() })
+      try { sessionStorage.removeItem('lohni-onboarding') } catch { /* Storage is optional. */ }
       finishing.current = true
       if (depth) void navigate(-depth)
       else void navigate('/', { replace: true })
@@ -97,7 +108,7 @@ export default function Onboarding() {
     {error && <p role="alert" className="text-foreground">{error}</p>}
     {busy && <p role="status">Préparation de tes {revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes… Cela peut prendre un instant.</p>}
     <div className="flex flex-wrap items-center gap-4">
-      {step > 1 && <button type="button" disabled={busy} className="rounded-xl border border-border px-4 py-3" onClick={() => navigate(-1)}>Retour</button>}
+      {step > 1 && <button type="button" disabled={busy} className="rounded-xl border border-border px-4 py-3" onClick={() => depth ? navigate(-1) : setSearch({ etape: String(step - 1) }, { replace: true })}>Retour</button>}
       <Button type="submit" disabled={busy || (step === 2 && !subjects.length) || (step === 4 && !title.trim())}>{step === 4 ? 'Créer mes cartes et commencer' : 'Continuer'}</Button>
     </div>
   </form>

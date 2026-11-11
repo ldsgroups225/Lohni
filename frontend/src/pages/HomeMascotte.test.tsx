@@ -18,7 +18,7 @@ test.each([
   [null, null, false, '', ''],
   [null, null, false, 'Erreur', ''],
 ])('accueil : le logo mobile est présent sans menu inactif', (home, progress, loading, error, progressError) => {
-  state.values = [home, progress, loading, error, progressError, 0, null, null, '3e', '', [], '', 'Mathématiques', '', false, '']
+  state.values = [home, progress, loading, error, progressError, 0, null, null, {}, '3e', '', [], '', 'Mathématiques', '', false, '']
   const html = renderToStaticMarkup(<MemoryRouter><Home /></MemoryRouter>)
   expect(html).toMatch(/<header class="[^"]*lg:hidden[^"]*">.*?mascotte\/corps\.webp.*?Lohni<\/span>/)
   expect(html).not.toContain('aria-label="Menu"')

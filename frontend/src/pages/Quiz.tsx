@@ -150,7 +150,7 @@ export default function Quiz() {
     }
   };
 
-  const newTopic = () => { setDone(false); setQs([]); setTopic(""); setAnswers([]); resetQuestionState(); setScore(0); };
+  const newTopic = () => { setDone(false); setQs([]); setTopic(""); setAnswers([]); resetQuestionState(); setScore(0); navigate('/quiz', { replace: true, state: { quizCacheKey: cacheKey } }); };
 
   return (
     <ToolPage title="Quiz libre">
