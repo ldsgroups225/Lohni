@@ -6,6 +6,7 @@ import { CheckIcon, CloseIcon } from '../components/ui/NavigationIcons'
 import { Progress } from '../components/ui/Progress'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { confirmDialog } from '../lib/confirm'
+import { useExitTransition } from '../lib/motion'
 import { SwipeCard } from '../components/Revision/SwipeCard'
 import { SessionRecap } from '../components/Revision/SessionRecap'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
@@ -30,6 +31,7 @@ export default function Revision() {
   const [menu, setMenu] = useState(false)
   const sending = useRef(false) // une seule réponse par carte, même si un geste et un bouton se suivent
   const menuButton = useRef<HTMLButtonElement>(null)
+  const menuExit = useExitTransition(menu, 160)
   const continueButton = useRef<HTMLButtonElement>(null)
   const [generating, setGenerating] = useState(false)
   const [slow, setSlow] = useState(false)
@@ -170,10 +172,10 @@ export default function Revision() {
   return (
     <main className={`loop-screen flex min-h-dvh flex-col px-4 md:pl-28 ${session && !session.complete && card ? 'pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))]' : 'pt-8 pb-36'}`}>
       <div className={`mx-auto flex w-full max-w-xl flex-1 flex-col ${session && !session.complete && card ? 'space-y-3' : 'space-y-6'}`}>
-        {session && !session.complete && card ? <header className="flex items-center gap-3"><Link to="/" aria-label="Quitter la session" className="-ml-2 inline-block rounded-xl p-2 text-muted"><CloseIcon /></Link>{session && <div className="flex-1"><div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div><Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" /></div>}{session && <span className="text-sm tabular-nums text-muted">{session.position + 1}/{session.cards.length}</span>}
+        {session && !session.complete && card ? <header className="flex items-center gap-3"><Link to="/" aria-label="Quitter la session" className="press-icon -ml-3 inline-grid size-11 place-items-center rounded-xl text-muted"><CloseIcon /></Link>{session && <div className="flex-1"><div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div><Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" /></div>}{session && <span className="text-sm tabular-nums text-muted">{session.position + 1}/{session.cards.length}</span>}
           <div className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
-            <button ref={menuButton} type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(value => !value)} className="rounded-xl px-2 py-1 text-xl leading-none text-muted">⋯</button>
-            {menu && <div role="menu" className="absolute right-0 top-full z-10 mt-1 rounded-xl border border-border bg-surface p-1 shadow-lg">
+            <button ref={menuButton} type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(value => !value)} className="press-icon -mr-2 grid size-11 place-items-center rounded-xl text-xl leading-none text-muted">⋯</button>
+            {menuExit.mounted && <div role="menu" data-state={menuExit.state} className="motion-menu absolute right-0 top-full z-10 mt-1 rounded-xl border border-border bg-surface p-1 shadow-lg">
               <button role="menuitem" autoFocus disabled={busy || !!verdict || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte</button>
             </div>}
           </div>
@@ -221,7 +223,7 @@ export default function Revision() {
                 })}
               </fieldset>}
               {verdict ? <div className="space-y-3 border-t border-border pt-5" aria-live="polite">
-                <p className="flex items-center gap-2 font-semibold">{verdict.choice === card.correct ? <><CheckIcon />Bonne réponse !</> : <><CloseIcon />Réponse incorrecte</>}</p>
+                <p className="flex items-center gap-2 font-semibold">{verdict.choice === card.correct ? <><span className="motion-pop text-success"><CheckIcon /></span>Bonne réponse !</> : <><span className="motion-pop text-danger"><CloseIcon /></span>Réponse incorrecte</>}</p>
                 <MarkdownView md={card.answer} />
               </div> : card.kind === 'mcq' ? null : revealed ? <div className="space-y-3 border-t border-border pt-5" aria-live="polite">
                                 <MarkdownView md={card.answer} />

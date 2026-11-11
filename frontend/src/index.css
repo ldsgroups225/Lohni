@@ -19,13 +19,17 @@
   --color-mascot: var(--lohni-mascot);
   --radius-card: 1rem;
   --radius-control: 0.75rem;
-  --ease-lohni: cubic-bezier(0.2, 0, 0, 1);
-  --ease-celebration: cubic-bezier(0.2, 1.35, 0.4, 1);
+  --ease-lohni: cubic-bezier(0.2, 0.8, 0.2, 1); /* courbe partagée, reprise de Dots Hermes */
+  --ease-pop: cubic-bezier(0.3, 1.6, 0.5, 1);
   --duration-fast: 150ms;
   --duration-normal: 200ms;
   --duration-slow: 250ms;
   --duration-accordion: 380ms;
+  --duration-pop: 350ms;
+  --duration-menu: 160ms;
+  --duration-progress: 600ms;
   --press-scale: .97; /* single press feedback, controls only */
+  --press-scale-icon: .94; /* petits boutons d’icône : amplitude plus grande */
 }
 
 :root {
@@ -200,15 +204,22 @@ body {
 @keyframes lohni-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes lohni-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes lohni-flip { from { opacity: 0.5; transform: perspective(800px) rotateY(-90deg); } to { opacity: 1; transform: perspective(800px) rotateY(0); } }
-@keyframes lohni-celebrate { from { opacity: 0; transform: translateY(8px) scale(0.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes lohni-feedback { 0% { opacity: 0; transform: translateY(4px); } 25%, 70% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-4px); } }
+@keyframes lohni-pop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+@keyframes lohni-card-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes lohni-menu-in { from { opacity: 0; transform: translateY(-4px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes lohni-menu-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-4px) scale(.96); } }
+@keyframes lohni-feedback { 0% { opacity: 0; transform: translateY(4px) scale(.6); animation-timing-function: var(--ease-pop); } 15% { opacity: 1; transform: translateY(0) scale(1); } 25%, 70% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-4px); } }
 .motion-route { animation: lohni-fade var(--duration-fast) var(--ease-lohni); }
 .motion-enter, .motion-list, .loop-screen [role="alert"], .loop-screen [role="status"] { animation: lohni-enter var(--duration-normal) var(--ease-lohni) backwards; }
 .motion-flip { animation: lohni-flip var(--duration-normal) var(--ease-lohni); transform-origin: center; }
-.motion-celebrate { display: inline-flex; animation: lohni-celebrate var(--duration-slow) var(--ease-celebration) both; }
+.motion-pop, .motion-celebrate { display: inline-flex; animation: lohni-pop var(--duration-pop) var(--ease-pop) both; }
+/* Nouvelle carte : fondu et échelle .97 → 1 (Dots Hermes) */
+.motion-card { animation: lohni-card-in 300ms var(--ease-lohni) backwards; }
+.motion-menu { transform-origin: top right; animation: lohni-menu-in var(--duration-menu) var(--ease-lohni) both; }
+.motion-menu[data-state="exit"] { animation: lohni-menu-out var(--duration-menu) var(--ease-lohni) both; pointer-events: none; }
 .motion-feedback { position: fixed; z-index: var(--z-feedback); max-width: calc(100vw - 2rem); inset: auto 1rem calc(5rem + env(safe-area-inset-bottom)) auto; pointer-events: none; border-radius: var(--radius-control); padding: .6rem 1rem; color: var(--color-foreground); background: var(--color-tint); animation: lohni-feedback var(--duration-slow) var(--ease-lohni) both; }
 .motion-progress { height: .5rem; border-radius: 9999px; overflow: hidden; background: var(--color-border); }
-.motion-progress > span { display: block; height: 100%; background: var(--color-primary); transform-origin: left; transition: transform var(--duration-normal) var(--ease-lohni); }
+.motion-progress > span { display: block; height: 100%; background: var(--color-primary); transform-origin: left; transition: transform var(--duration-progress) var(--ease-lohni); }
 .navigation-indicator { position: absolute; left: 0; top: 0; opacity: 0; pointer-events: none; border-radius: var(--radius-control); background: var(--color-tint); transition: transform var(--duration-normal) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni); }
 
 body[data-onboarding] nav[aria-label="Navigation principale"] { display: none; }
@@ -225,6 +236,7 @@ img, svg { -webkit-user-drag: none; }
 button, a, summary, input, select, textarea { transition: background-color var(--duration-fast) var(--ease-lohni), color var(--duration-fast) var(--ease-lohni), border-color var(--duration-fast) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni), transform var(--duration-fast) var(--ease-lohni); }
 /* Press feedback only on controls: scaling a whole card made accordions inside it jump on tap. */
 button:active:not(:disabled), .ui-button:active:not(:disabled), .loop-screen a:active { transform: scale(var(--press-scale)); }
+.press-icon:active:not(:disabled) { transform: scale(var(--press-scale-icon)); }
 .ui-card, article { transition: border-color var(--duration-fast) var(--ease-lohni), background-color var(--duration-fast) var(--ease-lohni); }
 
 /* Accordions: animated height, rotating chevron */
@@ -243,8 +255,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--color-primary)
 .ui-glow { position: absolute; width: 9rem; height: 9rem; border-radius: 9999px; background: radial-gradient(circle, var(--color-primary) 0%, transparent 70%); opacity: .22; animation: lohni-glow 2.4s var(--ease-lohni) infinite; }
 .ui-loadbar { height: .5rem; overflow: hidden; border-radius: 9999px; background: var(--color-border); }
 .ui-loadbar > span { display: block; width: 40%; height: 100%; border-radius: inherit; background: var(--color-primary); animation: lohni-load 1.3s var(--ease-lohni) infinite; }
-.ui-pip { width: .55rem; height: .55rem; border-radius: 9999px; background: var(--color-primary); animation: lohni-pip 1.2s var(--ease-lohni) infinite; }
+.ui-pip { width: .55rem; height: .55rem; border-radius: 9999px; background: var(--color-primary); animation: lohni-dot 1.2s ease-in-out infinite; }
 @keyframes lohni-glow { 0%, 100% { transform: scale(.85); opacity: .14; } 50% { transform: scale(1.1); opacity: .3; } }
 @keyframes lohni-load { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
-@keyframes lohni-pip { 0%, 100% { transform: scale(.7); opacity: .35; } 50% { transform: scale(1.15); opacity: 1; } }
+/* Points de saisie : cycle 1,2 s, décalage 160 ms, montée de 4 px (Dots Hermes) */
+@keyframes lohni-dot { 0%, 60%, 100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-4px); opacity: 1; } }
 
