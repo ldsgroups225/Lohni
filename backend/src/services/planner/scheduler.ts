@@ -1,5 +1,5 @@
-import { PlanPolicy, Slot, Task, WeeklyPlan } from "./types"
-import { makeSlots, calculateUrgencyScore } from "./ai"
+import type { PlanPolicy, Slot, Task, WeeklyPlan } from "./types"
+import { makeSlots } from "./ai"
 
 const DAY_MS = 24 * 3600 * 1000
 
@@ -34,7 +34,7 @@ export function planTasks(tasks: Task[], policy: PlanPolicy): Task[] {
     })
 }
 
-export function weeklyPlan(tasks: Task[], policy: PlanPolicy): WeeklyPlan {
+export function weeklyPlan(tasks: Task[], _policy: PlanPolicy): WeeklyPlan {
     const start = new Date()
     start.setHours(0, 0, 0, 0)
     const days = [] as { date: string; slots: Slot[] }[]

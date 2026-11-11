@@ -14,7 +14,7 @@ function emit(id: string, msg: any) {
 
 async function startJobIfReady(pid: string) {
   const job = pendingJobs.get(pid)
-  const hasSockets = sockets.has(pid) && sockets.get(pid)!.size > 0
+  const hasSockets = (sockets.get(pid)?.size ?? 0) > 0
   
   if (job && hasSockets) {
     pendingJobs.delete(pid)
@@ -36,16 +36,13 @@ export function podcastRoutes(app: any) {
       return ws.close(1008, "pid required")
     }
     
-    let set = sockets.get(pid)
-    if (!set) {
-      set = new Set()
-      sockets.set(pid, set)
-    }
+    const set = sockets.get(pid) ?? new Set()
+    sockets.set(pid, set)
     set.add(ws)
     
     ws.on("close", () => {
-      set!.delete(ws)
-      if (set!.size === 0) {
+      set.delete(ws)
+      if (set.size === 0) {
         sockets.delete(pid)
       }
     })
@@ -132,7 +129,7 @@ export function podcastRoutes(app: any) {
 
           const fileStream = fs.createReadStream(filePath)
           fileStream.pipe(res)
-          fileStream.on('error', (err) => {
+          fileStream.on('error', (_err) => {
             if (!res.headersSent) {
               res.status(500).send({ error: 'Download failed' })
             }

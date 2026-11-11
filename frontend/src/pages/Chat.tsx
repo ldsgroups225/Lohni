@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { env } from "../config/env";
 import { chatJSON, getChatDetail, type FlashCard, revisionAPI, revisionPolicy, type RevisionProfile, type ChatMessage, podcastStart } from "../lib/api";
 import MarkdownView from "../components/Chat/MarkdownView";
+import { withOccurrenceKeys } from "../lib/occurrenceKeys";
 import ActionRow from "../components/Chat/ActionRow";
 import FlashCards from "../components/Chat/FlashCards";
 import SelectionPopup from "../components/Chat/SelectionPopup";
@@ -185,6 +186,7 @@ export default function Chat() {
     };
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Défiler après l'ajout ou le retrait d'un message.
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 0);
   }, [Array.isArray(messages) ? messages.length : 0]);
@@ -267,13 +269,13 @@ export default function Chat() {
         {error && <p role="alert" className="text-foreground">{error}</p>}
       </div>
       {!showTopics && (
-        <button
+        <button type="button"
           onClick={() => setShowTopics(true)}
           className="fixed top-[calc(1.25rem+env(safe-area-inset-top))] right-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-surface text-xs font-medium shadow-lg backdrop-blur transition-opacity"
           title="Afficher les cartes"
           aria-label="Afficher les cartes"
         >
-          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg aria-hidden="true" className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect width="18" height="18" x="3" y="3" rx="2" />
             <path d="M15 3v18" />
           </svg>
@@ -289,11 +291,11 @@ export default function Chat() {
         <div className="flex-1 min-w-0 pr-0 lg:pr-2">
           <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 pt-2 pb-[calc(12rem+env(safe-area-inset-bottom))] md:pb-28">
             <div className="space-y-6">
-              {list.map((m, i) => {
+              {withOccurrenceKeys(list, message => JSON.stringify([message.role, message.at])).map(({ value: m, key }) => {
                 const userBubble = "inline-block max-w-[85%] bg-surface border border-border rounded-2xl px-4 py-3";
                 if (m.role === "assistant") {
                   return (
-                    <div key={i} className="w-full flex justify-start">
+                    <div key={key} className="w-full flex justify-start">
                       <div className="w-full mx-auto rounded-3xl bg-surface border border-border ring-1 ring-border backdrop-blur px-5 sm:px-8 py-5 sm:py-8 max-w-full">
                         <div className="animate-[fadeIn_300ms_ease-out] leading-7 md:leading-8 overflow-x-auto">
                           <MarkdownView md={m.content} />
@@ -303,7 +305,7 @@ export default function Chat() {
                   );
                 }
                 return (
-                  <div key={i} className="w-full flex justify-start">
+                  <div key={key} className="w-full flex justify-start">
                     <div className={userBubble}>
                       <div className="text-foreground whitespace-pre-wrap leading-relaxed">{m.content}</div>
                     </div>

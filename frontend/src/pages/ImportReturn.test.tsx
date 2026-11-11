@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -36,7 +37,7 @@ test('la création longue conserve son indicateur de progression', async () => {
   const root = createRoot(host)
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+    await act(async () => required(host.querySelector('form')).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
     expect(host.textContent).toContain('Préparation du chapitre… Cela peut prendre un moment.')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
 })

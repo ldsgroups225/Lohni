@@ -1,5 +1,6 @@
 import MarkdownView from "./MarkdownView";
 import type { FlashCard } from "../../lib/api";
+import { withOccurrenceKeys } from "../../lib/occurrenceKeys";
 
 type Props = {
   items?: FlashCard[];
@@ -21,13 +22,13 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
               </span>
             </div>
             {onToggleCollapse && (
-              <button
+              <button type="button"
                 onClick={onToggleCollapse}
                 className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-opacity"
                 title="Masquer les cartes"
                 aria-label="Masquer les cartes"
               >
-                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg aria-hidden="true" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 6 6 18M6 6l12 12" />
                 </svg>
               </button>
@@ -41,12 +42,12 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
               Aucune carte pour le moment
             </div>
           ) : (
-            items.map((c, i) => {
+            withOccurrenceKeys(items, c => JSON.stringify([c.q, c.a])).map(({ value: c, key }) => {
               const title = c.q;
               const content = c.a;
               return (
                 <div
-                  key={`${i}-${title}`}
+                  key={key}
                   className="group rounded-2xl bg-surface border border-border hover:bg-surface transition-opacity "
                 >
                   <div className="p-5">
@@ -59,14 +60,14 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
                           <MarkdownView md={content} />
                         </div>
                       </div>
-                      <button
+                      <button type="button"
                         disabled={disabled}
                         onClick={() => onAdd({ kind: "flashcard", title, content })}
                         className="shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-xl bg-surface border border-border text-muted hover:text-foreground hover:bg-tint transition-opacity"
                         aria-label="Enregistrer dans mes révisions"
                         title="Enregistrer dans mes révisions"
                       >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M19 12H5" />
                         </svg>
                       </button>

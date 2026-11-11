@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest'
 
 const entries = new Map<string, string>()
@@ -29,7 +30,7 @@ test('un cache local corrompu est jeté et ne bloque pas les appels de révision
   expect(api.revisionSyncStatus().pending).toBe(0)
   expect(entries.has(offlineKey)).toBe(false)
   await expect(api.revisionAPI.profile()).resolves.toEqual({ schoolClass: '3e', subjects: ['Mathématiques'] })
-  expect(JSON.parse(entries.get(offlineKey)!)).toMatchObject({ pending: [], cache: { '/profile': { schoolClass: '3e' } } })
+  expect(JSON.parse(required(entries.get(offlineKey)))).toMatchObject({ pending: [], cache: { '/profile': { schoolClass: '3e' } } })
 })
 
 function queueTwoAnswers() {
@@ -125,7 +126,7 @@ test('une lecture antérieure à un enregistrement ne remplace pas le profil enr
   await api.revisionAPI.saveProfile(updated)
   finish(new Response(JSON.stringify({ ok: true, data: { schoolClass: '3e', subjects: ['Mathématiques'] } }), { headers: { 'Content-Type': 'application/json' } }))
   await expect(oldRead).resolves.toEqual(updated)
-  expect(JSON.parse(entries.get(offlineKey)!).cache['/profile']).toEqual(updated)
+  expect(JSON.parse(required(entries.get(offlineKey))).cache['/profile']).toEqual(updated)
 })
 
 test('une synchronisation tardive ne déplace pas la file vers un autre appareil', async () => {
@@ -138,7 +139,7 @@ test('une synchronisation tardive ne déplace pas la file vers un autre appareil
   entries.set('lohni-device-id', '22222222-2222-4222-8222-222222222222')
   finish(new Response(JSON.stringify({ ok: true, data: { id: 'old', cards: [], position: 1 } }), { headers: { 'Content-Type': 'application/json' } }))
   await syncing
-  expect(JSON.parse(entries.get(offlineKey)!).pending).toHaveLength(2)
+  expect(JSON.parse(required(entries.get(offlineKey))).pending).toHaveLength(2)
   expect(entries.get(otherKey)).toBeUndefined()
 })
 

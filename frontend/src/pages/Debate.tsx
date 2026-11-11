@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import type React from "react";
+import { useState, useEffect, useRef } from "react";
 import { useOverlayNavigation } from "../lib/useOverlayNavigation";
+import { withOccurrenceKeys } from "../lib/occurrenceKeys";
 import { confirmDialog } from "../lib/confirm";
 import { ToolPage } from "../components/ui/ToolPage";
 import * as api from "../lib/api";
@@ -62,7 +64,7 @@ export default function Debate() {
         const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setAnalysisOpen(false); } };
         document.addEventListener("keydown", onKey);
         return () => document.removeEventListener("keydown", onKey);
-    }, [isDebateEnded, analysis]);
+    }, [isDebateEnded, analysis, setAnalysisOpen]);
 
     const wsRef = useRef<WebSocket | null>(null);
     const analysisWsRef = useRef<WebSocket | null>(null);
@@ -74,10 +76,12 @@ export default function Debate() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: Faire défiler à chaque message ou fragment reçu.
     useEffect(() => {
         scrollToBottom();
     }, [messages, streamingContent]);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: La connexion et ses gestionnaires appartiennent à l'identifiant du débat courant.
     useEffect(() => {
         if (debateId) {
             fetchDebateSession(debateId);
@@ -358,12 +362,12 @@ export default function Debate() {
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-foreground mb-3">
+                        <fieldset>
+                            <legend className="block text-sm font-medium text-foreground mb-3">
                                 Ton point de vue
-                            </label>
+                            </legend>
                             <div className="flex gap-2">
-                                <button
+                                <button type="button"
                                     onClick={() => setPosition("for")}
                                     aria-pressed={position === "for"}
                                     className={`min-w-0 flex-1 py-4 px-2 rounded-xl font-semibold transition-[transform,opacity] ${position === "for"
@@ -375,7 +379,7 @@ export default function Debate() {
                                     <div>Pour</div>
                                     <div className="text-xs mt-1 opacity-80">Défendre cette idée</div>
                                 </button>
-                                <button
+                                <button type="button"
                                     onClick={() => setPosition("against")}
                                     aria-pressed={position === "against"}
                                     className={`min-w-0 flex-1 py-4 px-2 rounded-xl font-semibold transition-[transform,opacity] ${position === "against"
@@ -388,9 +392,9 @@ export default function Debate() {
                                     <div className="text-xs mt-1 opacity-80">Contester cette idée</div>
                                 </button>
                             </div>
-                        </div>
+                        </fieldset>
 
-                        <button
+                        <button type="button"
                             onClick={startDebate}
                             disabled={!topic.trim()}
                             className="w-full py-4 bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:from-tint disabled:to-tint disabled:cursor-not-allowed disabled:text-muted text-on-primary font-bold rounded-xl transition-[transform,opacity] shadow-lg"
@@ -433,7 +437,7 @@ export default function Debate() {
                                 </span>
                             </div>
                         </div>
-                        <button
+                        <button type="button"
                             onClick={() => {
                                 setDebateId(null);
                                 setSession(null);
@@ -464,9 +468,9 @@ export default function Debate() {
                     </div>
                 )}
 
-                {messages.map((msg, idx) => (
+                {withOccurrenceKeys(messages, message => JSON.stringify([message.role, message.timestamp])).map(({ value: msg, key }) => (
                     <div
-                        key={idx}
+                        key={key}
                         className={`flex ${msg.role === "user" ? "justify-end animate-[slideInRight_0.3s_ease-out]" : "justify-start animate-[slideInLeft_0.3s_ease-out]"}`}
                     >
                         <div
@@ -549,7 +553,7 @@ export default function Debate() {
                             rows={1}
                             style={{ minHeight: "50px", maxHeight: "200px" }}
                         />
-                        <button
+                        <button type="button"
                             onClick={submitArgument}
                             disabled={!argument.trim() || isStreaming || isDebateEnded}
                             className={`px-6 py-3 rounded-xl font-semibold transition-[transform,opacity] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${session?.position === "for"
@@ -568,7 +572,7 @@ export default function Debate() {
                         </button>
                     </div>
                     <div className="flex items-center justify-center">
-                        <button
+                        <button type="button"
                             onClick={handleSurrender}
                             disabled={isStreaming || messages.length === 0 || isDebateEnded}
                             className="px-4 py-2 bg-tint hover:bg-tint border border-border hover:border-border text-foreground hover:text-foreground rounded-lg transition-[transform,opacity] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
@@ -611,8 +615,8 @@ export default function Debate() {
                                     <div className="bg-tint border border-success rounded-xl p-5">
                                         <h3 className="text-lg font-bold text-foreground mb-3">💪 Tes points forts</h3>
                                         <ul className="space-y-2">
-                                            {analysis.userStrengths.map((strength, idx) => (
-                                                <li key={idx} className="text-foreground text-sm flex items-start gap-2">
+                                            {withOccurrenceKeys(analysis.userStrengths, value => value).map(({ value: strength, key }) => (
+                                                <li key={key} className="text-foreground text-sm flex items-start gap-2">
                                                     <span className="text-secondary mt-0.5">✓</span>
                                                     <span>{strength}</span>
                                                 </li>
@@ -623,8 +627,8 @@ export default function Debate() {
                                         <div className="bg-tint border border-danger rounded-xl p-5">
                                             <h3 className="text-lg font-bold text-foreground mb-3">📉 Points à améliorer</h3>
                                             <ul className="space-y-2">
-                                                {analysis.userWeaknesses.map((weakness, idx) => (
-                                                    <li key={idx} className="text-foreground text-sm flex items-start gap-2">
+                                                {withOccurrenceKeys(analysis.userWeaknesses, value => value).map(({ value: weakness, key }) => (
+                                                    <li key={key} className="text-foreground text-sm flex items-start gap-2">
                                                         <span className="text-foreground mt-0.5">✗</span>
                                                         <span>{weakness}</span>
                                                     </li>
@@ -639,8 +643,8 @@ export default function Debate() {
                                     <div className="bg-tint border border-border rounded-xl p-5">
                                         <h3 className="text-lg font-bold text-foreground mb-3">🤖 Points forts de l’IA</h3>
                                         <ul className="space-y-2">
-                                            {analysis.aiStrengths.map((strength, idx) => (
-                                                <li key={idx} className="text-foreground text-sm flex items-start gap-2">
+                                            {withOccurrenceKeys(analysis.aiStrengths, value => value).map(({ value: strength, key }) => (
+                                                <li key={key} className="text-foreground text-sm flex items-start gap-2">
                                                     <span className="text-foreground mt-0.5">✓</span>
                                                     <span>{strength}</span>
                                                 </li>
@@ -651,8 +655,8 @@ export default function Debate() {
                                         <div className="bg-tint border border-danger rounded-xl p-5">
                                             <h3 className="text-lg font-bold text-foreground mb-3">📉 Points faibles de l’IA</h3>
                                             <ul className="space-y-2">
-                                                {analysis.aiWeaknesses.map((weakness, idx) => (
-                                                    <li key={idx} className="text-foreground text-sm flex items-start gap-2">
+                                                {withOccurrenceKeys(analysis.aiWeaknesses, value => value).map(({ value: weakness, key }) => (
+                                                    <li key={key} className="text-foreground text-sm flex items-start gap-2">
                                                         <span className="text-foreground mt-0.5">✗</span>
                                                         <span>{weakness}</span>
                                                     </li>
@@ -668,8 +672,8 @@ export default function Debate() {
                                 <div className="bg-surface border border-border rounded-xl p-6">
                                     <h3 className="text-xl font-bold text-foreground mb-4">⚡ Moments clés</h3>
                                     <ul className="space-y-3">
-                                        {analysis.keyMoments.map((moment, idx) => (
-                                            <li key={idx} className="text-foreground flex items-start gap-3">
+                                        {withOccurrenceKeys(analysis.keyMoments, value => value).map(({ value: moment, key }, idx) => (
+                                            <li key={key} className="text-foreground flex items-start gap-3">
                                                 <span className="text-primary font-bold text-sm mt-0.5">{idx + 1}.</span>
                                                 <span>{moment}</span>
                                             </li>
@@ -680,7 +684,7 @@ export default function Debate() {
 
                             {/* Actions */}
                             <div className="flex gap-4 pt-4">
-                                <button
+                                <button type="button"
                                     onClick={() => {
                                         setDebateId(null);
                                         setSession(null);
@@ -692,7 +696,7 @@ export default function Debate() {
                                 >
                                     Nouveau débat
                                 </button>
-                                <button
+                                <button type="button"
                                     onClick={() => {
                                         setAnalysisOpen(false);
                                     }}
@@ -723,7 +727,7 @@ export default function Debate() {
                     <div className="flex items-start gap-3">
                         <span className="text-xl">⚠️</span>
                         <div className="flex-1">{error}</div>
-                        <button
+                        <button type="button"
                             onClick={() => setError(null)}
                             className="text-foreground hover:text-foreground"
                         >

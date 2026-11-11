@@ -1,4 +1,5 @@
 import { useState, useRef } from "react"
+import { withOccurrenceKeys } from "../../lib/occurrenceKeys"
 
 interface QuickAddProps {
     onAdd: (data: { text?: string; files?: File[] }) => Promise<void>
@@ -56,7 +57,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                     className="hidden"
                 />
                 <div className="flex gap-2">
-                    <button
+                    <button type="button"
                         onClick={() => fileInputRef.current?.click()}
                         className="press-icon grid size-11 shrink-0 place-items-center rounded-xl border border-border bg-tint text-foreground"
                         title="Ajouter les fichiers du devoir"
@@ -64,7 +65,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                     >
                         <span aria-hidden="true">📎</span>
                     </button>
-                    <button
+                    <button type="button"
                         onClick={handleSubmit}
                         disabled={loading || (!text.trim() && selectedFiles.length === 0)}
                         className="min-h-11 flex-1 rounded-xl bg-primary px-4 font-semibold text-on-primary disabled:bg-tint disabled:text-muted"
@@ -76,11 +77,11 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                 {/* Selected Files Display */}
                 {selectedFiles.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                        {selectedFiles.map((file, i) => (
-                            <div key={i} className="flex items-center gap-1 px-2 py-1 bg-tint rounded text-xs text-foreground">
+                        {withOccurrenceKeys(selectedFiles, file => JSON.stringify([file.name, file.size, file.lastModified])).map(({ value: file, key }, i) => (
+                            <div key={key} className="flex items-center gap-1 px-2 py-1 bg-tint rounded text-xs text-foreground">
                                 <span className="truncate max-w-32" title={file.name}>{file.name}</span>
                                 <span className="text-muted">({Math.round(file.size / 1024)}KB)</span>
-                                <button
+                                <button type="button"
                                     onClick={() => removeFile(i)}
                                     className="text-muted hover:text-foreground ml-1"
                                 >×</button>
@@ -92,19 +93,19 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                 {/* Quick Templates */}
                 <div className="flex flex-wrap gap-2">
                     <div className="w-full text-xs text-muted">Exemples</div>
-                    <button
+                    <button type="button"
                         onClick={() => setText("Devoir de maths pour demain à 20 h, environ 1 h 30")}
                         className="min-h-10 rounded-xl bg-tint px-3 text-sm text-foreground"
                     >
                         Devoir de maths
                     </button>
-                    <button
+                    <button type="button"
                         onClick={() => setText("Lire le chapitre d’anglais pour vendredi, environ 30 min")}
                         className="min-h-10 rounded-xl bg-tint px-3 text-sm text-foreground"
                     >
                         Lecture
                     </button>
-                    <button
+                    <button type="button"
                         onClick={() => setText("Réviser le contrôle de la semaine prochaine, environ 2 h")}
                         className="min-h-10 rounded-xl bg-tint px-3 text-sm text-foreground"
                     >

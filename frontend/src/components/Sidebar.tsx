@@ -29,6 +29,7 @@ export default function Sidebar() {
     window.addEventListener(revisionCardVisibility, update)
     return () => window.removeEventListener(revisionCardVisibility, update)
   }, [])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Replacer l'indicateur après chaque changement d'onglet ou de visibilité.
   useEffect(() => {
     const move = () => {
       const item = nav.current?.querySelector<HTMLElement>('[aria-current="page"]')

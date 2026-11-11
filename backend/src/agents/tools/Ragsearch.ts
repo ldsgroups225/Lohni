@@ -1,4 +1,4 @@
-import { ToolIO } from "../types"
+import type { ToolIO } from "../types"
 import { getRetriever } from "../../utils/database/db"
 import { embeddings } from "../../utils/llm/llm"
 

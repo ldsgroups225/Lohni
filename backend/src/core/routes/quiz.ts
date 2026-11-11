@@ -12,11 +12,8 @@ export function quizRoutes(app: any) {
     const id = u.searchParams.get("quizId");
     if (!id) return ws.close(1008, "quizId required");
 
-    let s = qs.get(id);
-    if (!s) {
-      s = new Set();
-      qs.set(id, s);
-    }
+    const s = qs.get(id) ?? new Set();
+    qs.set(id, s);
     s.add(ws);
 
     qlog("ws open", id, "clients:", s.size);
@@ -24,9 +21,9 @@ export function quizRoutes(app: any) {
 
     ws.on("error", (e: any) => qlog("ws err", id, e?.message || e));
     ws.on("close", () => {
-      s!.delete(ws);
-      if (s!.size === 0) qs.delete(id);
-      qlog("ws close", id, "left:", s!.size);
+      s.delete(ws);
+      if (s.size === 0) qs.delete(id);
+      qlog("ws close", id, "left:", s.size);
     });
 
     const iv = setInterval(() => {

@@ -100,8 +100,8 @@ export default function PromptRail({ onSend }: { onSend?: (prompt: string) => vo
       <div className="relative z-0 rounded-3xl rounded-tl-[22px] rounded-bl-2xl md:rounded-r-none h-full p-2 px-4 border border-border md:border-r-0 text-sm flex items-center -ml-4 md:-ml-6.5 overflow-hidden max-w-sm">
         <div ref={railRef} className="h-8 overflow-hidden relative w-full cursor-grab active:cursor-grabbing">
           <div className="transition-transform duration-500 ease-in-out" style={{ transform: `translateY(${translateY}px)` }}>
-            {PROMPTS.map((p, i) => (
-              <div key={i} className="h-8 flex items-center">
+            {PROMPTS.map((p) => (
+              <div key={p} className="h-8 flex items-center">
                 <span className="text-sm md:text-xs">{p}</span>
               </div>
             ))}
@@ -117,7 +117,7 @@ export default function PromptRail({ onSend }: { onSend?: (prompt: string) => vo
         aria-label="Envoyer la question proposée"
         title={busy ? "Démarrage…" : "Envoyer"}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-5">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3" />
         </svg>
       </button>

@@ -13,7 +13,6 @@ export type Question = {
   correct: number
   hint: string
   explanation: string
-  imageHtml?: string
 }
 
 export type UA = {

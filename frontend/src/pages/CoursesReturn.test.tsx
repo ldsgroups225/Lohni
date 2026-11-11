@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -23,7 +24,7 @@ test('au retour les cours et Plus ouvert sont affichés avant la revalidation', 
     await act(async () => root.render(<RouterProvider router={router} />))
     expect(host.textContent).toContain('Les suites')
     expect(host.querySelector('.motion-list')).not.toBeNull()
-    const details = [...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Plus')!
+    const details = required([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Plus'))
     await act(async () => { details.open = true; details.dispatchEvent(new Event('toggle')) })
     await act(async () => { await router.navigate('/quiz') })
     await act(async () => { await router.navigate(-1) })
@@ -80,15 +81,15 @@ test('le résumé et les cartes sont accessibles à la demande sans charger leur
     await act(async () => root.render(<RouterProvider router={router} />))
     expect(host.textContent).not.toContain('Résumé de test')
     expect(host.textContent).not.toContain('Question de test')
-    const details = [...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Relire le résumé')!
+    const details = required([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Relire le résumé'))
     await act(async () => { details.open = true; details.dispatchEvent(new Event('toggle')) })
     expect(host.textContent).toContain('Résumé de test')
-    const cards = [...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Voir les cartes (1)')!
+    const cards = required([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Voir les cartes (1)'))
     await act(async () => { cards.open = true; cards.dispatchEvent(new Event('toggle')) })
-    await act(async () => [...host.querySelectorAll('button')].find(button => button.textContent === 'Modifier')!.click())
-    const question = host.querySelector('textarea')!
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'Modifier')).click())
+    const question = required(host.querySelector('textarea'))
     await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(question, 'Question modifiée')
+      required(required(Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')).set).call(question, 'Question modifiée')
       question.dispatchEvent(new Event('input', { bubbles: true }))
     })
     await act(async () => { cards.open = false; cards.dispatchEvent(new Event('toggle')); cards.open = true; cards.dispatchEvent(new Event('toggle')) })
@@ -111,10 +112,10 @@ test('une revalidation terminée ne réactive pas le formulaire pendant son enre
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
     await act(async () => { await router.navigate('/autre'); await router.navigate(-1) })
-    const cards = [...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Voir les cartes (1)')!
+    const cards = required([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Voir les cartes (1)'))
     await act(async () => { cards.open = true; cards.dispatchEvent(new Event('toggle')) })
-    await act(async () => [...host.querySelectorAll('button')].find(button => button.textContent === 'Modifier')!.click())
-    await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'Modifier')).click())
+    await act(async () => required(host.querySelector('form')).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
     expect(api.updateCard).toHaveBeenCalledOnce()
     await act(async () => finish([chapter]))
     expect(host.querySelector('fieldset')?.disabled).toBe(true)

@@ -49,7 +49,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                                 {task.course} • {task.estMins} mins • Échéance : {fmtTime(task.dueAt)}
                                             </div>
                                         </div>
-                                        <button
+                                        <button type="button"
                                             onClick={() => onCompleteTask(task.id)}
                                             className="min-h-10 shrink-0 rounded-lg bg-secondary px-3 text-sm text-on-secondary"
                                         >
@@ -76,7 +76,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                                 {task.course} • {task.estMins} mins • P{task.priority}
                                             </div>
                                         </div>
-                                        <button
+                                        <button type="button"
                                             onClick={() => onStartSession(task.id)}
                                             className="min-h-10 shrink-0 rounded-lg bg-primary px-3 text-sm text-on-primary"
                                         >
@@ -110,7 +110,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                                     {task.course} • Dans {Math.round(hoursLeft)}h • {task.estMins} min
                                                 </div>
                                             </div>
-                                            <button
+                                            <button type="button"
                                                 onClick={() => onStartSession(task.id)}
                                                 className="min-h-10 shrink-0 rounded-lg bg-primary px-3 text-sm text-on-primary"
                                             >

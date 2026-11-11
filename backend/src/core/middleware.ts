@@ -1,4 +1,4 @@
-export function loggerMiddleware(req: any, _res: any, next: Function) {
+export function loggerMiddleware(req: any, _res: any, next: () => void) {
   const now = new Date().toISOString()
   console.log(`[${now}] ${req.method} ${req.url}`)
   next()

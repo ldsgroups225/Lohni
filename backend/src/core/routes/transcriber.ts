@@ -1,4 +1,4 @@
-import { transcribeAudio, TranscriptionProvider } from "../../services/transcriber";
+import { transcribeAudio, type TranscriptionProvider } from "../../services/transcriber";
 import { config } from "../../config/env";
 import fs from 'fs';
 import path from 'path';
@@ -109,7 +109,7 @@ export function transcriberRoutes(app: any) {
             // Clean up the temporary file
             try {
                 fs.unlinkSync(audioFile.path);
-            } catch (e) {
+            } catch {
                 console.warn('Failed to delete temp file:', audioFile.path);
             }
 

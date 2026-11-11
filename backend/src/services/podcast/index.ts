@@ -34,7 +34,7 @@ export async function makeScript(input: string, topic?: string): Promise<POut> {
 
   // Models sometimes cut the JSON short: ask once more before giving up.
   for (let attempt = 0; attempt < 2; attempt++) {
-    let r
+    let r: Awaited<ReturnType<typeof llm.invoke>>
     try {
       r = await llm.invoke(m)
     } catch (error) {

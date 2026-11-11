@@ -50,7 +50,7 @@ export function SessionRecap({ session, progress, pending, moreCards, busy, onli
         <ul className="space-y-3">
           {missed.map(m => <li key={m.cardId} className="flex items-center justify-between gap-3">
             <span className="min-w-0 flex-1"><MarkdownView md={m.question} inline /></span>
-            <button className="shrink-0 rounded-xl border border-border px-3 py-2 text-sm text-primary disabled:opacity-50" disabled={busy || !online} onClick={() => onExplain(m.cardId)}>Explique-moi</button>
+            <button type="button" className="shrink-0 rounded-xl border border-border px-3 py-2 text-sm text-primary disabled:opacity-50" disabled={busy || !online} onClick={() => onExplain(m.cardId)}>Explique-moi</button>
           </li>)}
         </ul>
         {summary.missed.length > 3 && <p className="text-sm text-muted">+{summary.missed.length - 3} autre{summary.missed.length > 4 ? 's' : ''}</p>}
@@ -61,7 +61,7 @@ export function SessionRecap({ session, progress, pending, moreCards, busy, onli
       </div>
       {showStats && <p><AnimatedNumber value={progress.xp} /> XP au total</p>}
       <ButtonLink className="w-full" to="/">Revenir à l’accueil</ButtonLink>
-      {moreCards && <button className="text-primary underline disabled:opacity-50" disabled={busy || !online || pending > 0} onClick={onContinue}>Continuer avec les cartes restantes</button>}
+      {moreCards && <button type="button" className="text-primary underline disabled:opacity-50" disabled={busy || !online || pending > 0} onClick={onContinue}>Continuer avec les cartes restantes</button>}
     </section>
   )
 }

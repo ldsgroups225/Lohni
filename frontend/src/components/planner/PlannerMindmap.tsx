@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { forceSimulation, forceManyBody, forceCollide, forceRadial, type Simulation } from "d3-force"
 import { anchorLine } from "./mindmap/geometry"
 import { plannerMaterials } from "../../lib/api"
@@ -18,6 +18,57 @@ type Props = {
 type Pt = { x: number; y: number }
 type CustomNode = { id: string; x: number; y: number; label: string }
 
+// Tiny heuristic: decide contextual steps from task title/type
+type Step = { label: string; w: number }
+function inferSteps(t: PlannerTask): Step[] {
+    const title = (t.title || '').toLowerCase()
+    const isEssay = /(essay|paper|report|write|draft)/.test(title)
+    const isExam = /(exam|quiz|midterm|final|test|mock)/.test(title)
+    const isReading = /(read|chapter|book|article)/.test(title)
+    const isProblem = /(hw|pset|problem|assignment|calc|algebra|math|physics|chem|bio)/.test(title)
+    if (isEssay) return [
+        { label: "Rechercher", w: 2 },
+        { label: "Faire le plan", w: 1 },
+        { label: "Rédiger", w: 3 },
+        { label: "Revoir", w: 2 },
+        { label: "Relire", w: 1 },
+        { label: "Rendre", w: 1 },
+    ]
+    if (isExam) return [
+        { label: "Carte des sujets", w: 1 },
+        { label: "Cartes", w: 2 },
+        { label: "S’exercer", w: 3 },
+        { label: "Points fragiles", w: 2 },
+        { label: "Examen blanc", w: 2 },
+        { label: "Réviser", w: 1 },
+    ]
+    if (isReading) return [
+        { label: "Parcourir", w: 1 },
+        { label: "Lire", w: 3 },
+        { label: "Notes", w: 2 },
+        { label: "Résumé", w: 1 },
+        { label: 'Discuter et questionner', w: 1 },
+    ]
+    if (isProblem) return [
+        { label: "Relire les notes", w: 1 },
+        { label: "Exemples", w: 2 },
+        { label: "Résoudre les exercices", w: 3 },
+        { label: 'Vérifier', w: 2 },
+        { label: "Rédiger", w: 1 },
+        { label: "Rendre", w: 1 },
+    ]
+    return [
+        { label: "Planifier", w: 1 },
+        { label: "Rechercher", w: 2 },
+        { label: "Réaliser", w: 3 },
+        { label: "Réviser", w: 2 },
+        { label: "Améliorer", w: 1 },
+        { label: "Rendre", w: 1 },
+    ]
+}
+
+
+
 export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdateStatus, onUpload, onDelete, onUpdateNotes }: Props) {
     const wrapRef = useRef<HTMLDivElement>(null)
     const [positions, setPositions] = useState<Record<string, Pt>>({})
@@ -31,61 +82,13 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
     const MAX_ZOOM = 3
     const [customNodes, setCustomNodes] = useState<CustomNode[]>([])
     const [editingId, setEditingId] = useState<string | null>(null)
+    const focusEditor = useCallback((input: HTMLInputElement | null) => { input?.focus() }, [])
     const nodeRefs = useRef<Record<string, HTMLDivElement | null>>({})
     const [aiSteps, setAiSteps] = useState<Record<string, string[]>>({})
     const [stepPos, setStepPos] = useState<Record<string, Pt>>({}) // key `${taskId}::${label}` in world coords
     const [menuOpen, setMenuOpen] = useState<string | null>(null)
     const simsRef = useRef<Record<string, Simulation<any, any>>>({})
     const nodeMapRef = useRef<Record<string, any>>({})
-
-    // Tiny heuristic: decide contextual steps from task title/type
-    type Step = { label: string; w: number }
-    function inferSteps(t: PlannerTask): Step[] {
-        const title = (t.title || '').toLowerCase()
-        const isEssay = /(essay|paper|report|write|draft)/.test(title)
-        const isExam = /(exam|quiz|midterm|final|test|mock)/.test(title)
-        const isReading = /(read|chapter|book|article)/.test(title)
-        const isProblem = /(hw|pset|problem|assignment|calc|algebra|math|physics|chem|bio)/.test(title)
-        if (isEssay) return [
-            { label: "Rechercher", w: 2 },
-            { label: "Faire le plan", w: 1 },
-            { label: "Rédiger", w: 3 },
-            { label: "Revoir", w: 2 },
-            { label: "Relire", w: 1 },
-            { label: "Rendre", w: 1 },
-        ]
-        if (isExam) return [
-            { label: "Carte des sujets", w: 1 },
-            { label: "Cartes", w: 2 },
-            { label: "S’exercer", w: 3 },
-            { label: "Points fragiles", w: 2 },
-            { label: "Examen blanc", w: 2 },
-            { label: "Réviser", w: 1 },
-        ]
-        if (isReading) return [
-            { label: "Parcourir", w: 1 },
-            { label: "Lire", w: 3 },
-            { label: "Notes", w: 2 },
-            { label: "Résumé", w: 1 },
-            { label: 'Discuter et questionner', w: 1 },
-        ]
-        if (isProblem) return [
-            { label: "Relire les notes", w: 1 },
-            { label: "Exemples", w: 2 },
-            { label: "Résoudre les exercices", w: 3 },
-            { label: 'Vérifier', w: 2 },
-            { label: "Rédiger", w: 1 },
-            { label: "Rendre", w: 1 },
-        ]
-        return [
-            { label: "Planifier", w: 1 },
-            { label: "Rechercher", w: 2 },
-            { label: "Réaliser", w: 3 },
-            { label: "Réviser", w: 2 },
-            { label: "Améliorer", w: 1 },
-            { label: "Rendre", w: 1 },
-        ]
-    }
 
     function stepCountsFor(t: PlannerTask, steps: Step[]) {
         const total = (slotsByTask[t.id]?.length) || 0
@@ -101,7 +104,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
     }
 
     useEffect(() => {
-        if (!wrapRef.current) return
+        if (!wrapRef.current || !tasks.length) return
         if (Object.keys(positions).length) return
         const rect = wrapRef.current.getBoundingClientRect()
         const cx = rect.width / 2
@@ -114,7 +117,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
             init[t.id] = { x: cx + r * Math.cos(ang) - 120, y: cy + r * Math.sin(ang) - 40 }
         })
         setPositions(init)
-    }, [tasks])
+    }, [tasks, positions])
 
     // Load/save custom nodes in localStorage
     useEffect(() => {
@@ -137,8 +140,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
             }
             if (Object.keys(m).length) setAiSteps(s => ({ ...s, ...m }))
         } catch { }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tasks.length])
+    }, [tasks])
     useEffect(() => {
         let cancelled = false
             ; (async () => {
@@ -168,7 +170,8 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
             for (const t of tasks) {
                 const base = positions[t.id]
                 if (!base) continue
-                const labels = aiSteps[t.id]?.length ? aiSteps[t.id]! : inferSteps(t).map(s => s.label)
+                const cachedSteps = aiSteps[t.id]
+                const labels = cachedSteps?.length ? cachedSteps : inferSteps(t).map(s => s.label)
                 const n = Math.max(1, labels.length)
                 const r = 120
                 const node = nodeRefs.current[t.id]
@@ -187,6 +190,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
         })
     }, [tasks, positions, aiSteps])
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: La simulation initialise ses positions une fois puis les met elle-même à jour à chaque tick.
     useEffect(() => {
         for (const id of Object.keys(simsRef.current)) { try { simsRef.current[id].stop() } catch { } }
         simsRef.current = {}
@@ -202,7 +206,8 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
             const center = { id: cid, x: cx, y: cy, fx: cx, fy: cy, type: 'center' }
             const nodes: any[] = [center]
             nm[cid] = center
-            const labels = aiSteps[t.id]?.length ? aiSteps[t.id]! : inferSteps(t).map(s => s.label)
+            const cachedSteps = aiSteps[t.id]
+            const labels = cachedSteps?.length ? cachedSteps : inferSteps(t).map(s => s.label)
             for (const label of labels) {
                 const sid = `${t.id}::${label}`
                 const sp = stepPos[sid]
@@ -257,12 +262,23 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
             const raw = localStorage.getItem("planner.stepPos")
             if (raw) setStepPos(JSON.parse(raw))
         } catch { }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
     useEffect(() => {
         try { localStorage.setItem("planner.stepPos", JSON.stringify(stepPos)) } catch { }
     }, [stepPos])
 
+    const centerTask = (id: string) => {
+        const position = positions[id]
+        if (!position) return
+        const rect = wrapRef.current?.getBoundingClientRect()
+        const node = nodeRefs.current[id]
+        const newZoom = Math.min(MAX_ZOOM, Math.max(zoom, 1.5))
+        setPan({
+            x: (rect?.width ?? 0) / 2 - (position.x + (node?.offsetWidth ?? 140) / 2) * newZoom,
+            y: (rect?.height ?? 0) / 2 - (position.y + (node?.offsetHeight ?? 36) / 2) * newZoom,
+        })
+        setZoom(newZoom)
+    }
     const onDown = (e: React.PointerEvent, id: string) => {
         const rect = wrapRef.current?.getBoundingClientRect()
         const localX = rect ? e.clientX - rect.left : e.clientX
@@ -276,7 +292,8 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
         const rect = wrapRef.current?.getBoundingClientRect()
         const localX = rect ? e.clientX - rect.left : e.clientX
         const localY = rect ? e.clientY - rect.top : e.clientY
-        const node = customNodes.find(n => n.id === id)!
+        const node = customNodes.find(n => n.id === id)
+        if (!node) return
         const screenX = pan.x + node.x * zoom
         const screenY = pan.y + node.y * zoom
         setDragCustom({ id, off: { x: localX - screenX, y: localY - screenY } })
@@ -383,7 +400,10 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
 
     const slotsByTask = useMemo(() => {
         const m: Record<string, PlannerSlot[]> = {}
-        for (const d of plan?.days || []) for (const s of d.slots) (m[s.taskId] ||= []).push(s)
+        for (const d of plan?.days || []) for (const s of d.slots) {
+            if (!m[s.taskId]) m[s.taskId] = []
+            m[s.taskId].push(s)
+        }
         return m
     }, [plan])
 
@@ -405,7 +425,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
             <div className="absolute top-3 left-3 right-3 z-20 hidden max-w-[calc(100%-9rem)] text-[11px] text-muted sm:block bg-surface border border-border rounded px-2 py-1 backdrop-blur">
                 Fais glisser pour déplacer la carte, défile pour zoomer. Double-clique sur une bulle pour la centrer.
             </div>
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+            <svg aria-hidden="true" className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
                 {tasks.map(t => {
                     const p = positions[t.id]; if (!p) return null
                     const node = nodeRefs.current[t.id]
@@ -415,7 +435,8 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     const cyWorld = p.y + h / 2
                     const rxC = w / 2
                     const ryC = h / 2
-                    const labels = aiSteps[t.id]?.length ? aiSteps[t.id]! : inferSteps(t).map(s => s.label)
+                    const cachedSteps = aiSteps[t.id]
+                    const labels = cachedSteps?.length ? cachedSteps : inferSteps(t).map(s => s.label)
                     return (
                         <g key={t.id}>
                             {labels.map(label => {
@@ -436,7 +457,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
             </svg>
             {tasks.length === 0 && customNodes.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <svg viewBox="90 50 550 230" className="w-full max-w-[520px] opacity-60">
+                    <svg aria-hidden="true" viewBox="90 50 550 230" className="w-full max-w-[520px] opacity-60">
                         <defs>
                             <radialGradient id="pulse1" cx="50%" cy="50%">
                                 <stop offset="0%" stopColor="var(--color-secondary)" stopOpacity="0.7" />
@@ -494,7 +515,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     </svg>
                 </div>
             )}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+            <svg aria-hidden="true" className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
                 {(() => {
                     const edges = new Map<string, { ax: number; ay: number; bx: number; by: number }>()
                     for (const a of customNodes) {
@@ -514,57 +535,45 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                             }
                         }
                     }
-                    return Array.from(edges.values()).map((e, i) => (
-                        <line key={i} x1={e.ax} y1={e.ay} x2={e.bx} y2={e.by} stroke="var(--color-border)" strokeWidth={1} />
+                    return Array.from(edges.entries()).map(([key, e]) => (
+                        <line key={key} x1={e.ax} y1={e.ay} x2={e.bx} y2={e.by} stroke="var(--color-border)" strokeWidth={1} />
                     ))
                 })()}
             </svg>
 
             {tasks.map(t => {
                 const p = positions[t.id]; if (!p) return null
-                const labels = aiSteps[t.id]?.length ? aiSteps[t.id]! : inferSteps(t).map(s => s.label)
+                const cachedSteps = aiSteps[t.id]
+                const labels = cachedSteps?.length ? cachedSteps : inferSteps(t).map(s => s.label)
                 const counts = stepCountsFor(t, labels.map(l => ({ label: l, w: 1 })))
                 return (
                     <div key={t.id} className="absolute select-none" data-node style={{ left: pan.x + p.x * zoom, top: pan.y + p.y * zoom }}>
                         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', position: 'relative' }}>
-                            <div ref={el => { nodeRefs.current[t.id] = el }}
-                                onDoubleClick={() => {
-                                    const rect = wrapRef.current?.getBoundingClientRect()
-                                    const cx = rect ? rect.width / 2 : 0
-                                    const cy = rect ? rect.height / 2 : 0
-                                    const node = nodeRefs.current[t.id]
-                                    const w = (node?.offsetWidth ?? 140)
-                                    const h = (node?.offsetHeight ?? 36)
-                                    const worldX = positions[t.id].x + w / 2
-                                    const worldY = positions[t.id].y + h / 2
-                                    const newZoom = Math.min(MAX_ZOOM, Math.max(zoom, 1.5))
-                                    const newPanX = cx - worldX * newZoom
-                                    const newPanY = cy - worldY * newZoom
-                                    setPan({ x: newPanX, y: newPanY })
-                                    setZoom(newZoom)
-                                }}>
+                            {/* biome-ignore lint/a11y/noStaticElementInteractions: Le double-clic est un raccourci ; la même action est disponible dans le menu clavier. */}
+                            <div ref={el => { nodeRefs.current[t.id] = el }} onDoubleClick={() => centerTask(t.id)}>
                                 <div className="pointer-events-none absolute -inset-2 opacity-35" style={{ background: `radial-gradient(22px 22px at 50% 65%, color-mix(in srgb, var(--color-secondary) 20%, transparent), transparent 70%)` }} />
                                 <div onPointerDown={e => onDown(e, t.id)} className="cursor-grab active:cursor-grabbing rounded-full border bg-surface border-border pl-3 pr-1.5 py-1.5  backdrop-blur flex items-center gap-1.5">
                                     <div className="text-[12px] text-foreground whitespace-nowrap max-w-[260px] truncate">{t.title}</div>
-                                    <button onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-foreground hover:text-foreground px-1 rounded hover:bg-tint">⋯</button>
+                                    <button type="button" aria-label={`Options de ${t.title}`} aria-expanded={menuOpen === t.id} onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-foreground hover:text-foreground px-1 rounded hover:bg-tint">⋯</button>
                                 </div>
                                 {menuOpen === t.id && (
                                     <div className="absolute left-0 top-[120%] z-30 bg-surface border border-border rounded-md shadow-lg min-w-[160px] p-1">
-                                        <button onClick={() => { setMenuOpen(null); onUpdateStatus(t.id, 'doing'); onPlan(t.id); }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Commencer</button>
-                                        <button onClick={() => { setMenuOpen(null); onPlan(t.id) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Planifier</button>
+                                        <button type="button" onClick={() => { setMenuOpen(null); onUpdateStatus(t.id, 'doing'); onPlan(t.id); }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Commencer</button>
+                                        <button type="button" onClick={() => { setMenuOpen(null); onPlan(t.id) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Planifier</button>
                                         <div className="border-t border-border my-1" />
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'summary') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : résumé</button>
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'studyGuide') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : guide de révision</button>
-                                        <button onClick={() => { setMenuOpen(null); onAssist(t.id, 'flashcards') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : cartes</button>
+                                        <button type="button" onClick={() => { setMenuOpen(null); onAssist(t.id, 'summary') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : résumé</button>
+                                        <button type="button" onClick={() => { setMenuOpen(null); onAssist(t.id, 'studyGuide') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : guide de révision</button>
+                                        <button type="button" onClick={() => { setMenuOpen(null); onAssist(t.id, 'flashcards') }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Aide : cartes</button>
                                         <div className="border-t border-border my-1" />
                                         <label className="block text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint cursor-pointer">
                                             Ajouter un fichier
                                             <input type="file" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(t.id, f); setMenuOpen(null) }} />
                                         </label>
-                                        <button onClick={() => { const val = window.prompt("Ajouter une note"); if (val != null) { onUpdateNotes?.(t.id, val) } setMenuOpen(null) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Ajouter une note…</button>
-                                        <button onClick={() => { recenterSteps(t.id); setMenuOpen(null) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Recentrer les étapes</button>
+                                        <button type="button" onClick={() => { const val = window.prompt("Ajouter une note"); if (val != null) { onUpdateNotes?.(t.id, val) } setMenuOpen(null) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Ajouter une note…</button>
+                                        <button type="button" onClick={() => { recenterSteps(t.id); setMenuOpen(null) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Recentrer les étapes</button>
+                                        <button type="button" onClick={() => { centerTask(t.id); setMenuOpen(null) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Centrer la tâche</button>
                                         <div className="border-t border-border my-1" />
-                                        <button onClick={() => { setMenuOpen(null); onDelete(t.id) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Supprimer la tâche</button>
+                                        <button type="button" onClick={() => { setMenuOpen(null); onDelete(t.id) }} className="w-full text-left text-[12px] text-foreground px-2 py-1 rounded hover:bg-tint">Supprimer la tâche</button>
                                     </div>
                                 )}
                             </div>
@@ -595,7 +604,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                             fontSize: '11px'
                                         }}>
                                         <div className="pointer-events-none absolute -inset-2" style={{ background: glow }} />
-                                        <button
+                                        <button type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation()
                                                 setAiSteps(s => {
@@ -634,12 +643,12 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                         >
                             <div className="flex items-center gap-2">
                                 {editingId === n.id ? (
-                                    <input autoFocus defaultValue={n.label} onBlur={(e) => { setCustomNodes(list => list.map(x => x.id === n.id ? { ...x, label: e.target.value } : x)); setEditingId(null) }}
+                                    <input ref={focusEditor} defaultValue={n.label} onBlur={(e) => { setCustomNodes(list => list.map(x => x.id === n.id ? { ...x, label: e.target.value } : x)); setEditingId(null) }}
                                         className="bg-transparent text-[12px] text-foreground outline-none" />
                                 ) : (
-                                    <div className="text-[12px] text-foreground" onDoubleClick={() => setEditingId(n.id)}>{n.label}</div>
+                                    <button type="button" className="text-[12px] text-foreground" onClick={() => setEditingId(n.id)}>{n.label}</button>
                                 )}
-                                <button onClick={() => setCustomNodes(list => list.filter(x => x.id !== n.id))}
+                                <button type="button" onClick={() => setCustomNodes(list => list.filter(x => x.id !== n.id))}
                                     className="text-[11px] text-foreground hover:text-foreground">×</button>
                             </div>
                         </div>
@@ -648,7 +657,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
             ))}
 
             <div className="absolute top-3 right-3 z-20 bg-surface border border-border rounded-lg px-2 py-1 flex items-center gap-2 text-xs text-foreground">
-                <button onClick={() => {
+                <button type="button" onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
                     const cx = rect ? rect.width / 2 : 300
                     const cy = rect ? rect.height / 2 : 200
@@ -658,7 +667,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     setCustomNodes(list => [...list, { id, x: worldX, y: worldY, label: "Idée" }])
                     setEditingId(id)
                 }} className="px-2 py-1 bg-tint rounded">Ajouter une bulle</button>
-                <button onClick={() => {
+                <button type="button" onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
                     const cx = rect ? rect.width / 2 : 0
                     const cy = rect ? rect.height / 2 : 0
@@ -669,7 +678,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     setZoom(newZoom)
                 }} className="px-2 py-1 bg-tint rounded">-</button>
                 <div className="px-2">{Math.round(zoom * 100)}%</div>
-                <button onClick={() => {
+                <button type="button" onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
                     const cx = rect ? rect.width / 2 : 0
                     const cy = rect ? rect.height / 2 : 0
@@ -679,7 +688,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                     setPan({ x: cx - worldX * newZoom, y: cy - worldY * newZoom })
                     setZoom(newZoom)
                 }} className="px-2 py-1 bg-tint rounded">+</button>
-                <button onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1.25) }} className="px-2 py-1 bg-tint rounded">Réinitialiser</button>
+                <button type="button" onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1.25) }} className="px-2 py-1 bg-tint rounded">Réinitialiser</button>
             </div>
         </div>
     )

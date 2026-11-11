@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -31,8 +32,8 @@ test('retour ferme le bilan et permet de relire le debat', async () => {
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
     expect(host.querySelector('textarea')?.placeholder).toBe('Écris ton argument…')
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Terminer le débat'))!.click())
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Terminer')!.click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Terminer le débat'))).click())
+    await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Terminer')).click())
     expect(host.textContent).toContain('Analyse du débat')
     expect(sockets[1].url).toMatch(/^ws:\/\/.+\/ws\/debate\/analyze\?debateId=1$/)
     // The server only streams the analysis to sockets already registered.
@@ -46,8 +47,8 @@ test('retour ferme le bilan et permet de relire le debat', async () => {
     expect(host.querySelector('textarea')?.disabled).toBe(false)
     await act(async () => sockets[1].sendEvent({ type: 'complete', analysis: { winner: 'user' } }))
     expect(host.querySelector('textarea')?.disabled).toBe(false)
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Terminer le débat'))!.click())
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Terminer')!.click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Terminer le débat'))).click())
+    await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Terminer')).click())
     await act(async () => sockets[2].sendEvent({ type: 'error', error: 'provider failure' }))
     expect(host.textContent).toContain('L’analyse du débat a échoué. Réessaie.')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove(); vi.unstubAllGlobals() }

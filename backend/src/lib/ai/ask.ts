@@ -55,7 +55,7 @@ export function salvageTruncatedJson(draft: string, fallbackTopic: string): AskP
     // Drop a dangling escape (\ or a partial \uXXXX) left by the cut.
     answer = tryParse<string>(`"${raw.slice(0, raw.length - cut).replace(/\n/g, "\\n")}"`)
   }
-  if (!answer || !answer.trim()) return null
+  if (!answer?.trim()) return null
   const topic = tryParse<string>(`"${/"topic"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(draft)?.[1] ?? ""}"`) || fallbackTopic
   const cardsAt = draft.indexOf('"flashcards"')
   const flashcards = cardsAt < 0 ? [] : (draft.slice(cardsAt).match(/\{[^{}]*"q"[^{}]*\}/g) ?? [])
@@ -272,7 +272,7 @@ function toMessageContent(content: any): string {
 }
 
 function serializeHistoryForCache(history?: HistoryMessage[]): string[] {
-  if (!history || !history.length) return []
+  if (!history?.length) return []
   return history
     .slice(-4)
     .filter((m) => m?.role === "user" || m?.role === "assistant")
@@ -280,7 +280,7 @@ function serializeHistoryForCache(history?: HistoryMessage[]): string[] {
 }
 
 function toConversationHistory(history?: HistoryMessage[]): Array<{ role: string; content: string }> {
-  if (!history || !history.length) return []
+  if (!history?.length) return []
   const recent = history.slice(-6)
   const out: Array<{ role: string; content: string }> = []
   for (const msg of recent) {

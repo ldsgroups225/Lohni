@@ -1,6 +1,6 @@
 import { StateGraph, Annotation } from "@langchain/langgraph"
 import { loadExam } from "./loader"
-import { ExamPayload, ExamSpec, QuizLikeItem } from "./types"
+import type { ExamPayload, ExamSpec, QuizLikeItem } from "./types"
 import { generateSectionItems } from "./generator"
 
 const log = (...a: any[]) => console.log("[examlab/generate]", new Date().toISOString(), ...a)
@@ -29,7 +29,8 @@ const nLoad = async (s: Ctx) => {
 }
 
 const nGen = async (s: Ctx) => {
-  const spec = s.spec!
+  const spec = s.spec
+  if (!spec) throw new Error("exam not found")
   log("nGen:start", { sections: spec.sections.length })
   const sections: { id: string; title: string; durationSec: number; items: QuizLikeItem[] }[] = []
   for (const sec of spec.sections) {

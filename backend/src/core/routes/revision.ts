@@ -39,13 +39,13 @@ export function revisionRoutes(app: any) {
     }
     const directory = await mkdtemp(join(tmpdir(), 'lohni-import-'))
     try {
-      let upload
+      let upload: Awaited<ReturnType<typeof parseMultipart>>
       try {
         upload = await parseMultipart(req, { directory, limits: { files: 1, fileSize: policy.maxUploadMB * 1024 * 1024, fields: 1, fieldSize: 4096 } })
       } catch {
         throw new RevisionError(`Import illisible ou trop volumineux. Choisis un seul fichier de ${policy.maxUploadMB} Mo maximum.`)
       }
-      let metadata
+      let metadata: { title: string; subject: string }
       try { metadata = JSON.parse(upload.q) } catch { throw new RevisionError('Matière et titre du chapitre requis.') }
       if (upload.files.length !== 1) throw new RevisionError('Choisis un fichier à importer.')
       return await revision.importChapter(context, { title: metadata?.title, subject: metadata?.subject, file: upload.files[0] })

@@ -1,3 +1,4 @@
+import { required } from '../../test/required'
 // @vitest-environment jsdom
 import { act, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -18,7 +19,7 @@ test('retour ferme l’assistant en gardant le cours ouvert', async () => {
   const router = createMemoryRouter([{ path: '/courses', element: <CompanionProvider><Screen /></CompanionProvider> }], { initialEntries: ['/courses'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Assistant de cours'))!.click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Assistant de cours'))).click())
     expect(host.querySelector('[role=dialog]')?.hasAttribute('inert')).toBe(false)
     await act(async () => { await router.navigate(-1) })
     expect(host.querySelector('[role=dialog]')?.hasAttribute('inert')).toBe(true)

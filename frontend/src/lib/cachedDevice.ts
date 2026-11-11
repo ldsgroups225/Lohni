@@ -6,7 +6,7 @@ let revisionCacheVersion = 0
 export const currentRevisionCacheVersion = () => revisionCacheVersion
 export const invalidateRevisionCache = (...paths: string[]) => {
   revisionCacheVersion++
-  if (paths.length) paths.forEach(path => snapshots.delete(path))
+  if (paths.length) paths.forEach(path => { snapshots.delete(path); })
   else snapshots.clear()
 }
 

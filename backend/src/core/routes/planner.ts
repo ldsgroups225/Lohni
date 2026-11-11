@@ -1,23 +1,21 @@
-import { ingestText } from "../../services/planner/ingest"
 import { plannerService } from "../../services/planner/service"
-import { CreateTaskRequest, UpdateTaskRequest, PlannerGenerateRequest, MaterialsRequest } from "../../services/planner/types"
+import type { CreateTaskRequest, UpdateTaskRequest, PlannerGenerateRequest, MaterialsRequest } from "../../services/planner/types"
 import { emitToAll } from "../../utils/chat/ws"
 import { emitLarge } from "../../utils/chat/ws"
 import { parseMultipart } from "../../lib/parser/upload"
 import crypto from "crypto"
 
 const rooms = new Map<string, Set<any>>()
-const log = (...a: any[]) => console.log("[planner]", ...a)
 
 export function plannerRoutes(app: any) {
     app.ws("/ws/planner", (ws: any, req: any) => {
         const u = new URL(req.url, "http://localhost")
         const sid = u.searchParams.get("sid") || "default"
-        let set = rooms.get(sid)
-        if (!set) { set = new Set(); rooms.set(sid, set) }
+        const set = rooms.get(sid) ?? new Set()
+        rooms.set(sid, set)
         set.add(ws)
         ws.send(JSON.stringify({ type: "ready", sid }))
-        ws.on("close", () => { set!.delete(ws); if (set!.size === 0) rooms.delete(sid) })
+        ws.on("close", () => { set.delete(ws); if (set.size === 0) rooms.delete(sid) })
     })
 
     app.post("/tasks", async (req: any, res: any) => {
@@ -104,7 +102,7 @@ export function plannerRoutes(app: any) {
         }
     })
 
-    app.get("/planner/today", async (req: any, res: any) => {
+    app.get("/planner/today", async (_req: any, res: any) => {
         try {
             const sessions = await plannerService.getTodaySessions()
             res.send({ ok: true, sessions })
@@ -113,7 +111,7 @@ export function plannerRoutes(app: any) {
         }
     })
 
-    app.get("/planner/deadlines", async (req: any, res: any) => {
+    app.get("/planner/deadlines", async (_req: any, res: any) => {
         try {
             const deadlines = await plannerService.getUpcomingDeadlines()
             res.send({ ok: true, ...deadlines })
@@ -122,7 +120,7 @@ export function plannerRoutes(app: any) {
         }
     })
 
-    app.get("/planner/stats", async (req: any, res: any) => {
+    app.get("/planner/stats", async (_req: any, res: any) => {
         try {
             const stats = await plannerService.getUserStats()
             res.send({ ok: true, stats })

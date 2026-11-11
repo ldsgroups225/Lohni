@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -19,8 +20,8 @@ test('une panne du podcast dans le Tuteur est visible et permet de réessayer', 
     await act(async () => root.render(<MemoryRouter initialEntries={[{ pathname: '/chat', state: { q: 'Question', answer: 'Une réponse' } }]}><Chat /></MemoryRouter>))
     const button = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Créer un podcast'))
     expect(button).toBeTruthy()
-    await act(async () => { button!.click() })
+    await act(async () => { required(button).click() })
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Impossible de créer le podcast. Réessaie.')
-    expect(button!.disabled).toBe(false)
+    expect(required(button).disabled).toBe(false)
   } finally { act(() => root.unmount()); host.remove() }
 })

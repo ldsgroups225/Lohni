@@ -10,11 +10,12 @@ import MarkdownView from '../components/Chat/MarkdownView'
 import { useOverlayNavigation } from '../lib/useOverlayNavigation'
 import { cachedDevice, currentRevisionCacheVersion } from '../lib/cachedDevice'
 import { useLeaveConfirmation } from '../lib/useLeaveConfirmation'
+import { withOccurrenceKeys } from '../lib/occurrenceKeys'
 import { confirmDialog } from '../lib/confirm'
 import { MENU_EXIT_MS, prefersReducedMotion, useExitTransition } from '../lib/motion'
 import { SwipeCard } from '../components/Revision/SwipeCard'
 import { SessionRecap } from '../components/Revision/SessionRecap'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { chatJSON, revisionAPI, revisionPolicy, revisionSyncStatus, syncRevisionAnswers, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress } from '../lib/api'
 
@@ -41,6 +42,7 @@ export default function Revision() {
   const [menu, setMenu] = useOverlayNavigation('revision-menu')
   const sending = useRef(false) // une seule réponse par carte, même si un geste et un bouton se suivent
   const menuButton = useRef<HTMLButtonElement>(null)
+  const focusMenuItem = useCallback((button: HTMLButtonElement | null) => { button?.focus() }, [])
   const menuExit = useExitTransition(menu, MENU_EXIT_MS)
   const continueButton = useRef<HTMLButtonElement>(null)
   const [generating, setGenerating] = useState(false)
@@ -79,7 +81,7 @@ export default function Revision() {
     return () => motion.removeEventListener('change', clear)
   }, [feedback])
 
-  function display(next: RevisionSession) {
+  const display = useCallback((next: RevisionSession) => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' }) // pas de saut : on repart du haut avant d'afficher la carte suivante
     setSession(next)
     setValidated(true)
@@ -89,7 +91,7 @@ export default function Revision() {
     setMenu(false)
     sending.current = false
     startedAt.current = Date.now()
-  }
+  }, [setMenu])
   async function run(operation: () => Promise<void>) {
     setBusy(true)
     setError('')
@@ -137,7 +139,8 @@ export default function Revision() {
     }
     void load()
     return () => { active = false }
-  }, [])
+  }, [display])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Recharger le bilan pour chaque nouvelle session terminée.
   useEffect(() => {
     setMoreCards(false)
     if (!session?.complete || sync.pending || !sync.online) return
@@ -162,7 +165,7 @@ export default function Revision() {
     }).finally(() => { window.clearTimeout(timer); setGenerating(false); setSlow(false) })
   }
   function answer(knew: boolean, selected?: number) {
-    if (!session || !card || verdict || sending.current) return
+    if (!session || !card || verdict || sending.current || (card.kind === 'mcq' && selected === undefined)) return
     sending.current = true
     void run(async () => {
       let next: RevisionSession
@@ -172,7 +175,7 @@ export default function Revision() {
           durationMs: Math.max(0, Date.now() - startedAt.current),
         })
       } catch (e) { sending.current = false; throw e }
-      if (card.kind === 'mcq') { setChoice(selected); setVerdict({ choice: selected!, next }); return }
+      if (card.kind === 'mcq' && selected !== undefined) { setChoice(selected); setVerdict({ choice: selected, next }); return }
       setFeedback({ id: Date.now(), knew })
       setMissed(knew ? null : card)
       display(next)
@@ -210,21 +213,21 @@ export default function Revision() {
     <main className={`loop-screen flex min-h-dvh flex-col px-4 md:pl-28 ${session && !session.complete && card ? `pt-1 ${verdict ? 'pb-[max(2rem,env(safe-area-inset-bottom))]' : 'pb-[max(.5rem,env(safe-area-inset-bottom))]'}` : 'pt-8 pb-36'}`}>
       <div className={`mx-auto flex w-full max-w-xl flex-1 flex-col ${session && !session.complete && card ? 'space-y-2' : 'space-y-6'}`}>
         {session && !session.complete && card ? <header className="flex items-center gap-3"><h1 className="sr-only">Session de révision</h1><BackButton fallback="/" label="Quitter la session" className="press-icon -ml-3 inline-grid size-11 place-items-center rounded-xl text-muted"><CloseIcon /></BackButton>{session && <div className="flex-1"><div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div><Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" /></div>}{session && <span className="text-sm tabular-nums text-muted">{session.position + 1}/{session.cards.length}</span>}
-          <div className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
+          <fieldset aria-label="Options de révision" className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
             <button ref={menuButton} type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} className="press-icon -mr-2 grid size-11 place-items-center rounded-xl text-xl leading-none text-muted">⋯</button>
             {menuExit.mounted && <div role="menu" data-state={menuExit.state} className="motion-menu absolute right-0 top-full z-10 mt-1 rounded-xl border border-border bg-surface p-1 shadow-lg">
-              <button role="menuitem" autoFocus disabled={busy || !validated || !!verdict || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte</button>
+              <button type="button" role="menuitem" ref={focusMenuItem} disabled={busy || !validated || !!verdict || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte</button>
             </div>}
-          </div>
+          </fieldset>
         </header> : !(session && session.position > 0) && <header><h1 className="text-2xl font-semibold text-foreground">Session de révision</h1></header>}
         {(!sync.online || sync.pending > 0) && <aside role="status" className="space-y-2 rounded-xl border border-border p-4 text-foreground">
           {!sync.online && <p>Hors ligne. Tu peux terminer ta session déjà chargée.</p>}
           {sync.pending > 0 && <p>{sync.pending} réponse{sync.pending > 1 ? 's' : ''} enregistrée{sync.pending > 1 ? 's' : ''} sur cet appareil, en attente d’envoi. Tes XP et ta série seront confirmés au retour du réseau.</p>}
           {sync.error && <p>{sync.error}</p>}
-          {sync.online && sync.pending > 0 && <button className="underline" onClick={() => void syncRevisionAnswers()}>Réessayer l’envoi</button>}
+          {sync.online && sync.pending > 0 && <button type="button" className="underline" onClick={() => void syncRevisionAnswers()}>Réessayer l’envoi</button>}
         </aside>}
         {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground">{!card && <Mascotte humeur="désolée" taille={96} />}{error}
-          <button className="ml-3 underline" disabled={busy} onClick={() => void run(async () => {
+          <button type="button" className="ml-3 underline" disabled={busy} onClick={() => void run(async () => {
             const saved = await revisionAPI.profile()
             setProfile(saved)
             setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
@@ -248,10 +251,10 @@ export default function Revision() {
               <h2 className="text-xl text-foreground"><MarkdownView md={card.question} inline /></h2>
               {card.kind === 'mcq' && <fieldset disabled={busy || !validated || !!verdict} className="space-y-3">
                 <legend className="mb-3">Choisis ta réponse</legend>
-                {card.options?.map((option, i) => {
+                {withOccurrenceKeys(card.options ?? [], option => option).map(({ value: option, key }, i) => {
                   const n = i + 1
                   const tone = !verdict ? 'border-border' : n === card.correct ? 'border-success bg-success/10' : n === verdict.choice ? 'border-danger bg-danger/10' : 'border-border opacity-60'
-                  return <label key={i} className={`flex items-start gap-3 rounded-xl border p-3 ${tone}`}>
+                  return <label key={key} className={`flex items-start gap-3 rounded-xl border p-3 ${tone}`}>
                     <input type="radio" name="answer" value={n} checked={choice === n} onChange={() => answer(n === card.correct, n)} className="mt-1" />
                     <span className="flex-1">{n}. <MarkdownView md={option} inline /></span>
                     {verdict && n === card.correct && <span className="flex items-center gap-1 text-sm"><CheckIcon />Bonne réponse</span>}
@@ -273,13 +276,13 @@ export default function Revision() {
             {!error && <Mascotte humeur="au repos" taille={112} />}
             <h2 className="text-xl">Aucune carte à réviser pour le moment</h2>
             <p>Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.</p>
-            <button className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer</button>
+            <button type="button" className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer</button>
           </section>)}
           {profile && !(session && session.position > 0) && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-border p-6">
             <h2 className="text-xl text-foreground">Préparer un chapitre</h2>
             <label className="block space-y-2"><span>Matière</span><select className={input} required value={subject} onChange={e => setSubject(e.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
             <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex. : Les fractions" /></label>
-            {session && session.position > 0 ? <button className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0}>Générer mes cartes</button> : <Button type="submit" disabled={busy || !validated || !sync.online || sync.pending > 0}>Générer mes cartes</Button>}
+            {session && session.position > 0 ? <button type="submit" className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0}>Générer mes cartes</button> : <Button type="submit" disabled={busy || !validated || !sync.online || sync.pending > 0}>Générer mes cartes</Button>}
           </form>}
         </>}
         {profile && !(session && !session.complete && card) && !(session && session.position > 0) && <Link to="/import" className="block rounded-xl border border-border p-4 text-center text-foreground">Importer mon cours</Link>}

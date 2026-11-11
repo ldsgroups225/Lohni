@@ -1,3 +1,4 @@
+import { required } from '../../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -12,16 +13,11 @@ test('les nombres restaurés restent visibles et seuls les changements sont anim
   vi.stubGlobal('cancelAnimationFrame', vi.fn())
   const host = document.createElement('div'); document.body.append(host)
   host.style.setProperty('--duration-slow', '300ms')
-  const computed = window.getComputedStyle
-  vi.spyOn(window, 'getComputedStyle').mockImplementation(element => {
-    const style = computed(element)
-    style.setProperty('--duration-slow', '300ms')
-    return style
-  })
+  vi.spyOn(window, 'getComputedStyle').mockReturnValue(host.style)
   const root = createRoot(host)
   try {
     act(() => root.render(<AnimatedNumber value={42} />))
-    const number = () => host.querySelector('[aria-hidden]')!.textContent
+    const number = () => required(host.querySelector('[aria-hidden]')).textContent
     expect(number()).toBe('42')
     expect(raf).not.toHaveBeenCalled()
     act(() => root.render(<AnimatedNumber value={43} />))

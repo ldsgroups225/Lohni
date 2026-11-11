@@ -1,4 +1,4 @@
-import { ToolIO } from "../types"
+import type { ToolIO } from "../types"
 export const nopTool: ToolIO = {
   name: "nop",
   desc: "no operation",

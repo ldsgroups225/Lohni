@@ -116,8 +116,8 @@ export class RevisionService {
       const chapters = await this.readChapters(context.deviceId)
       const subjects = (await this.dependencies.db.all('SELECT id, name FROM revision_subjects WHERE device_id = ? AND selected = 1 ORDER BY rowid', [context.deviceId])).map(subject => {
         const own = chapters.filter(chapter => chapter.subjectId === subject.id)
-        const seen = own.filter(chapter => chapter.mastery !== null)
-        const mastery = seen.length ? seen.reduce((sum, chapter) => sum + chapter.mastery!, 0) / seen.length : null
+        const seen = own.flatMap(chapter => chapter.mastery === null ? [] : [chapter.mastery])
+        const mastery = seen.length ? seen.reduce((sum, value) => sum + value, 0) / seen.length : null
         return { subjectId: subject.id, name: subject.name, mastery,
           status: this.masteryStatus(mastery, own.reduce((sum, chapter) => sum + chapter.seenCards, 0), own.reduce((sum, chapter) => sum + chapter.cards.length, 0)) }
       })
@@ -141,7 +141,7 @@ export class RevisionService {
     return chapters.map(chapter => {
       const own = rows.filter(row => row.chapter_id === chapter.id)
       const seen = own.filter(row => row.reviewed_scheduling)
-      const mastery = seen.length ? seen.reduce((sum, row) => sum + this.scheduler.get_retrievability(JSON.parse(row.reviewed_scheduling).card, this.dependencies.now(), false) * 100, 0) / seen.length : null
+      const mastery = seen.length ? seen.reduce((sum, row) => sum + this.scheduler.retrievability(JSON.parse(row.reviewed_scheduling).card, this.dependencies.now()) * 100, 0) / seen.length : null
       return { id: chapter.id, subjectId: chapter.subject_id, subject: chapter.subject, title: chapter.title, summary: chapter.summary, origin: chapter.origin,
         cards: own.map(row => revisionCard({ ...row, origin: chapter.origin })),
         seenCards: seen.length, mastery, status: this.masteryStatus(mastery, seen.length, own.length) }
@@ -193,7 +193,7 @@ export class RevisionService {
       for (const subject of input.subjects) await db.run(`INSERT INTO revision_subjects(id, device_id, name) VALUES (?, ?, ?)
         ON CONFLICT(device_id, name) DO UPDATE SET selected = 1`, [randomUUID(), context.deviceId, subject.trim()])
       await this.refreshSessions(context.deviceId)
-      return (await this.readProfile(context.deviceId))!
+      return this.requireProfile(context.deviceId)
     })
   }
   async generateChapter(context: RevisionContext, input: { title: string; subject: string }) {
@@ -340,7 +340,7 @@ export class RevisionService {
     const eligible = rows.filter(r => !reviewed.has(r.id) && (r.reviews === 0 || r.due.slice(0, 10) <= context.localDate))
     const rank = (row: any) => row.reviews > 0 ? 0 : JSON.parse(row.content).kind === 'mcq' ? 2 : 1
     eligible.sort((a, b) => rank(a) - rank(b) || (a.reviews > 0 && b.reviews > 0
-      ? this.scheduler.get_retrievability(JSON.parse(a.scheduling), this.dependencies.now(), false) - this.scheduler.get_retrievability(JSON.parse(b.scheduling), this.dependencies.now(), false) : 0))
+      ? this.scheduler.retrievability(JSON.parse(a.scheduling), this.dependencies.now()) - this.scheduler.retrievability(JSON.parse(b.scheduling), this.dependencies.now()) : 0))
     let newCount = 0
     let newMcqCount = 0
     const mcqQuota = quota + introduced.count - introducedMcq.count
@@ -392,7 +392,7 @@ export class RevisionService {
       if (session.complete || session.position !== input.position || card?.id !== input.cardId) throw new RevisionError('Cette carte ne correspond pas à la session en cours.')
       const row = await db.get('SELECT * FROM revision_cards WHERE device_id = ? AND id = ?', [context.deviceId, input.cardId])
       if (!row) throw new RevisionError('Carte introuvable.')
-      if (card.kind === 'mcq' && (!Number.isInteger(input.choice) || input.choice! < 1 || input.choice! > card.options.length)) throw new RevisionError('Choisis une réponse au QCM.')
+      if (card.kind === 'mcq' && (typeof input.choice !== 'number' || !Number.isInteger(input.choice) || input.choice < 1 || input.choice > card.options.length)) throw new RevisionError('Choisis une réponse au QCM.')
       const knew = input.knew && (card.kind !== 'mcq' || input.choice === card.correct)
       const now = this.dependencies.now()
       const scheduled = this.scheduler.next(row.scheduling ? JSON.parse(row.scheduling) : createEmptyCard(now), now, knew ? Rating.Good : Rating.Again)

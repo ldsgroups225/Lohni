@@ -1,6 +1,6 @@
 import fs from 'fs'
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters'
-import { Document } from '@langchain/core/documents'
+import type { Document } from '@langchain/core/documents'
 import { embeddings } from '../../utils/llm/llm'
 import { saveDocuments } from '../../utils/database/db'
 

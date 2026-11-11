@@ -1,4 +1,4 @@
-import { Agent } from "./types"
+import type { Agent } from "./types"
 
 const registry = new Map<string, Agent>()
 

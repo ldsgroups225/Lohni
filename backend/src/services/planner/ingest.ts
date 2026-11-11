@@ -1,4 +1,4 @@
-﻿import { Task } from "./types"
+﻿import type { Task } from "./types"
 
 function parseEstMins(s: string): number | null {
     const m = s.match(/(~|)?\s*(\d+(?:\.\d+)?)\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes)\b/i)

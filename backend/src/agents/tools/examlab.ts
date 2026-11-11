@@ -1,4 +1,4 @@
-import { ToolIO } from "../types"
+import type { ToolIO } from "../types"
 import { generateSectionItems } from "../../services/examlab/generator"
 import crypto from "crypto"
 

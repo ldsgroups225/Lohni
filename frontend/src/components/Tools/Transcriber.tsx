@@ -2,6 +2,7 @@ import MarkdownView from "../Chat/MarkdownView"
 import { useState, useRef, useEffect } from "react";
 import { useOverlayNavigation } from "../../lib/useOverlayNavigation";
 import { transcribeAudio, type StudyMaterials } from "../../lib/api";
+import { withOccurrenceKeys } from "../../lib/occurrenceKeys";
 
 export default function Transcriber() {
   const [busy, setBusy] = useState(false);
@@ -66,7 +67,7 @@ export default function Transcriber() {
       setShowSiriUI(true);
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (recordingRun.current !== run) { stream.getTracks().forEach(track => track.stop()); return; }
+      if (recordingRun.current !== run) { stream.getTracks().forEach(track => { track.stop(); }); return; }
       
       const audioContext = new AudioContext();
       const analyser = audioContext.createAnalyser();
@@ -114,7 +115,7 @@ export default function Transcriber() {
           audioContextRef.current.close();
         }
         
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(track => { track.stop(); });
         
         if (recordingRun.current !== run) return;
         await handleFileUpload(audioFile);
@@ -126,7 +127,7 @@ export default function Transcriber() {
       mediaRecorder.start();
       setRecording(true);
       setStatus("Écoute…");
-    } catch (error) {
+    } catch {
       setStatus("Impossible d’accéder au microphone");
       recordingActive.current = false;
       setShowSiriUI(false);
@@ -158,8 +159,8 @@ export default function Transcriber() {
         audioContextRef.current.close();
       }
       
-      if (mediaRecorderRef.current && mediaRecorderRef.current.stream) {
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      if (mediaRecorderRef.current?.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => { track.stop(); });
       }
     }
     setShowSiriUI(false);
@@ -176,7 +177,7 @@ export default function Transcriber() {
   useEffect(() => {
     return () => {
       recordingRun.current++;
-      mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+      mediaRecorderRef.current?.stream.getTracks().forEach(track => { track.stop(); });
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
@@ -217,7 +218,7 @@ export default function Transcriber() {
           </div>
 
           <div className="absolute bottom-16 sm:bottom-20 flex items-center gap-6 sm:gap-8">
-            <button
+            <button type="button"
               onClick={cancelRecording}
               aria-label="Annuler l’enregistrement"
               className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border border-border text-foreground hover:text-foreground hover:border-border transition-[transform,opacity] duration-300 flex items-center justify-center"
@@ -227,12 +228,12 @@ export default function Transcriber() {
                 WebkitBackdropFilter: 'blur(20px)'
               }}
             >
-              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            <button
+            <button type="button"
               onClick={recording ? stopRecording : undefined}
               aria-label="Terminer l’enregistrement"
               className="w-16 h-16 sm:w-18 sm:h-18 rounded-full border border-border text-foreground hover:text-foreground hover:border-border transition-[transform,opacity] duration-300 flex items-center justify-center"
@@ -242,7 +243,7 @@ export default function Transcriber() {
                 WebkitBackdropFilter: 'blur(20px)'
               }}
             >
-              <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="currentColor" viewBox="0 0 24 24">
+              <svg aria-hidden="true" className="w-6 h-6 sm:w-7 sm:h-7" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
               </svg>
             </button>
@@ -276,7 +277,7 @@ export default function Transcriber() {
 
       <div className="mt-6 space-y-3">
         <div className="flex gap-2">
-          <button
+          <button type="button"
             onClick={startRecording}
             disabled={busy}
             className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed text-on-primary font-medium transition-[transform,opacity] duration-300 flex items-center justify-center gap-2"
@@ -288,7 +289,7 @@ export default function Transcriber() {
               </>
             ) : (
               <>
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <svg aria-hidden="true" className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
                 </svg>
                 Enregistrer ma voix
@@ -305,12 +306,12 @@ export default function Transcriber() {
             className="hidden"
           />
           
-          <button
+          <button type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={busy}
             className="px-6 py-3 rounded-xl bg-tint hover:bg-tint disabled:opacity-50 disabled:cursor-not-allowed text-foreground hover:text-foreground font-medium transition-[transform,opacity] duration-300 flex items-center gap-2"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg aria-hidden="true" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
             Ajouter un fichier
@@ -338,7 +339,7 @@ export default function Transcriber() {
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-gradient-to-br from-tint to-tint border border-border">
                   <div className="flex items-center gap-2 mb-3">
-                    <svg className="w-5 h-5 text-foreground" fill="currentColor" viewBox="0 0 20 20">
+                    <svg aria-hidden="true" className="w-5 h-5 text-foreground" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     <h3 className="text-foreground font-semibold">Supports de révision créés</h3>
@@ -349,14 +350,14 @@ export default function Transcriber() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="p-4 rounded-xl bg-surface border border-border">
                     <h4 className="text-foreground font-medium mb-3 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                      <svg aria-hidden="true" className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd"/>
                       </svg>
                       Points clés
                     </h4>
                     <ul className="space-y-2">
-                      {studyMaterials.keyPoints.map((point, i) => (
-                        <li key={i} className="text-foreground text-sm flex items-start gap-2">
+                      {withOccurrenceKeys(studyMaterials.keyPoints, point => point).map(({ value: point, key }) => (
+                        <li key={key} className="text-foreground text-sm flex items-start gap-2">
                           <span className="text-primary mt-1">•</span>
                           {point}
                         </li>
@@ -366,7 +367,7 @@ export default function Transcriber() {
 
                   <div className="p-4 rounded-xl bg-surface border border-border">
                     <h4 className="text-foreground font-medium mb-3 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-foreground" fill="currentColor" viewBox="0 0 20 20">
+                      <svg aria-hidden="true" className="w-4 h-4 text-foreground" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd"/>
                       </svg>
                       Sujets et catégories
@@ -375,8 +376,8 @@ export default function Transcriber() {
                       <div>
                         <span className="text-xs text-muted uppercase tracking-wider">Sujets</span>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {studyMaterials.topics.map((topic, i) => (
-                            <span key={i} className="px-2 py-1 bg-tint text-foreground text-xs rounded-md">
+                          {withOccurrenceKeys(studyMaterials.topics, topic => topic).map(({ value: topic, key }) => (
+                            <span key={key} className="px-2 py-1 bg-tint text-foreground text-xs rounded-md">
                               {topic}
                             </span>
                           ))}
@@ -385,8 +386,8 @@ export default function Transcriber() {
                       <div>
                         <span className="text-xs text-muted uppercase tracking-wider">Catégories</span>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {studyMaterials.categories.map((cat, i) => (
-                            <span key={i} className="px-2 py-1 bg-tint text-foreground text-xs rounded-md">
+                          {withOccurrenceKeys(studyMaterials.categories, cat => cat).map(({ value: cat, key }) => (
+                            <span key={key} className="px-2 py-1 bg-tint text-foreground text-xs rounded-md">
                               {cat}
                             </span>
                           ))}
@@ -399,7 +400,7 @@ export default function Transcriber() {
                 {studyMaterials.studyGuide.mainConcepts.length > 0 && (
                   <div className="p-4 rounded-xl bg-surface border border-border">
                     <h4 className="text-foreground font-medium mb-3 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-foreground" fill="currentColor" viewBox="0 0 20 20">
+                      <svg aria-hidden="true" className="w-4 h-4 text-foreground" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                       </svg>
                       Guide de révision
@@ -408,8 +409,8 @@ export default function Transcriber() {
                       <div>
                         <h5 className="text-foreground font-medium mb-2">Notions principales</h5>
                         <ul className="space-y-1">
-                          {studyMaterials.studyGuide.mainConcepts.map((concept, i) => (
-                            <li key={i} className="text-muted text-sm">• {concept}</li>
+                          {withOccurrenceKeys(studyMaterials.studyGuide.mainConcepts, concept => concept).map(({ value: concept, key }) => (
+                            <li key={key} className="text-muted text-sm">• {concept}</li>
                           ))}
                         </ul>
                       </div>
@@ -417,8 +418,8 @@ export default function Transcriber() {
                         <div>
                           <h5 className="text-foreground font-medium mb-2">Questions de révision</h5>
                           <ul className="space-y-1">
-                            {studyMaterials.studyGuide.questions.map((question, i) => (
-                              <li key={i} className="text-muted text-sm">• {question}</li>
+                            {withOccurrenceKeys(studyMaterials.studyGuide.questions, question => question).map(({ value: question, key }) => (
+                              <li key={key} className="text-muted text-sm">• {question}</li>
                             ))}
                           </ul>
                         </div>
@@ -431,12 +432,12 @@ export default function Transcriber() {
 
             <div className="p-4 rounded-xl bg-surface border border-border">
               <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-medium text-foreground">Transcription originale</label>
-                <button
+                <span className="text-sm font-medium text-foreground">Transcription originale</span>
+                <button type="button"
                   onClick={copyToClipboard}
                   className="text-xs px-3 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary transition-opacity flex items-center gap-1"
                 >
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg aria-hidden="true" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
                   Copier

@@ -15,19 +15,19 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [21.x]
+        node-version: [26.x]
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
     
     - name: Setup pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v6
       with:
-        version: 8
+        version: 10.13.1
     
     - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v7
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
@@ -68,13 +68,13 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
     
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
     
     - name: Build backend Docker image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: ./backend/Dockerfile
@@ -84,9 +84,9 @@ jobs:
         cache-to: type=gha,mode=max
     
     - name: Build frontend Docker image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
-        context: ./frontend
+        context: .
         file: ./frontend/Dockerfile
         push: false
         tags: pagelm-frontend:test
@@ -99,17 +99,17 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
       
     - name: Setup pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v6
       with:
-        version: 8
+        version: 10.13.1
     
     - name: Setup Node.js
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v7
       with:
-        node-version: '21.x'
+        node-version: '26.x'
     
     - name: Install dependencies (backend)
       run: npm install

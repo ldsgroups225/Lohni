@@ -50,7 +50,7 @@ function ff(dir: string, parts: string[], out: string, emit?: (m: any) => void) 
     
     p.stderr.on('data', d => {
       const msg = String(d)
-      emit && emit({ type: 'ffmpeg', data: msg })
+      emit?.({ type: 'ffmpeg', data: msg })
     })
     
     p.on('close', c => {
@@ -82,7 +82,7 @@ async function synth_voxcpm(segs: TSeg[], dir: string, base: string, emit?: (m: 
     const f = path.join(dir, `${base}.${i}.wav`)
     await fs.promises.writeFile(f, wav)
     files.push(f)
-    emit && emit({ type: 'audio_progress', i, len: segs.length })
+    emit?.({ type: 'audio_progress', i, len: segs.length })
   }
 
   const out = path.join(dir, `${base}.mp3`)
@@ -120,7 +120,7 @@ async function synth_edge(segs: TSeg[], dir: string, base: string, emit?: (m: an
         lastError = err
         
         if (attempt < maxRetries) {
-          const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000) // Exponential backoff: 1s, 2s, 4s (max 5s)
+          const waitTime = Math.min(1000 * 2 ** (attempt - 1), 5000) // Exponential backoff: 1s, 2s, 4s (max 5s)
           await new Promise(resolve => setTimeout(resolve, waitTime))
         }
       }
@@ -137,7 +137,7 @@ async function synth_edge(segs: TSeg[], dir: string, base: string, emit?: (m: an
     await convertSegmentWithRetry(s, v, f, i)
     
     files.push(f)
-    emit && emit({ type: 'audio_progress', i, len: segs.length })
+    emit?.({ type: 'audio_progress', i, len: segs.length })
   }
 
   const out = path.join(dir, `${base}.mp3`)
@@ -172,7 +172,7 @@ async function synth_eleven(segs: TSeg[], dir: string, base: string, emit?: (m: 
     const b = new Uint8Array(await r.arrayBuffer())
     await fs.promises.writeFile(f, b)
     files.push(f)
-    emit && emit({ type: 'audio_progress', i, len: segs.length })
+    emit?.({ type: 'audio_progress', i, len: segs.length })
   }
 
   const out = path.join(dir, `${base}.mp3`)
@@ -201,7 +201,7 @@ async function synth_google(segs: TSeg[], dir: string, base: string, emit?: (m: 
     const f = path.join(dir, `${base}.${i}.mp3`)
     await fs.promises.writeFile(f, r.audioContent as Buffer)
     files.push(f)
-    emit && emit({ type: 'audio_progress', i, len: segs.length })
+    emit?.({ type: 'audio_progress', i, len: segs.length })
   }
 
   const out = path.join(dir, `${base}.mp3`)
@@ -231,7 +231,7 @@ async function synth_speechsdk(segs: TSeg[], dir: string, base: string, emit?: (
 
   const out = path.join(dir, `${base}.mp3`)
   await fs.promises.writeFile(out, r.audio.uint8Array)
-  emit && emit({ type: 'audio_progress', i: segs.length - 1, len: segs.length })
+  emit?.({ type: 'audio_progress', i: segs.length - 1, len: segs.length })
   return out
 }
 

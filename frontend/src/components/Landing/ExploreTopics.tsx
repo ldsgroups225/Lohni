@@ -4,6 +4,22 @@ import { chatJSON } from "../../lib/api";
 
 const labels: Record<string, string> = { Mathematics: 'Mathématiques', English: 'Anglais', Science: 'Sciences', History: 'Histoire', Geography: 'Géographie', Music: 'Musique', Art: 'Arts', Technology: 'Technologie', Philosophy: 'Philosophie' };
 
+function TopicCard({ title, extra, busy, onSelect }: { title: string; extra?: string; busy: boolean; onSelect: (title: string) => void }) {
+  return <button
+    type="button"
+    onClick={() => onSelect(title)}
+    disabled={busy}
+    className={`w-full h-32 sm:h-48 relative rounded-3xl border border-border bg-surface
+                md:hover:scale-105 active:scale-95 transition-transform duration-200 ease-out
+                focus:outline-none focus:ring-2 focus:ring-border disabled:opacity-60 ${extra || ""}`}
+    title={busy ? "Démarrage…" : `Découvrir : ${labels[title]}`}
+  >
+    <img src={`/pictures/${encodeURIComponent(title.toLocaleLowerCase())}.png`} alt="" className="w-full h-full rounded-3xl object-cover" loading="lazy" draggable={false} />
+    <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-transparent to-background" />
+    <div className="absolute left-3 right-3 bottom-3 w-fit max-w-[calc(100%-1.5rem)] truncate rounded-lg bg-surface px-1.5 py-1 text-left text-foreground text-xs min-[360px]:text-sm sm:text-2xl font-medium">{labels[title]}</div>
+  </button>
+}
+
 export default function ExploreTopics() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -17,8 +33,6 @@ export default function ExploreTopics() {
     ],
     []
   );
-
-  const imgSrc = (title: string) => `/pictures/${encodeURIComponent(title.toLocaleLowerCase())}.png`;
 
   const promptFor = (topic: string) =>
     `Explique-moi en français les bases de ce sujet : ${labels[topic]}.`;
@@ -40,27 +54,11 @@ export default function ExploreTopics() {
     }
   };
 
-  const Card = ({ title, extra }: { title: string; extra?: string }) => (
-    <button
-      type="button"
-      onClick={() => startTopic(title)}
-      disabled={busy}
-      className={`w-full h-32 sm:h-48 relative rounded-3xl border border-border bg-surface
-                  md:hover:scale-105 active:scale-95 transition-transform duration-200 ease-out
-                  focus:outline-none focus:ring-2 focus:ring-border disabled:opacity-60 ${extra || ""}`}
-      title={busy ? "Démarrage…" : `Découvrir : ${labels[title]}`}
-    >
-      <img src={imgSrc(title)} alt="" className="w-full h-full rounded-3xl object-cover" loading="lazy" draggable={false} />
-      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-transparent to-background" />
-      <div className="absolute left-3 right-3 bottom-3 w-fit max-w-[calc(100%-1.5rem)] truncate rounded-lg bg-surface px-1.5 py-1 text-left text-foreground text-xs min-[360px]:text-sm sm:text-2xl font-medium">{labels[title]}</div>
-    </button>
-  );
-
   return (
     <div className="mt-auto pb-4 pt-4 relative">
       {error && <p role="alert" className="text-center text-foreground">{error}</p>}
       <button type="button" aria-expanded={open} className="w-fit flex flex-col items-center mx-auto mb-5 md:mb-8 py-2 cursor-pointer select-none" onClick={() => setOpen((v) => !v)}>
-        <svg
+        <svg aria-hidden="true"
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
@@ -81,9 +79,9 @@ export default function ExploreTopics() {
 
       <div className="w-full max-w-4xl mx-auto overflow-hidden">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-3 md:mb-4">
-          <Card title="Mathematics" />
-          <Card title="English" />
-          <Card title="Science" extra="col-span-2 md:col-span-1" />
+          <TopicCard title="Mathematics" busy={busy} onSelect={startTopic} />
+          <TopicCard title="English" busy={busy} onSelect={startTopic} />
+          <TopicCard title="Science" extra="col-span-2 md:col-span-1" busy={busy} onSelect={startTopic} />
         </div>
 
         <div
@@ -93,10 +91,10 @@ export default function ExploreTopics() {
             maxHeight: open ? 1000 : 0
           }}
         >
-          {moreRows.map((row, i) => (
-            <div key={i} className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+          {moreRows.map((row) => (
+            <div key={row[0]} className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
               {row.map((title, j) => (
-                <Card key={title} title={title} extra={j === 2 ? "col-span-2 md:col-span-1" : ""} />
+                <TopicCard key={title} title={title} extra={j === 2 ? "col-span-2 md:col-span-1" : ""} busy={busy} onSelect={startTopic} />
               ))}
             </div>
           ))}

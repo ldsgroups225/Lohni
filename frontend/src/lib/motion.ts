@@ -75,7 +75,7 @@ export function spring({ from, to, velocity = 0, stiffness = 260, damping = 0.85
       x += v * h
       dt -= h
     }
-    if (Math.abs(x - to) < 0.1 && Math.abs(v) < 5) return finish()
+    if (Math.abs(x - to) < 0.1 && Math.abs(v) < 5) { finish(); return }
     onUpdate(x)
     raf = requestAnimationFrame(frame)
   }

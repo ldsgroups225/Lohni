@@ -1,6 +1,6 @@
 import { StateGraph, Annotation } from "@langchain/langgraph"
 import llm from "../../utils/llm/llm"
-import { GenSpec, QuizLikeItem } from "./types"
+import type { GenSpec, QuizLikeItem } from "./types"
 import { normalizeTopic } from "../../utils/text/normalize"
 
 export type QuizItem = {
@@ -92,7 +92,7 @@ function validQuiz(a: any, count: number): a is QuizItem[] {
   return Array.isArray(a) && a.length === count && a.every(validItem)
 }
 
-async function ask(sys: string, user: string, tag: string) {
+async function ask(sys: string, user: string, _tag: string) {
   const msgs = [
     { role: "system", content: sys },
     { role: "user", content: user }

@@ -19,10 +19,10 @@ export default function Onboarding() {
   })
   const [schoolClass, setSchoolClass] = useState(() => curriculum.some(item => item.schoolClass === saved.schoolClass) ? saved.schoolClass as string : '3e')
   const [series, setSeries] = useState(() => {
-    const choices = curriculum.find(item => item.schoolClass === schoolClass)!.series
+    const choices = (curriculum.find(item => item.schoolClass === schoolClass) ?? curriculum[0]).series
     return typeof saved.series === 'string' && saved.series in choices ? saved.series as string : Object.keys(choices)[0]
   })
-  const entry = curriculum.find(item => item.schoolClass === schoolClass)!
+  const entry = curriculum.find(item => item.schoolClass === schoolClass) ?? curriculum[0]
   const available = (entry.series as Record<string, string[] | undefined>)[series] ?? []
   const [subjects, setSubjects] = useState<string[]>(() => Array.isArray(saved.subjects) ? saved.subjects.filter((name: unknown): name is string => typeof name === 'string' && available.includes(name)) : available)
   const [examDate, setExamDate] = useState(() => typeof saved.examDate === 'string' ? saved.examDate as string : '')
@@ -32,6 +32,7 @@ export default function Onboarding() {
     try { sessionStorage.setItem('lohni-onboarding', JSON.stringify({ schoolClass, series, subjects, examDate, subject, title })) } catch { /* Storage is optional. */ }
   }, [schoolClass, series, subjects, examDate, subject, title])
   const finishing = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reprendre la navigation après chaque changement d'entrée dans l'historique.
   useEffect(() => {
     if (!finishing.current || depth) return
     finishing.current = false
@@ -74,8 +75,9 @@ export default function Onboarding() {
       <h2 className="text-2xl font-semibold text-foreground">Dans quelle classe es-tu ?</h2>
       <p>Programme de Côte d’Ivoire. Aucun compte à créer.</p>
       <label className="block space-y-2"><span>Ta classe</span><select className={input} value={schoolClass} onChange={event => {
-        setSchoolClass(event.target.value)
-        const next = curriculum.find(item => item.schoolClass === event.target.value)!
+        const next = curriculum.find(item => item.schoolClass === event.target.value)
+        if (!next) return
+        setSchoolClass(next.schoolClass)
         const nextSeries = Object.keys(next.series)[0]
         setSeries(nextSeries)
         setSubjects((next.series as Record<string, string[] | undefined>)[nextSeries] ?? [])

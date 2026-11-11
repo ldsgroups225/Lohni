@@ -56,7 +56,9 @@ test('chaque génération de section demande de nouvelles questions au modèle',
 test('chaque lancement du même examen génère un nouvel examen blanc', async () => {
   let generation = 0
   vi.mocked(llm.invoke).mockImplementation(async (messages: any) => {
-    const count = Number(String(messages[0].content).match(/exactement (\d+) questions/)![1])
+    const match = String(messages[0].content).match(/exactement (\d+) questions/)
+    if (!match) throw new Error('Nombre de questions absent du prompt')
+    const count = Number(match[1])
     generation++
     return { content: JSON.stringify(Array.from({ length: count }, (_, i) => ({
       id: i + 1, question: `Quelle est la réponse de la génération ${generation} ?`,

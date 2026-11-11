@@ -1,4 +1,4 @@
-import { ToolIO, Ctx } from "../types"
+import type { ToolIO, Ctx } from "../types"
 import { handleAsk } from "../../lib/ai/ask"
 
 export const askTool: ToolIO = {

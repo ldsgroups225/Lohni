@@ -1,4 +1,5 @@
-import { memo, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+// biome-ignore-all lint/a11y/noNoninteractiveTabindex: La carte doit recevoir les flèches et les touches de retournement.
+import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import MarkdownView from '../Chat/MarkdownView'
 import { spring } from '../../lib/motion'
 
@@ -23,14 +24,14 @@ type Props = {
  *  Le glissement n'est actif qu'une fois la réponse vue. Flèches du clavier et boutons restent disponibles.
  *  Pendant le geste, la carte suit le doigt sans rendu React ; au lâcher, un ressort repart de la vitesse réelle. */
 export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwipe }: Props) {
-  const card = useRef<HTMLDivElement>(null)
+  const card = useRef<HTMLFieldSetElement>(null)
   const x = useRef(0)
   const stop = useRef<(() => void) | null>(null)
   const drag = useRef<{ id: number; origin: number; start: number; points: [number, number][]; moved: boolean } | null>(null)
   const sent = useRef(false)
   const [hint, setHint] = useState(false)
 
-  function apply(value: number) {
+  const apply = useCallback((value: number) => {
     x.current = value
     const el = card.current
     if (!el) return
@@ -38,7 +39,7 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
     el.style.transform = `translate3d(${value}px,0,0) rotate(${(value / 200) * 15}deg)`
     el.style.opacity = String(1 - 0.5 * Math.min(1, Math.max(0, (Math.abs(value) - 100) / 100)))
     el.style.setProperty('--swipe-border', `color-mix(in srgb, ${value > 0 ? 'var(--color-success)' : 'var(--color-danger)'} ${strength * 100}%, var(--color-border))`)
-  }
+  }, [])
   function animate(to: number, velocity: number, onUpdate?: (value: number) => void, onDone?: () => void) {
     stop.current?.()
     stop.current = spring({ from: x.current, to, velocity, onUpdate: value => { apply(value); onUpdate?.(value) }, onDone })
@@ -58,7 +59,7 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
     sent.current = false
     stop.current?.()
     apply(0)
-  }, [enabled])
+  }, [enabled, apply])
 
   function down(e: PointerEvent) {
     if (!enabled || sent.current || drag.current) return // un seul doigt à la fois
@@ -106,8 +107,8 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
   const face = 'absolute inset-0 flex touch-pan-y overflow-y-auto rounded-3xl border border-[color:var(--swipe-border)] bg-surface px-6 pb-10 pt-6 [backface-visibility:hidden]'
   return (
     <div className="motion-card flex min-h-[55dvh] flex-1 flex-col">
-      <div
-        ref={card} role="group" aria-roledescription="carte" aria-label={revealed ? 'Réponse' : 'Question'} aria-describedby="swipe-hint" tabIndex={0}
+      <fieldset
+        ref={card} aria-roledescription="carte" aria-label={revealed ? 'Réponse' : 'Question'} aria-describedby="swipe-hint" tabIndex={0}
         onKeyDown={key} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel}
         className="relative flex-1 touch-pan-y select-none will-change-transform [perspective:1000px]"
       >
@@ -128,7 +129,7 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
         <p id="swipe-hint" className="pointer-events-none absolute inset-x-0 bottom-3 text-center text-xs text-muted">
           {!revealed ? 'Touche la carte pour voir la réponse' : hint ? 'Glisse la carte à gauche ou à droite' : '← Je ne savais pas · Je savais →'}
         </p>
-      </div>
+      </fieldset>
       {/* Sans geste : flèches du clavier ou ces boutons, masqués à l'écran mais lus et focalisables. */}
       {revealed && <div className="sr-only focus-within:not-sr-only focus-within:mt-2 focus-within:grid focus-within:grid-cols-2 focus-within:gap-3">
         <button type="button" disabled={!enabled} onClick={() => rate(false)} className="rounded-xl border border-border bg-surface px-2 py-3 text-foreground disabled:opacity-50">Je ne savais pas</button>

@@ -10,7 +10,7 @@ export function emitToAll(set: Set<any> | undefined, payload: any) {
     return
   }
   for (const ws of set) {
-    if (!ws || ws.readyState !== 1) continue
+    if (ws?.readyState !== 1) continue
     try {
       ws.send(msg)
     } catch (err) {
@@ -20,7 +20,7 @@ export function emitToAll(set: Set<any> | undefined, payload: any) {
 }
 
 async function safeSend(ws: any, data: string, hi = 512 * 1024) {
-  if (!ws || ws.readyState !== 1) return
+  if (ws?.readyState !== 1) return
   while (ws.bufferedAmount && ws.bufferedAmount > hi) {
     await new Promise(r => setTimeout(r, 10))
   }

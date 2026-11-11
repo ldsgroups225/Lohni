@@ -98,7 +98,14 @@
 .ui-progress::-moz-progress-bar { background: var(--color-primary); }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after, ::details-content { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  *, *::before, *::after, ::details-content {
+    /* biome-ignore lint/complexity/noImportantStyles: La préférence de réduction du mouvement doit primer sur les animations. */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: La préférence de réduction du mouvement doit primer sur les transitions. */
+    transition: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: La préférence de réduction du mouvement doit primer sur le défilement animé. */
+    scroll-behavior: auto !important;
+  }
 }
 
 body {

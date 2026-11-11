@@ -85,8 +85,8 @@ async function transcribeWithGoogle(filePath: string): Promise<TranscriptionResu
 
         let speech: any;
         try {
-            speech = await eval(`import('@google-cloud/speech')`);
-        } catch (importError) {
+            speech = await import('@google-cloud/speech');
+        } catch {
             throw new Error('Google Cloud Speech SDK not installed. Run: npm install @google-cloud/speech');
         }
 

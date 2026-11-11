@@ -7,7 +7,7 @@ export function flashcardRoutes(app: any) {
       if (!question || !answer || !tag) return res.status(400).send({ error: 'question, answer, tag required' })
       const id = crypto.randomUUID()
       const card = { id, question, answer, tag, created: Date.now() }
-      let cards = await db.get('flashcards') || []
+      const cards = await db.get('flashcards') || []
       cards.push(card)
       await db.set(`flashcard:${id}`, card)
       await db.set('flashcards', cards)

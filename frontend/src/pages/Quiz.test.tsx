@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -17,7 +18,7 @@ test('choisir un sujet lance une seule génération malgré la mise à jour de l
   try {
     await act(async () => root.render(<RouterProvider router={createMemoryRouter([{ path: '/quiz', element: <Quiz /> }], { initialEntries: ['/quiz'] })} />))
     const click = async (text: string) => {
-      const button = [...host.querySelectorAll('button')].find(b => b.textContent?.includes(text))!
+      const button = required([...host.querySelectorAll('button')].find(b => b.textContent?.includes(text)))
       await act(async () => button.click())
     }
     await click('Les fractions')

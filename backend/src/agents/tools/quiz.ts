@@ -1,4 +1,4 @@
-import { ToolIO } from "../types"
+import type { ToolIO } from "../types"
 import { handleQuiz } from "../../services/quiz"
 
 export const quizTool: ToolIO = {

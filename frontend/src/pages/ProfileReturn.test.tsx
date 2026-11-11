@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -38,8 +39,8 @@ test('Moi garde le formulaire au retour puis met les données à jour en place',
     expect(host.textContent).not.toContain('On récupère ton parcours')
     await act(async () => resolve({ ...profile, schoolClass: '5e' }))
     expect(host.querySelector('form')).toBe(form)
-    expect(host.querySelector('select')!.value).toBe('5e')
-    expect(host.querySelector('dl')!.textContent).toContain('20')
+    expect(required(host.querySelector('select')).value).toBe('5e')
+    expect(required(host.querySelector('dl')).textContent).toContain('20')
   } finally { close() }
 })
 
@@ -75,7 +76,7 @@ test('un échec de revalidation garde les données connues et signale l’erreur
     await act(async () => { await router.navigate('/tutor') })
     await act(async () => { await router.navigate('/me') })
     expect(host.querySelector('form')).not.toBeNull()
-    expect(host.querySelector('select')!.value).toBe('3e')
+    expect(required(host.querySelector('select')).value).toBe('3e')
     expect(host.textContent).toContain('Réseau indisponible')
     expect(host.textContent).not.toContain('On récupère ton parcours')
   } finally { close() }
@@ -88,10 +89,10 @@ test('enregistrer le profil met aussi à jour les données restaurées au retour
   api.saveProfile.mockResolvedValue({ ...profile, schoolClass: '5e' })
   const { router, host, close } = await setup('profil-enregistre')
   try {
-    await act(async () => host.querySelector('form')!.requestSubmit())
+    await act(async () => required(host.querySelector('form')).requestSubmit())
     await act(async () => { await router.navigate('/tutor') })
     await act(async () => { await router.navigate('/me') })
-    expect(host.querySelector('select')!.value).toBe('5e')
+    expect(required(host.querySelector('select')).value).toBe('5e')
     expect(host.textContent).not.toContain('On récupère ton parcours')
   } finally { close() }
 })
@@ -103,7 +104,7 @@ test('un enregistrement tardif ne conserve pas le profil pour un autre appareil'
   api.saveProfile.mockReturnValueOnce(new Promise(r => { resolve = r }))
   const { host, close } = await setup('profil-enregistrement-ancien')
   try {
-    await act(async () => host.querySelector('form')!.requestSubmit())
+    await act(async () => required(host.querySelector('form')).requestSubmit())
     localStorage.setItem('lohni-device-id', 'profil-enregistrement-nouveau')
     await act(async () => resolve(profile))
     expect(host.querySelector('form')).toBeNull()
@@ -120,7 +121,7 @@ test('une modification du profil reste intacte pendant la revalidation', async (
     let resolve!: (value: typeof profile) => void
     api.profile.mockReturnValueOnce(new Promise(r => { resolve = r }))
     await act(async () => { await router.navigate('/me') })
-    const select = host.querySelector('select')!
+    const select = required(host.querySelector('select'))
     expect(select.disabled).toBe(false)
     await act(async () => { select.value = '5e'; select.dispatchEvent(new Event('change', { bubbles: true })) })
     await act(async () => resolve(profile))
@@ -138,11 +139,11 @@ test('un enregistrement pendant la revalidation ne peut pas être remplacé par 
     api.profile.mockReturnValueOnce(new Promise(r => { resolve = r })).mockResolvedValue({ ...profile, schoolClass: '5e' })
     api.saveProfile.mockResolvedValue({ ...profile, schoolClass: '5e' })
     await act(async () => { await router.navigate('/me') })
-    const select = host.querySelector('select')!
+    const select = required(host.querySelector('select'))
     await act(async () => { select.value = '5e'; select.dispatchEvent(new Event('change', { bubbles: true })) })
-    await act(async () => host.querySelector('form')!.requestSubmit())
+    await act(async () => required(host.querySelector('form')).requestSubmit())
     await act(async () => resolve(profile))
-    expect(host.querySelector('select')!.value).toBe('5e')
+    expect(required(host.querySelector('select')).value).toBe('5e')
   } finally { close() }
 })
 
@@ -153,12 +154,12 @@ test('le retour pendant un enregistrement attend sa fin avant de réactiver le f
   api.saveProfile.mockReturnValue(new Promise(r => { resolve = r }))
   const { router, host, close } = await setup('profil-retour-enregistrement')
   try {
-    await act(async () => host.querySelector('form')!.requestSubmit())
+    await act(async () => required(host.querySelector('form')).requestSubmit())
     await act(async () => { await router.navigate('/tutor') })
     await act(async () => { await router.navigate('/me') })
-    expect(host.querySelector('select')!.disabled).toBe(true)
+    expect(required(host.querySelector('select')).disabled).toBe(true)
     await act(async () => resolve(profile))
-    expect(host.querySelector('select')!.disabled).toBe(false)
+    expect(required(host.querySelector('select')).disabled).toBe(false)
   } finally { close() }
 })
 

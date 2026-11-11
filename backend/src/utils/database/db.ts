@@ -2,7 +2,7 @@ import fs from "fs"
 import path from "path"
 import { Chroma } from "@langchain/community/vectorstores/chroma"
 import { Document } from "@langchain/core/documents"
-import { EmbeddingsInterface } from "@langchain/core/embeddings"
+import type { EmbeddingsInterface } from "@langchain/core/embeddings"
 import { config } from "../../config/env"
 
 const memoryStores: Record<string, any> = {}

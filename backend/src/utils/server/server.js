@@ -1,3 +1,4 @@
+// biome-ignore lint/suspicious/noRedundantUseStrict: CommonJS n'active pas le mode strict par défaut.
 "use strict";
 /**
  *--------------------------------------------------------------------------------
@@ -25,14 +26,16 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const WebSocket = require('ws');
-const { parse } = require('url');
+const parseRequestTarget = require('./request-url');
 function server() {
     const ROUTES = [];
     const WARES = [];
     const WS_ROUTES = [];
     const wss = new WebSocket.Server({ noServer: true });
     const SERVER = http.createServer((req, res) => {
-        let u = parse(req.url, true);
+        let u;
+        try { u = parseRequestTarget(req.url); }
+        catch { res.writeHead(400); res.end('400: Bad Request'); return; }
         req.query = u.query || {};
         req.path = u.pathname;
         req.hostname = (req.headers.host || '').split(':')[0].replace(/[^\w.-]/g, '');
@@ -55,26 +58,28 @@ function server() {
             res.end(String(x));
         };
         res.set = (k, v) => { res.setHeader(k, v); return res; };
-        let r = matchRoute(req.method.toUpperCase(), req.path);
+        const r = matchRoute(req.method.toUpperCase(), req.path);
         req.params = r ? r.params : {};
-        let fns = [...WARES];
+        const fns = [...WARES];
         fns.push(r ? (req, res, next) => r.handler(req, res, next) : (_req, res) => res.status(404).end('404: Not Found'));
         let i = 0;
-        let next = () => {
+        const next = () => {
             if (i < fns.length)
                 fns[i++](req, res, next);
         };
         next();
     });
     SERVER.on('upgrade', (req, socket, head) => {
-        let u = parse(req.url || '', true);
-        let path = u.pathname;
-        if (!path || path.includes('..') || /[\0-\x1F\x7F]/.test(path)) {
+        let u;
+        try { u = parseRequestTarget(req.url); }
+        catch { socket.destroy(); return; }
+        const path = u.pathname;
+        if (!path || path.includes('..') || Array.from(path).some(c => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127)) {
             socket.destroy();
             return;
         }
         for (let i = 0; i < WS_ROUTES.length; i++) {
-            let r = WS_ROUTES[i];
+            const r = WS_ROUTES[i];
             if (r.path === path) {
                 wss.handleUpgrade(req, socket, head, (ws) => {
                     ws.req = req;
@@ -87,14 +92,14 @@ function server() {
     });
     const matchRoute = (a, b) => {
         for (let i = 0; i < ROUTES.length; i++) {
-            let r = ROUTES[i];
+            const r = ROUTES[i];
             if (r.method !== a && r.method !== 'ALL')
                 continue;
-            let p = r.path.split('/').filter(Boolean);
-            let u = b.split('/').filter(Boolean);
+            const p = r.path.split('/').filter(Boolean);
+            const u = b.split('/').filter(Boolean);
             if (p.length !== u.length)
                 continue;
-            let params = {};
+            const params = {};
             let matched = true;
             for (let j = 0; j < p.length; j++) {
                 if (p[j].startsWith(':')) {
@@ -114,21 +119,25 @@ function server() {
     const use = (a) => { WARES.push(a); };
     const listen = (a, b) => { SERVER.setTimeout(10000); SERVER.listen(a, b); };
     const all = (a, b) => { add('ALL', a, b); };
-    const getRoutes = () => ROUTES.reduce((acc, { method, path }) => ((acc[method] = acc[method] || []).push(path), acc), {});
+    const getRoutes = () => ROUTES.reduce((acc, { method, path }) => {
+        if (!acc[method]) acc[method] = [];
+        acc[method].push(path);
+        return acc;
+    }, {});
     const serverStatic = (endpoint, dir) => {
         const a = path.resolve(dir);
         if (!fs.existsSync(a) || !fs.statSync(a).isDirectory()) {
             console.error(`[STATIC] Directory not found or is not a directory: ${a}`);
-            return (req, res, next) => next();
+            return (_req, _res, next) => next();
         }
-        let b = (endpoint.endsWith('/') ? endpoint : endpoint + '/');
+        const b = (endpoint.endsWith('/') ? endpoint : endpoint + '/');
         return function staticMiddleware(req, res, next) {
             if (req.method !== 'GET' && req.method !== 'HEAD')
                 return next();
             if (!req.path.startsWith(b))
                 return next();
-            let c = path.join(a, req.path.substring(b.length));
-            let d = path.relative(a, c);
+            const c = path.join(a, req.path.substring(b.length));
+            const d = path.relative(a, c);
             if (!(d && !d.startsWith('..') && !path.isAbsolute(d)))
                 return next();
             fs.stat(c, (err, stats) => {
@@ -159,7 +168,7 @@ function server() {
     use((req, res, next) => {
         if (req.headers['content-type']?.includes('application/json')) {
             let d = '';
-            let max = 1e6;
+            const max = 1e6;
             req.on('data', e => {
                 d += e;
                 if (d.length > max) {
@@ -195,7 +204,6 @@ function server() {
         patch: (a, b) => add('PATCH', a, b),
         options: (a, b) => add('OPTIONS', a, b),
         head: (a, b) => add('HEAD', a, b),
-        all: (a, b) => add('ALL', a, b),
         ws: (a, b) => WS_ROUTES.push({ path: a, handler: b })
     };
 }

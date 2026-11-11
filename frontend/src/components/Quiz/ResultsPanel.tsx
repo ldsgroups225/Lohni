@@ -1,5 +1,6 @@
 import MarkdownView from "../Chat/MarkdownView";
 import type { UA } from "../../pages/Quiz";
+import { withOccurrenceKeys } from "../../lib/occurrenceKeys";
 
 export default function ResultsPanel({
   score, total, percentage, visual, answers, onRetake, onNewTopic
@@ -25,8 +26,8 @@ export default function ResultsPanel({
       <details className="rounded-2xl border border-border p-5">
         <summary className="cursor-pointer font-semibold text-foreground">Revoir mes réponses ({answers.length})</summary>
         <ol className="mt-3 space-y-3">
-          {answers.map((a, i) => (
-            <li key={i} className="space-y-1 rounded-xl border border-border bg-surface p-3 text-sm">
+          {withOccurrenceKeys(answers, answer => String(answer.questionId)).map(({ value: a, key }, i) => (
+            <li key={key} className="space-y-1 rounded-xl border border-border bg-surface p-3 text-sm">
               <p className="font-medium text-foreground">{i + 1}. <MarkdownView md={a.question} inline /></p>
               <p className="flex items-start gap-1 text-foreground"><span aria-hidden="true">{a.correct ? "✓" : "✗"}</span><span><span className="text-muted">Ta réponse : </span><MarkdownView md={a.selectedOption} inline />{a.correct ? " — correcte" : " — incorrecte"}</span></p>
               {!a.correct && <p className="text-foreground"><span className="text-muted">Bonne réponse : </span><MarkdownView md={a.correctOption} inline /></p>}
@@ -37,8 +38,8 @@ export default function ResultsPanel({
       </details>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <button onClick={onRetake} className="ui-button min-h-11">Refaire le quiz</button>
-        <button onClick={onNewTopic} className="min-h-11 rounded-xl border border-border bg-surface px-4 text-foreground">Nouveau sujet</button>
+        <button type="button" onClick={onRetake} className="ui-button min-h-11">Refaire le quiz</button>
+        <button type="button" onClick={onNewTopic} className="min-h-11 rounded-xl border border-border bg-surface px-4 text-foreground">Nouveau sujet</button>
       </div>
     </div>
   );

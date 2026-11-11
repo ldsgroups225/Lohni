@@ -53,7 +53,7 @@ export default function SmartNotes() {
               onKeyDown={(e) => e.key === "Enter" && onGenerate()}
             />
           </div>
-          <button
+          <button type="button"
             onClick={onGenerate}
             disabled={busy || !topic.trim()}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed text-on-primary font-medium transition-[transform,opacity] duration-300"

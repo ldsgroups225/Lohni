@@ -19,17 +19,17 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
     
     - name: Setup Node.js
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v7
       with:
-        node-version: '21.x'
+        node-version: '26.x'
     
     - name: Setup pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v6
       with:
-        version: 8
+        version: 10.13.1
     
     - name: Install backend dependencies
       run: npm install
@@ -50,7 +50,7 @@ jobs:
     
     - name: Create issue for high/critical vulnerabilities
       if: failure()
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       with:
         script: |
           const title = `🚨 Security vulnerabilities detected - ${new Date().toISOString().split('T')[0]}`;
@@ -82,17 +82,17 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
     
     - name: Setup Node.js
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v7
       with:
-        node-version: '21.x'
+        node-version: '26.x'
     
     - name: Setup pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v6
       with:
-        version: 8
+        version: 10.13.1
     
     - name: Check for backend updates
       run: |

@@ -41,7 +41,11 @@ function fakeFetch(input: any, init?: any) {
 }
 
 const msgs = [{ role: 'user' as const, content: 'hi' }]
-const chatRequest = () => requests.find(r => r.url.endsWith('/chat/completions'))!
+const chatRequest = () => {
+  const request = requests.find(r => r.url.endsWith('/chat/completions'))
+  if (!request) throw new Error('Requête chat introuvable')
+  return request
+}
 
 describe('LiteLLM provider over HTTP', () => {
   beforeEach(() => {
@@ -77,7 +81,9 @@ describe('LiteLLM provider over HTTP', () => {
     const chat = chatRequest()
     expect(chat.url).toBe('http://localhost:4000/v1/chat/completions')
     expect(chat.auth).toBe('Bearer no-key')
-    expect(requests.find(q => q.url.endsWith('/model/info'))!.auth).toBeNull()
+    const modelInfo = requests.find(q => q.url.endsWith('/model/info'))
+    expect(modelInfo).toBeDefined()
+    expect(modelInfo?.auth).toBeNull()
     expect(requests.every(q => !q.auth?.includes(OPENAI_KEY))).toBe(true)
   })
 

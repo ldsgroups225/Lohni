@@ -1,5 +1,5 @@
 import { reg } from "./registry"
-import { Agent } from "./types"
+import type { Agent } from "./types"
 import { askTool } from "./tools/ask"
 import { notesTool } from "./tools/notes"
 import { quizTool } from "./tools/quiz"

@@ -200,7 +200,7 @@ test('après un long retard, la session reste plafonnée et continuer propose le
   await finish(await service.getSession(context()))
   await finish(await service.getSession(context(), true))
   now = new Date('2026-12-11T12:00:00Z')
-  let session = await service.getSession(context())
+  const session = await service.getSession(context())
   expect(session.cards).toHaveLength(20)
   expect(session.cards.every(c => c.reviews > 0)).toBe(true)
   await finish(session)
@@ -228,7 +228,9 @@ test('un QCM fragile reste prioritaire quand les cartes dues dépassent le plafo
     kind: 'mcq', question: 'Quelle fraction ?', answer: 'A', options: ['A', 'B', 'C', 'D'], correct: 1,
   }] }] }
   const chapter = await service.generateChapter(context(), { subject: 'Mathématiques', title: 'QCM fragile' })
-  const fragile = (await service.listChapters(context())).find(value => value.id === chapter.id)!.cards[0].id
+  const found = (await service.listChapters(context())).find(value => value.id === chapter.id)
+  if (!found) throw new Error('Chapitre introuvable')
+  const fragile = found.cards[0].id
   for (const date of ['2026-11-09', '2026-11-10']) {
     now = new Date(`${date}T12:00:00Z`)
     await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'], examDate: new Date(now.getTime() + 86400000).toISOString().slice(0, 10) })

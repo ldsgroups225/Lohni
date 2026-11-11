@@ -1,15 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { companionAsk, type FlashCard } from "../../lib/api"
-import { lazy, Suspense, type ComponentProps } from "react"
+import { withOccurrenceKeys } from "../../lib/occurrenceKeys"
+import MarkdownView from "../Chat/MarkdownView"
 
 import { useOverlayNavigation } from "../../lib/useOverlayNavigation"
 import { useCompanion } from "./CompanionProvider"
-
-// KaTeX and syntax highlighting are heavy: load them only when the assistant panel shows a message.
-const LazyMarkdown = lazy(() => import("../Chat/MarkdownView"))
-const MarkdownView = (props: ComponentProps<typeof LazyMarkdown>) => (
-  <Suspense fallback={<span className="opacity-60">…</span>}><LazyMarkdown {...props} /></Suspense>
-)
 
 type CompanionMessage = {
   id: string
@@ -45,7 +40,7 @@ export default function CompanionDock() {
   useEffect(() => {
     if (previousDocument.current && previousDocument.current !== document && open) setOpen(false)
     previousDocument.current = document
-  }, [document])
+  }, [document, open, setOpen])
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<CompanionMessage[]>([])
   const [busy, setBusy] = useState(false)
@@ -69,12 +64,14 @@ export default function CompanionDock() {
 
   const hasDocument = !!document
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Le contexte change quand l'identifiant ou le texte du document change.
   useEffect(() => {
     setMessages([])
     setError(null)
     setInput("")
   }, [document?.id, document?.text])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Tout changement de messages nécessite un défilement vers le bas.
   useEffect(() => {
     if (!open) return
     const el = bodyRef.current
@@ -182,7 +179,7 @@ export default function CompanionDock() {
               className="p-2 rounded-full hover:bg-tint text-foreground transition-opacity"
               aria-label="Fermer l’assistant"
             >
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-4">
+              <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-4">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7l6 6m0-6-6 6" />
               </svg>
             </button>
@@ -234,8 +231,8 @@ export default function CompanionDock() {
                       <div className="rounded-xl border border-primary bg-tint px-3 py-2">
                         <div className="text-xs uppercase tracking-wide text-primary mb-2">Cartes</div>
                         <ul className="space-y-2 text-sm text-foreground">
-                          {msg.flashcards.slice(0, 4).map((card, idx) => (
-                            <li key={`${msg.id}-card-${idx}`}>
+                          {withOccurrenceKeys(msg.flashcards.slice(0, 4), card => JSON.stringify([card.q, card.a])).map(({ value: card, key }) => (
+                            <li key={key}>
                               <div className="font-semibold">Q: <MarkdownView md={card.q} inline /></div>
                               <div className="text-foreground">A: <MarkdownView md={card.a} /></div>
                             </li>

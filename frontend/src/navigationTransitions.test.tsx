@@ -1,3 +1,4 @@
+import { required } from './test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -10,7 +11,7 @@ import { navigationTransitions } from './navigationTransitions'
 
 function OverlayScreen() {
   const [open, setOpen] = useOverlayNavigation('menu')
-  return <><button onClick={() => setOpen(!open)}>Menu</button>{open && <p>Options</p>}</>
+  return <><button type="button" onClick={() => setOpen(!open)}>Menu</button>{open && <p>Options</p>}</>
 }
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -74,12 +75,12 @@ test('ouvrir et fermer une surcouche ne lance aucune transition d’écran', asy
   const unsubscribe = router.subscribe((_state, options) => transitions.push(!!options.viewTransitionOpts))
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => host.querySelector('button')!.click())
+    await act(async () => required(host.querySelector('button')).click())
     expect(host.textContent).toContain('Options')
     await act(async () => { await router.navigate(-1) })
     expect(host.textContent).not.toContain('Options')
-    await act(async () => host.querySelector('button')!.click())
-    await act(async () => host.querySelector('button')!.click())
+    await act(async () => required(host.querySelector('button')).click())
+    await act(async () => required(host.querySelector('button')).click())
     expect(transitions).toEqual([false, false, false, false])
     expect(start).not.toHaveBeenCalled()
   } finally {
@@ -99,7 +100,7 @@ test('le routeur declenche la transition native lors du changement de page', asy
   const router = navigationTransitions(createMemoryRouter([{ path: '*', element: <Link to="/quiz">Quiz</Link> }]))
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => host.querySelector('a')!.click())
+    await act(async () => required(host.querySelector('a')).click())
     expect(start).toHaveBeenCalledTimes(1)
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); vi.unstubAllGlobals(); delete (document as Partial<Document>).startViewTransition }
 })

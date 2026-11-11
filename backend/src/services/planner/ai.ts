@@ -1,4 +1,4 @@
-import { Task, TaskType, Slot, PlanPolicy } from "./types"
+import type { Task, TaskType, Slot, PlanPolicy } from "./types"
 import { handleAsk } from "../../lib/ai/ask"
 
 export async function parseTask(text: string): Promise<Partial<Task>> {
@@ -178,7 +178,7 @@ function parseDateHeuristic(dateStr: string): string {
         return targetDate.toISOString()
     }
 
-    const dateMatch = dateStr.match(/(\d{1,2})[\/\-](\d{1,2})/)
+    const dateMatch = dateStr.match(/(\d{1,2})[/-](\d{1,2})/)
     if (dateMatch) {
         const month = parseInt(dateMatch[1]) - 1
         const day = parseInt(dateMatch[2])
@@ -252,7 +252,7 @@ function getDefaultSteps(type?: TaskType): string[] {
 }
 
 export function calculateUrgencyScore(task: Task): number {
-    const now = new Date().getTime()
+    const now = Date.now()
     const dueTime = new Date(task.dueAt).getTime()
     const timeToDeadline = Math.max(1, dueTime - now) / (1000 * 60 * 60)
 
@@ -348,7 +348,7 @@ function findNextAvailableSlot(
     const preferredEnd = 22   // 10 PM instead of 9 PM
     const maxDailyMins = policy.maxDailyMins || 240
 
-    let searchTime = new Date(fromTime)
+    const searchTime = new Date(fromTime)
 
     if (searchTime.getHours() < preferredStart) {
         searchTime.setHours(preferredStart, 0, 0, 0)
@@ -381,7 +381,7 @@ function findNextAvailableSlot(
             continue
         }
 
-        let currentSlot = new Date(Math.max(dayStart.getTime(), searchTime.getTime()))
+        const currentSlot = new Date(Math.max(dayStart.getTime(), searchTime.getTime()))
 
         while (currentSlot.getTime() + durationMins * 60 * 1000 <= dayEnd.getTime()) {
             const proposedEnd = new Date(currentSlot.getTime() + durationMins * 60 * 1000)

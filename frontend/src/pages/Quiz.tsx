@@ -9,7 +9,7 @@ import QuizHeader from "../components/Quiz/QuizHeader";
 import QuestionCard from "../components/Quiz/QuestionCard";
 import ResultsPanel from "../components/Quiz/ResultsPanel";
 
-export type Question = { id: number; question: string; options: string[]; correct: number; hint: string; explanation: string; imageHtml?: string };
+export type Question = { id: number; question: string; options: string[]; correct: number; hint: string; explanation: string };
 export type UA = { questionId: number; selectedAnswer: number; correct: boolean; question: string; selectedOption: string; correctOption: string; explanation: string };
 
 function takeQuizArray(a: unknown): Question[] {
@@ -24,7 +24,7 @@ export default function Quiz() {
   const location = useLocation() as any;
 
   const cacheKey = location.state?.quizCacheKey || location.key;
-  const passedTopic = (location?.state && location.state.topic) || "";
+  const passedTopic = location?.state?.topic || "";
   const initialTopic = search.get("topic") || passedTopic || "";
 
   const [topic, setTopic] = useState(initialTopic);
@@ -51,6 +51,7 @@ export default function Quiz() {
   const resultVisual = useMemo(() => { if (percentage >= 90) return { msg: "Excellent ! Tu maîtrises ce sujet !", cls: "bg-success border border-success text-on-success", icon: "🏆" }; if (percentage >= 70) return { msg: "Bravo ! Tu as bien compris.", cls: "bg-tint border border-primary text-foreground", icon: "🎉" }; if (percentage >= 50) return { msg: "Bon travail ! Relis les notions puis réessaie.", cls: "bg-tint border border-border text-foreground", icon: "📚" }; return { msg: "Continue à réviser pour progresser.", cls: "bg-tint border border-primary text-foreground", icon: "💪" }; }, [percentage]);
 
   useEffect(() => () => { if (closeRef.current) closeRef.current(); }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Le sujet ou la clé de cache lance au plus une génération ; start change à chaque rendu.
   useEffect(() => {
     if (!initialTopic) return;
     if (startedTopicRef.current === initialTopic) { startedTopicRef.current = null; return; }

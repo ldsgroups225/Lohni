@@ -14,7 +14,7 @@ function sanitizeText(s: string) {
     .replace(/\u2192/g, "->")
     .replace(/\u00b2/g, "^2")
     .replace(/\u00b3/g, "^3")
-    .replace(/[^\x00-\x7F]/g, "")
+    .replace(/[^\p{ASCII}]/gu, "")
 }
 
 function wrap(s: string, max = 90) {
@@ -138,7 +138,7 @@ async function fillTemplateFormPDF(data: any) {
   try {
     const qna = (data.questions || [])
       .map((q: string, i: number) => {
-        const a = data.answers && data.answers[i] ? `\nAnswer: ${data.answers[i]}` : ""
+        const a = data.answers?.[i] ? `\nAnswer: ${data.answers[i]}` : ""
         return `• ${q}${a}`
       })
       .join("\n\n")
@@ -161,7 +161,6 @@ async function createSimplePDF(data: any) {
   const page = pdfDoc.addPage([612, 792])
 
   const margin = 48
-  const width = page.getWidth() - margin * 2
   let y = page.getHeight() - margin
 
   const title = sanitizeText(data.title || "Notes")
@@ -175,7 +174,7 @@ async function createSimplePDF(data: any) {
       h: "Questions",
       t: (data.questions || [])
         .map((q: string, i: number) => {
-          const a = data.answers && data.answers[i] ? `\nAnswer: ${data.answers[i]}` : ""
+          const a = data.answers?.[i] ? `\nAnswer: ${data.answers[i]}` : ""
           return `• ${q}${a}`
         })
         .join("\n\n")

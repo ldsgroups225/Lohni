@@ -1,6 +1,7 @@
 import MarkdownView from "../Chat/MarkdownView"
 import { confirmDialog } from "../../lib/confirm"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { withOccurrenceKeys } from "../../lib/occurrenceKeys"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import PlannerMindmap from "./PlannerMindmap"
 import TodayFocus from "./TodayFocus"
 import QuickAdd from "./QuickAdd"
@@ -41,10 +42,21 @@ export default function Planner() {
     const [view, setView] = useState<"today" | "list" | "mindmap">("today")
     const [notifications, setNotifications] = useState<Array<{ id: string; type: string; message: string; at: number }>>([])
 
+    const addNotification = useCallback((type: string, message: string) => {
+        const id = Math.random().toString(36).slice(2)
+        setNotifications(n => [{ id, type, message, at: Date.now() }, ...n.slice(0, 4)])
+        setTimeout(() => {
+            setNotifications(n => n.filter(x => x.id !== id))
+        }, 5000)
+    }, [])
+
     const taskIndex = useMemo(() => Object.fromEntries(tasks.map(t => [t.id, t])), [tasks])
     const slotsByTask = useMemo(() => {
         const m: Record<string, PlannerSlot[]> = {}
-        for (const d of plan?.days || []) for (const s of d.slots) (m[s.taskId] ||= []).push(s)
+        for (const d of plan?.days || []) for (const s of d.slots) {
+            if (!m[s.taskId]) m[s.taskId] = []
+            m[s.taskId].push(s)
+        }
         for (const k of Object.keys(m)) m[k].sort((a, b) => a.start - b.start)
         return m
     }, [plan])
@@ -100,15 +112,7 @@ export default function Planner() {
             if (ev.type === "materials.done") { }
         })
         return () => { try { wsRef.current?.close() } catch { } }
-    }, [sid])
-
-    const addNotification = (type: string, message: string) => {
-        const id = Math.random().toString(36).slice(2)
-        setNotifications(n => [{ id, type, message, at: Date.now() }, ...n.slice(0, 4)])
-        setTimeout(() => {
-            setNotifications(n => n.filter(x => x.id !== id))
-        }, 5000)
-    }
+    }, [sid, addNotification])
 
     // Request notification permission on mount
     useEffect(() => {
@@ -117,14 +121,14 @@ export default function Planner() {
         }
     }, [])
 
-    const reload = async () => {
+    const reload = useCallback(async () => {
         const res = await plannerList()
         setTasks(res.tasks)
         const wp = await plannerWeekly(false)
         setPlan(wp.plan)
-    }
+    }, [])
 
-    useEffect(() => { reload() }, [])
+    useEffect(() => { void reload() }, [reload])
 
     const add = async (data: { text?: string; files?: File[] }) => {
         const taskText = data.text || ""
@@ -168,7 +172,7 @@ export default function Planner() {
         try {
             await plannerUploadFiles(id, [file])
             // Files will be updated via WebSocket event
-        } catch (e) {
+        } catch {
             addNotification("error", "Impossible d’ajouter le fichier")
         }
     }
@@ -177,7 +181,7 @@ export default function Planner() {
         try {
             await plannerDeleteFile(taskId, fileId)
             // File removal will be updated via WebSocket event
-        } catch (e) {
+        } catch {
             addNotification("error", "Impossible de supprimer le fichier")
         }
     }
@@ -218,11 +222,11 @@ export default function Planner() {
             <div className="flex items-center gap-2">
                 <div role="tablist" aria-label="Vue du planning" onKeyDown={onTabKey} className="grid min-w-0 flex-1 grid-cols-3 gap-1 rounded-xl border border-border bg-surface p-1">
                     {views.map(([id, label, full]) => (
-                        <button key={id} role="tab" aria-selected={view === id} aria-label={full} tabIndex={view === id ? 0 : -1} onClick={() => setView(id)}
+                        <button type="button" key={id} role="tab" aria-selected={view === id} aria-label={full} tabIndex={view === id ? 0 : -1} onClick={() => setView(id)}
                             className={`min-h-10 rounded-lg px-2 text-sm font-medium ${view === id ? 'bg-primary text-on-primary' : 'text-foreground'}`}>{label}</button>
                     ))}
                 </div>
-                <button onClick={reload} aria-label="Actualiser" title="Actualiser" className="press-icon grid size-11 shrink-0 place-items-center rounded-xl border border-border bg-surface text-foreground">
+                <button type="button" onClick={reload} aria-label="Actualiser" title="Actualiser" className="press-icon grid size-11 shrink-0 place-items-center rounded-xl border border-border bg-surface text-foreground">
                     <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992V4.356M20.5 9.5A8.25 8.25 0 0 0 5.4 7.4M7.977 14.652H2.985v4.992M3.5 14.5a8.25 8.25 0 0 0 15.1 2.1" /></svg>
                 </button>
             </div>
@@ -289,10 +293,10 @@ export default function Planner() {
                                         <option value="done">Terminé</option>
                                         <option value="blocked">Bloqué</option>
                                     </select>
-                                    <button onClick={() => planTask(t.id)} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Planifier</button>
-                                    <button onClick={() => gen(t.id, "summary")} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Résumé</button>
-                                    <button onClick={() => gen(t.id, "flashcards")} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Cartes</button>
-                                    <button onClick={() => { void confirmDialog(`Supprimer la tâche « ${t.title} » ?`).then(ok => { if (ok) void del(t.id) }) }} className="ml-auto min-h-10 rounded-lg border border-danger px-3 text-sm text-danger">Supprimer</button>
+                                    <button type="button" onClick={() => planTask(t.id)} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Planifier</button>
+                                    <button type="button" onClick={() => gen(t.id, "summary")} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Résumé</button>
+                                    <button type="button" onClick={() => gen(t.id, "flashcards")} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Cartes</button>
+                                    <button type="button" onClick={() => { void confirmDialog(`Supprimer la tâche « ${t.title} » ?`).then(ok => { if (ok) void del(t.id) }) }} className="ml-auto min-h-10 rounded-lg border border-danger px-3 text-sm text-danger">Supprimer</button>
                                 </div>
 
                                 {/* Task Files */}
@@ -304,7 +308,7 @@ export default function Planner() {
                                                 <div key={file.id} className="flex items-center gap-1 px-2 py-1 bg-tint rounded text-xs text-foreground">
                                                     <span className="truncate max-w-32" title={file.originalName}>{file.originalName}</span>
                                                     <span className="text-muted">({Math.round(file.size / 1024)}KB)</span>
-                                                    <button
+                                                    <button type="button"
                                                         onClick={() => deleteFile(t.id, file.id)}
                                                         className="text-muted hover:text-foreground ml-1"
                                                         title="Supprimer le fichier"
@@ -320,8 +324,8 @@ export default function Planner() {
                                 )}
                                 {Array.isArray(materials[t.id]?.flashcards?.flashcards) && (
                                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {materials[t.id].flashcards.flashcards.map((c: any, i: number) => (
-                                            <div key={i} className="border border-border rounded-lg p-2">
+                                        {withOccurrenceKeys(materials[t.id].flashcards.flashcards as Array<{ q: string; a: string }>, c => JSON.stringify([c.q, c.a])).map(({ value: c, key }) => (
+                                            <div key={key} className="border border-border rounded-lg p-2">
                                                 <div className="text-foreground text-sm font-medium">Q: <MarkdownView md={c.q} inline /></div>
                                                 <div className="text-muted text-sm">A: <MarkdownView md={c.a} /></div>
                                             </div>

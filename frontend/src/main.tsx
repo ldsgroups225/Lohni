@@ -7,7 +7,9 @@ import { navigationTransitions } from "./navigationTransitions";
 
 prepareRevisionStartup();
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+const root = document.getElementById("root")
+if (!root) throw new Error("Élément racine introuvable")
+ReactDOM.createRoot(root).render(
   <RouterProvider router={navigationTransitions(createBrowserRouter(routes))} />
 );
 

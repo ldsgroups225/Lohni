@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -17,9 +18,9 @@ test('choisir un nouveau sujet retire l’ancien sujet de l’adresse', async ()
   const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }], { initialEntries: ['/quiz?topic=maths'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Un'))!.click())
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))!.click())
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Nouveau sujet'))!.click())
+    await act(async () => required(host.querySelector<HTMLInputElement>('input[type="radio"]')).click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))).click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Nouveau sujet'))).click())
     expect(router.state.location.search).toBe('')
     expect(host.querySelector('input')).not.toBeNull()
   } finally { act(() => root.unmount()); router.dispose(); host.remove() }
@@ -36,14 +37,14 @@ test('reprendre un quiz relancé sur le même sujet garde la nouvelle progressio
   const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }, { path: '/courses', element: <p>Cours</p> }], { initialEntries: ['/quiz?topic=maths'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Un'))!.click())
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))!.click())
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Nouveau sujet'))!.click())
-    const input = host.querySelector('input')!
-    await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'maths'); input.dispatchEvent(new Event('input', { bubbles: true })) })
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Commencer le quiz'))!.click())
+    await act(async () => required(host.querySelector<HTMLInputElement>('input[type="radio"]')).click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))).click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Nouveau sujet'))).click())
+    const input = required(host.querySelector('input'))
+    await act(async () => { required(required(Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')).set).call(input, 'maths'); input.dispatchEvent(new Event('input', { bubbles: true })) })
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Commencer le quiz'))).click())
     await act(async () => { await router.navigate('/courses') })
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')!.click())
+    await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')).click())
     await act(async () => { await router.navigate(-1) })
     expect(host.textContent).toContain('Combien ?')
     expect(host.textContent).not.toContain('Quiz terminé')
@@ -61,7 +62,7 @@ test('retrouver le quiz conserve les questions sans nouvelle génération', asyn
     HTMLDialogElement.prototype.showModal = function () { this.open = true }
     HTMLDialogElement.prototype.close = function (value = '') { this.returnValue = value; this.open = false; this.dispatchEvent(new Event('close')) }
     await act(async () => { await router.navigate('/courses') })
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')!.click())
+    await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')).click())
     await act(async () => { await router.navigate(-1) })
     expect(host.textContent).toContain('Combien ?')
     expect(api.start).toHaveBeenCalledTimes(1)
@@ -79,10 +80,10 @@ test('quitter un quiz en cours demande confirmation', async () => {
     await act(async () => root.render(<RouterProvider router={router} />))
     await act(async () => { await router.navigate(-1) })
     expect(document.querySelector('dialog')?.textContent).toContain('Quitter')
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Annuler')!.click())
+    await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Annuler')).click())
     expect(host.textContent).toContain('Combien ?')
     await act(async () => { await router.navigate(-1) })
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')!.click())
+    await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')).click())
     expect(host.textContent).toContain('Cours')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
 })
@@ -97,7 +98,7 @@ test('une nouvelle demande du même sujet crée un nouveau quiz', async () => {
     await act(async () => { await router.navigate('/quiz?topic=maths') })
     expect(host.textContent).toContain('Combien ?')
     await act(async () => { await router.navigate(-1) })
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')!.click())
+    await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')).click())
     await act(async () => { await router.navigate('/quiz?topic=maths') })
     expect(host.textContent).toContain('Combien ?')
     expect(api.start).toHaveBeenCalledTimes(2)
@@ -111,11 +112,11 @@ test('un quiz choisi sur place reste disponible après la mise à jour de son ad
   const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }, { path: '/tutor', element: <p>Tuteur</p> }], { initialEntries: ['/quiz'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Les fractions'))!.click())
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Commencer le quiz'))!.click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Les fractions'))).click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Commencer le quiz'))).click())
     expect(host.textContent).toContain('Combien ?')
     await act(async () => { await router.navigate('/tutor') })
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')!.click())
+    await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')).click())
     await act(async () => { await router.navigate(-1) })
     expect(host.textContent).toContain('Combien ?')
     expect(api.start).toHaveBeenCalledTimes(1)
@@ -131,8 +132,8 @@ test('retrouver un quiz termine conserve ses resultats sans confirmation', async
   const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }, { path: '/courses', element: <p>Cours</p> }], { initialEntries: ['/quiz?topic=maths'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Un'))!.click())
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))!.click())
+    await act(async () => required(host.querySelector<HTMLInputElement>('input[type="radio"]')).click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Voir'))).click())
     await act(async () => { await router.navigate('/courses') })
     await act(async () => { await router.navigate(-1) })
     expect(host.textContent).toContain('Quiz terminé')

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 export function useOverlayNavigation(id: string, onClose?: () => void): [boolean, (open: boolean) => void] {
@@ -25,7 +25,7 @@ export function useOverlayNavigation(id: string, onClose?: () => void): [boolean
     }
     wasOpen.current = open
   }, [id, location, navigate, open])
-  return [open, next => {
+  const setOpen = useCallback((next: boolean) => {
     if (next === current.current.open) return
     current.current.open = next
     const { location } = current.current
@@ -34,5 +34,6 @@ export function useOverlayNavigation(id: string, onClose?: () => void): [boolean
       const overlays = location.state?.overlays ?? (location.state?.overlay ? [location.state.overlay] : [])
       navigate(`${location.pathname}${location.search}${location.hash}`, { state: { ...location.state, overlay: id, overlays: [...overlays, id] } })
     } else navigate(-1)
-  }]
+  }, [id, navigate])
+  return [open, setOpen]
 }

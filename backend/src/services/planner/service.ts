@@ -1,6 +1,6 @@
-import { Task, Slot, PlanPolicy, CreateTaskRequest, UpdateTaskRequest, PlannerGenerateRequest, MaterialsRequest } from "./types"
+import type { Task, Slot, PlanPolicy, CreateTaskRequest, UpdateTaskRequest, PlannerGenerateRequest, MaterialsRequest } from "./types"
 import { createTask, getTask, updateTask, deleteTask, listTasks } from "./store"
-import { parseTask, generateSteps, makeSlots, replan, calculateUrgencyScore } from "./ai"
+import { parseTask, generateSteps, replan } from "./ai"
 import { planTask, planTasks, weeklyPlan, defaultPolicy } from "./scheduler"
 import { handleAsk } from "../../lib/ai/ask"
 import crypto from "crypto"
@@ -238,7 +238,7 @@ export class PlannerService {
         try {
             const response = await handleAsk(prompt + '\n\n' + content)
             return JSON.parse(response.answer)
-        } catch (error) {
+        } catch {
             console.warn('Failed to parse flashcards JSON, returning default')
             return [
                 { front: `Key concept from ${task.title}`, back: 'Review the main material' }
@@ -312,7 +312,7 @@ export class PlannerService {
         const task = await getTask(taskId)
         if (!task) throw new Error("Task not found")
 
-        const { saveTaskFile } = await import("./store")
+        const { saveTaskFile } = await import("./store.js")
         const uploadedFiles: any[] = []
 
         for (const file of files) {
@@ -337,7 +337,7 @@ export class PlannerService {
         const task = await getTask(taskId)
         if (!task) return false
 
-        const { deleteTaskFile } = await import("./store")
+        const { deleteTaskFile } = await import("./store.js")
         try {
             await deleteTaskFile(fileId)
             return true

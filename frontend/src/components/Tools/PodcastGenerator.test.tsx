@@ -1,3 +1,4 @@
+import { required } from '../../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -19,10 +20,12 @@ test('un podcast terminé ne devient pas une erreur après le délai maximal', a
   const root = createRoot(host)
   try {
     await act(async () => root.render(<MemoryRouter initialEntries={[{ pathname: '/tools', state: { podcastPid: '1' } }]}><PodcastGenerator /></MemoryRouter>))
-    await act(async () => { stream.emit({ type: 'audio', file: '/podcast.mp3' }); stream.emit({ type: 'done' }) })
+    await act(async () => { stream.emit({ type: 'script', data: { segments: [{ spk: 'A', md: 'Bonjour !' }, { spk: 'B', md: 'Bonjour à toi.' }] } }); stream.emit({ type: 'audio', file: '/podcast.mp3' }); stream.emit({ type: 'done' }) })
     await act(async () => { vi.advanceTimersByTime(120001) })
     expect(host.textContent).toContain('Terminé')
     expect(host.textContent).not.toContain('prend trop de temps')
+    expect(host.textContent).toContain('Intervenant A : Bonjour !')
+    expect(host.textContent).toContain('Intervenant B : Bonjour à toi.')
   } finally {
     act(() => root.unmount()); host.remove(); vi.useRealTimers()
   }
@@ -48,7 +51,7 @@ test('une panne réseau est expliquée en français', async () => {
   try {
     await act(async () => root.render(<MemoryRouter initialEntries={[{ pathname: '/tools', state: { podcastPid: '1', podcastTopic: 'Fractions' } }]}><PodcastGenerator /></MemoryRouter>))
     await act(async () => { stream.emit({ type: 'error', error: 'stream_error' }) })
-    await act(async () => { host.querySelector('button')!.click() })
+    await act(async () => { required(host.querySelector('button')).click() })
     expect(host.textContent).toContain('Impossible de créer le podcast. Réessaie.')
     expect(host.textContent).not.toContain('Failed to fetch')
     expect(host.querySelector('button')?.disabled).toBe(false)

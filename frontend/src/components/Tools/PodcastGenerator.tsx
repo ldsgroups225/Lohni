@@ -1,6 +1,13 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useId } from "react"
 import { useLocation } from "react-router-dom"
 import { podcastStart, connectPodcastStream, type PodcastEvent } from "../../lib/api"
+
+function scriptTranscript(data: unknown) {
+  const segments = (data as { segments?: unknown })?.segments
+  return Array.isArray(segments) ? segments.flatMap(segment =>
+    typeof segment?.md === 'string' ? [`${segment.spk === 'B' ? 'Intervenant B' : 'Intervenant A'} : ${segment.md}`] : []
+  ).join('\n\n') : ''
+}
 
 export default function PodcastGenerator() {
   const location = useLocation()
@@ -9,6 +16,8 @@ export default function PodcastGenerator() {
   const [status, setStatus] = useState("")
   const [audioFile, setAudioFile] = useState<string | null>(null)
   const [audioFilename, setAudioFilename] = useState<string | null>(null)
+  const [transcript, setTranscript] = useState("")
+  const transcriptId = useId()
 
   useEffect(() => {
     // Check if we were navigated here with a podcast already started
@@ -27,6 +36,7 @@ export default function PodcastGenerator() {
           setStatus("Création en cours…")
         }
         if (ev.type === "script") {
+          setTranscript(scriptTranscript(ev.data))
           setStatus("Texte prêt, création de l’audio…")
         }
         if (ev.type === "audio") {
@@ -71,6 +81,7 @@ export default function PodcastGenerator() {
     setStatus("Démarrage…")
     setAudioFile(null)
     setAudioFilename(null)
+    setTranscript("")
 
     try {
       const { pid } = await podcastStart({ topic })
@@ -85,6 +96,7 @@ export default function PodcastGenerator() {
           setStatus("Création en cours…")
         }
         if (ev.type === "script") {
+          setTranscript(scriptTranscript(ev.data))
           setStatus("Texte prêt, création de l’audio…")
         }
         if (ev.type === "audio") {
@@ -155,7 +167,7 @@ export default function PodcastGenerator() {
               onKeyDown={(e) => e.key === "Enter" && onGenerate()}
             />
           </div>
-          <button
+          <button type="button"
             onClick={onGenerate}
             disabled={busy || !topic.trim()}
             className="ui-button min-h-11 px-6 disabled:opacity-50"
@@ -175,14 +187,21 @@ export default function PodcastGenerator() {
           <div className="space-y-3">
             <div className="p-4 rounded-xl bg-surface border border-border">
               <div className="text-sm text-muted mb-2">Écouter :</div>
+              {/* biome-ignore lint/a11y/useMediaCaption: La transcription est disponible ci-dessous, sans minutage audio fiable. */}
               <audio
                 controls
                 className="w-full"
                 src={audioFile}
+                aria-describedby={transcript ? transcriptId : undefined}
               >
                 Ton navigateur ne prend pas en charge la lecture audio.
               </audio>
             </div>
+
+            {transcript && <details id={transcriptId} className="rounded-xl border border-border p-4">
+              <summary className="cursor-pointer font-medium text-foreground">Lire la transcription</summary>
+              <p className="mt-3 whitespace-pre-wrap text-sm text-foreground">{transcript}</p>
+            </details>}
 
             <a
               href={audioFile}

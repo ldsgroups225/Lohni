@@ -1,5 +1,6 @@
 import { usePersistentDetails } from '../lib/usePersistentDetails'
-import React, { useEffect, useRef, useState } from "react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { AdaptiveErrorBoundary, adaptiveToast } from '@cognicatch/react'
 import { Link, useNavigate } from "react-router-dom";
 import PromptRail from "../components/Landing/PromptRail";
@@ -134,7 +135,7 @@ export default function Landing() {
         <div className="mt-3 w-full md:mt-0 md:w-fit flex">
           <div className="w-full md:w-fit md:min-w-fit p-1.5 rounded-2xl md:rounded-t-none bg-surface flex flex-col items-start sm:items-center border border-border md:border-t-0 md:border-r-0 shadow-[inset_2px_-2px_15px] shadow-border">
             <div className="flex items-start justify-between md:justify-start space-x-1 md:space-x-2 p-1.5 w-full">
-              <div data-dropdown onKeyDown={(e) => menuKeys(e, showMode, setShowMode)} className="relative flex-1 md:flex-none">
+              <fieldset aria-label="Mode" data-dropdown onKeyDown={(e) => menuKeys(e, showMode, setShowMode)} className="relative min-w-0 flex-1 md:flex-none">
                 <button
                   type="button" aria-haspopup="menu" aria-expanded={showMode} aria-controls="menu-mode"
                   onClick={() => setShowMode(!showMode)}
@@ -144,7 +145,7 @@ export default function Landing() {
                     <span className="text-xs text-foreground">Mode</span>
                     <span className="text-sm font-semibold text-foreground">{mode}</span>
                   </div>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-muted">
+                  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-muted">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
                   </svg>
                 </button>
@@ -167,27 +168,27 @@ export default function Landing() {
                     ))}
                   </div>
                 )}
-              </div>
+              </fieldset>
 
               <div className="w-px h-8 mx-2 bg-tint rounded-full mt-2" />
 
-              <div className="p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer min-w-fit h-fit hidden md:flex items-center space-x-4" onClick={onPickFile} title={stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}>
+              <button type="button" className="p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer min-w-fit h-fit hidden md:flex items-center space-x-4 text-left" onClick={onPickFile} title={stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}>
                 <div className="flex flex-col -space-y-0.5 pr-2">
                   <span className="text-xs text-foreground">{stagedFile ? "Fichier sélectionné" : "Ajouter des fichiers"}</span>
                   <span className="text-sm font-semibold text-foreground">{stagedFile ? stagedFile.name : "Clique ou dépose un fichier"}</span>
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-6 text-muted">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-6 text-muted">
                   <path
                     fillRule="evenodd"
                     d="M5.5 17a4.5 4.5 0 0 1-1.44-8.765 4.5 4.5 0 0 1 8.302-3.046 3.5 3.5 0 0 1 4.504 4.272A4 4 0 0 1 15 17H5.5Zm3.75-2.75a.75.75 0 0 0 1.5 0V9.66l1.95 2.1a.75.75 0 1 0 1.1-1.02l-3.25-3.5a.75.75 0 0 0-1.1 0l-3.25 3.5a.75.75 0 1 0 1.1 1.02l1.95-2.1v4.59Z"
                     clipRule="evenodd"
                   />
                 </svg>
-              </div>
+              </button>
 
               <div className="w-px h-8 mx-2 bg-tint rounded-full mt-2" />
 
-              <div data-dropdown onKeyDown={(e) => menuKeys(e, showLength, setShowLength)} className="relative flex-1 md:flex-none">
+              <fieldset aria-label="Longueur" data-dropdown onKeyDown={(e) => menuKeys(e, showLength, setShowLength)} className="relative min-w-0 flex-1 md:flex-none">
                 <button
                   type="button" aria-haspopup="menu" aria-expanded={showLength} aria-controls="menu-length"
                   onClick={() => setShowLength(!showLength)}
@@ -196,7 +197,7 @@ export default function Landing() {
                     <span className="text-xs text-foreground">Longueur</span>
                     <span className="text-sm font-semibold text-foreground">{responseLength}</span>
                   </div>
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-muted">
+                  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-muted">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
                   </svg>
                 </button>
@@ -219,12 +220,12 @@ export default function Landing() {
                     ))}
                   </div>
                 )}
-              </div>
+              </fieldset>
 
             </div>
           </div>
 
-          <svg className="h-9 w-8 -ml-0.5 -mt-[2px] min-w-fit hidden md:block rotate-3" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg aria-hidden="true" className="h-9 w-8 -ml-0.5 -mt-[2px] min-w-fit hidden md:block rotate-3" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1 1H71C21.4764 5.44502 6.18653 20.4467 1 71V1Z" fill="var(--color-background)" strokeWidth="2" stroke="url(#paint0_linear_1409_7)" />
             <defs>
               <linearGradient id="paint0_linear_1409_7" x1="33" y1="31" x2="1" y2="1" gradientUnits="userSpaceOnUse">

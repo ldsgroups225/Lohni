@@ -1,13 +1,13 @@
 import "./agents"
 import { randomBytes } from "crypto"
 import { get } from "./registry"
-import { ExecIn, ExecOut } from "./types"
+import type { ExecIn, ExecOut } from "./types"
 
 async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   if (!ms || ms <= 0) return p
-  let t: NodeJS.Timeout
+  let t: NodeJS.Timeout | undefined
   return await Promise.race([
-    p.finally(() => clearTimeout(t!)),
+    p.finally(() => clearTimeout(t)),
     new Promise<T>((_, rej) => { t = setTimeout(() => rej(new Error(`timeout: ${label} exceeded ${ms}ms`)), ms) })
   ])
 }

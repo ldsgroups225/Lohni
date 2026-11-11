@@ -1,3 +1,4 @@
+import { required } from '../../test/required'
 // @vitest-environment jsdom
 import { afterEach, expect, test, vi } from 'vitest'
 import { act } from 'react'
@@ -16,8 +17,8 @@ test('les anciennes bulles utilisent les couleurs du thème', async () => {
   await act(async () => root.render(<PlannerMindmap {...props} />))
   const node = [...container.querySelectorAll('[data-node]')].find(element => element.textContent?.includes('Ancienne idée'))
   expect(node).toBeTruthy()
-  expect(node!.innerHTML).not.toContain('#ff0000')
-  expect(node!.innerHTML).toContain('var(--color-secondary)')
+  expect(required(node).innerHTML).not.toContain('#ff0000')
+  expect(required(node).innerHTML).toContain('var(--color-secondary)')
 })
 
 test('la carte vide remplit la largeur disponible sur téléphone', async () => {

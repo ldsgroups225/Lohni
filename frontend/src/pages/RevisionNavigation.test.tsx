@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -20,16 +21,16 @@ test('le menu se ferme au retour et la sortie de session demande confirmation', 
   const router = createMemoryRouter([{ path: '/', element: <p>Accueil</p> }, { path: '/revision', element: <Revision /> }], { initialEntries: ['/', '/revision'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Plus d’options"]')!.click())
+    await act(async () => required(host.querySelector<HTMLButtonElement>('[aria-label="Plus d’options"]')).click())
     expect(host.textContent).toContain('Supprimer cette carte')
     await act(async () => { await router.navigate(-1) })
     expect(host.querySelector('[aria-expanded]')?.getAttribute('aria-expanded')).toBe('false')
     await act(async () => { await router.navigate(-1) })
     expect(document.querySelector('dialog')?.textContent).toContain('Ta progression est enregistrée')
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Annuler')!.click())
+    await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Annuler')).click())
     expect(host.textContent).toContain('Question ?')
     await act(async () => { await router.navigate(-1) })
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')!.click())
+    await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')).click())
     expect(host.textContent).toContain('Accueil')
   } finally { delayedProfile.wait = false; act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
 })
@@ -40,9 +41,9 @@ test('expliquer une carte ratée ouvre le tuteur sans confirmation de sortie', a
   const router = createMemoryRouter([{ path: '/revision', element: <Revision /> }, { path: '/chat', element: <p>Tuteur ouvert</p> }], { initialEntries: ['/revision'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => host.querySelector<HTMLElement>('[aria-label="Question"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })))
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Je ne savais pas')!.click())
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Explique-moi')!.click())
+    await act(async () => required(host.querySelector<HTMLElement>('[aria-label="Question"]')).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })))
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent === 'Je ne savais pas')).click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent === 'Explique-moi')).click())
     expect(host.textContent).toContain('Tuteur ouvert')
     expect(document.querySelector('dialog')).toBeNull()
   } finally { delayedProfile.wait = false; act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
@@ -55,7 +56,7 @@ test('la session reste visible au retour pendant son actualisation', async () =>
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
     await act(async () => { await router.navigate('/') })
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')!.click())
+    await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')).click())
     delayedProfile.wait = true
     await act(async () => { void router.navigate('/revision') })
     expect(host.textContent).toContain('Question ?')

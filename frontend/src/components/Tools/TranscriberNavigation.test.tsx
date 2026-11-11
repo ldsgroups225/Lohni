@@ -1,3 +1,4 @@
+import { required } from '../../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -16,7 +17,7 @@ test('le retour ferme le micro et libère un accès autorisé tardivement', asyn
   const router = createMemoryRouter([{ path: '/tools', element: <Transcriber /> }], { initialEntries: ['/tools'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Enregistrer ma voix'))!.click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Enregistrer ma voix'))).click())
     expect(host.textContent).not.toContain('Audio en texte')
     await act(async () => { await router.navigate(-1) })
     expect(host.textContent).toContain('Audio en texte')

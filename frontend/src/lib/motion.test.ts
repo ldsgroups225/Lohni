@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 import { afterEach, expect, test, vi } from 'vitest'
 import { prefersReducedMotion, spring, springLinear, springStep } from './motion'
 
@@ -8,7 +9,7 @@ function fakeRaf() {
   vi.stubGlobal('requestAnimationFrame', (cb: (t: number) => void) => q.push(cb))
   vi.stubGlobal('cancelAnimationFrame', () => { q = [] })
   return (maxFrames = 600) => {
-    for (let i = 0; i < maxFrames && q.length; i++) { const cb = q.shift()!; cb(i * 16) }
+    for (let i = 0; i < maxFrames && q.length; i++) { const cb = required(q.shift()); cb(i * 16) }
   }
 }
 const reduce = (matches: boolean) => vi.stubGlobal('window', { matchMedia: () => ({ matches }) })

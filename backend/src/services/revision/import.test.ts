@@ -44,7 +44,10 @@ test.each(['jpg', 'jpeg', 'png', 'webp'])('une photo %s transcrite rejoint la ch
   await writeFile(path, Buffer.from('/9j/2Q==', 'base64'))
   service = new RevisionService({ db, now: () => now,
     transcribePhoto: async () => input.text,
-    generateCards: async ({ text }) => ({ ...generated, summary: text! }),
+    generateCards: async ({ text }) => {
+      if (text === undefined) throw new Error('Texte transcrit absent')
+      return { ...generated, summary: text }
+    },
   })
   const imported = await service.importChapter(context(), { title: input.title, subject: input.subject,
     file: { path, filename: `cahier.${extension}`, mimeType: 'application/octet-stream' },

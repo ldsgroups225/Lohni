@@ -1,7 +1,7 @@
 import fs from "fs"
 import path from "path"
 import { load } from "js-yaml"
-import { ExamSpec } from "./types"
+import type { ExamSpec } from "./types"
 
 const modulesDir = path.join(process.cwd(), "modules")
 

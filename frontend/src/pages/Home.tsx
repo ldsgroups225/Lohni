@@ -24,13 +24,17 @@ export default function Home() {
   const sharedHome = revisionSnapshot<RevisionHome | null>('/home')
   const sharedProgress = revisionSnapshot<RevisionProgress>('/progress')
   if (!cachedHome && sharedHome) cachedHome = { device, version: currentRevisionCacheVersion(), day: new Date().toDateString(), home: sharedHome, progress: sharedProgress ?? null, chapters: null }
-  const [home, setHome] = useState<RevisionHome | null>(() => (cachedHome?.home ?? sharedHome) ? { ...(cachedHome?.home ?? sharedHome)!, profile: sharedProfile ?? (cachedHome?.home ?? sharedHome)!.profile } : null)
+  const [home, setHome] = useState<RevisionHome | null>(() => {
+    const initial = cachedHome?.home ?? sharedHome
+    return initial ? { ...initial, profile: sharedProfile ?? initial.profile } : null
+  })
   const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedHome?.progress ?? sharedProgress ?? null)
   const [loading, setLoading] = useState(!cachedHome && sharedHome === undefined)
   const [error, setError] = useState('')
   const [progressError, setProgressError] = useState('')
   const [attempt, setAttempt] = useState(0)
   const [chapters, setChapters] = useState<RevisionChapter[] | null>(() => cachedHome?.chapters ?? null)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Une tentative explicite relance la lecture ; la valeur du cache ne doit pas déclencher de nouvelle requête.
   useEffect(() => {
     let active = true
     async function load() {
@@ -85,7 +89,7 @@ export default function Home() {
       {(!home || loading || error) && <MobileHeader />}
       {(!home || loading || error) && <header className="sr-only lg:not-sr-only"><h1 className="text-2xl font-semibold text-foreground">Lohni</h1></header>}
       {loading ? <PendingRead title="Session du jour" label="On prépare ta journée…" /> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
-        <Mascotte humeur="désolée" taille={96} /><p>{error}</p><button className="underline" onClick={() => setAttempt(value => value + 1)}>Réessayer</button>
+        <Mascotte humeur="désolée" taille={96} /><p>{error}</p><button type="button" className="underline" onClick={() => setAttempt(value => value + 1)}>Réessayer</button>
       </div> : !home ? <Onboarding /> : <>
         <header className="flex items-center gap-3">
           <Mascotte humeur={humeurSerie(progress?.streak, progress?.streakStarted, home.state === 'done')} taille={72} />

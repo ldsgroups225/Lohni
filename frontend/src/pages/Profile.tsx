@@ -113,7 +113,8 @@ export default function Profile() {
       {profile ? <form onSubmit={save} className="space-y-5 rounded-2xl border border-border p-6" aria-busy={busy}>
         <h2 className="text-xl text-foreground">Mon parcours</h2>
         <label className="block space-y-2"><span>Ma classe</span><select className={input} disabled={busy} value={profile.schoolClass} onChange={event => {
-          const next = curriculum.find(item => item.schoolClass === event.target.value)!
+          const next = curriculum.find(item => item.schoolClass === event.target.value)
+          if (!next) return
           const series = Object.keys(next.series)[0]
           update({ schoolClass: next.schoolClass, series: series || undefined, subjects: (next.series as Record<string, string[] | undefined>)[series] ?? [] })
         }}>{curriculum.map(item => <option key={item.schoolClass} value={item.schoolClass}>{item.label}</option>)}</select></label>

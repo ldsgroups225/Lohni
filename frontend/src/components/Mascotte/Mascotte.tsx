@@ -114,7 +114,7 @@ export default function Mascotte({ humeur, taille, decorative = false }: { humeu
 
   const layer = { position: 'absolute' as const, inset: 0, width: '100%', height: '100%' }
   const fondu = (i: 0 | 1) => ({ ...layer, opacity: f.actif === i ? 1 : 0, transition: `opacity ${f.duree}ms ease` })
-  return <span ref={cadre} role={decorative ? undefined : 'img'} aria-label={decorative ? undefined : `Lohni, ${humeur}`} aria-hidden={decorative || undefined} style={{ display: 'inline-block', position: 'relative', width: taille, height: taille }}>
+  return <span ref={cadre} role="img" aria-label={decorative ? undefined : `Lohni, ${humeur}`} aria-hidden={decorative || undefined} style={{ display: 'inline-block', position: 'relative', width: taille, height: taille }}>
     <img ref={ombre} src="/mascotte/ombre.webp" alt="" style={layer} />
     <img ref={corps} src="/mascotte/corps.webp" alt="" style={layer} />
     <img ref={yeuxA} src={`/mascotte/yeux-${f.fichiers[0]}.webp`} alt="" style={fondu(0)} />

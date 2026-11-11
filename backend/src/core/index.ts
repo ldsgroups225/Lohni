@@ -1,6 +1,5 @@
 import '../config/env'
 import cors from 'cors';
-import path from 'path'
 import { mkdirSync } from 'node:fs'
 import { publicStorage } from '../config/storage'
 import server from '../utils/server/server'

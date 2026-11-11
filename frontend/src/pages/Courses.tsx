@@ -1,4 +1,5 @@
 import { usePersistentDetails } from '../lib/usePersistentDetails'
+import { withOccurrenceKeys } from '../lib/occurrenceKeys'
 import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { PendingRead } from '../components/ui/PendingRead'
@@ -7,7 +8,7 @@ import { listDelay } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { Progress } from '../components/ui/Progress'
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
@@ -29,23 +30,25 @@ function CardEditor({ card, busy, onSave, onCancel }: {
 }) {
   const [question, setQuestion] = useState(card.question)
   const [answer, setAnswer] = useState(card.answer)
-  const [options, setOptions] = useState(card.options ?? [])
+  const [options, setOptions] = useState(() => (card.options ?? []).map((value, index) => ({ id: String(index), value })))
   const [correct, setCorrect] = useState(card.correct ?? 1)
+  const questionInput = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => { questionInput.current?.focus() }, [])
   function submit(event: FormEvent) {
     event.preventDefault()
     const content = { question: question.trim(), answer: answer.trim() }
-    onSave(card.kind === 'mcq' ? { ...content, kind: 'mcq', options: options.map(option => option.trim()), correct } : { ...content, kind: 'basic' })
+    onSave(card.kind === 'mcq' ? { ...content, kind: 'mcq', options: options.map(option => option.value.trim()), correct } : { ...content, kind: 'basic' })
   }
   return <form onSubmit={submit}>
     <fieldset disabled={busy} className="space-y-4">
       <legend className="mb-4 font-semibold text-foreground">Modifier la carte</legend>
-      <label className="block space-y-2"><span>Question</span><textarea autoFocus className={input} required value={question} onChange={event => setQuestion(event.target.value)} /></label>
+      <label className="block space-y-2"><span>Question</span><textarea ref={questionInput} className={input} required value={question} onChange={event => setQuestion(event.target.value)} /></label>
       {card.kind === 'mcq' && <>
-        {options.map((option, index) => <label key={index} className="block space-y-2"><span>Choix {index + 1}</span>
-          <input className={input} required value={option} onChange={event => setOptions(options.map((value, i) => i === index ? event.target.value : value))} />
+        {options.map((option, index) => <label key={option.id} className="block space-y-2"><span>Choix {index + 1}</span>
+          <input className={input} required value={option.value} onChange={event => setOptions(options.map(item => item.id === option.id ? { ...item, value: event.target.value } : item))} />
         </label>)}
         <label className="block space-y-2"><span>Bonne réponse</span><select className={input} value={correct} onChange={event => setCorrect(Number(event.target.value))}>
-          {options.map((_, index) => <option key={index} value={index + 1}>Choix {index + 1}</option>)}
+          {options.map((option, index) => <option key={option.id} value={index + 1}>Choix {index + 1}</option>)}
         </select></label>
       </>}
       <label className="block space-y-2"><span>{card.kind === 'mcq' ? 'Explication' : 'Réponse'}</span><textarea className={input} required value={answer} onChange={event => setAnswer(event.target.value)} /></label>
@@ -68,7 +71,7 @@ export default function Courses() {
   const more = usePersistentDetails('lohni-courses-more')
   const [error, setError] = useState('')
 
-  async function load(isActive = () => true) {
+  const load = useCallback(async function load(isActive: () => boolean = () => true) {
     const requestDevice = cachedDevice()
     const version = currentRevisionCacheVersion()
     let nextChapters: RevisionChapter[], nextProgress: RevisionProgress
@@ -89,7 +92,7 @@ export default function Courses() {
     setChapters(nextChapters)
     setProgress(nextProgress)
     setStale(false)
-  }
+  }, [])
   async function run(operation: () => Promise<void>) {
     setBusy(true)
     setError('')
@@ -103,7 +106,7 @@ export default function Courses() {
       if (active) setError(error instanceof Error ? error.message : 'Impossible de charger tes cours.')
     }).finally(() => { if (active) setBusy(false) })
     return () => { active = false }
-  }, [])
+  }, [load])
 
   return <main className="loop-screen min-h-dvh px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-2xl space-y-6">
@@ -121,7 +124,7 @@ export default function Courses() {
         </div>
       </header>
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
-        <button className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Réessayer</button>
+        <button type="button" className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Réessayer</button>
       </div>}
       {busy && chapters.length === 0 && <PendingRead title="Mes cours" label="On prépare tes cours…" />}
       {!busy && !error && chapters.length === 0 && <section className="space-y-3 rounded-2xl border border-border p-6">
@@ -152,7 +155,7 @@ export default function Courses() {
                   await load()
                 })} /> : <>
                   <MarkdownView md={card.question} />
-                  {card.kind === 'mcq' && <ol className="list-decimal space-y-1 pl-5">{card.options?.map((option, i) => <li key={i}><MarkdownView md={option} inline />{i + 1 === card.correct && <span className="text-foreground"> — Bonne réponse</span>}</li>)}</ol>}
+                  {card.kind === 'mcq' && <ol className="list-decimal space-y-1 pl-5">{withOccurrenceKeys(card.options ?? [], option => option).map(({ value: option, key }, i) => <li key={key}><MarkdownView md={option} inline />{i + 1 === card.correct && <span className="text-foreground"> — Bonne réponse</span>}</li>)}</ol>}
                   <MarkdownView md={card.answer} />
                   <div className="flex flex-wrap gap-3">
                     <Button disabled={busy || stale} onClick={() => setEditing(card.id)}>Modifier</Button>
@@ -163,7 +166,7 @@ export default function Courses() {
                 </>}
               </article>)}</div>
             </DeferredDetails>
-            <button className="min-h-11 py-2 text-sm text-foreground underline disabled:opacity-50" disabled={busy || stale} onClick={() => {
+            <button type="button" className="min-h-11 py-2 text-sm text-foreground underline disabled:opacity-50" disabled={busy || stale} onClick={() => {
               void confirmDialog(`Supprimer le chapitre « ${chapter.title} » et toutes ses cartes ? Cette action est définitive.`).then(ok => { if (ok) void run(async () => {
                 await revisionAPI.deleteChapter(chapter.id)
                 setEditing(null)

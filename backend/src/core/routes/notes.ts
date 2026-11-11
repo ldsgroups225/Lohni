@@ -14,11 +14,8 @@ export function smartnotesRoutes(app: any) {
     const id = u.searchParams.get("noteId");
     if (!id) return ws.close(1008, "noteId required");
 
-    let s = ns.get(id);
-    if (!s) {
-      s = new Set();
-      ns.set(id, s);
-    }
+    const s = ns.get(id) ?? new Set();
+    ns.set(id, s);
     s.add(ws);
 
     nlog("ws open", id, "clients:", s.size);
@@ -26,9 +23,9 @@ export function smartnotesRoutes(app: any) {
 
     ws.on("error", (e: any) => nlog("ws err", id, e?.message || e));
     ws.on("close", () => {
-      s!.delete(ws);
-      if (s!.size === 0) ns.delete(id);
-      nlog("ws close", id, "left:", s!.size);
+      s.delete(ws);
+      if (s.size === 0) ns.delete(id);
+      nlog("ws close", id, "left:", s.size);
     });
 
     const iv = setInterval(() => {

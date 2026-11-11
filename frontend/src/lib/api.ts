@@ -11,7 +11,7 @@ export type ChatDetail = { ok: true; chat: ChatInfo; messages: ChatMessage[] };
 export type ChatJSONBody = { q: string; chatId?: string };
 export type ChatPhase = "upload_start" | "upload_done" | "generating";
 export type FlashCard = { q: string; a: string; tags?: string[] };
-export type Question = { id: number; question: string; options: string[]; correct: number; hint: string; explanation: string; imageHtml?: string; };
+export type Question = { id: number; question: string; options: string[]; correct: number; hint: string; explanation: string; };
 export type QuizStartResponse = { ok: true; quizId: string; stream: string }
 export type QuizEvent = { type: "ready" | "phase" | "quiz" | "done" | "error" | "ping"; quizId?: string; value?: string; quiz?: unknown; error?: string; t?: number }
 export type SmartNotesStart = { ok: true; noteId: string; stream: string }
@@ -214,7 +214,7 @@ export async function companionAsk(input: {
   if (input.documentText) payload.documentText = input.documentText;
   if (input.documentTitle) payload.documentTitle = input.documentTitle;
   if (input.topic) payload.topic = input.topic;
-  if (input.history && input.history.length) {
+  if (input.history?.length) {
     payload.history = input.history.map((h) => ({ role: h.role, content: h.content }));
   }
 
@@ -358,7 +358,7 @@ export function connectPodcastStream(pid: string, onEvent: (ev: any) => void) {
     try {
       const msg = JSON.parse(e.data)
       onEvent(msg)
-    } catch (err) {
+    } catch {
       onEvent({ type: "error", error: "invalid_message" })
     }
   }
@@ -786,7 +786,11 @@ function cachedRevisionRead<T>(path: string): Promise<T> {
       if (!navigator.onLine) throw new RevisionConnectionError('Hors ligne. Connecte-toi pour charger ces données.')
       const result = await revisionRequest<T>(path, 'GET', undefined, undefined, 8000)
       await updateOffline(state => {
-        if (cachedDevice() === device && currentRevisionCacheVersion() === version && revisionLocalDate() === day) { state.cache[path] = result; (state.cacheDates ??= {})[path] = day }
+        if (cachedDevice() === device && currentRevisionCacheVersion() === version && revisionLocalDate() === day) {
+          state.cache[path] = result
+          state.cacheDates ??= {}
+          state.cacheDates[path] = day
+        }
       })
       return result
     } catch (error) {
@@ -811,7 +815,9 @@ async function revisionSession(continueSession = false): Promise<RevisionSession
       if (cachedDevice() === device && !state.pending.length && (!state.session || state.session.id !== next.id || state.session.position <= next.position)) state.session = next;
     });
     if (cachedDevice() !== device) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
-    return readOffline().session!;
+    const session = readOffline().session;
+    if (!session) throw new Error('Session introuvable. Recharge la page puis réessaie.');
+    return session;
   } catch (error) {
     if (!continueSession && error instanceof RevisionConnectionError && saved.session) return saved.session;
     throw error;
@@ -835,7 +841,8 @@ async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<
   });
   invalidateRevisionCache('/home', '/progress');
   void syncRevisionAnswers();
-  return next!;
+  if (!next) throw new Error('Session introuvable. Recharge la page puis réessaie.');
+  return next;
 }
 async function revisionMutation<T>(path: string, method: string, body?: unknown): Promise<T> {
   await syncRevisionAnswers();

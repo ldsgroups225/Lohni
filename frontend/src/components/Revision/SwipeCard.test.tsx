@@ -1,3 +1,4 @@
+import { required } from '../../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -34,7 +35,7 @@ function fire(type: string, clientX: number, timeStamp: number, pointerId = 1) {
 const drag = (from: number, steps: [number, number][], end: number, pointerId = 1) => {
   fire('pointerdown', from, 0, pointerId)
   for (const [dx, t] of steps) fire('pointermove', from + dx, t, pointerId)
-  fire('pointerup', from + steps.at(-1)![0], end, pointerId)
+  fire('pointerup', from + required(steps.at(-1))[0], end, pointerId)
 }
 
 test('retourner la carte ne recalcule pas ses deux faces', async () => {
@@ -55,20 +56,20 @@ test('un glissement avant la révélation ne répond pas et la carte revient en 
   await render({ revealed: false })
   drag(200, [[30, 20], [90, 40], [140, 60]], 70)
   expect(onSwipe).not.toHaveBeenCalled()
-  expect(springs.at(-1)!.opts.to).toBe(0)
+  expect(required(springs.at(-1)).opts.to).toBe(0)
 })
 
 test('un glissement lent et court revient en ressort sans répondre', async () => {
   await render()
   drag(200, [[20, 100], [40, 220], [50, 340]], 600) // doigt immobile avant le lâcher : vitesse nulle
   expect(onSwipe).not.toHaveBeenCalled()
-  const s = springs.at(-1)!; expect(s.opts.to).toBe(0); expect(s.opts.velocity).toBe(0)
+  const s = required(springs.at(-1)); expect(s.opts.to).toBe(0); expect(s.opts.velocity).toBe(0)
 })
 
 test('au-delà de 80 px la carte sort à droite avec la vitesse du doigt puis répond « je savais » une fois', async () => {
   await render()
   drag(200, [[40, 30], [90, 60], [120, 90]], 100)
-  const s = springs.at(-1)!
+  const s = required(springs.at(-1))
   expect(s.opts.to).toBe(480) // 1,2 × largeur d'écran
   expect(s.opts.velocity).toBeGreaterThan(500) // vitesse réelle, pas nulle
   act(() => s.opts.onUpdate(399)); expect(onSwipe).not.toHaveBeenCalled()
@@ -79,7 +80,7 @@ test('au-delà de 80 px la carte sort à droite avec la vitesse du doigt puis r�
 test('un flick rapide de moins de 80 px est compté, à gauche aussi', async () => {
   await render()
   drag(200, [[-30, 15], [-60, 30], [-70, 40]], 45)
-  const s = springs.at(-1)!
+  const s = required(springs.at(-1))
   expect(s.opts.to).toBe(-480)
   act(() => s.opts.onDone?.())
   expect(onSwipe).toHaveBeenCalledWith(false)
@@ -88,7 +89,7 @@ test('un flick rapide de moins de 80 px est compté, à gauche aussi', async () 
 test('un second doigt est ignoré et un pointercancel pendant la sortie ne coupe pas la réponse', async () => {
   await render()
   drag(200, [[40, 30], [90, 60], [120, 90]], 100)
-  const exit = springs.at(-1)!
+  const exit = required(springs.at(-1))
   const before = springs.length
   drag(100, [[200, 20]], 40, 2) // second doigt pendant la sortie
   fire('pointercancel', 0, 120)
@@ -111,7 +112,7 @@ test('les flèches du clavier répondent seulement une fois la réponse vue', as
 
 test('la carte est un groupe étiqueté dont la face cachée est masquée aux lecteurs d’écran', async () => {
   await render({ revealed: false })
-  expect(card().getAttribute('role')).toBe('group'); expect(card().getAttribute('aria-label')).toBe('Question')
+  expect(card().tagName).toBe('FIELDSET'); expect(card().getAttribute('aria-label')).toBe('Question')
   const faces = [...host.querySelectorAll('[aria-hidden]')].map(face => face.getAttribute('aria-hidden'))
   expect(faces).toEqual(['false', 'true'])
 })
@@ -120,7 +121,7 @@ test('relâcher un glissement après une flèche du clavier ne coupe pas la sort
   await render()
   fire('pointerdown', 200, 0); fire('pointermove', 240, 20)
   act(() => { card().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })) })
-  const exit = springs.at(-1)!, count = springs.length
+  const exit = required(springs.at(-1)), count = springs.length
   fire('pointerup', 240, 60)
   expect(exit.cancelled).toBe(false); expect(springs.length).toBe(count)
   act(() => exit.opts.onDone?.())
@@ -133,7 +134,7 @@ test('sans geste : deux boutons masqués à l’écran mais présents une fois l
   await render({ revealed: true })
   const [no, yes] = [...host.querySelectorAll('button')] as HTMLButtonElement[]
   expect(no.textContent).toBe('Je ne savais pas'); expect(yes.textContent).toBe('Je savais')
-  expect(no.parentElement!.className).toContain('sr-only') // pas d'espace pris à l'écran
+  expect(required(no.parentElement).className).toContain('sr-only') // pas d'espace pris à l'écran
   act(() => yes.click()); act(() => no.click())
   expect(springs.length).toBe(1)
   act(() => springs[0].opts.onDone?.())

@@ -4,7 +4,7 @@ import { BackButton } from '../components/ui/BackButton'
 import { LoadingState } from '../components/ui/LoadingState'
 import { PendingRead } from '../components/ui/PendingRead'
 import Mascotte from '../components/Mascotte/Mascotte'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { revisionAPI, revisionPolicy, type RevisionProfile, type RevisionImportedChapter, type RevisionImportQuota } from '../lib/api'
@@ -35,7 +35,7 @@ export default function ImportCourse() {
     catch (error) { setError(error instanceof Error ? error.message : 'Impossible d’importer le cours. Réessaie.') }
     finally { setBusy(false) }
   }
-  async function load(isActive = () => true) {
+  const load = useCallback(async function load(isActive: () => boolean = () => true) {
     const device = cachedDevice()
     const version = currentRevisionCacheVersion()
     let saved: RevisionProfile | null, currentQuota: RevisionImportQuota
@@ -56,13 +56,13 @@ export default function ImportCourse() {
     setProfile(saved)
     setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
     setQuota(currentQuota)
-  }
+  }, [])
   useEffect(() => {
     let active = true
     load(() => active).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Impossible de charger ton import.') })
       .finally(() => { if (active) { setBusy(false); setChecking(false) } })
     return () => { active = false }
-  }, [])
+  }, [load])
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -82,7 +82,7 @@ export default function ImportCourse() {
         <Link to="/revision" className="underline">Révision</Link>
       </header>
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
-        <button className="ml-3 underline" disabled={busy} onClick={() => void run(() => load())}>Actualiser</button>
+        <button type="button" className="ml-3 underline" disabled={busy} onClick={() => void run(() => load())}>Actualiser</button>
       </div>}
       {busy && !profile && !error && <PendingRead title="Cours à réviser" label="On prépare ton import…" />}
       {busy && profile && <LoadingState label="Préparation du chapitre… Cela peut prendre un moment." />}
@@ -97,8 +97,8 @@ export default function ImportCourse() {
         <p className="text-xs text-muted">Préparé par IA à partir de ton cours · Peut contenir des erreurs</p>
         <MarkdownView md={imported.summary} />
         <Button disabled={busy} onClick={() => void run(async () => { await revisionAPI.continue(); navigate('/revision') })}>Commencer à réviser</Button>
-        <button className="block underline" disabled={busy} onClick={() => setImported(undefined)}>Importer un autre cours</button>
-        <button className="block text-sm text-muted underline" disabled={busy} onClick={() => void run(async () => { await revisionAPI.deleteChapter(imported.id); setImported(undefined) })}>Supprimer ce chapitre</button>
+        <button type="button" className="block underline" disabled={busy} onClick={() => setImported(undefined)}>Importer un autre cours</button>
+        <button type="button" className="block text-sm text-muted underline" disabled={busy} onClick={() => void run(async () => { await revisionAPI.deleteChapter(imported.id); setImported(undefined) })}>Supprimer ce chapitre</button>
       </section> : profile && <form onSubmit={submit} aria-busy={busy}>
         <fieldset disabled={busy || quota?.remaining === 0} className="space-y-4 rounded-2xl border border-border p-6 disabled:opacity-60">
           <legend className="px-2 text-base text-foreground">Cours à réviser</legend>

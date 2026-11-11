@@ -1,10 +1,10 @@
 import { expect, test, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-const effects = vi.hoisted(() => [] as Array<() => void | (() => void)>)
+const effects = vi.hoisted(() => [] as Array<() => undefined | (() => void)>)
 vi.mock('react', async importOriginal => ({
   ...await importOriginal<typeof import('react')>(),
-  useEffect: (effect: () => void | (() => void)) => { effects.push(effect) },
+  useEffect: (effect: () => undefined | (() => void)) => { effects.push(effect) },
   useRef: (initial?: unknown) => ({ current: initial ?? { style: {}, getBoundingClientRect: () => ({ top: 0, bottom: 10 }) } }),
 }))
 import Mascotte from './Mascotte'
@@ -19,7 +19,7 @@ test('la mascotte reste fixe quand la réduction des animations est demandée', 
   renderToStaticMarkup(<Mascotte humeur="au repos" taille={120} />)
   const cleanups = effects.splice(0).map(effect => effect())
   expect(raf).not.toHaveBeenCalled()
-  cleanups.forEach(cleanup => cleanup?.())
+  cleanups.forEach(cleanup => { cleanup?.(); })
   vi.unstubAllGlobals()
 })
 
@@ -51,7 +51,7 @@ test('la boucle anime quand elle est visible, puis s’arrête au démontage', (
   const cleanups = effects.splice(0).map(effect => effect())
   expect(frames).toHaveLength(1)
   for (let time = 0; time < 12000; time += 16) frames[frames.length - 1](time)
-  cleanups.forEach(cleanup => cleanup?.())
+  cleanups.forEach(cleanup => { cleanup?.(); })
   expect(cancel).toHaveBeenCalled()
   vi.unstubAllGlobals()
 })

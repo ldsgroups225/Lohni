@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -27,13 +28,13 @@ test('un examen affiche la correction avant le résultat et permet de revoir sa 
   const click = async (text: string) => {
     const button = [...host.querySelectorAll('button')].find(b => b.textContent?.includes(text))
     expect(button).toBeTruthy()
-    await act(async () => { button!.click() })
+    await act(async () => { required(button).click() })
   }
   try {
     await act(async () => { root.render(<MemoryRouter><ExamLabs /></MemoryRouter>) })
     await click('Examen test')
     expect(host.textContent).toContain('Examen test')
-    await click('Non')
+    await act(async () => required(host.querySelectorAll<HTMLInputElement>('input[type="radio"]')[1]).click())
     expect(host.textContent).toContain('Réponse incorrecte')
     expect(host.textContent).toContain('Bonne réponse')
     expect(host.textContent).not.toContain('Quiz terminé')
@@ -54,9 +55,9 @@ test('un échec de préparation est expliqué et permet de revenir à la liste',
   const root = createRoot(host)
   try {
     await act(async () => { root.render(<MemoryRouter><ExamLabs /></MemoryRouter>) })
-    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Examen test'))!.click() })
+    await act(async () => { required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Examen test'))).click() })
     expect(host.textContent).toContain('Impossible de préparer l’examen. Réessaie.')
-    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Retour aux examens'))!.click() })
+    await act(async () => { required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Retour aux examens'))).click() })
     expect(host.textContent).toContain('Commencer cet examen')
   } finally {
     stream.event = null
@@ -72,7 +73,7 @@ test('une panne de connexion invite à réessayer sans afficher une erreur techn
   const root = createRoot(host)
   try {
     await act(async () => { root.render(<MemoryRouter><ExamLabs /></MemoryRouter>) })
-    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Examen test'))!.click() })
+    await act(async () => { required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Examen test'))).click() })
     expect(host.textContent).toContain('Impossible de préparer l’examen. Réessaie.')
     expect(host.textContent).not.toContain('stream_error')
   } finally {

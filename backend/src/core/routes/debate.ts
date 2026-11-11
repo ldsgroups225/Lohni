@@ -6,7 +6,6 @@ import {
     listDebateSessions,
     deleteDebateSession,
     surrenderDebate,
-    DebateSession,
 } from "../../services/debate";
 
 const debateSockets = new Map<string, Set<any>>();
@@ -20,16 +19,13 @@ export function debateRoutes(app: any) {
             return ws.close(1008, "debateId required");
         }
 
-        let set = debateSockets.get(debateId);
-        if (!set) {
-            set = new Set();
-            debateSockets.set(debateId, set);
-        }
+        const set = debateSockets.get(debateId) ?? new Set();
+        debateSockets.set(debateId, set);
         set.add(ws);
 
         ws.on("close", () => {
-            set!.delete(ws);
-            if (set!.size === 0) debateSockets.delete(debateId);
+            set.delete(ws);
+            if (set.size === 0) debateSockets.delete(debateId);
         });
 
         ws.send(JSON.stringify({ type: "ready", debateId }));
@@ -42,16 +38,13 @@ export function debateRoutes(app: any) {
             return ws.close(1008, "debateId required");
         }
 
-        let set = analysisSockets.get(debateId);
-        if (!set) {
-            set = new Set();
-            analysisSockets.set(debateId, set);
-        }
+        const set = analysisSockets.get(debateId) ?? new Set();
+        analysisSockets.set(debateId, set);
         set.add(ws);
 
         ws.on("close", () => {
-            set!.delete(ws);
-            if (set!.size === 0) analysisSockets.delete(debateId);
+            set.delete(ws);
+            if (set.size === 0) analysisSockets.delete(debateId);
         });
 
         ws.send(JSON.stringify({ type: "ready", debateId }));
@@ -61,7 +54,7 @@ export function debateRoutes(app: any) {
         try {
             const { topic, position } = req.body;
 
-            if (!topic || !topic.trim()) {
+            if (typeof topic !== 'string' || !topic.trim()) {
                 return res.status(400).json({
                     ok: false,
                     error: "Topic is required",
@@ -102,7 +95,7 @@ export function debateRoutes(app: any) {
             const { debateId } = req.params;
             const { argument } = req.body;
 
-            if (!argument || !argument.trim()) {
+            if (typeof argument !== 'string' || !argument.trim()) {
                 return res.status(400).json({
                     ok: false,
                     error: "Argument is required",
@@ -202,7 +195,7 @@ export function debateRoutes(app: any) {
         }
     });
 
-    app.get("/debates", async (req: any, res: any) => {
+    app.get("/debates", async (_req: any, res: any) => {
         try {
             const sessions = await listDebateSessions();
             res.json({

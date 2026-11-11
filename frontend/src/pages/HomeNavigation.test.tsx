@@ -1,3 +1,4 @@
+import { required } from '../test/required'
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -62,9 +63,9 @@ test('après modification du profil une erreur réseau ne réaffiche pas l’anc
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
     await act(async () => { await router.navigate('/me') })
-    const select = host.querySelector('select')!
+    const select = required(host.querySelector('select'))
     await act(async () => { select.value = '5e'; select.dispatchEvent(new Event('change', { bubbles: true })) })
-    await act(async () => host.querySelector('form')!.requestSubmit())
+    await act(async () => required(host.querySelector('form')).requestSubmit())
     await act(async () => { await router.navigate(-1) })
     expect(host.textContent).not.toContain('3ᵉ')
     expect(host.textContent).toContain('5ᵉ')

@@ -21,23 +21,19 @@ export function chatRoutes(app: any) {
       return ws.close(1008, "chatId required");
     }
 
-    let set = chatSockets.get(chatId);
-    if (!set) {
-      set = new Set();
-      chatSockets.set(chatId, set);
-    }
+    const set = chatSockets.get(chatId) ?? new Set();
+    chatSockets.set(chatId, set);
     set.add(ws);
 
-    ws.on("close", (code: number, reason: string) => {
-      set!.delete(ws);
-      if (set!.size === 0) chatSockets.delete(chatId);
+    ws.on("close", (_code: number, _reason: string) => {
+      set.delete(ws);
+      if (set.size === 0) chatSockets.delete(chatId);
     });
 
     ws.send(JSON.stringify({ type: "ready", chatId }));
   });
 
   app.post("/chat", async (req: any, res: any, next: any) => {
-    const t0 = Date.now();
     try {
       const ct = String(req.headers["content-type"] || "");
       const isMp = ct.includes("multipart/form-data");
@@ -47,7 +43,6 @@ export function chatRoutes(app: any) {
       let files: UpFile[] = [];
 
       if (isMp) {
-        const tMp = Date.now();
         const { q: mq, chatId: mcid, files: mf } = await parseMultipart(req);
         q = mq;
         chatId = mcid;
@@ -75,7 +70,6 @@ export function chatRoutes(app: any) {
               type: "phase",
               value: "upload_start",
             });
-            const tUp = Date.now();
             for (const f of files) {
               emitToAll(chatSockets.get(id), {
                 type: "file",
@@ -95,7 +89,6 @@ export function chatRoutes(app: any) {
             });
           }
 
-          const tUser = Date.now();
           await addMsg(id, { role: "user", content: q, at: Date.now() });
           emitToAll(chatSockets.get(id), {
             type: "phase",
@@ -136,13 +129,11 @@ export function chatRoutes(app: any) {
   });
 
   app.get("/chats", async (_: any, res: any) => {
-    const t = Date.now();
     const chats = await listChats();
     res.send({ ok: true, chats });
   });
 
   app.get("/chats/:id", async (req: any, res: any) => {
-    const t = Date.now();
     const id = req.params.id;
     const chat = await getChat(id);
     if (!chat) {
