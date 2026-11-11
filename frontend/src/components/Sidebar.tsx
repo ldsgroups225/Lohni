@@ -1,4 +1,5 @@
 import { revisionCardVisibility } from './ui/revisionPresentation'
+import { prefersReducedMotion } from '../lib/motion'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { CoursesIcon, HomeIcon, ProfileIcon, TutorIcon } from './ui/NavigationIcons'
@@ -42,9 +43,9 @@ export default function Sidebar() {
     <div ref={nav} className="relative flex justify-around md:h-full md:flex-col md:justify-center md:gap-5">
       <span ref={indicator} aria-hidden="true" className="navigation-indicator" />
       {tabs.map(tab => <Link key={tab.to} to={tab.to} replace={pathname !== '/'} onClick={event => {
-        if (active === tab.to) {
+        if (pathname === tab.to) {
           event.preventDefault()
-          window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+          window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
         }
       }} aria-current={active === tab.to ? 'page' : undefined}
         className={`relative flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-control p-2 text-xs focus-visible:outline-2 focus-visible:outline-secondary ${active === tab.to ? 'text-foreground' : 'text-muted hover:bg-tint hover:text-foreground'}`}>

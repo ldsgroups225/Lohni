@@ -43,3 +43,13 @@ test('toucher l’onglet actif remonte en respectant le mouvement réduit', asyn
   expect(scroll).toHaveBeenCalledWith({ top: 0, behavior: 'instant' })
   expect(router.state.location.pathname).toBe('/courses')
 })
+test('depuis l’import, toucher Cours ouvre la racine de l’onglet', async () => {
+  window.matchMedia = vi.fn().mockReturnValue({ matches: false })
+  const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  const { router, click } = await setup(['/', '/import'])
+  await click('a[href="/courses"]')
+  expect(router.state.location.pathname).toBe('/courses')
+  expect(scroll).not.toHaveBeenCalled()
+  await act(async () => { await router.navigate(-1) })
+  expect(router.state.location.pathname).toBe('/')
+})
