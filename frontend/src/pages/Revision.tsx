@@ -1,13 +1,13 @@
-import { Button, ButtonLink } from '../components/ui/Button'
+import { Button } from '../components/ui/Button'
 import { LoadingState } from '../components/ui/LoadingState'
 import { revisionCardVisibility } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
-import { CheckIcon, CloseIcon, FlameIcon } from '../components/ui/NavigationIcons'
-import { AnimatedNumber } from '../components/ui/AnimatedNumber'
+import { CheckIcon, CloseIcon } from '../components/ui/NavigationIcons'
 import { Progress } from '../components/ui/Progress'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { confirmDialog } from '../lib/confirm'
 import { SwipeCard } from '../components/Revision/SwipeCard'
+import { SessionRecap } from '../components/Revision/SessionRecap'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { chatJSON, revisionAPI, revisionPolicy, revisionSyncStatus, syncRevisionAnswers, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress } from '../lib/api'
@@ -28,6 +28,8 @@ export default function Revision() {
   const [feedback, setFeedback] = useState<{ id: number; knew: boolean } | null>(null)
   const [moreCards, setMoreCards] = useState(false)
   const [menu, setMenu] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [slow, setSlow] = useState(false)
   // QCM: la réponse est enregistrée au choix ; la carte suivante n’apparaît qu’au clic sur « Continuer ».
   const [verdict, setVerdict] = useState<{ choice: number; next: RevisionSession } | null>(null)
   const startedAt = useRef(Date.now())
@@ -105,11 +107,14 @@ export default function Revision() {
 
   function generate(event: FormEvent) {
     event.preventDefault()
+    setGenerating(true)
+    setSlow(false)
+    const timer = window.setTimeout(() => setSlow(true), 20000) // vrai temps écoulé, pas une progression simulée
     void run(async () => {
       setSubject(subject.trim())
       await revisionAPI.generateChapter({ subject: subject.trim(), title: title.trim() })
       display(await revisionAPI.continue())
-    })
+    }).finally(() => { window.clearTimeout(timer); setGenerating(false); setSlow(false) })
   }
   function answer(knew: boolean, selected?: number) {
     if (!session || !card || verdict) return
@@ -139,7 +144,7 @@ export default function Revision() {
       display(await revisionAPI.session())
     })
   }
-  function explain() {
+  function explain(missed: RevisionCard | null | undefined) {
     if (!missed || !profile) return
     void run(async () => {
       const chapter = (await revisionAPI.chapters()).find(value => value.id === missed.chapterId)
@@ -178,11 +183,11 @@ export default function Revision() {
             setProgress(await revisionAPI.progress())
           })}>Réessayer</button>
         </div>}
-        {busy && !session && <LoadingState label="On prépare ta session…" />}
+        {generating ? <div className="space-y-2"><LoadingState label="Lohni prépare tes cartes…" />{slow && <p role="status" className="text-center text-sm text-muted">Ça prend plus de temps que d’habitude. Ta demande est toujours en cours, tu peux rester sur cette page.</p>}</div> : busy && !session && <LoadingState label="On prépare ta session…" />}
         {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}
         {missed && !session?.complete && <aside className="space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
           <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
-          <Button disabled={busy || !sync.online} onClick={explain}>Explique-moi</Button>
+          <Button disabled={busy || !sync.online} onClick={() => explain(missed)}>Explique-moi</Button>
         </aside>}
         {session && !session.complete && card ? (
           <section className="flex flex-1 flex-col space-y-4" aria-label="Session de révision" aria-busy={busy}>
@@ -219,18 +224,7 @@ export default function Revision() {
             </div>}
           </section>
         ) : !busy && <>
-          {session && (session.position > 0 ? <section className="flex flex-col items-center gap-4 text-center" aria-live="polite">
-            {!error && <span className="motion-celebrate"><Mascotte humeur="en fête" taille={160} /></span>}
-            <h2 className="text-2xl font-bold">Session terminée !</h2>
-            <p>{session.position} réponses enregistrées{sync.pending ? ' sur cet appareil' : ''}. À demain pour la suite.</p>
-            <div className="motion-enter flex gap-3">
-              <div className="rounded-2xl border border-border bg-surface p-4"><strong className="block text-3xl"><AnimatedNumber value={session.earnedXP} prefix="+" /></strong><span>XP gagnés</span></div>
-              {!sync.pending && progress && <div className="rounded-2xl bg-tint p-4"><span className="flex items-center justify-center gap-2"><FlameIcon /><strong className="text-3xl"><AnimatedNumber value={progress.streak} /></strong></span><span>jour{progress.streak > 1 ? 's' : ''} de série</span></div>}
-            </div>
-            {!sync.pending && progress && <p><AnimatedNumber value={progress.xp} /> XP au total</p>}
-            <ButtonLink className="w-full" to="/">Revenir à l’accueil</ButtonLink>
-            {moreCards && <button className="text-primary underline disabled:opacity-50" disabled={busy || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer avec les cartes restantes</button>}
-          </section> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
+          {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} pending={sync.pending} moreCards={moreCards} busy={busy} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onContinue={() => void run(async () => display(await revisionAPI.continue()))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
             {!error && <Mascotte humeur="au repos" taille={112} />}
             <h2 className="text-xl">Aucune carte à réviser pour le moment</h2>
             <p>Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.</p>

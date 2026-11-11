@@ -6,6 +6,25 @@ import PromptBox from "../components/Landing/PromptBox";
 import ExploreTopics from "../components/Landing/ExploreTopics";
 import { chatMultipart, chatJSON, getChats, type ChatInfo } from "../lib/api";
 
+// Keyboard support shared by both dropdowns: arrows/Home/End move between items, Escape closes and refocuses the trigger, Tab closes.
+function menuKeys(e: React.KeyboardEvent<HTMLElement>, open: boolean, setOpen: (v: boolean) => void) {
+  const trigger = e.currentTarget.querySelector<HTMLElement>("[aria-haspopup]");
+  const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>("[role=menuitem]"));
+  const i = items.indexOf(document.activeElement as HTMLElement);
+  const go = (n: number) => { e.preventDefault(); items[(n + items.length) % items.length]?.focus(); };
+  if (e.key === "Escape" && open) { e.preventDefault(); setOpen(false); trigger?.focus(); }
+  else if (e.key === "Tab") setOpen(false);
+  else if (!open && e.key === "ArrowDown" && document.activeElement === trigger) {
+    e.preventDefault(); setOpen(true);
+    const root = e.currentTarget;
+    setTimeout(() => root.querySelector<HTMLElement>("[role=menuitem]")?.focus(), 0);
+  }
+  else if (open && e.key === "ArrowDown") go(i + 1);
+  else if (open && e.key === "ArrowUp") go(i < 0 ? -1 : i - 1);
+  else if (open && e.key === "Home") go(0);
+  else if (open && e.key === "End") go(-1);
+}
+
 export default function Landing() {
   const [chats, setChats] = useState<ChatInfo[]>([]);
   useEffect(() => {
@@ -111,8 +130,9 @@ export default function Landing() {
         <div className="mt-3 w-full md:mt-0 md:w-fit flex">
           <div className="w-full md:w-fit md:min-w-fit p-1.5 rounded-2xl md:rounded-t-none bg-surface flex flex-col items-start sm:items-center border border-border md:border-t-0 md:border-r-0 shadow-[inset_2px_-2px_15px] shadow-border">
             <div className="flex items-start justify-between md:justify-start space-x-1 md:space-x-2 p-1.5 w-full">
-              <div data-dropdown className="relative flex-1 md:flex-none">
-                <div
+              <div data-dropdown onKeyDown={(e) => menuKeys(e, showMode, setShowMode)} className="relative flex-1 md:flex-none">
+                <button
+                  type="button" aria-haspopup="menu" aria-expanded={showMode} aria-controls="menu-mode"
                   onClick={() => setShowMode(!showMode)}
                   className="flex items-center space-x-1 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer"
                 >
@@ -123,22 +143,23 @@ export default function Landing() {
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-muted">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
                   </svg>
-                </div>
+                </button>
 
                 {showMode && (
-                  <div className="absolute top-full left-0 mt-1 p-1 w-36 bg-surface border border-border rounded-xl shadow-lg z-20">
+                  <div id="menu-mode" role="menu" className="absolute top-full left-0 mt-1 p-1 w-36 bg-surface border border-border rounded-xl shadow-lg z-20">
                     {["Discussion", "Quiz"].map((opt) => (
-                      <div
-                        key={opt}
-                        onClick={() => {
+                      <button
+                        key={opt} type="button" role="menuitem"
+                        onClick={(e) => {
                           setMode(opt as "Discussion" | "Quiz");
                           setShowMode(false);
+                          e.currentTarget.closest<HTMLElement>("[data-dropdown]")?.querySelector<HTMLElement>("[aria-haspopup]")?.focus();
                         }}
-                        className={`px-3 py-3 md:py-2 cursor-pointer hover:bg-tint transition rounded-lg ${mode === opt ? "text-primary" : "text-foreground"
+                        className={`block w-full text-left px-3 py-3 md:py-2 cursor-pointer hover:bg-tint transition rounded-lg ${mode === opt ? "text-primary" : "text-foreground"
                           }`}
                       >
                         {opt}
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -162,10 +183,11 @@ export default function Landing() {
 
               <div className="w-px h-8 mx-2 bg-tint rounded-full mt-2" />
 
-              <div data-dropdown className="relative flex-1 md:flex-none">
-                <div
+              <div data-dropdown onKeyDown={(e) => menuKeys(e, showLength, setShowLength)} className="relative flex-1 md:flex-none">
+                <button
+                  type="button" aria-haspopup="menu" aria-expanded={showLength} aria-controls="menu-length"
                   onClick={() => setShowLength(!showLength)}
-                  className="flex items-center space-x-1 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer">
+                  className="flex items-center space-x-1 p-1.5 rounded-xl hover:bg-tint duration-300 transition-[transform,opacity] cursor-pointer text-left">
                   <div className="flex flex-col -space-y-0.5 pr-2">
                     <span className="text-xs text-foreground">Longueur</span>
                     <span className="text-sm font-semibold text-foreground">{responseLength}</span>
@@ -173,22 +195,23 @@ export default function Landing() {
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 text-muted">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
                   </svg>
-                </div>
+                </button>
 
                 {showLength && (
-                  <div className="absolute top-full right-0 md:right-auto md:left-0 mt-1 p-1 w-40 bg-surface border border-border rounded-xl shadow-lg z-20">
+                  <div id="menu-length" role="menu" className="absolute top-full right-0 md:right-auto md:left-0 mt-1 p-1 w-40 bg-surface border border-border rounded-xl shadow-lg z-20">
                     {["Courte", "Moyenne", "Longue"].map((opt) => (
-                      <div
-                        key={opt}
-                        onClick={() => {
+                      <button
+                        key={opt} type="button" role="menuitem"
+                        onClick={(e) => {
                           setResponseLength(opt as "Courte" | "Moyenne" | "Longue");
                           setShowLength(false);
+                          e.currentTarget.closest<HTMLElement>("[data-dropdown]")?.querySelector<HTMLElement>("[aria-haspopup]")?.focus();
                         }}
-                        className={`px-3 py-3 md:py-2 cursor-pointer hover:bg-tint transition rounded-lg ${responseLength === opt ? "text-primary" : "text-foreground"
+                        className={`block w-full text-left px-3 py-3 md:py-2 cursor-pointer hover:bg-tint transition rounded-lg ${responseLength === opt ? "text-primary" : "text-foreground"
                           }`}
                       >
                         {opt}
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}

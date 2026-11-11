@@ -86,9 +86,9 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
     '--swipe-border': `color-mix(in srgb, ${tone} ${strength * 100}%, var(--color-border))`,
     transition: settling ? 'transform var(--duration-slow) var(--ease-lohni), opacity var(--duration-slow) var(--ease-lohni)' : 'none',
   } as CSSProperties
-  const face = 'absolute inset-0 flex overflow-y-auto rounded-3xl border border-[color:var(--swipe-border)] bg-surface p-6 [backface-visibility:hidden]'
+  const face = 'absolute inset-0 flex overflow-y-auto rounded-3xl border border-[color:var(--swipe-border)] bg-surface px-6 pb-10 pt-6 [backface-visibility:hidden]'
   return (
-    <div className="flex min-h-[55dvh] flex-1 flex-col gap-3">
+    <div className="flex min-h-[55dvh] flex-1 flex-col">
       <div
         role="button" tabIndex={0} aria-pressed={revealed} aria-label={revealed ? 'Réponse. Touche pour revenir à la question.' : 'Question. Touche pour voir la réponse.'}
         onKeyDown={key} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel}
@@ -108,10 +108,10 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
             </div>
           </div>
         </div>
-      </div>
-      <p className="text-center text-xs text-muted" aria-live="polite">
+        <p className="pointer-events-none absolute inset-x-0 bottom-3 text-center text-xs text-muted" aria-live="polite">
         {!revealed ? 'Touche la carte pour voir la réponse' : hint ? 'Glisse la carte à gauche ou à droite' : '← Je ne savais pas · Je savais →'}
       </p>
+      </div>
     </div>
   )
 }
