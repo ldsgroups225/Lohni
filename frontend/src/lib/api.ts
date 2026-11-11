@@ -784,6 +784,7 @@ async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<
     const answer = { ...input, answerId: crypto.randomUUID() };
     state.pending.push({ answer, localDate: session.localDate });
     advanceSession(session, knew, input.durationMs);
+    delete session.summary; // périmé : le récap le recharge une fois les réponses envoyées
     next = session;
   });
   void syncRevisionAnswers();

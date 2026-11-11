@@ -28,12 +28,16 @@ export default function Revision() {
   const [feedback, setFeedback] = useState<{ id: number; knew: boolean } | null>(null)
   const [moreCards, setMoreCards] = useState(false)
   const [menu, setMenu] = useState(false)
+  const sending = useRef(false) // une seule réponse par carte, même si un geste et un bouton se suivent
+  const menuButton = useRef<HTMLButtonElement>(null)
+  const continueButton = useRef<HTMLButtonElement>(null)
   const [generating, setGenerating] = useState(false)
   const [slow, setSlow] = useState(false)
   // QCM: la réponse est enregistrée au choix ; la carte suivante n’apparaît qu’au clic sur « Continuer ».
   const [verdict, setVerdict] = useState<{ choice: number; next: RevisionSession } | null>(null)
   const startedAt = useRef(Date.now())
   const card = session?.cards[session.position]
+  useEffect(() => { if (verdict) continueButton.current?.scrollIntoView({ block: 'nearest' }) }, [verdict])
   const secondaryButton = 'rounded-xl border border-border bg-surface px-4 py-3 text-foreground disabled:opacity-50 disabled:cursor-wait'
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
@@ -57,6 +61,7 @@ export default function Revision() {
     setChoice(undefined)
     setVerdict(null)
     setMenu(false)
+    sending.current = false
     startedAt.current = Date.now()
   }
   async function run(operation: () => Promise<void>) {
@@ -99,6 +104,7 @@ export default function Revision() {
     if (!session?.complete || sync.pending || !sync.online) return
     let active = true
     revisionAPI.home().then(value => { if (active) setMoreCards(value?.moreCards ?? false) }).catch(() => {})
+    revisionAPI.session().then(fresh => { if (active) setSession(current => current && current.id === fresh.id ? { ...current, summary: fresh.summary } : current) }).catch(() => {})
     revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(error => {
       if (active) setError(error instanceof Error ? error.message : 'Impossible de charger ta progression.')
     })
@@ -117,12 +123,16 @@ export default function Revision() {
     }).finally(() => { window.clearTimeout(timer); setGenerating(false); setSlow(false) })
   }
   function answer(knew: boolean, selected?: number) {
-    if (!session || !card || verdict) return
+    if (!session || !card || verdict || sending.current) return
+    sending.current = true
     void run(async () => {
-      const next = await revisionAPI.answer({
-        sessionId: session.id, cardId: card.id, position: session.position, knew, choice: selected,
-        durationMs: Math.max(0, Date.now() - startedAt.current),
-      })
+      let next: RevisionSession
+      try {
+        next = await revisionAPI.answer({
+          sessionId: session.id, cardId: card.id, position: session.position, knew, choice: selected,
+          durationMs: Math.max(0, Date.now() - startedAt.current),
+        })
+      } catch (e) { sending.current = false; throw e }
       if (card.kind === 'mcq') { setChoice(selected); setVerdict({ choice: selected!, next }); return }
       setFeedback({ id: Date.now(), knew })
       setMissed(knew ? null : card)
@@ -161,10 +171,10 @@ export default function Revision() {
     <main className={`loop-screen flex min-h-dvh flex-col px-4 md:pl-28 ${session && !session.complete && card ? 'pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))]' : 'pt-8 pb-36'}`}>
       <div className={`mx-auto flex w-full max-w-xl flex-1 flex-col ${session && !session.complete && card ? 'space-y-3' : 'space-y-6'}`}>
         {session && !session.complete && card ? <header className="flex items-center gap-3"><Link to="/" aria-label="Quitter la session" className="-ml-2 inline-block rounded-xl p-2 text-muted"><CloseIcon /></Link>{session && <div className="flex-1"><div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div><Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" /></div>}{session && <span className="text-sm tabular-nums text-muted">{session.position + 1}/{session.cards.length}</span>}
-          <div className="relative" onKeyDown={e => { if (e.key === 'Escape') setMenu(false) }}>
-            <button type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(value => !value)} className="rounded-xl px-2 py-1 text-xl leading-none text-muted">⋯</button>
+          <div className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
+            <button ref={menuButton} type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(value => !value)} className="rounded-xl px-2 py-1 text-xl leading-none text-muted">⋯</button>
             {menu && <div role="menu" className="absolute right-0 top-full z-10 mt-1 rounded-xl border border-border bg-surface p-1 shadow-lg">
-              <button role="menuitem" autoFocus disabled={busy || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte</button>
+              <button role="menuitem" autoFocus disabled={busy || !!verdict || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte</button>
             </div>}
           </div>
         </header> : !(session && session.position > 0) && <header><h1 className="text-2xl font-semibold text-foreground">Session de révision</h1></header>}
@@ -194,7 +204,7 @@ export default function Revision() {
             {card.kind === 'basic' ? <>
               {card.origin === 'ai' && <p className="text-center text-xs text-muted">Générée par IA · Peut contenir des erreurs</p>}
               <SwipeCard key={`${card.id}-${session.position}`} question={card.question} answer={card.answer} revealed={revealed} enabled={!busy} onToggle={() => setRevealed(value => !value)} onSwipe={answer} />
-            </> : <article key={`${card.id}-${session.position}-${revealed}`} className={`space-y-4 rounded-2xl border border-border bg-surface p-5 ${revealed && card.kind !== 'mcq' ? 'motion-flip' : 'motion-enter'}`}>
+            </> : <article key={`${card.id}-${session.position}-${revealed}`} className={`shrink-0 space-y-4 rounded-2xl border border-border bg-surface p-5 ${revealed && card.kind !== 'mcq' ? 'motion-flip' : 'motion-enter'}`}>
               {card.origin === 'ai' && <p className="text-xs text-muted">Générée par IA · Peut contenir des erreurs</p>}
               <h2 className="text-xl text-foreground"><MarkdownView md={card.question} inline /></h2>
               {card.kind === 'mcq' && <fieldset disabled={busy || !!verdict} className="space-y-3">
@@ -217,7 +227,7 @@ export default function Revision() {
                                 <MarkdownView md={card.answer} />
               </div> : <Button disabled={busy} onClick={() => setRevealed(true)}>Révéler la réponse</Button>}
             </article>}
-            {verdict && <Button className="w-full" onClick={next}>Continuer</Button>}
+            {verdict && <Button ref={continueButton} className="w-full" onClick={next}>Continuer</Button>}
             {card.kind === 'basic' && <div className={`grid grid-cols-2 gap-3 ${revealed ? '' : 'invisible'}`} aria-hidden={!revealed}>
               <button className="flex items-center justify-center gap-1 whitespace-nowrap rounded-xl border border-border bg-surface px-2 py-3 [&>svg]:shrink-0 text-sm text-foreground disabled:cursor-wait disabled:opacity-50 sm:text-base" disabled={busy || !revealed} onClick={() => answer(false)}><CloseIcon />Je ne savais pas</button>
               <button className="flex items-center justify-center gap-2 rounded-xl bg-success px-2 py-3 [&>svg]:shrink-0 text-sm font-semibold text-on-success disabled:opacity-50 sm:text-base" disabled={busy || !revealed} onClick={() => answer(true)}><CheckIcon />Je savais</button>
