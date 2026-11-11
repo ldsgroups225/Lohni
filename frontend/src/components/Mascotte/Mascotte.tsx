@@ -42,7 +42,13 @@ export default function Mascotte({ humeur, taille, decorative = false }: { humeu
   useEffect(() => {
     const element = cadre.current
     if (!element) return
-    const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    // Safari < 14 n'a que addListener/removeListener sur MediaQueryList.
+    const onMotion = (add: boolean) => {
+      if (!motion) return
+      if (motion.addEventListener) add ? motion.addEventListener('change', update) : motion.removeEventListener('change', update)
+      else add ? motion.addListener(update) : motion.removeListener(update)
+    }
     const { amp, periode } = mouvement[humeur]
     const dort = humeur === 'endormie'
     const box = element.getBoundingClientRect()
@@ -90,17 +96,17 @@ export default function Mascotte({ humeur, taille, decorative = false }: { humeu
     const update = () => {
       cancelAnimationFrame(frame)
       frame = 0
-      if (visible && !document.hidden && !motion.matches) frame = requestAnimationFrame(tick)
+      if (visible && !document.hidden && !motion?.matches) frame = requestAnimationFrame(tick)
       else reset()
     }
-    const observer = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? false; update() })
-    observer.observe(element)
+    const observer = typeof IntersectionObserver === 'undefined' ? undefined : new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? false; update() })
+    observer?.observe(element)
     document.addEventListener('visibilitychange', update)
-    motion.addEventListener('change', update)
+    onMotion(true)
     return () => {
-      observer.disconnect()
+      observer?.disconnect()
       document.removeEventListener('visibilitychange', update)
-      motion.removeEventListener('change', update)
+      onMotion(false)
       cancelAnimationFrame(frame)
       reset()
     }

@@ -32,21 +32,21 @@ export function SessionRecap({ session, progress, pending, moreCards, busy, onli
   return (
     <section className="flex flex-col items-center gap-4 text-center" aria-live="polite">
       {!error && <span className="motion-celebrate"><Mascotte humeur="en fête" taille={160} /></span>}
-      <h2 className="text-2xl font-bold">Session terminée !</h2>
+      <h1 className="text-2xl font-bold">Session terminée !</h1>
       {summary ? <p>{motivation(summary, showStats ? progress.streak : undefined)}</p>
         : <p>{position} réponses enregistrées{pending ? ' sur cet appareil' : ''}. À demain pour la suite.</p>}
       {summary && (summary.quiz.total > 0 || summary.flashcards.total > 0) && <div className="w-full space-y-3">
         {summary.quiz.total > 0 && <div className={block}>
-          <h3 className="text-sm font-semibold text-muted">Quiz</h3>
+          <h2 className="text-sm font-semibold text-muted">Quiz</h2>
           <p><strong className="text-2xl">{summary.quiz.correct}/{summary.quiz.total}</strong> bonnes réponses · {Math.round(100 * summary.quiz.correct / summary.quiz.total)} %</p>
         </div>}
         {summary.flashcards.total > 0 && <div className={block}>
-          <h3 className="text-sm font-semibold text-muted">Flashcards <span className="font-normal">(auto-évaluation)</span></h3>
+          <h2 className="text-sm font-semibold text-muted">Flashcards <span className="font-normal">(auto-évaluation)</span></h2>
           <p><strong className="text-2xl">{summary.flashcards.knew}</strong> maîtrisée{summary.flashcards.knew > 1 ? 's' : ''}, <strong className="text-2xl">{summary.flashcards.total - summary.flashcards.knew}</strong> à revoir</p>
         </div>}
       </div>}
       {missed.length > 0 && summary && <div className={`${block} w-full space-y-3`}>
-        <h3 className="text-sm font-semibold text-muted">À revoir</h3>
+        <h2 className="text-sm font-semibold text-muted">À revoir</h2>
         <ul className="space-y-3">
           {missed.map(m => <li key={m.cardId} className="flex items-center justify-between gap-3">
             <span className="min-w-0 flex-1"><MarkdownView md={m.question} inline /></span>
