@@ -2,6 +2,7 @@ import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../
 import { Button } from '../components/ui/Button'
 import { BackButton } from '../components/ui/BackButton'
 import { LoadingState } from '../components/ui/LoadingState'
+import { PendingRead } from '../components/ui/PendingRead'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -11,13 +12,13 @@ import { revisionAPI, revisionPolicy, type RevisionProfile, type RevisionImporte
 let cachedImport: { device: string | null; version: number; day: string; profile: RevisionProfile | null; quota: RevisionImportQuota } | null = null
 
 export default function ImportCourse() {
-  if (cachedImport && (cachedImport.device !== cachedDevice() || cachedImport.version !== currentRevisionCacheVersion() || cachedImport.day !== new Date().toDateString())) cachedImport = null
+  if (cachedImport && (cachedImport.device !== cachedDevice() || cachedImport.day !== new Date().toDateString())) cachedImport = null
   const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
   const navigate = useNavigate()
-  const [profile, setProfile] = useState<RevisionProfile | null>(() => cachedImport?.profile ?? sharedProfile ?? null)
-  const [quota, setQuota] = useState<RevisionImportQuota | undefined>(() => cachedImport?.quota)
+  const [profile, setProfile] = useState<RevisionProfile | null>(() => sharedProfile ?? cachedImport?.profile ?? null)
+  const [quota, setQuota] = useState<RevisionImportQuota | undefined>(() => cachedImport?.version === currentRevisionCacheVersion() ? cachedImport.quota : undefined)
   const [imported, setImported] = useState<RevisionImportedChapter>()
-  const [subject, setSubject] = useState(() => (cachedImport?.profile ?? sharedProfile)?.subjects[0] ?? '')
+  const [subject, setSubject] = useState(() => (sharedProfile ?? cachedImport?.profile)?.subjects[0] ?? '')
   const [title, setTitle] = useState('')
   const [mode, setMode] = useState('text')
   const [text, setText] = useState('')
@@ -37,9 +38,20 @@ export default function ImportCourse() {
   async function load(isActive = () => true) {
     const device = cachedDevice()
     const version = currentRevisionCacheVersion()
-    const [saved, currentQuota] = await Promise.all([revisionAPI.profile(), revisionAPI.importQuota()])
+    let saved: RevisionProfile | null, currentQuota: RevisionImportQuota
+    try { [saved, currentQuota] = await Promise.all([revisionAPI.profile(), revisionAPI.importQuota()]) }
+    catch (cause) {
+      if (isActive() && device !== cachedDevice()) {
+        cachedImport = null; setProfile(null); setQuota(undefined); setSubject(''); setBusy(true)
+        return load(isActive)
+      }
+      throw cause
+    }
     if (!isActive()) return
-    if (device !== cachedDevice() || version !== currentRevisionCacheVersion()) return load(isActive)
+    if (device !== cachedDevice() || version !== currentRevisionCacheVersion()) {
+      if (device !== cachedDevice()) { cachedImport = null; setProfile(null); setQuota(undefined); setSubject(''); setBusy(true) }
+      return load(isActive)
+    }
     cachedImport = { device, version, day: new Date().toDateString(), profile: saved, quota: currentQuota }
     setProfile(saved)
     setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
@@ -72,8 +84,8 @@ export default function ImportCourse() {
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
         <button className="ml-3 underline" disabled={busy} onClick={() => void run(() => load())}>Actualiser</button>
       </div>}
-      {busy && !profile && !error && <Mascotte humeur="pensive" taille={112} />}
-      {busy && <LoadingState label={profile ? 'Préparation du chapitre… Cela peut prendre un moment.' : 'On prépare ton import…'} />}
+      {busy && !profile && !error && <PendingRead title="Cours à réviser" label="On prépare ton import…" />}
+      {busy && profile && <LoadingState label="Préparation du chapitre… Cela peut prendre un moment." />}
       {quota && <p className="text-sm text-muted" aria-live="polite">
         {quota.remaining === 0 ? `Tu as atteint tes ${revisionPolicy.dailyImports} imports du jour.` : `${quota.remaining} import${quota.remaining > 1 ? 's' : ''} restant${quota.remaining > 1 ? 's' : ''} aujourd’hui.`}
         {' '}Recharge le {new Date(quota.resetsAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} (heure de ton appareil).

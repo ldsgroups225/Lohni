@@ -62,3 +62,17 @@ test('la session reste visible au retour pendant son actualisation', async () =>
     expect(host.textContent).not.toContain('On prépare ta session')
   } finally { delayedProfile.wait = false; act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
 })
+
+test('la première visite présente la session sans indiquer une session vide', async () => {
+  localStorage.setItem('lohni-device-id', 'revision-premiere-visite')
+  delayedProfile.wait = true
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <p>Accueil</p> }, { path: '/revision', element: <Revision /> }], { initialEntries: ['/revision'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.textContent).toContain('Ta session')
+    expect(host.textContent).not.toContain('On prépare ta session')
+    expect(host.textContent).not.toContain('Aucune carte à réviser')
+  } finally { delayedProfile.wait = false; act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
+})

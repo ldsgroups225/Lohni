@@ -1,6 +1,7 @@
 import { Button } from '../components/ui/Button'
 import { BackButton } from '../components/ui/BackButton'
 import { LoadingState } from '../components/ui/LoadingState'
+import { PendingRead } from '../components/ui/PendingRead'
 import { revisionCardVisibility } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { CheckIcon, CloseIcon } from '../components/ui/NavigationIcons'
@@ -21,12 +22,13 @@ let cachedRevision: { device: string | null; version: number; day: string; profi
 
 export default function Revision() {
   const day = new Date().toDateString()
-  if (cachedRevision && (cachedRevision.device !== cachedDevice() || cachedRevision.version !== currentRevisionCacheVersion() || cachedRevision.day !== day)) cachedRevision = null
+  if (cachedRevision && (cachedRevision.device !== cachedDevice() || cachedRevision.day !== day)) cachedRevision = null
   const navigate = useNavigate()
   const [profile, setProfile] = useState<RevisionProfile | null>(() => cachedRevision?.profile ?? null)
   const [session, setSession] = useState<RevisionSession | null>(() => cachedRevision?.session ?? null)
   const [progress, setProgress] = useState<RevisionProgress | null>(null)
   const [busy, setBusy] = useState(true)
+  const [validated, setValidated] = useState(false)
   const [sync, setSync] = useState(revisionSyncStatus)
   const [error, setError] = useState('')
   const [revealed, setRevealed] = useState(false)
@@ -47,8 +49,8 @@ export default function Revision() {
   const [verdict, setVerdict] = useState<{ choice: number; next: RevisionSession } | null>(null)
   const startedAt = useRef(Date.now())
   useEffect(() => {
-    if (profile && session) cachedRevision = { device: cachedDevice(), version: currentRevisionCacheVersion(), day, profile, session }
-  }, [profile, session, day])
+    if (profile && session && validated) cachedRevision = { device: cachedDevice(), version: currentRevisionCacheVersion(), day, profile, session }
+  }, [profile, session, day, validated])
   const card = session?.cards[session.position]
   useLeaveConfirmation(!!session && !session.complete && !!card, 'Quitter la session ? Ta progression est enregistrée.')
   // Après un QCM : fait défiler jusqu'à l'indice et « Continuer », avec une marge sous le bouton.
@@ -80,6 +82,7 @@ export default function Revision() {
   function display(next: RevisionSession) {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' }) // pas de saut : on repart du haut avant d'afficher la carte suivante
     setSession(next)
+    setValidated(true)
     setRevealed(false)
     setChoice(undefined)
     setVerdict(null)
@@ -108,8 +111,8 @@ export default function Revision() {
   useEffect(() => {
     let active = true
     async function load() {
+      const requestDevice = cachedDevice()
       try {
-        const requestDevice = cachedDevice()
         const version = currentRevisionCacheVersion()
         const saved = await revisionAPI.profile()
         const current = saved ? await revisionAPI.session() : null
@@ -124,6 +127,11 @@ export default function Revision() {
         setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
         if (current) display(current)
       } catch (e) {
+        if (active && requestDevice !== cachedDevice()) {
+          cachedRevision = null; setProfile(null); setSession(null); setValidated(false)
+          await load()
+          return
+        }
         if (active) setError(e instanceof Error ? e.message : 'Impossible de charger la révision.')
       } finally { if (active) setBusy(false) }
     }
@@ -205,7 +213,7 @@ export default function Revision() {
           <div className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
             <button ref={menuButton} type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} className="press-icon -mr-2 grid size-11 place-items-center rounded-xl text-xl leading-none text-muted">⋯</button>
             {menuExit.mounted && <div role="menu" data-state={menuExit.state} className="motion-menu absolute right-0 top-full z-10 mt-1 rounded-xl border border-border bg-surface p-1 shadow-lg">
-              <button role="menuitem" autoFocus disabled={busy || !!verdict || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte</button>
+              <button role="menuitem" autoFocus disabled={busy || !validated || !!verdict || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte</button>
             </div>}
           </div>
         </header> : !(session && session.position > 0) && <header><h1 className="text-2xl font-semibold text-foreground">Session de révision</h1></header>}
@@ -224,7 +232,7 @@ export default function Revision() {
             setProgress(await revisionAPI.progress())
           })}>Réessayer</button>
         </div>}
-        {generating ? <div className="space-y-2"><LoadingState label="Lohni prépare tes cartes…" />{slow && <p role="status" className="text-center text-sm text-muted">Ça prend plus de temps que d’habitude. Ta demande est toujours en cours, tu peux rester sur cette page.</p>}</div> : busy && !session && <LoadingState label="On prépare ta session…" />}
+        {generating ? <div className="space-y-2"><LoadingState label="Lohni prépare tes cartes…" />{slow && <p role="status" className="text-center text-sm text-muted">Ça prend plus de temps que d’habitude. Ta demande est toujours en cours, tu peux rester sur cette page.</p>}</div> : busy && !session && <PendingRead title="Ta session" label="On prépare ta session…" />}
         {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}
         {missed && !session?.complete && <aside className="space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
           <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
@@ -234,11 +242,11 @@ export default function Revision() {
           <section className="flex flex-1 flex-col space-y-4" aria-label="Session de révision" aria-busy={busy}>
             {card.kind === 'basic' ? <>
               {card.origin === 'ai' && <p className="text-center text-xs text-muted">Générée par IA · Peut contenir des erreurs</p>}
-              <SwipeCard key={`${card.id}-${session.position}`} question={card.question} answer={card.answer} revealed={revealed} enabled={!busy} onToggle={() => setRevealed(value => !value)} onSwipe={answer} />
+              <SwipeCard key={`${card.id}-${session.position}`} question={card.question} answer={card.answer} revealed={revealed} enabled={!busy && validated} onToggle={() => setRevealed(value => !value)} onSwipe={answer} />
             </> : <article key={`${card.id}-${session.position}-${revealed}`} className={`shrink-0 space-y-4 rounded-2xl border border-border bg-surface p-5 ${revealed && card.kind !== 'mcq' ? 'motion-flip' : 'motion-enter'}`}>
               {card.origin === 'ai' && <p className="text-xs text-muted">Générée par IA · Peut contenir des erreurs</p>}
               <h2 className="text-xl text-foreground"><MarkdownView md={card.question} inline /></h2>
-              {card.kind === 'mcq' && <fieldset disabled={busy || !!verdict} className="space-y-3">
+              {card.kind === 'mcq' && <fieldset disabled={busy || !validated || !!verdict} className="space-y-3">
                 <legend className="mb-3">Choisis ta réponse</legend>
                 {card.options?.map((option, i) => {
                   const n = i + 1
@@ -256,22 +264,22 @@ export default function Revision() {
                 <MarkdownView md={card.answer} />
               </div> : card.kind === 'mcq' ? null : revealed ? <div className="space-y-3 border-t border-border pt-5" aria-live="polite">
                                 <MarkdownView md={card.answer} />
-              </div> : <Button disabled={busy} onClick={() => setRevealed(true)}>Révéler la réponse</Button>}
+              </div> : <Button disabled={busy || !validated} onClick={() => setRevealed(true)}>Révéler la réponse</Button>}
             </article>}
             {verdict && <Button ref={continueButton} className="w-full scroll-mb-8" onClick={next}>Continuer</Button>}
           </section>
         ) : (!busy || !!session) && <>
-          {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} pending={sync.pending} moreCards={moreCards} busy={busy} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onContinue={() => void run(async () => display(await revisionAPI.continue()))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
+          {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} pending={sync.pending} moreCards={moreCards} busy={busy || !validated} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onContinue={() => void run(async () => display(await revisionAPI.continue()))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
             {!error && <Mascotte humeur="au repos" taille={112} />}
             <h2 className="text-xl">Aucune carte à réviser pour le moment</h2>
             <p>Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.</p>
-            <button className={secondaryButton} disabled={busy || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer</button>
+            <button className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await revisionAPI.continue()))}>Continuer</button>
           </section>)}
           {profile && !(session && session.position > 0) && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-border p-6">
             <h2 className="text-xl text-foreground">Préparer un chapitre</h2>
             <label className="block space-y-2"><span>Matière</span><select className={input} required value={subject} onChange={e => setSubject(e.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
             <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex. : Les fractions" /></label>
-            {session && session.position > 0 ? <button className={secondaryButton} disabled={busy || !sync.online || sync.pending > 0}>Générer mes cartes</button> : <Button type="submit" disabled={busy || !sync.online || sync.pending > 0}>Générer mes cartes</Button>}
+            {session && session.position > 0 ? <button className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0}>Générer mes cartes</button> : <Button type="submit" disabled={busy || !validated || !sync.online || sync.pending > 0}>Générer mes cartes</Button>}
           </form>}
         </>}
         {profile && !(session && !session.complete && card) && !(session && session.position > 0) && <Link to="/import" className="block rounded-xl border border-border p-4 text-center text-foreground">Importer mon cours</Link>}

@@ -1,5 +1,5 @@
 import { ButtonLink } from '../components/ui/Button'
-import { LoadingState } from '../components/ui/LoadingState'
+import { PendingRead } from '../components/ui/PendingRead'
 import { humeurSerie, listDelay } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { FlameIcon } from '../components/ui/NavigationIcons'
@@ -11,16 +11,17 @@ import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import Onboarding from '../components/Revision/Onboarding'
 import MobileHeader from '../components/MobileHeader'
-import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter } from '../lib/api'
-import { cachedDevice, currentRevisionCacheVersion } from '../lib/cachedDevice'
+import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter, type RevisionProfile } from '../lib/api'
+import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 
 let cachedHome: { device: string | null; version: number; day: string; home: RevisionHome | null; progress: RevisionProgress | null; chapters: RevisionChapter[] | null } | null = null
 
 export default function Home() {
   const device = cachedDevice()
-  if (cachedHome && (cachedHome.device !== device || cachedHome.version !== currentRevisionCacheVersion() || cachedHome.day !== new Date().toDateString())) cachedHome = null
+  if (cachedHome && (cachedHome.device !== device || cachedHome.day !== new Date().toDateString())) cachedHome = null
   const animateEntry = useRef(!cachedHome).current
-  const [home, setHome] = useState<RevisionHome | null>(() => cachedHome?.home ?? null)
+  const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
+  const [home, setHome] = useState<RevisionHome | null>(() => cachedHome?.home ? { ...cachedHome.home, profile: sharedProfile ?? cachedHome.home.profile } : null)
   const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedHome?.progress ?? null)
   const [loading, setLoading] = useState(!cachedHome)
   const [error, setError] = useState('')
@@ -39,7 +40,8 @@ export default function Home() {
         const data = await revisionAPI.home()
         if (!active) return
         if ((requestDevice && requestDevice !== cachedDevice()) || version !== currentRevisionCacheVersion()) {
-          cachedHome = null; setHome(null); setProgress(null); setChapters(null); setAttempt(value => value + 1)
+          if (requestDevice && requestDevice !== cachedDevice()) { cachedHome = null; setHome(null); setProgress(null); setChapters(null) }
+          setAttempt(value => value + 1)
           return
         }
         cachedHome = data ? { device: cachedDevice(), version: currentRevisionCacheVersion(), day: new Date().toDateString(), home: data, progress: cachedHome?.progress ?? null, chapters: cachedHome?.chapters ?? null } : null
@@ -51,10 +53,14 @@ export default function Home() {
         })
       } catch (cause) {
         if (active) {
+          if (requestDevice && requestDevice !== cachedDevice()) {
+            cachedHome = null; setHome(null); setProgress(null); setChapters(null); setLoading(true); setAttempt(value => value + 1)
+            return
+          }
           if (cachedHome) setProgressError('La mise à jour de ton accueil est temporairement indisponible.')
           else setError(cause instanceof Error ? cause.message : 'Impossible de charger l’accueil.')
         }
-      } finally { if (active) setLoading(false) }
+      } finally { if (active && (!requestDevice || requestDevice === cachedDevice())) setLoading(false) }
     }
     void load()
     return () => { active = false }
@@ -75,7 +81,7 @@ export default function Home() {
     <div className="mx-auto max-w-xl space-y-6">
       {(!home || loading || error) && <MobileHeader />}
       {(!home || loading || error) && <header className="sr-only lg:not-sr-only"><h1 className="text-2xl font-semibold text-foreground">Lohni</h1></header>}
-      {loading ? <LoadingState label="On prépare ta journée…" /> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
+      {loading ? <PendingRead title="Session du jour" label="On prépare ta journée…" /> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
         <Mascotte humeur="désolée" taille={96} /><p>{error}</p><button className="underline" onClick={() => setAttempt(value => value + 1)}>Réessayer</button>
       </div> : !home ? <Onboarding /> : <>
         <header className="flex items-center gap-3">

@@ -116,14 +116,15 @@ test('une lecture tardive du profil ne copie pas les données sur un autre appar
 test('une lecture antérieure à un enregistrement ne remplace pas le profil enregistré', async () => {
   let finish!: (response: Response) => void
   const updated = { schoolClass: '5e', subjects: ['Français'] }
-  vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => init.method === 'PUT'
+  let reads = 0
+  vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => init.method === 'PUT' || ++reads > 1
     ? Promise.resolve(new Response(JSON.stringify({ ok: true, data: updated }), { headers: { 'Content-Type': 'application/json' } }))
     : new Promise<Response>(resolve => { finish = resolve })))
   const oldRead = api.revisionAPI.profile()
   await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
   await api.revisionAPI.saveProfile(updated)
   finish(new Response(JSON.stringify({ ok: true, data: { schoolClass: '3e', subjects: ['Mathématiques'] } }), { headers: { 'Content-Type': 'application/json' } }))
-  await expect(oldRead).rejects.toThrow('Les données ont changé')
+  await expect(oldRead).resolves.toEqual(updated)
   expect(JSON.parse(entries.get(offlineKey)!).cache['/profile']).toEqual(updated)
 })
 

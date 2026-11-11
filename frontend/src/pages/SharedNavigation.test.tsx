@@ -33,6 +33,6 @@ test('le profil et la progression chargés à l’accueil sont réutilisés dans
     vi.setSystemTime(Date.now() + 86400000)
     await act(async () => { await router.navigate('/me') })
     expect(host.querySelector('form')).toBeNull()
-    expect(host.textContent).toContain('On récupère ton parcours')
+    expect(host.textContent).toContain('Mon parcours')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.clear(); vi.useRealTimers(); vi.unstubAllGlobals() }
 })

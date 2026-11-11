@@ -753,11 +753,13 @@ async function sharedRevisionRead<T>(path: string, read: () => Promise<T>): Prom
   const pending = revisionReads.get(key)
   if (pending) return pending as Promise<T>
   const request = read().then(value => {
-    if (cachedDevice() !== device || currentRevisionCacheVersion() !== version || revisionLocalDate() !== day) {
-      throw new Error('Les données ont changé. Actualise la page.')
-    }
+    if (cachedDevice() !== device) throw new Error('Les données ont changé. Actualise la page.')
+    if (currentRevisionCacheVersion() !== version || revisionLocalDate() !== day) return sharedRevisionRead(path, read)
     rememberRevisionSnapshot(path, value)
     return value
+  }, error => {
+    if (cachedDevice() === device && (currentRevisionCacheVersion() !== version || revisionLocalDate() !== day)) return sharedRevisionRead(path, read)
+    throw error
   }).finally(() => { revisionReads.delete(key) })
   revisionReads.set(key, request)
   return request
@@ -831,7 +833,11 @@ async function revisionMutation<T>(path: string, method: string, body?: unknown)
   if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
   if (path === '/profile') invalidateRevisionCache()
   else invalidateRevisionCache('/home', '/progress', '/chapters')
-  if (path === '/profile') await updateOffline(state => { if (device === cachedDevice()) { state.cache['/profile'] = result; delete state.cache['/home']; } });
+  if (path === '/profile') {
+    await updateOffline(state => { if (device === cachedDevice()) { state.cache['/profile'] = result; delete state.cache['/home']; } });
+    if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
+    rememberRevisionSnapshot('/profile', result);
+  }
   return result;
 }
 

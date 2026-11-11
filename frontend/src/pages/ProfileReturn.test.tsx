@@ -49,7 +49,7 @@ test('Moi ne restaure pas le cache d’un autre appareil', async () => {
   const { host, close } = await setup('profil-autre')
   try {
     expect(host.querySelector('form')).toBeNull()
-    expect(host.textContent).toContain('On récupère ton parcours')
+    expect(host.textContent).toContain('Mon parcours')
   } finally { close() }
 })
 
@@ -63,7 +63,7 @@ test('une réponse tardive du précédent appareil ne remplit pas le cache du no
     localStorage.setItem('lohni-device-id', 'profil-nouveau')
     await act(async () => resolve(profile))
     expect(host.querySelector('form')).toBeNull()
-    expect(host.textContent).toContain('On récupère ton parcours')
+    expect(host.textContent).toContain('Mon parcours')
   } finally { close() }
 })
 
@@ -159,5 +159,21 @@ test('le retour pendant un enregistrement attend sa fin avant de réactiver le f
     expect(host.querySelector('select')!.disabled).toBe(true)
     await act(async () => resolve(profile))
     expect(host.querySelector('select')!.disabled).toBe(false)
+  } finally { close() }
+})
+
+test('un changement d’appareil pendant une revalidation échouée masque aussitôt le profil précédent', async () => {
+  api.profile.mockResolvedValueOnce(profile)
+  api.progress.mockResolvedValue(progress)
+  const { router, host, close } = await setup('profil-avant-changement')
+  try {
+    await act(async () => { await router.navigate('/tutor') })
+    let reject!: (error: Error) => void
+    api.profile.mockReturnValueOnce(new Promise((_resolve, fail) => { reject = fail })).mockReturnValue(new Promise(() => {}))
+    await act(async () => { await router.navigate('/me') })
+    localStorage.setItem('lohni-device-id', 'profil-apres-changement')
+    await act(async () => reject(new Error('Les données ont changé. Actualise la page.')))
+    expect(host.querySelector('form')).toBeNull()
+    expect(host.textContent).not.toContain('Les données ont changé')
   } finally { close() }
 })

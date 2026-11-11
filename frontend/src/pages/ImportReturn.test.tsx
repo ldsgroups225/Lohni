@@ -40,3 +40,18 @@ test('la création longue conserve son indicateur de progression', async () => {
     expect(host.textContent).toContain('Préparation du chapitre… Cela peut prendre un moment.')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
 })
+
+test('la première visite présente la zone de cours pendant le chargement du profil', async () => {
+  localStorage.setItem('lohni-device-id', 'import-premiere-visite')
+  api.profile.mockReset().mockReturnValue(new Promise(() => {}))
+  api.importQuota.mockReset().mockReturnValue(new Promise(() => {}))
+  const router = createMemoryRouter([{ path: '/import', element: <ImportCourse /> }], { initialEntries: ['/import'] })
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.textContent).toContain('Cours à réviser')
+    expect(host.textContent).not.toContain('On prépare ton import')
+    expect(host.textContent).not.toContain('Crée d’abord ton profil')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
+})
