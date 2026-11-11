@@ -122,7 +122,8 @@ ${shouldCheckConcede ? `IMPORTANT: If you find that you have run out of strong a
 10. Be savage, competitive, persuiasive, assertive and to the point
 11. Exceed the paragraphs limit if needed to make a strong argument
 ${shouldCheckConcede ? "12. If you genuinely cannot provide a strong counterargument, CONCEDE rather than making weak arguments\n" : ""}
-Remember: You are in a debate, so be persuasive and competitive while remaining intellectually honest.`;
+Remember: You are in a debate, so be persuasive and competitive while remaining intellectually honest.
+Réponds toujours en français, en tutoyant l’élève.`;
 
     const conversationHistory = session.messages
         .slice(-6)
@@ -228,7 +229,8 @@ Provide a comprehensive analysis in this EXACT JSON format (no markdown, just JS
   "aiWeaknesses": ["weakness 1", "weakness 2"],
   "keyMoments": ["moment 1", "moment 2", "moment 3"],
   "overallAssessment": "A paragraph summarizing the debate quality and outcome"
-}`;
+}
+Garde "winner" tel quel ("user", "ai" ou "draw"). Rédige toutes les autres valeurs en français, en t’adressant à l’élève avec « tu » (« Tu as… ») et en appelant l’IA « l’IA ».`;
 
     const messages = [
         { role: "system" as const, content: "You are an expert debate judge. Provide fair, balanced analysis. Respond with valid JSON only." },
@@ -265,92 +267,15 @@ Provide a comprehensive analysis in this EXACT JSON format (no markdown, just JS
 
         const fallbackAnalysis: DebateAnalysis = {
             winner: session.winner || "draw",
-            reason: session.winner === "user" ? "User presented stronger arguments" : session.winner === "ai" ? "AI presented stronger arguments" : "Both sides presented balanced arguments",
-            userStrengths: ["Engaged in debate", "Presented arguments", "Maintained position"],
-            aiStrengths: ["Provided counterarguments", "Challenged user's points", "Used logical reasoning"],
+            reason: session.winner === "user" ? "Tes arguments ont été les plus solides." : session.winner === "ai" ? "Les arguments de l’IA ont été les plus solides." : "Les deux camps se sont équilibrés.",
+            userStrengths: ["Tu as participé au débat", "Tu as présenté des arguments", "Tu as défendu ta position"],
+            aiStrengths: ["L’IA a proposé des contre-arguments", "L’IA a contesté tes idées", "L’IA a raisonné avec logique"],
             userWeaknesses: [],
             aiWeaknesses: [],
-            keyMoments: ["Opening arguments", "Key rebuttals", "Final exchanges"],
-            overallAssessment: `The debate featured ${userMessages.length} exchanges with arguments from both sides. Due to technical limitations, a detailed analysis could not be completed, but both participants engaged meaningfully in the discussion.`
+            keyMoments: ["Les arguments d’ouverture", "Les réfutations clés", "Les derniers échanges"],
+            overallAssessment: `Le débat a compté ${userMessages.length} échange(s). Le bilan détaillé n’a pas pu être généré, mais chaque camp a défendu sa position.`
         };
 
         yield { type: "analysis", data: fallbackAnalysis };
-    }
-}
-
-export async function analyzeDebate(sessionId: string): Promise<DebateAnalysis> {
-    const session = await getDebateSession(sessionId);
-    if (!session) {
-        throw new Error("Debate session not found");
-    }
-
-    const userMessages = session.messages.filter(m => m.role === "user").map(m => m.content);
-    const aiMessages = session.messages.filter(m => m.role === "assistant").map(m => m.content);
-
-    console.log("[Debate Analysis] Starting analysis for session:", sessionId);
-
-    const analysisPrompt = `You are an expert debate judge analyzing a completed debate on the topic: "${session.topic}"
-
-User's position: ${session.position.toUpperCase()}
-AI's position: ${session.position === "for" ? "AGAINST" : "FOR"}
-
-${session.status === "user_surrendered" ? "NOTE: The user surrendered this debate.\n" : ""}${session.status === "ai_conceded" ? "NOTE: The AI conceded this debate due to lack of strong counterarguments.\n" : ""}
-User's arguments:
-${userMessages.map((msg, i) => `${i + 1}. ${msg}`).join("\n\n")}
-
-AI's arguments:
-${aiMessages.map((msg, i) => `${i + 1}. ${msg}`).join("\n\n")}
-
-Provide a comprehensive analysis in this EXACT JSON format (no markdown, just JSON):
-{
-  "winner": "user",
-  "reason": "Brief explanation of why this party won",
-  "userStrengths": ["strength 1", "strength 2", "strength 3"],
-  "aiStrengths": ["strength 1", "strength 2", "strength 3"],
-  "userWeaknesses": ["weakness 1", "weakness 2"],
-  "aiWeaknesses": ["weakness 1", "weakness 2"],
-  "keyMoments": ["moment 1", "moment 2", "moment 3"],
-  "overallAssessment": "A paragraph summarizing the debate quality and outcome"
-}`;
-
-    const messages = [
-        { role: "system" as const, content: "You are an expert debate judge. Provide fair, balanced analysis. Respond with valid JSON only." },
-        { role: "user" as const, content: analysisPrompt }
-    ];
-
-    try {
-        console.log("[Debate Analysis] Calling LLM...");
-        const response = await llm.call(messages);
-        const analysisText = toText(response).trim();
-        console.log("[Debate Analysis] LLM response received, length:", analysisText.length);
-
-        let jsonText = analysisText;
-        const jsonMatch = analysisText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-        if (jsonMatch) {
-            jsonText = jsonMatch[1];
-        }
-
-        const analysis: DebateAnalysis = JSON.parse(jsonText);
-        console.log("[Debate Analysis] Successfully parsed analysis");
-
-        if (!session.winner) {
-            session.winner = analysis.winner;
-            session.status = "completed";
-            await db.set(`debate:session:${sessionId}`, session);
-        }
-
-        return analysis;
-    } catch (error) {
-        console.error("[Debate Analysis] Error:", error);
-        return {
-            winner: session.winner || "draw",
-            reason: session.winner === "user" ? "User presented stronger arguments" : session.winner === "ai" ? "AI presented stronger arguments" : "Both sides presented balanced arguments",
-            userStrengths: ["Engaged in debate", "Presented arguments", "Maintained position"],
-            aiStrengths: ["Provided counterarguments", "Challenged user's points", "Used logical reasoning"],
-            userWeaknesses: [],
-            aiWeaknesses: [],
-            keyMoments: ["Opening arguments", "Key rebuttals", "Final exchanges"],
-            overallAssessment: "The debate featured " + userMessages.length + " exchanges with arguments from both sides. Due to technical limitations, a detailed analysis could not be completed, but both participants engaged meaningfully in the discussion."
-        };
     }
 }

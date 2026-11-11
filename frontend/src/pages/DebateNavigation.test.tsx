@@ -13,12 +13,15 @@ test('retour ferme le bilan et permet de relire le debat', async () => {
     onopen: (() => void) | null = null
     onclose: (() => void) | null = null
     onerror: (() => void) | null = null
-    constructor(_url: string) { sockets.push(this) }
+    url: string
+    constructor(url: string) { this.url = url; sockets.push(this) }
     close() {}
     sendEvent(data: unknown) { this.onmessage?.({ data: JSON.stringify(data) }) }
   }
   vi.stubGlobal('WebSocket', FakeSocket)
-  vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => ({ ok: true, session: { topic: 'Sujet', position: 'for', messages: [{ role: 'user', content: 'Argument', timestamp: 1 }] } }) })))
+  const fetchMock = vi.fn(async (_url: string) => new Response(JSON.stringify({ ok: true, session: { topic: 'Sujet', position: 'for', messages: [{ role: 'user', content: 'Argument', timestamp: 1 }] } }), { headers: { 'content-type': 'application/json' } }))
+  vi.stubGlobal('fetch', fetchMock)
+  const analyzeCalls = () => fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/analyze')).length
   Element.prototype.scrollIntoView = vi.fn()
   HTMLDialogElement.prototype.showModal = function () { this.open = true }
   HTMLDialogElement.prototype.close = function (value = '') { this.returnValue = value; this.open = false; this.dispatchEvent(new Event('close')) }
@@ -30,6 +33,11 @@ test('retour ferme le bilan et permet de relire le debat', async () => {
     await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Terminer le débat'))!.click())
     await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Terminer')!.click())
     expect(host.textContent).toContain('Analyse du débat')
+    expect(sockets[1].url).toMatch(/^ws:\/\/.+\/ws\/debate\/analyze\?debateId=1$/)
+    // The server only streams the analysis to sockets already registered.
+    expect(analyzeCalls()).toBe(0)
+    await act(async () => sockets[1].sendEvent({ type: 'ready', debateId: '1' }))
+    expect(analyzeCalls()).toBe(1)
     await act(async () => sockets[1].sendEvent({ type: 'complete', analysis: { winner: 'user', reason: 'Bravo', overallAssessment: 'Bilan', userStrengths: [], aiStrengths: [], userWeaknesses: [], aiWeaknesses: [], keyMoments: [] } }))
     expect(host.textContent).toContain('Bilan')
     await act(async () => { await router.navigate(-1) })

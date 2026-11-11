@@ -126,7 +126,7 @@ const jsonHeaders = (_?: unknown) => {
   return h;
 };
 
-function wsURL(path: string) {
+export function wsURL(path: string) {
   const u = new URL(env.backend);
   const proto = u.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${u.host}${path}`;

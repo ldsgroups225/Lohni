@@ -6,7 +6,6 @@ import {
     listDebateSessions,
     deleteDebateSession,
     surrenderDebate,
-    analyzeDebate,
     DebateSession,
 } from "../../services/debate";
 
