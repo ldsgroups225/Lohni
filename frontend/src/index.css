@@ -28,8 +28,11 @@
   --duration-pop: 350ms;
   --duration-menu: 160ms;
   --duration-progress: 600ms;
-  --press-scale: .97; /* single press feedback, controls only */
-  --press-scale-icon: .94; /* petits boutons d’icône : amplitude plus grande */
+  --duration-press: 80ms;
+  --duration-release: 300ms;
+  --ease-release: cubic-bezier(0.3, 2.6, 0.5, 1); /* rebond net au relâchement d'un bouton */
+  --press-scale: .96; /* single press feedback, controls only */
+  --press-scale-icon: .92; /* petits boutons d’icône : amplitude plus grande */
 }
 
 :root {
@@ -84,7 +87,6 @@
   padding: 0.75rem 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform var(--duration-fast) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni);
 }
 .ui-button:disabled { cursor: not-allowed; opacity: 0.55; }
 .ui-button:focus-visible { outline: 3px solid var(--color-secondary); outline-offset: 3px; }
@@ -95,7 +97,7 @@
 .ui-progress::-moz-progress-bar { background: var(--color-primary); }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  *, *::before, *::after, ::details-content { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 
 body {
@@ -233,19 +235,24 @@ img, svg { -webkit-user-drag: none; }
 @media (max-width: 767px) { input, textarea, select { font-size: 16px; } }
 
 /* Smooth interactions everywhere */
-button, a, summary, input, select, textarea { transition: background-color var(--duration-fast) var(--ease-lohni), color var(--duration-fast) var(--ease-lohni), border-color var(--duration-fast) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni), transform var(--duration-fast) var(--ease-lohni); }
+button, a, summary, input, select, textarea { transition: background-color var(--duration-fast) var(--ease-lohni), color var(--duration-fast) var(--ease-lohni), border-color var(--duration-fast) var(--ease-lohni), opacity var(--duration-fast) var(--ease-lohni), filter var(--duration-release) var(--ease-lohni), transform var(--duration-release) var(--ease-release); }
 /* Press feedback only on controls: scaling a whole card made accordions inside it jump on tap. */
-button:active:not(:disabled), .ui-button:active:not(:disabled), .loop-screen a:active { transform: scale(var(--press-scale)); }
+button:active:not(:disabled), .ui-button:active:not(:disabled), .loop-screen a:active { transform: scale(var(--press-scale)); filter: brightness(.94); }
 .press-icon:active:not(:disabled) { transform: scale(var(--press-scale-icon)); }
+/* Appui : rapide et sans rebond ; le rebond n'existe qu'au relâchement (courbe --ease-pop de l'état de repos). */
+button:active:not(:disabled), .ui-button:active:not(:disabled), .loop-screen a:active, .press-icon:active:not(:disabled), summary:active { transition-duration: var(--duration-press); transition-timing-function: var(--ease-lohni); }
+summary { border-radius: var(--radius-control); padding-inline: .5rem; margin-inline: -.5rem; }
+summary:active { background-color: var(--color-tint); }
 .ui-card, article { transition: border-color var(--duration-fast) var(--ease-lohni), background-color var(--duration-fast) var(--ease-lohni); }
 
 /* Accordions: animated height, rotating chevron */
 details { interpolate-size: allow-keywords; }
-details::details-content { block-size: 0; opacity: 0; overflow: hidden; transition: block-size var(--duration-accordion) var(--ease-lohni), opacity var(--duration-accordion) var(--ease-lohni), content-visibility var(--duration-accordion) allow-discrete; }
-details[open]::details-content { block-size: auto; opacity: 1; }
+/* Ouverture : la hauteur s'étend, le contenu apparaît juste après (fondu retardé + léger glissement). Fermeture : il s'efface vite avant que la hauteur se replie. */
+details::details-content { block-size: 0; opacity: 0; transform: translateY(-6px); overflow: hidden; transition: block-size 320ms var(--ease-lohni), opacity 120ms linear, transform 320ms var(--ease-lohni), content-visibility 320ms allow-discrete; }
+details[open]::details-content { block-size: auto; opacity: 1; transform: none; transition: block-size var(--duration-accordion) var(--ease-lohni), opacity 260ms var(--ease-lohni) 90ms, transform var(--duration-accordion) var(--ease-lohni), content-visibility var(--duration-accordion) allow-discrete; }
 summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
 summary::-webkit-details-marker { display: none; }
-summary::after { content: ""; flex: none; width: .55rem; height: .55rem; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform var(--duration-accordion) var(--ease-lohni); opacity: .7; }
+summary::after { content: ""; flex: none; width: .55rem; height: .55rem; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform 260ms var(--ease-lohni), opacity var(--duration-fast); opacity: .7; }
 details[open] > summary::after { transform: rotate(225deg) translateY(-2px); }
 
 /* Native controls follow the brand color */
