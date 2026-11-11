@@ -3,7 +3,7 @@ import type { UA } from "../../pages/Quiz";
 
 export default function ReviewModal({ answers, onClose }:{ answers:UA[]; onClose:()=>void }) {
   return (
-    <div role="dialog" aria-modal="true" onKeyDown={e => e.key === "Escape" && onClose()} className="fixed inset-0 bg-background z-[60] flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" onKeyDown={e => e.key === "Escape" && onClose()} className="fixed inset-0 bg-background z-[var(--z-modal)] flex items-center justify-center p-4">
       <div className="bg-surface border border-border rounded-2xl p-6 max-w-2xl w-full max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-foreground">Revoir les réponses</h2>

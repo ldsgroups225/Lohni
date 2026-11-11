@@ -38,7 +38,7 @@ export default function Sidebar() {
   const active = pathname === '/chat' ? '/tutor'
     : ['/import', '/cards', '/exam', '/debate', '/tools', '/planner', '/quiz'].includes(pathname) ? '/courses'
     : pathname === '/revision' ? '/' : pathname
-  return <nav aria-label="Navigation principale" className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:inset-x-auto md:left-3 md:top-4 md:bottom-4 md:w-20 md:rounded-card md:border md:px-1 md:py-6">
+  return <nav aria-label="Navigation principale" className="fixed inset-x-0 bottom-0 z-[var(--z-nav)] border-t border-border bg-surface px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:inset-x-auto md:left-3 md:top-4 md:bottom-4 md:w-20 md:rounded-card md:border md:px-1 md:py-6">
     <div ref={nav} className="relative flex justify-around md:h-full md:flex-col md:justify-center md:gap-5">
       <span ref={indicator} aria-hidden="true" className="navigation-indicator" />
       {tabs.map(tab => <Link key={tab.to} to={tab.to} aria-current={active === tab.to ? 'page' : undefined}

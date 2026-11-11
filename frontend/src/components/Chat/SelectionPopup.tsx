@@ -12,7 +12,7 @@ export default function SelectionPopup({ selected, addNote, askDoubt, popupRef }
   return (
     <div
       ref={popupRef}
-      className="absolute z-[45] flex max-w-[calc(100vw-1rem)] flex-wrap gap-1 bg-surface border border-border rounded-xl p-2 shadow-xl"
+      className="absolute z-[var(--z-popup)] flex max-w-[calc(100vw-1rem)] flex-wrap gap-1 bg-surface border border-border rounded-xl p-2 shadow-xl"
       style={{ left: Math.max(8, Math.min(selected.x, window.innerWidth - 296)), top: selected.y + 10, transition: "opacity .15s" }}
     >
       <button

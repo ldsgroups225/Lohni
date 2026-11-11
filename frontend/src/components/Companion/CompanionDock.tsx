@@ -138,7 +138,7 @@ export default function CompanionDock() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`fixed bottom-[calc(12.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-28 md:right-6 z-40 flex size-12 items-center justify-center md:size-auto md:px-4 md:py-3 rounded-full md:rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg transition-[opacity,transform] ${fabHidden ? "pointer-events-none translate-y-4 opacity-0" : ""}`}
+          className={`fixed bottom-[calc(12.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-28 md:right-6 z-[var(--z-dock)] flex size-12 items-center justify-center md:size-auto md:px-4 md:py-3 rounded-full md:rounded-2xl bg-primary hover:bg-primary text-on-primary font-medium shadow-lg transition-[opacity,transform] ${fabHidden ? "pointer-events-none translate-y-4 opacity-0" : ""}`}
         >
           <svg aria-hidden="true" className="size-6 md:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg>
           <span className="max-md:sr-only">Assistant de cours</span>
@@ -150,7 +150,7 @@ export default function CompanionDock() {
         aria-label="Assistant de cours"
         inert={!open}
         className={cx(
-          "fixed bottom-[calc(12.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-28 md:right-6 z-40 w-[min(360px,calc(100vw-2rem))] max-h-[calc(100dvh-15rem)] md:max-h-[min(70vh,640px)] overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl  transition-[transform,opacity] duration-300",
+          "fixed bottom-[calc(12.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-28 md:right-6 z-[var(--z-dock)] w-[min(360px,calc(100vw-2rem))] max-h-[calc(100dvh-15rem)] md:max-h-[min(70vh,640px)] overflow-hidden rounded-3xl border border-border bg-surface shadow-2xl  transition-[transform,opacity] duration-300",
           open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
         )}
       >

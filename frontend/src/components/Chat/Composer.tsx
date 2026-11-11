@@ -31,7 +31,7 @@ export default function Composer({ disabled, onSend }: Props) {
   };
 
   return (
-    <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] md:bottom-0 pt-6 pb-4 border-t border-border left-4 right-4 md:left-32 z-40 bg-background">
+    <div className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] md:bottom-0 pt-6 pb-4 border-t border-border left-4 right-4 md:left-32 z-[var(--z-dock)] bg-background">
       <div className="max-w-4xl mx-auto">
         <div className="relative rounded-3xl bg-surface border border-border shadow-[inset_0_3px_15px] shadow-border flex items-end backdrop-blur-lg">
           <textarea

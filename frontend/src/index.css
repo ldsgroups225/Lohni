@@ -28,7 +28,13 @@
 
 :root {
   color-scheme: light dark;
-  /* Stacking scale: content < sticky 10-30 < dock 40 < nav 50 < modal 60 < toast 70 */
+  /* Stacking scale: content < sticky 10-30 < dock 40 < popup 45 < nav 50 < toast 55 < modal 60 < feedback 70 */
+  --z-dock: 40;
+  --z-popup: 45;
+  --z-nav: 50;
+  --z-toast: 55;
+  --z-modal: 60;
+  --z-feedback: 70;
   --lohni-background: #fff8f1;
   --lohni-surface: #ffffff;
   --lohni-foreground: #2a1d17;
@@ -199,7 +205,7 @@ body {
 .motion-enter, .motion-list, .loop-screen [role="alert"], .loop-screen [role="status"] { animation: lohni-enter var(--duration-normal) var(--ease-lohni) backwards; }
 .motion-flip { animation: lohni-flip var(--duration-normal) var(--ease-lohni); transform-origin: center; }
 .motion-celebrate { display: inline-flex; animation: lohni-celebrate var(--duration-slow) var(--ease-celebration) both; }
-.motion-feedback { position: fixed; z-index: 70; max-width: calc(100vw - 2rem); inset: auto 1rem calc(5rem + env(safe-area-inset-bottom)) auto; pointer-events: none; border-radius: var(--radius-control); padding: .6rem 1rem; color: var(--color-foreground); background: var(--color-tint); animation: lohni-feedback var(--duration-slow) var(--ease-lohni) both; }
+.motion-feedback { position: fixed; z-index: var(--z-feedback); max-width: calc(100vw - 2rem); inset: auto 1rem calc(5rem + env(safe-area-inset-bottom)) auto; pointer-events: none; border-radius: var(--radius-control); padding: .6rem 1rem; color: var(--color-foreground); background: var(--color-tint); animation: lohni-feedback var(--duration-slow) var(--ease-lohni) both; }
 .motion-progress { height: .5rem; border-radius: 9999px; overflow: hidden; background: var(--color-border); }
 .motion-progress > span { display: block; height: 100%; background: var(--color-primary); transform-origin: left; transition: transform var(--duration-normal) var(--ease-lohni); }
 .loop-screen button, .loop-screen a, .loop-screen .ui-card, .loop-screen article { transition: transform var(--duration-fast) var(--ease-lohni); }
