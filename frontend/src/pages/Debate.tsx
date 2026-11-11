@@ -47,6 +47,13 @@ export default function Debate() {
     const [isDebateEnded, setIsDebateEnded] = useState(false);
     const [analysis, setAnalysis] = useState<DebateAnalysis | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    // Escape closes the analysis dialog, same as its « Fermer » button (the debate itself stays ended).
+    useEffect(() => {
+        if (!isDebateEnded || !analysis) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setIsDebateEnded(false); setAnalysis(null); } };
+        document.addEventListener("keydown", onKey);
+        return () => document.removeEventListener("keydown", onKey);
+    }, [isDebateEnded, analysis]);
 
     const wsRef = useRef<WebSocket | null>(null);
     const analysisWsRef = useRef<WebSocket | null>(null);
