@@ -5,7 +5,13 @@ import { createMemoryRouter, Link, Outlet, RouterProvider } from 'react-router-d
 import { expect, test, vi } from 'vitest'
 import Sidebar from './components/Sidebar'
 import { BackButton } from './components/ui/BackButton'
+import { useOverlayNavigation } from './lib/useOverlayNavigation'
 import { navigationTransitions } from './navigationTransitions'
+
+function OverlayScreen() {
+  const [open, setOpen] = useOverlayNavigation('menu')
+  return <><button onClick={() => setOpen(!open)}>Menu</button>{open && <p>Options</p>}</>
+}
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -54,5 +60,29 @@ test('les transitions natives sont demandées uniquement entre écrans et sans m
     expect(transitions.at(-1)).toBe(false)
   } finally {
     unsubscribe(); router.dispose(); vi.unstubAllGlobals(); delete (document as Partial<Document>).startViewTransition; delete document.documentElement.dataset.nav
+  }
+})
+
+test('ouvrir et fermer une surcouche ne lance aucune transition d’écran', async () => {
+  const start = vi.fn()
+  Object.defineProperty(document, 'startViewTransition', { configurable: true, value: start })
+  vi.stubGlobal('matchMedia', () => ({ matches: false }))
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = navigationTransitions(createMemoryRouter([{ path: '/revision', element: <OverlayScreen /> }], { initialEntries: ['/revision'] }))
+  const transitions: boolean[] = []
+  const unsubscribe = router.subscribe((_state, options) => transitions.push(!!options.viewTransitionOpts))
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => host.querySelector('button')!.click())
+    expect(host.textContent).toContain('Options')
+    await act(async () => { await router.navigate(-1) })
+    expect(host.textContent).not.toContain('Options')
+    await act(async () => host.querySelector('button')!.click())
+    await act(async () => host.querySelector('button')!.click())
+    expect(transitions).toEqual([false, false, false, false])
+    expect(start).not.toHaveBeenCalled()
+  } finally {
+    act(() => root.unmount()); unsubscribe(); router.dispose(); host.remove(); vi.unstubAllGlobals(); delete (document as Partial<Document>).startViewTransition
   }
 })

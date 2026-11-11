@@ -61,3 +61,21 @@ test('une nouvelle demande du même sujet crée un nouveau quiz', async () => {
     expect(api.start).toHaveBeenCalledTimes(2)
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
 })
+
+test('un quiz choisi sur place reste disponible après la mise à jour de son adresse et un retour', async () => {
+  api.start.mockClear(); sessionStorage.clear()
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }, { path: '/tutor', element: <p>Tuteur</p> }], { initialEntries: ['/quiz'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Les fractions'))!.click())
+    await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Commencer le quiz'))!.click())
+    expect(host.textContent).toContain('Combien ?')
+    await act(async () => { await router.navigate('/tutor') })
+    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Quitter')!.click())
+    await act(async () => { await router.navigate(-1) })
+    expect(host.textContent).toContain('Combien ?')
+    expect(api.start).toHaveBeenCalledTimes(1)
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
+})
