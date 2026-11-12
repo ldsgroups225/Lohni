@@ -5,5 +5,9 @@
   "scripts": {},
   "devDependencies": {
     "wrangler": "^4.160.1"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "workerd": true
   }
 }
