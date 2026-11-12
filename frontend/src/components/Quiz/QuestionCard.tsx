@@ -1,3 +1,4 @@
+import { LightbulbIcon } from '../ui/NavigationIcons'
 import { useEffect, useRef } from "react";
 import MarkdownView from "../Chat/MarkdownView";
 import { prefersReducedMotion } from "../../lib/motion";
@@ -62,7 +63,7 @@ export default function QuestionCard({
           <div>
             {!showHint && (
               <button type="button" onClick={onHint} className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-surface px-4 text-foreground">
-                <span aria-hidden="true">💡</span> Afficher un indice
+                <LightbulbIcon /> Afficher un indice
               </button>
             )}
             {showHint && (

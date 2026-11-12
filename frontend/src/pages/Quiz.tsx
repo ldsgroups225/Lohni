@@ -1,3 +1,4 @@
+import { PartyIcon, TrophyIcon, BookIcon, DumbbellIcon } from '../components/ui/NavigationIcons'
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { quizStart, connectQuizStream, type QuizEvent } from "../lib/api";
@@ -48,7 +49,7 @@ export default function Quiz() {
   const q = qs[idx];
 
   const percentage = useMemo(() => (total ? Math.round((score / total) * 100) : 0), [score, total]);
-  const resultVisual = useMemo(() => { if (percentage >= 90) return { msg: "Excellent ! Tu maîtrises ce sujet !", cls: "bg-success border border-success text-on-success", icon: "🏆" }; if (percentage >= 70) return { msg: "Bravo ! Tu as bien compris.", cls: "bg-tint border border-primary text-foreground", icon: "🎉" }; if (percentage >= 50) return { msg: "Bon travail ! Relis les notions puis réessaie.", cls: "bg-tint border border-border text-foreground", icon: "📚" }; return { msg: "Continue à réviser pour progresser.", cls: "bg-tint border border-primary text-foreground", icon: "💪" }; }, [percentage]);
+  const resultVisual = useMemo(() => { if (percentage >= 90) return { msg: "Excellent ! Tu maîtrises ce sujet !", cls: "bg-success border border-success text-on-success", icon: <TrophyIcon className="size-14" /> }; if (percentage >= 70) return { msg: "Bravo ! Tu as bien compris.", cls: "bg-tint border border-primary text-foreground", icon: <PartyIcon className="size-14" /> }; if (percentage >= 50) return { msg: "Bon travail ! Relis les notions puis réessaie.", cls: "bg-tint border border-border text-foreground", icon: <BookIcon className="size-14" /> }; return { msg: "Continue à réviser pour progresser.", cls: "bg-tint border border-primary text-foreground", icon: <DumbbellIcon className="size-14" /> }; }, [percentage]);
 
   useEffect(() => () => { if (closeRef.current) closeRef.current(); }, []);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Le sujet ou la clé de cache lance au plus une génération ; start change à chaque rendu.

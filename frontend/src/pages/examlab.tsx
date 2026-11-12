@@ -1,3 +1,4 @@
+import { PartyIcon, TrophyIcon, BookIcon, DumbbellIcon } from '../components/ui/NavigationIcons'
 import { useEffect, useMemo, useRef, useState } from "react"
 import { getExams, startExam, connectExamStream, type ExamEvent } from "../lib/api"
 import LoadingIndicator from "../components/Chat/LoadingIndicator"
@@ -53,10 +54,10 @@ export default function ExamLabs() {
   )
 
   const resultVisual = useMemo(() => {
-    if (percentage >= 90) return { msg: "Excellent!", cls: "bg-success border border-success text-on-success", icon: "🏆" }
-    if (percentage >= 70) return { msg: "Bravo !", cls: "bg-tint border border-primary text-foreground", icon: "🎉" }
-    if (percentage >= 50) return { msg: "Bon travail !", cls: "bg-tint border border-border text-foreground", icon: "📚" }
-    return { msg: "Continue à réviser !", cls: "bg-tint border border-primary text-foreground", icon: "💪" }
+    if (percentage >= 90) return { msg: "Excellent!", cls: "bg-success border border-success text-on-success", icon: <TrophyIcon className="size-14" /> }
+    if (percentage >= 70) return { msg: "Bravo !", cls: "bg-tint border border-primary text-foreground", icon: <PartyIcon className="size-14" /> }
+    if (percentage >= 50) return { msg: "Bon travail !", cls: "bg-tint border border-border text-foreground", icon: <BookIcon className="size-14" /> }
+    return { msg: "Continue à réviser !", cls: "bg-tint border border-primary text-foreground", icon: <DumbbellIcon className="size-14" /> }
   }, [percentage])
 
   useEffect(() => {

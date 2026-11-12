@@ -1,3 +1,4 @@
+import { TargetIcon, PartyIcon } from '../ui/NavigationIcons'
 import type { PlannerTask } from "../../lib/api"
 
 function fmtTime(ts: number) {
@@ -30,7 +31,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
     return (
         <div className="rounded-xl border border-border bg-surface p-4">
             <h2 className="text-foreground font-medium mb-3 flex items-center gap-2">
-                <span aria-hidden="true">🎯</span>
+                <TargetIcon />
                 Priorités du jour
             </h2>
 
@@ -127,7 +128,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                 {/* Empty State */}
                 {todayTasks.length === 0 && urgentTasks.length === 0 && activeTasks.length === 0 && (
                     <div className="flex items-center gap-3 rounded-xl bg-tint p-3 text-muted">
-                        <span aria-hidden="true" className="text-2xl">🎉</span>
+                        <PartyIcon className="size-6 shrink-0" />
                         <p className="text-sm"><span className="font-medium text-foreground">Rien d’urgent aujourd’hui.</span> Continue à ton rythme ou ajoute une tâche.</p>
                     </div>
                 )}
