@@ -4,8 +4,6 @@ import path from 'node:path'
 import Busboy from 'busboy'
 import { extractText } from './extract'
 import { embedTextFromFile } from '../ai/embed'
-import { OllamaEmbeddings } from '@langchain/ollama'
-import { OpenAIEmbeddings } from '@langchain/openai'
 
 const str = path.join(process.cwd(), 'storage', 'uploads')
 if (!fs.existsSync(str)) fs.mkdirSync(str, { recursive: true })
@@ -57,10 +55,6 @@ export async function handleUpload(a: { filePath: string; filename?: string; con
   if (!txt?.trim()) throw new Error('No valid content extracted from file.')
   const out = `${fp}.txt`
   fs.writeFileSync(out, txt)
-  const isO = process.env.LLM_PROVIDER === 'ollama'
-  const _emb = isO
-    ? new OllamaEmbeddings({ model: process.env.OLLAMA_MODEL || 'llama3' })
-    : new OpenAIEmbeddings({ model: 'text-embedding-3-small', openAIApiKey: process.env.OPENROUTER_API_KEY, configuration: { baseURL: 'https://openrouter.ai/api/v1' } })
   await embedTextFromFile(out, ns)
   return { stored: out }
 }

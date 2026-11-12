@@ -65,8 +65,6 @@ export type StudyMaterials = {
 export type TranscriptionResponse = {
   ok: boolean;
   transcription?: string;
-  provider?: string;
-  confidence?: number;
   error?: string;
   studyMaterials?: StudyMaterials;
 }

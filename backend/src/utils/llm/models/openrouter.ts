@@ -4,7 +4,7 @@ import type { MkLLM, MkEmb, EmbeddingsLike, Msg } from './types'
 // OPENROUTER_MODEL peut lister plusieurs modèles séparés par des virgules, essayés dans l'ordre.
 // Une erreur (ex. 402 crédit épuisé) passe au modèle suivant ; la dernière erreur est relancée.
 export const makeLLM: MkLLM = (cfg: any) => {
-  const models = (cfg.openrouter_model || 'google/gemini-2.5-flash').split(',').map((m: string) => m.trim()).filter(Boolean)
+  const models = cfg.openrouter_model.split(',').map((m: string) => m.trim()).filter(Boolean)
   const chats = models.map((model: string) => new ChatOpenAI({
     model,
     apiKey: cfg.openrouter || '',
@@ -24,8 +24,8 @@ export const makeLLM: MkLLM = (cfg: any) => {
 
 export const makeEmbeddings: MkEmb = (cfg: any): EmbeddingsLike => {
   return new OpenAIEmbeddings({
-    model: cfg.openai_embed_model || 'text-embedding-3-large',
-    apiKey: cfg.openrouter || process.env.OPENROUTER_API_KEY,
+    model: cfg.openrouter_embed_model,
+    apiKey: cfg.openrouter,
     configuration: { baseURL: 'https://openrouter.ai/api/v1' },
   })
 }

@@ -13,7 +13,6 @@ export default function Transcriber() {
   const [transcription, setTranscription] = useState<string | null>(null);
   const [studyMaterials, setStudyMaterials] = useState<StudyMaterials | null>(null);
   const [status, setStatus] = useState("");
-  const [confidence, setConfidence] = useState<number | null>(null);
   const [audioLevel, setAudioLevel] = useState(0);
   const [processing, setProcessing] = useState(false);
   
@@ -32,7 +31,6 @@ export default function Transcriber() {
     setStatus("Transcription de l’audio…");
     setTranscription(null);
     setStudyMaterials(null);
-    setConfidence(null);
 
     try {
       const result = await transcribeAudio(file);
@@ -40,7 +38,6 @@ export default function Transcriber() {
       if (result.ok && result.transcription) {
         setTranscription(result.transcription);
         setStudyMaterials(result.studyMaterials || null);
-        setConfidence(result.confidence || null);
         setStatus("Tes supports de révision sont prêts !");
       } else {
         setStatus(`Erreur : ${result.error || "La transcription a échoué"}`);
@@ -325,11 +322,6 @@ export default function Transcriber() {
               : 'bg-tint border border-border text-foreground'
           }`}>
             {status}
-            {confidence && (
-              <span className="block text-sm mt-1 opacity-75">
-                Fiabilité : {Math.round(confidence * 100)}%
-              </span>
-            )}
           </div>
         )}
 

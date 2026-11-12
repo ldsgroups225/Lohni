@@ -1,132 +1,58 @@
-import { transcribeAudio, type TranscriptionProvider } from "../../services/transcriber";
-import { config } from "../../config/env";
+import { transcribeAudio } from "../../services/transcriber";
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import Busboy from 'busboy';
 
-type ParsedTranscriptionRequest = {
-    provider: TranscriptionProvider;
-    files: Array<{ path: string; filename: string; mimeType: string }>;
-};
+// OpenRouter rejects multipart transcription uploads above 25 MB.
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
 
-function parseTranscriptionRequest(req: any): Promise<ParsedTranscriptionRequest> {
+type AudioUpload = { path: string; mimeType: string; truncated: boolean };
+
+// Audio goes to the OS temp dir, not storage/uploads, which is served publicly.
+function parseAudioUpload(req: any): Promise<AudioUpload | null> {
     return new Promise((resolve, reject) => {
-        const bb = Busboy({ headers: req.headers });
-        let provider: TranscriptionProvider = config.transcription_provider as TranscriptionProvider;
-        const files: Array<{ path: string; filename: string; mimeType: string }> = [];
-        let pending = 0;
-        let ended = false;
-        let failed = false;
-        const done = () => {
-            if (!failed && ended && pending === 0) {
-                resolve({ provider, files });
-            }
-        };
-
-        const uploadDir = path.join(process.cwd(), 'storage', 'uploads');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-
-        bb.on('field', (name, value) => {
-            if (name === 'provider') {
-                provider = value as TranscriptionProvider;
-            }
-        });
+        const bb = Busboy({ headers: req.headers, limits: { files: 1, fileSize: MAX_AUDIO_BYTES } });
+        let upload: AudioUpload | null = null;
+        let writing: Promise<void> = Promise.resolve();
 
         bb.on('file', (_name, file, info: any) => {
-            pending++;
-            const filename = info?.filename || 'audio';
-            const mimeType = info?.mimeType || info?.mime || 'audio/webm';
-            const filePath = path.join(uploadDir, `${Date.now()}-${filename}`);
-            const writeStream = fs.createWriteStream(filePath);
-
-            file.on('error', (e) => {
-                failed = true;
-                reject(e);
-            });
-            writeStream.on('error', (e) => {
-                failed = true;
-                reject(e);
-            });
-            writeStream.on('finish', () => {
-                files.push({ path: filePath, filename, mimeType });
-                pending--;
-                done();
-            });
-
-            file.pipe(writeStream);
+            const ext = path.extname(info?.filename || '').replace(/[^.\w]/g, '') || '.webm';
+            const current: AudioUpload = { path: path.join(os.tmpdir(), `lohni-audio-${crypto.randomUUID()}${ext}`), mimeType: info?.mimeType || 'audio/webm', truncated: false };
+            upload = current;
+            const out = fs.createWriteStream(current.path);
+            writing = new Promise((done, fail) => { out.on('finish', done); out.on('error', fail); file.on('error', fail); });
+            file.on('limit', () => { current.truncated = true; });
+            file.pipe(out);
         });
-
-        bb.on('error', (e) => {
-            failed = true;
-            reject(e);
-        });
-        bb.on('finish', () => {
-            ended = true;
-            done();
-        });
-
+        bb.on('error', reject);
+        bb.on('finish', () => { writing.then(() => resolve(upload), reject); });
         req.pipe(bb);
     });
 }
 
 export function transcriberRoutes(app: any) {
     app.post("/transcriber", async (req: any, res: any) => {
+        if (!String(req.headers['content-type'] || '').includes('multipart/form-data')) {
+            return res.status(400).json({ ok: false, error: 'Envoie un fichier audio.' });
+        }
+
+        let upload: AudioUpload | null = null;
         try {
-            const contentType = req.headers['content-type'] || '';
-
-            if (!contentType.includes('multipart/form-data')) {
-                return res.status(400).json({
-                    ok: false,
-                    error: 'Content-Type must be multipart/form-data'
-                });
+            upload = await parseAudioUpload(req);
+            if (!upload) return res.status(400).json({ ok: false, error: 'Aucun fichier audio reçu.' });
+            if (upload.truncated) return res.status(413).json({ ok: false, error: 'L’enregistrement dépasse 25 Mo. Raccourcis-le et réessaie.' });
+            if (!upload.mimeType.startsWith('audio/') && !upload.mimeType.startsWith('video/')) {
+                return res.status(400).json({ ok: false, error: 'Le fichier doit être un enregistrement audio ou vidéo.' });
             }
 
-            const { provider, files } = await parseTranscriptionRequest(req);
-
-            if (!files || files.length === 0) {
-                return res.status(400).json({
-                    ok: false,
-                    error: 'No audio file provided'
-                });
-            }
-
-            const audioFile = files[0];
-
-            // Check if it's an audio file (or video, which often contains audio)
-            if (!audioFile.mimeType.startsWith('audio/') && !audioFile.mimeType.startsWith('video/')) {
-                return res.status(400).json({
-                    ok: false,
-                    error: 'File must be an audio or video file'
-                });
-            }
-
-            console.log(`[transcriber] Processing ${audioFile.filename} with ${provider} provider`);
-
-            const result = await transcribeAudio(audioFile.path, provider);
-
-            // Clean up the temporary file
-            try {
-                fs.unlinkSync(audioFile.path);
-            } catch {
-                console.warn('Failed to delete temp file:', audioFile.path);
-            }
-
-            res.json({
-                ok: true,
-                transcription: result.text,
-                provider: result.provider,
-                duration: result.duration,
-                confidence: result.confidence
-            });
-
+            const result = await transcribeAudio(upload.path);
+            res.json({ ok: true, transcription: result.text, studyMaterials: result.studyMaterials });
         } catch (error: any) {
             console.error('Transcription route error:', error);
-            res.status(500).json({
-                ok: false,
-                error: error.message || 'Transcription failed'
-            });
+            res.status(500).json({ ok: false, error: error?.message?.startsWith('La transcription') ? error.message : 'La transcription a échoué. Réessaie dans un instant.' });
+        } finally {
+            if (upload) fs.promises.rm(upload.path, { force: true }).catch(() => {});
         }
     });
 }
