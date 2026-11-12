@@ -66,7 +66,9 @@ async function synth_edge(segs: TSeg[], dir: string, base: string, emit?: (m: an
         
       } catch (err: any) {
         lastError = err
-        
+        // A 4xx at the handshake (e.g. 403 from an outdated client) will not pass on retry.
+        if (/Unexpected server response: 4\d\d/.test(String(err?.message))) break
+
         if (attempt < maxRetries) {
           const waitTime = Math.min(1000 * 2 ** (attempt - 1), 5000) // Exponential backoff: 1s, 2s, 4s (max 5s)
           await new Promise(resolve => setTimeout(resolve, waitTime))
@@ -74,7 +76,7 @@ async function synth_edge(segs: TSeg[], dir: string, base: string, emit?: (m: an
       }
     }
     
-    throw new Error(`Failed to convert segment ${segmentIndex + 1} after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`)
+    throw new Error(`Failed to convert segment ${segmentIndex + 1}: ${lastError?.message || 'Unknown error'}`)
   }
 
   for (let i = 0; i < segs.length; i++) {
