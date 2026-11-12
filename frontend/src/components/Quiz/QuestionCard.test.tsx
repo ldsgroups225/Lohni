@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, test, vi } from 'vitest'
 import QuestionCard from './QuestionCard'
+import { required } from '../../test/required'
 
 test('ne rend pas le HTML ajouté à une question', () => {
   const question = { id: 1, question: 'Question', options: ['Réponse'], correct: 0, hint: '', explanation: '', imageHtml: '<img src=x onerror=alert(1)>' }
@@ -48,4 +49,21 @@ test('les flèches ne répondent pas, un clic répond une fois et verrouille les
     host.remove()
     Element.prototype.scrollIntoView = scroll
   }
+})
+
+ test('après une réponse au clavier, le focus passe au bouton suivant', async () => {
+  const question = { id: 1, question: 'Question', options: ['Une', 'Deux'], correct: 0, hint: '', explanation: '' }
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const scroll = Element.prototype.scrollIntoView
+  Element.prototype.scrollIntoView = vi.fn()
+  const render = (showExp: boolean) => <QuestionCard q={question} selected={showExp ? 0 : null} showExp={showExp} showHint={false} onSelect={() => {}} onHint={() => {}} onNext={() => {}} isLast={false} />
+  try {
+    await act(async () => root.render(render(false)))
+    const option = required(host.querySelector<HTMLButtonElement>('#answerOptions button'))
+    option.focus()
+    await act(async () => option.click())
+    await act(async () => root.render(render(true)))
+    expect(document.activeElement?.textContent).toBe('Continuer')
+  } finally { act(() => root.unmount()); host.remove(); Element.prototype.scrollIntoView = scroll }
 })

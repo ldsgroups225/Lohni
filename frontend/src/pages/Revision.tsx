@@ -45,6 +45,7 @@ export default function Revision() {
   const focusMenuItem = useCallback((button: HTMLButtonElement | null) => { button?.focus() }, [])
   const menuExit = useExitTransition(menu, MENU_EXIT_MS)
   const continueButton = useRef<HTMLButtonElement>(null)
+  const keyboardAnswer = useRef(false)
   const [generating, setGenerating] = useState(false)
   const [slow, setSlow] = useState(false)
   // QCM: la réponse est enregistrée au choix ; la carte suivante n’apparaît qu’au clic sur « Continuer ».
@@ -59,6 +60,8 @@ export default function Revision() {
   // Deuxième passage : le Markdown se charge à la demande et peut allonger la page après le premier.
   useEffect(() => {
     if (!verdict) return
+    if (keyboardAnswer.current) continueButton.current?.focus({ preventScroll: true })
+    keyboardAnswer.current = false
     const go = () => continueButton.current?.scrollIntoView({ block: 'end', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
     go()
     const timer = window.setTimeout(go, 350)
@@ -254,12 +257,11 @@ export default function Revision() {
                 {withOccurrenceKeys(card.options ?? [], option => option).map(({ value: option, key }, i) => {
                   const n = i + 1
                   const tone = !verdict ? 'border-border' : n === card.correct ? 'border-success bg-success/10' : n === verdict.choice ? 'border-danger bg-danger/10' : 'border-border opacity-60'
-                  return <label key={key} className={`flex items-start gap-3 rounded-xl border p-3 ${tone}`}>
-                    <input type="radio" name="answer" value={n} checked={choice === n} onChange={() => answer(n === card.correct, n)} className="mt-1" />
+                  return <button key={key} type="button" aria-pressed={choice === n} disabled={busy || !validated || !!verdict} onClick={event => { keyboardAnswer.current = event.detail === 0; answer(n === card.correct, n) }} className={`flex min-h-14 w-full items-start gap-3 rounded-xl border p-3 text-left text-foreground focus-visible:outline-2 focus-visible:outline-primary ${tone}`}>
                     <span className="flex-1">{n}. <MarkdownView md={option} inline /></span>
                     {verdict && n === card.correct && <span className="flex items-center gap-1 text-sm"><CheckIcon />Bonne réponse</span>}
                     {verdict && n === verdict.choice && n !== card.correct && <span className="flex items-center gap-1 text-sm"><CloseIcon />Ta réponse</span>}
-                  </label>
+                  </button>
                 })}
               </fieldset>}
               {verdict ? <div className="space-y-3 border-t border-border pt-5" aria-live="polite">

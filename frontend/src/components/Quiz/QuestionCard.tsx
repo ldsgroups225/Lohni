@@ -14,10 +14,13 @@ export default function QuestionCard({
   onSelect:(i:number)=>void; onHint:()=>void; onNext:()=>void; isLast:boolean;
 }) {
   const next = useRef<HTMLButtonElement>(null);
+  const keyboardAnswer = useRef(false);
   // Après la réponse : défiler jusqu'à l'explication et « Continuer », avec une marge sous le bouton.
   // Second passage : le Markdown se charge à la demande et peut allonger la page.
   useEffect(() => {
     if (!showExp) return;
+    if (keyboardAnswer.current) next.current?.focus({ preventScroll: true });
+    keyboardAnswer.current = false;
     const go = () => next.current?.scrollIntoView({ block: "end", behavior: prefersReducedMotion() ? "auto" : "smooth" });
     go();
     const timer = window.setTimeout(go, 350);
@@ -43,7 +46,7 @@ export default function QuestionCard({
                 type="button"
                 aria-pressed={isSel}
                 disabled={showExp}
-                onClick={() => onSelect(i)}
+                onClick={event => { keyboardAnswer.current = event.detail === 0; onSelect(i); }}
                 className={`flex min-h-14 w-full items-start gap-3 rounded-xl border p-3 text-left text-foreground focus-visible:outline-2 focus-visible:outline-primary ${tone}`}
               >
                 <span className="grid size-7 shrink-0 place-items-center rounded-full border border-border text-xs font-bold">{String.fromCharCode(65 + i)}</span>
