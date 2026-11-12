@@ -1,10 +1,14 @@
-const Database = require('better-sqlite3')
+import Database from 'better-sqlite3'
 import path from 'node:path'
 import { mkdirSync } from 'node:fs'
 import { keyvReady } from './keyv'
 
+const normalizeParams = (params: any[]) => params.map(value =>
+    typeof value === 'boolean' ? Number(value) : value instanceof Date ? value.getTime() : value
+)
+
 export class SQLiteDatabase {
-    private db: any
+    private db: Database.Database
     private pending: Promise<unknown>
 
     constructor(dbPath: string, ready: Promise<unknown> = Promise.resolve()) {
@@ -24,17 +28,17 @@ export class SQLiteDatabase {
 
     async run(sql: string, params: any[] = []): Promise<{ lastID: number | bigint; changes: number }> {
         return this.execute(() => {
-            const result = this.db.prepare(sql).run(...params)
+            const result = this.db.prepare(sql).run(...normalizeParams(params))
             return { lastID: result.lastInsertRowid, changes: result.changes }
         })
     }
 
     async get(sql: string, params: any[] = []): Promise<any> {
-        return this.execute(() => this.db.prepare(sql).get(...params))
+        return this.execute(() => this.db.prepare(sql).get(...normalizeParams(params)))
     }
 
     async all(sql: string, params: any[] = []): Promise<any[]> {
-        return this.execute(() => this.db.prepare(sql).all(...params))
+        return this.execute(() => this.db.prepare(sql).all(...normalizeParams(params)))
     }
 
     async close(): Promise<void> {

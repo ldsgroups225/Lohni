@@ -29,3 +29,17 @@ it('waits for shared storage readiness before starting a transaction', async () 
     expect(started).toBe(true)
   } finally { await db.close() }
 })
+
+it('binds booleans as SQLite integers', async () => {
+  const db = new SQLiteDatabase(':memory:')
+  try {
+    expect(await db.get('SELECT ? AS yes, ? AS no', [true, false])).toEqual({ yes: 1, no: 0 })
+  } finally { await db.close() }
+})
+
+it('binds dates as epoch milliseconds', async () => {
+  const db = new SQLiteDatabase(':memory:')
+  try {
+    expect(await db.get('SELECT ? AS instant', [new Date('2024-01-02T03:04:05.000Z')])).toEqual({ instant: 1704164645000 })
+  } finally { await db.close() }
+})
