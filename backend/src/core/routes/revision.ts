@@ -29,6 +29,8 @@ export function revisionRoutes(app: any) {
   route('put', '/revision/exams/:id', (context, req) => revision.saveExam(context, { ...req.body, id: req.params.id }))
   route('delete', '/revision/exams/:id', (context, req) => revision.deleteExam(context, req.params.id))
   route('get', '/revision/profile', context => revision.getProfile(context))
+  route('get', '/revision/settings', context => revision.getSettings(context))
+  route('put', '/revision/settings', (context, req) => revision.saveSettings(context, req.body))
   route('get', '/revision/progress', context => revision.getProgress(context))
   route('get', '/revision/home', context => revision.getHome(context))
   route('put', '/revision/profile', (context, req) => revision.saveProfile(context, req.body))

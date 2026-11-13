@@ -628,6 +628,7 @@ export { revisionPolicy };
 
 export type RevisionExam = { id: string; title: string; date: string; subjects: string[]; chapterIds: string[] };
 export type RevisionProfile = { schoolClass: string; series?: string; subjects: string[]; examDate?: string };
+export type RevisionSettings = { dailyMinutes: number; restDays: number[] };
 export type RevisionCard = {
   id: string; chapterId: string; kind: 'basic' | 'mcq'; question: string; answer: string;
   options?: string[]; correct?: number; origin: 'ai' | 'import'; due: string; reviews: number;
@@ -906,6 +907,8 @@ export const revisionAPI = {
   saveExam: (exam: Omit<RevisionExam, 'id'> & { id?: string }) => revisionMutation<RevisionExam>(exam.id ? `/exams/${encodeURIComponent(exam.id)}` : '/exams', exam.id ? 'PUT' : 'POST', exam),
   deleteExam: (id: string) => revisionMutation<null>(`/exams/${encodeURIComponent(id)}`, 'DELETE'),
   profile: () => cachedRevisionRead<RevisionProfile | null>('/profile'),
+  settings: () => revisionRequest<RevisionSettings>('/settings'),
+  saveSettings: (settings: RevisionSettings) => revisionMutation<RevisionSettings>('/settings', 'PUT', settings),
   chapters: () => sharedRevisionRead('/chapters', () => revisionRequest<RevisionChapter[]>('/chapters')),
   deleteChapter: (id: string) => revisionMutation<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),
   updateCard: (id: string, card: RevisionCardInput) => revisionMutation<null>(`/cards/${encodeURIComponent(id)}`, 'PUT', card),
