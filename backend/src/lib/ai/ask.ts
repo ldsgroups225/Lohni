@@ -297,6 +297,7 @@ type AskWithContextOptions = {
   systemPrompt?: string
   history?: HistoryMessage[]
   cacheScope?: string
+  isCacheable?: (payload: AskPayload) => boolean
 }
 
 export async function askWithContext(opts: AskWithContextOptions): Promise<AskPayload> {
@@ -311,8 +312,12 @@ export async function askWithContext(opts: AskWithContextOptions): Promise<AskPa
   const historyCache = serializeHistoryForCache(historyArr)
 
   const ck = { t: opts.cacheScope || "ask_ctx", q: safeQ, ctx, topic, sys: systemPrompt, hist: historyCache }
-  const cached = readCache(ck)
-  if (cached) return cached
+  let cached: AskPayload | null
+  try { cached = readCache(ck) } catch (error) {
+    if (!opts.isCacheable || !(error instanceof SyntaxError)) throw error
+    cached = null
+  }
+  if (cached && (!opts.isCacheable || opts.isCacheable(cached))) return cached
 
   const messages: any[] = [{ role: "system", content: systemPrompt }]
   for (const msg of toConversationHistory(historyArr)) messages.push(msg)
@@ -336,7 +341,7 @@ export async function askWithContext(opts: AskWithContextOptions): Promise<AskPa
       }
       : salvageTruncatedJson(draft, topic) ?? { topic, answer: draft, flashcards: [] }
 
-  writeCache(ck, out)
+  if (!opts.isCacheable || opts.isCacheable(out)) writeCache(ck, out)
   return out
 }
 

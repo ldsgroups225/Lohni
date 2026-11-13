@@ -12,6 +12,8 @@ export type QuizItem = {
   explanation: string
 }
 
+export class InvalidQuizError extends Error {}
+
 const SYS = String.raw`PRIMARY OBJECTIVE
 Generate exactly ${policy.generatedMCQCards} multiple-choice questions about the given topic.
 
@@ -90,6 +92,6 @@ export async function handleQuiz(topic: string, language: "en" | "fr" = "en"): P
   const parsed = await ask(topic, french(SYS))
   if (validQuiz(parsed)) return normalizeQuiz(parsed)
   const parsed2 = await ask(topic, french(SYS_STRICT))
-  if (!validQuiz(parsed2)) throw new Error("Invalid quiz JSON from model")
+  if (!validQuiz(parsed2)) throw new InvalidQuizError("Invalid quiz JSON from model")
   return normalizeQuiz(parsed2)
 }
