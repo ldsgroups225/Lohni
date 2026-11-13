@@ -34,8 +34,8 @@ function DaySlots({ date, slots, tasks }: { date: string; slots: PlannerSlot[]; 
 
 export default function Planner() {
     const [loading, setLoading] = useState(false)
+    const [addError, setAddError] = useState("")
     const [tasks, setTasks] = useState<PlannerTask[]>([])
-    const [sid] = useState(() => Math.random().toString(36).slice(2, 10))
     const [plan, setPlan] = useState<WeeklyPlan | null>(null)
     const [materials, setMaterials] = useState<Record<string, any>>({})
     const wsRef = useRef<ReturnType<typeof connectPlannerStream> | null>(null)
@@ -62,7 +62,7 @@ export default function Planner() {
     }, [plan])
 
     useEffect(() => {
-        wsRef.current = connectPlannerStream(sid, (ev: PlannerEvent) => {
+        wsRef.current = connectPlannerStream((ev: PlannerEvent) => {
             if (ev.type === "plan.update") {
                 setTasks(t => t.map(x => x.id === ev.taskId ? { ...x, plan: { ...(x as any).plan, slots: ev.slots } } as any : x))
                 plannerWeekly(false).then(wp => setPlan(wp.plan)).catch(() => { })
@@ -112,7 +112,7 @@ export default function Planner() {
             if (ev.type === "materials.done") { }
         })
         return () => { try { wsRef.current?.close() } catch { } }
-    }, [sid, addNotification])
+    }, [addNotification])
 
     // Request notification permission on mount
     useEffect(() => {
@@ -130,12 +130,13 @@ export default function Planner() {
 
     useEffect(() => { void reload() }, [reload])
 
-    const add = async (data: { text?: string; files?: File[] }) => {
+    const add = async (data: { text?: string; files?: File[] }): Promise<boolean> => {
         const taskText = data.text || ""
         const taskFiles = data.files || []
 
-        if (!taskText.trim() && taskFiles.length === 0) return
+        if (!taskText.trim() && taskFiles.length === 0) return false
         setLoading(true)
+        setAddError("")
         try {
             if (taskFiles.length > 0) {
                 const { task } = await plannerCreateWithFiles({ text: taskText, files: taskFiles })
@@ -144,6 +145,14 @@ export default function Planner() {
                 const { task } = await plannerIngest(taskText)
                 setTasks(t => [task, ...t.filter(x => x.id !== task.id)])
             }
+            return true
+        } catch (error) {
+            const message = error instanceof Error ? error.message : ""
+            // Server messages are French; raw network or HTTP errors are not shown as is.
+            setAddError(message && !/^http \d|failed to fetch|abort|load failed/i.test(message) ? message
+                : "La tâche n’a pas pu être ajoutée. Vérifie ta connexion et réessaie ; ton texte est conservé.")
+            void reload().catch(() => { }) // the task may have been created even if the answer was lost
+            return false
         } finally {
             setLoading(false)
         }
@@ -258,7 +267,7 @@ export default function Planner() {
                             />
                         </div>
                         <div className="order-1 lg:order-2">
-                            <QuickAdd onAdd={add} loading={loading} />
+                            <QuickAdd onAdd={add} loading={loading} error={addError} />
                         </div>
                     </div>
                 ) : view === 'mindmap' ? (

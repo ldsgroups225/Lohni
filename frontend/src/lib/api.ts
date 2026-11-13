@@ -430,10 +430,17 @@ export type PlannerEvent =
   | { type: "slot.update"; taskId: string; slotId: string; done: boolean; skip: boolean }
   | { type: "done" };
 
+// Planner data belongs to the device: every call carries the same id as the revision calls.
+const plannerHeaders = (json = false) => {
+  const h = new Headers({ "X-Device-Id": revisionDeviceId() });
+  if (json) h.set("content-type", "application/json");
+  return h;
+};
+
 export async function plannerIngest(text: string) {
   return req<{ ok: boolean; task: PlannerTask }>(`${env.backend}/tasks/ingest`, {
     method: "POST",
-    headers: jsonHeaders({}),
+    headers: plannerHeaders(true),
     body: JSON.stringify({ text })
   })
 }
@@ -444,13 +451,13 @@ export async function plannerList(params?: { status?: string; dueBefore?: number
   if (params?.dueBefore) q.set("dueBefore", String(params.dueBefore))
   if (params?.course) q.set("course", params.course)
   const url = `${env.backend}/tasks${q.toString() ? `?${q}` : ""}`
-  return req<{ ok: boolean; tasks: PlannerTask[] }>(url, { method: "GET" })
+  return req<{ ok: boolean; tasks: PlannerTask[] }>(url, { method: "GET", headers: plannerHeaders() })
 }
 
 export async function plannerPlan(id: string, cram?: boolean) {
   return req<{ ok: boolean; task: PlannerTask & { plan?: { slots: PlannerSlot[] } } }>(`${env.backend}/tasks/${encodeURIComponent(id)}/plan`, {
     method: "POST",
-    headers: jsonHeaders({}),
+    headers: plannerHeaders(true),
     body: JSON.stringify({ cram: !!cram })
   })
 }
@@ -458,7 +465,7 @@ export async function plannerPlan(id: string, cram?: boolean) {
 export async function plannerWeekly(cram?: boolean) {
   return req<{ ok: boolean; plan: WeeklyPlan }>(`${env.backend}/planner/weekly`, {
     method: "POST",
-    headers: jsonHeaders({}),
+    headers: plannerHeaders(true),
     body: JSON.stringify({ cram: !!cram })
   })
 }
@@ -466,13 +473,13 @@ export async function plannerWeekly(cram?: boolean) {
 export async function plannerMaterials(id: string, kind: "summary" | "studyGuide" | "flashcards" | "quiz") {
   return req<{ ok: boolean; data: any }>(`${env.backend}/tasks/${encodeURIComponent(id)}/materials`, {
     method: "POST",
-    headers: jsonHeaders({}),
+    headers: plannerHeaders(true),
     body: JSON.stringify({ kind })
   })
 }
 
-export function connectPlannerStream(sid: string, onEvent: (ev: PlannerEvent) => void) {
-  const url = wsURL(`/ws/planner?sid=${encodeURIComponent(sid)}`)
+export function connectPlannerStream(onEvent: (ev: PlannerEvent) => void) {
+  const url = wsURL(`/ws/planner?device=${encodeURIComponent(revisionDeviceId())}`)
   const ws = new WebSocket(url)
   ws.onmessage = (m) => {
     try {
@@ -487,13 +494,13 @@ export function connectPlannerStream(sid: string, onEvent: (ev: PlannerEvent) =>
 export async function plannerUpdate(id: string, patch: Partial<PlannerTask>) {
   return req<{ ok: boolean; task: PlannerTask }>(`${env.backend}/tasks/${encodeURIComponent(id)}`, {
     method: "PATCH",
-    headers: jsonHeaders({}),
+    headers: plannerHeaders(true),
     body: JSON.stringify(patch)
   })
 }
 
 export async function plannerDelete(id: string) {
-  return req<{ ok: boolean }>(`${env.backend}/tasks/${encodeURIComponent(id)}`, { method: "DELETE" })
+  return req<{ ok: boolean }>(`${env.backend}/tasks/${encodeURIComponent(id)}`, { method: "DELETE", headers: plannerHeaders() })
 }
 
 export async function plannerCreateWithFiles(data: { text?: string; title?: string; course?: string; type?: string; files?: File[] }) {
@@ -510,6 +517,7 @@ export async function plannerCreateWithFiles(data: { text?: string; title?: stri
 
   return req<{ ok: boolean; task: PlannerTask & { files?: any[] } }>(`${env.backend}/tasks`, {
     method: "POST",
+    headers: plannerHeaders(),
     body: formData,
     timeout: Math.max(env.timeout, 300000),
   })
@@ -523,6 +531,7 @@ export async function plannerUploadFiles(taskId: string, files: File[]) {
 
   return req<{ ok: boolean; files: any[] }>(`${env.backend}/tasks/${encodeURIComponent(taskId)}/files`, {
     method: "POST",
+    headers: plannerHeaders(),
     body: formData,
     timeout: Math.max(env.timeout, 300000),
   })
@@ -530,7 +539,8 @@ export async function plannerUploadFiles(taskId: string, files: File[]) {
 
 export async function plannerDeleteFile(taskId: string, fileId: string) {
   return req<{ ok: boolean }>(`${env.backend}/tasks/${encodeURIComponent(taskId)}/files/${encodeURIComponent(fileId)}`, {
-    method: "DELETE"
+    method: "DELETE",
+    headers: plannerHeaders(),
   })
 }
 

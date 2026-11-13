@@ -6,6 +6,7 @@ import { podcastRoutes } from "./routes/podcast";
 import { examRoutes } from "./routes/examlab";
 import { transcriberRoutes } from "./routes/transcriber";
 import { plannerRoutes } from "./routes/planner";
+import { plannerService } from "../services/planner/instance";
 import { debateRoutes } from "./routes/debate";
 import { companionRoutes } from "./routes/companion";
 import { revisionRoutes } from "./routes/revision";
@@ -18,7 +19,7 @@ export function registerRoutes(app: any) {
   flashcardRoutes(app);
   smartnotesRoutes(app);
   transcriberRoutes(app);
-  plannerRoutes(app);
+  plannerRoutes(app, plannerService);
   debateRoutes(app);
   companionRoutes(app);
   revisionRoutes(app);
