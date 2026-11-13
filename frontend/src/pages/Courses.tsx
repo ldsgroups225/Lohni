@@ -1,5 +1,4 @@
 import { HelpIcon, ClipboardIcon, DebateIcon, HeadphonesIcon, CalendarIcon } from '../components/ui/NavigationIcons'
-import { usePersistentDetails } from '../lib/usePersistentDetails'
 import { withOccurrenceKeys } from '../lib/occurrenceKeys'
 import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 import { Button, ButtonLink } from '../components/ui/Button'
@@ -69,7 +68,6 @@ export default function Courses() {
   const [editing, setEditing] = useState<string | null>(null)
   const [stale, setStale] = useState(!!cachedCourses && cachedCourses.version !== currentRevisionCacheVersion())
   const [busy, setBusy] = useState((!cachedCourses && !sharedChapters) || stale)
-  const more = usePersistentDetails('lohni-courses-more')
   const [error, setError] = useState('')
 
   const load = useCallback(async function load(isActive: () => boolean = () => true) {
@@ -124,6 +122,21 @@ export default function Courses() {
           <Link to="/revision" className="flex items-center justify-center whitespace-nowrap rounded-xl border border-border px-4 py-2.5 text-center text-foreground">Session du jour</Link>
         </div>
       </header>
+      <nav aria-label="S’entraîner" className="space-y-2">
+        <h2 className="text-lg font-semibold text-foreground">S’entraîner</h2>
+        <div className="grid grid-cols-5 gap-2">
+          {([
+            ['/exam', ClipboardIcon, 'Examens'],
+            ['/quiz', HelpIcon, 'Quiz'],
+            ['/debate', DebateIcon, 'Débat'],
+            ['/tools', HeadphonesIcon, 'Podcast'],
+            ['/planner', CalendarIcon, 'Planning'],
+          ] satisfies [string, () => ReactNode, string][]).map(([to, Icon, label]) => <Link key={to} to={to} className="flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-xl border border-border bg-surface px-0.5 py-2 text-xs text-foreground">
+            <span aria-hidden="true" className="grid size-8 place-items-center rounded-lg bg-tint text-lg"><Icon /></span>
+            <span className="whitespace-nowrap font-semibold">{label}</span>
+          </Link>)}
+        </div>
+      </nav>
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
         <button type="button" className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Réessayer</button>
       </div>}
@@ -177,22 +190,6 @@ export default function Courses() {
           </article>)}
         </section>
       })}
-      <details className="rounded-2xl border border-border p-5" {...more}>
-        <summary className="cursor-pointer font-semibold text-foreground">Plus</summary>
-        <nav aria-label="Autres outils" className="mt-3 space-y-2">
-          {([
-            ['/exam', ClipboardIcon, 'Examens', 'Entraîne-toi sur des sujets d’examen'],
-            ['/debate', DebateIcon, 'Débat', 'Défends ton point de vue face à l’IA'],
-            ['/tools', HeadphonesIcon, 'Podcast et outils', 'Podcast, fiches de cours, audio en texte'],
-            ['/planner', CalendarIcon, 'Planning', 'Organise tes devoirs et tes priorités'],
-            ['/quiz', HelpIcon, 'Quiz libre', 'Teste-toi sur le sujet de ton choix'],
-          ] satisfies [string, () => ReactNode, string, string][]).map(([to, Icon, label, hint]) => <Link key={to} to={to} className="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-foreground">
-            <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-lg bg-tint text-xl"><Icon /></span>
-            <span className="min-w-0 flex-1"><span className="block font-semibold">{label}</span><span className="block text-sm text-muted">{hint}</span></span>
-            <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="m9 5 7 7-7 7" /></svg>
-          </Link>)}
-        </nav>
-      </details>
     </div>
   </main>
 }
