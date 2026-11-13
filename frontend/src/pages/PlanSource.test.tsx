@@ -6,7 +6,7 @@ import { expect, test, vi } from 'vitest'
 import Plan from './Plan'
 import { PlanToday } from '../components/Revision/PlanToday'
 
-const api = vi.hoisted(() => ({ plan: vi.fn() }))
+const api = vi.hoisted(() => ({ plan: vi.fn(), settings: async () => ({ dailyMinutes: 15, restDays: [] }) }))
 vi.mock('../lib/api', () => ({ revisionAPI: api }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
