@@ -71,7 +71,8 @@ export default function Onboarding() {
       return
     }
     if (!selectedSubject || !title.trim()) return
-    if (nameDevice !== cachedDevice() || !writeFirstName(firstName.trim())) { setError('Impossible d’enregistrer ton prénom sur cet appareil.'); return }
+    if (nameDevice !== cachedDevice()) { setError('L’appareil a changé. Recharge la page avant de continuer.'); return }
+    writeFirstName(firstName.trim())
     submitting.current = true
     setBusy(true)
     setError('')

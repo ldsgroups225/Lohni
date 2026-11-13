@@ -327,3 +327,20 @@ test('un changement d’appareil ne copie pas le prénom en cours de modificatio
     expect(api.saveProfile).not.toHaveBeenCalled()
   } finally { close(); localStorage.removeItem('lohni-first-name:ancien-prenom'); localStorage.removeItem('lohni-first-name:autre-prenom') }
 })
+
+test('un échec de stockage du prénom signale que le profil est néanmoins enregistré', async () => {
+  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress); api.saveProfile.mockResolvedValue(profile)
+  const { host, close } = await setup('profil-stockage', '/me/profil')
+  const original = Storage.prototype.setItem
+  const storage = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (this === localStorage && key.startsWith('lohni-first-name:')) throw new DOMException('Quota exceeded', 'QuotaExceededError')
+    return original.call(this, key, value)
+  })
+  try {
+    const input = required(host.querySelector<HTMLInputElement>('input[autocomplete="given-name"]'))
+    await act(async () => { required(required(Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')).set).call(input, 'Awa'); input.dispatchEvent(new Event('input', { bubbles: true })) })
+    await act(async () => required(host.querySelector('form')).requestSubmit())
+    expect(host.textContent).toContain('Ton profil est enregistré.')
+    expect(host.textContent).toContain('Impossible d’enregistrer ton prénom sur cet appareil.')
+  } finally { storage.mockRestore(); close() }
+})

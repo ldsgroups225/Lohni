@@ -104,11 +104,11 @@ export default function Home() {
       {loading ? <PendingRead title="Session du jour" label="On prépare ta journée…" /> : error ? <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">
         <Mascotte humeur="désolée" taille={96} /><p>{error}</p><button type="button" className="underline" onClick={() => setAttempt(value => value + 1)}>Réessayer</button>
       </div> : !home ? null : <>
-        <header className="grid grid-cols-[56px_1fr_auto] items-center gap-x-3">
-          <Mascotte humeur={humeurSerie(progress?.streak, progress?.streakStarted, home.state === 'done')} taille={56} />
-          <h1 className="text-2xl font-extrabold">Salut{readFirstName() ? ` ${readFirstName()}` : ''} !</h1>
+        <header className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-x-3">
+          <span className="row-span-2"><Mascotte humeur={humeurSerie(progress?.streak, progress?.streakStarted, home.state === 'done')} taille={56} /></span>
+          <h1 className="line-clamp-2 min-w-0 text-2xl font-extrabold [overflow-wrap:anywhere]">Salut{readFirstName() ? ` ${readFirstName()}` : ''} !</h1>
           {progress && <p className="flex items-center gap-1.5 rounded-full bg-tint px-3 py-2 text-primary"><FlameIcon /><strong><AnimatedNumber value={progress.streak} from={streakFrom} /></strong><span className="sr-only"> jours de série</span></p>}
-          <p className="col-start-2 col-end-4 -mt-5 text-sm text-muted">{curriculum.find(item => item.schoolClass === home.profile.schoolClass)?.label.split(' · ')[0] ?? home.profile.schoolClass}{home.profile.series ? ` ${home.profile.series}` : ''}{home.daysUntilExam !== null && home.nextExam && <> · <Link to={`/plan#exam-${encodeURIComponent(home.nextExam.id)}`} className="underline">{home.daysUntilExam > 0 ? `${home.nextExam.title} dans ${home.daysUntilExam} jour${home.daysUntilExam > 1 ? 's' : ''}` : `${home.nextExam.title} aujourd’hui`}</Link></>}</p>
+          <p className="col-start-2 col-end-4 min-w-0 text-sm text-muted [overflow-wrap:anywhere]">{curriculum.find(item => item.schoolClass === home.profile.schoolClass)?.label.split(' · ')[0] ?? home.profile.schoolClass}{home.profile.series ? ` ${home.profile.series}` : ''}{home.daysUntilExam !== null && home.nextExam && <> · <Link to={`/plan#exam-${encodeURIComponent(home.nextExam.id)}`} className="underline">{home.daysUntilExam > 0 ? `${home.nextExam.title} dans ${home.daysUntilExam} jour${home.daysUntilExam > 1 ? 's' : ''}` : `${home.nextExam.title} aujourd’hui`}</Link></>}</p>
         </header>
         <Card className="space-y-3 rounded-3xl p-5">
           <div className="flex justify-between gap-2 text-sm text-muted"><h2 className="font-semibold">Session du jour</h2>{home.state === 'ready' && <span>environ {home.estimatedMinutes} min</span>}</div>

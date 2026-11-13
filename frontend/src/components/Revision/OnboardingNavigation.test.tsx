@@ -244,3 +244,23 @@ test('une double soumission ne crée qu’un chapitre', async () => {
     expect(api.generateChapter).toHaveBeenCalledTimes(1)
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); sessionStorage.clear(); localStorage.clear() }
 })
+
+test('une panne du stockage du prénom facultatif ne bloque pas la création des cartes', async () => {
+  sessionStorage.clear(); localStorage.setItem('lohni-device-id', 'storage-error')
+  sessionStorage.setItem('lohni-first-name:storage-error', 'Awa')
+  sessionStorage.setItem('lohni-onboarding', JSON.stringify({ schoolClass: '3e', subjects: ['Français'], title: 'Fractions' }))
+  api.saveProfile.mockClear(); api.generateChapter.mockReset()
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host); const router = createMemoryRouter([{ path: '/', element: <Onboarding /> }], { initialEntries: ['/?etape=6'] })
+  const original = Storage.prototype.setItem
+  const storage = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (this === localStorage && key.startsWith('lohni-first-name:')) throw new DOMException('Quota exceeded', 'QuotaExceededError')
+    return original.call(this, key, value)
+  })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => required(host.querySelector('form')).requestSubmit())
+    expect(api.saveProfile).toHaveBeenCalledTimes(1)
+    expect(api.generateChapter).toHaveBeenCalledWith({ subject: 'Français', title: 'Fractions' })
+  } finally { storage.mockRestore(); act(() => root.unmount()); router.dispose(); host.remove(); sessionStorage.clear(); localStorage.clear() }
+})

@@ -144,7 +144,7 @@ export default function Profile() {
         cachedProfile = null; setProfile(null); setProgress(null)
         throw new Error('L’appareil a changé. Recharge la page avant de continuer.')
       }
-      if (page === 'profil' && !writeFirstName(firstName.trim())) throw new Error('Impossible d’enregistrer ton prénom sur cet appareil.')
+      if (page === 'profil' && !writeFirstName(firstName.trim())) setError('Impossible d’enregistrer ton prénom sur cet appareil.')
       setProfile(value)
       dirty.current = false
       cachedProfile = progress ? { device: cachedDevice(), version: currentRevisionCacheVersion(), day: new Date().toDateString(), profile: value, progress } : null
