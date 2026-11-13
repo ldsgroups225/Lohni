@@ -12,7 +12,7 @@ export default function Onboarding() {
   const [search, setSearch] = useSearchParams()
   const depth = typeof location.state?.onboardingDepth === 'number' ? location.state.onboardingDepth : 0
   const requestedStep = Number(search.get('etape'))
-  const step = Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 4 ? requestedStep : 1
+  const requested = Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 4 ? requestedStep : 1
   const setStep = (next: number) => { const params = new URLSearchParams(search); params.set('etape', String(next)); setSearch(params, { state: { ...location.state, onboardingDepth: depth + 1 } }) }
   const [saved] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('lohni-onboarding') ?? '{}') ?? {} } catch { return {} }
@@ -20,17 +20,23 @@ export default function Onboarding() {
   const [schoolClass, setSchoolClass] = useState(() => curriculum.some(item => item.schoolClass === saved.schoolClass) ? saved.schoolClass as string : '3e')
   const [series, setSeries] = useState(() => {
     const choices = (curriculum.find(item => item.schoolClass === schoolClass) ?? curriculum[0]).series
-    return typeof saved.series === 'string' && saved.series in choices ? saved.series as string : Object.keys(choices)[0]
+    return typeof saved.series === 'string' && saved.series in choices ? saved.series as string : ''
   })
+  const [seriesConfirmed, setSeriesConfirmed] = useState(() => saved.seriesConfirmed === true)
   const entry = curriculum.find(item => item.schoolClass === schoolClass) ?? curriculum[0]
   const available = (entry.series as Record<string, string[] | undefined>)[series] ?? []
   const [subjects, setSubjects] = useState<string[]>(() => Array.isArray(saved.subjects) ? saved.subjects.filter((name: unknown): name is string => typeof name === 'string' && available.includes(name)) : available)
   const [examDate, setExamDate] = useState(() => typeof saved.examDate === 'string' ? saved.examDate as string : '')
-  const [subject, setSubject] = useState(() => typeof saved.subject === 'string' ? saved.subject as string : 'Mathématiques')
+  const [subject, setSubject] = useState(() => typeof saved.subject === 'string' && subjects.includes(saved.subject) ? saved.subject as string : subjects[0] ?? '')
+  const needsSeries = !('' in entry.series)
+  const step = needsSeries && (!series || !seriesConfirmed) ? 1 : requested > 2 && !subjects.length ? 2 : requested
+  useEffect(() => {
+    if (step !== requested) { const params = new URLSearchParams(search); params.set('etape', String(step)); setSearch(params, { replace: true, state: location.state }) }
+  }, [step, requested, search, setSearch, location.state])
   const [title, setTitle] = useState(() => typeof saved.title === 'string' ? saved.title as string : '')
   useEffect(() => {
-    try { sessionStorage.setItem('lohni-onboarding', JSON.stringify({ schoolClass, series, subjects, examDate, subject, title })) } catch { /* Storage is optional. */ }
-  }, [schoolClass, series, subjects, examDate, subject, title])
+    try { sessionStorage.setItem('lohni-onboarding', JSON.stringify({ schoolClass, series, seriesConfirmed, subjects, examDate, subject, title })) } catch { /* Storage is optional. */ }
+  }, [schoolClass, series, seriesConfirmed, subjects, examDate, subject, title])
   const finishing = useRef(false)
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reprendre la navigation après chaque changement d'entrée dans l'historique.
   useEffect(() => {
@@ -39,6 +45,7 @@ export default function Onboarding() {
     void (async () => { await navigate('/', { replace: true }); await navigate('/revision') })()
   }, [location.key, depth, navigate])
   const [busy, setBusy] = useState(false)
+  const submitting = useRef(false)
   const [error, setError] = useState('')
   // Masque la navigation principale (index.css) tant que l'élève n'a pas de profil.
   useEffect(() => { document.body.dataset.onboarding = ''; return () => { delete document.body.dataset.onboarding } }, [])
@@ -46,11 +53,14 @@ export default function Onboarding() {
 
   async function submit(event: FormEvent) {
     event.preventDefault()
+    if (submitting.current || (needsSeries && (!series || !seriesConfirmed)) || (step > 1 && !subjects.length)) return
     if (step < 4) {
       if (step === 2 && !subjects.includes(subject)) setSubject(subjects[0])
       setStep(step + 1)
       return
     }
+    if (!subjects.includes(subject) || !title.trim()) return
+    submitting.current = true
     setBusy(true)
     setError('')
     try {
@@ -62,29 +72,29 @@ export default function Onboarding() {
       else void navigate('/', { replace: true })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Impossible de préparer tes cartes. Réessaie.')
-    } finally { setBusy(false) }
+    } finally { submitting.current = false; setBusy(false) }
   }
 
-  return <form onSubmit={submit} className="space-y-6 rounded-2xl border border-border bg-surface p-6" aria-busy={busy}>
-    <Mascotte humeur={error ? "désolée" : busy ? "pensive" : "au repos"} taille={120} />
+  return <form onSubmit={submit} className="space-y-4 rounded-2xl border border-border bg-surface p-4 sm:p-6" aria-busy={busy}>
+    <Mascotte humeur={error ? "désolée" : busy ? "pensive" : "au repos"} taille={64} />
     {step === 1 && <p>La connaissance, un peu chaque jour.</p>}
     <p className="text-sm text-primary">Bienvenue sur Lohni · Étape {step} sur 4</p>
     <Progress className="w-full" value={step} max={4} aria-label="Progression du parcours d’arrivée" />
     <div key={step} className="motion-enter space-y-4">
     {step === 1 && <>
       <h2 className="text-2xl font-semibold text-foreground">Dans quelle classe es-tu ?</h2>
-      <p>Programme de Côte d’Ivoire. Aucun compte à créer.</p>
-      <label className="block space-y-2"><span>Ta classe</span><select className={input} value={schoolClass} onChange={event => {
-        const next = curriculum.find(item => item.schoolClass === event.target.value)
-        if (!next) return
-        setSchoolClass(next.schoolClass)
-        const nextSeries = Object.keys(next.series)[0]
-        setSeries(nextSeries)
-        setSubjects((next.series as Record<string, string[] | undefined>)[nextSeries] ?? [])
-      }}>{curriculum.map(item => <option key={item.schoolClass} value={item.schoolClass}>{item.label}</option>)}</select></label>
-      {Object.keys(entry.series)[0] !== '' && <label className="block space-y-2"><span>Ta série</span><select className={input} value={series} onChange={event => { setSeries(event.target.value); setSubjects((entry.series as Record<string, string[] | undefined>)[event.target.value] ?? []) }}>
-        {Object.keys(entry.series).map(name => <option key={name}>{name}</option>)}
-      </select></label>}
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block text-sm">Pays<select className={input} value="ci" onChange={() => {}}><option value="ci">Côte d’Ivoire</option></select></label>
+        <label className="block text-sm">Langue<select className={input} value="fr" onChange={() => {}}><option value="fr">Français</option></select></label>
+      </div>
+      <fieldset><legend className="mb-2">Ta classe</legend><div className="grid grid-cols-4 gap-2">{curriculum.map(item => <button key={item.schoolClass} type="button" aria-pressed={schoolClass === item.schoolClass} className={`min-h-11 rounded-xl border px-1 text-sm ${schoolClass === item.schoolClass ? 'border-primary bg-primary/10 text-primary' : 'border-border'}`} onClick={() => {
+        if (schoolClass === item.schoolClass) return
+        setSchoolClass(item.schoolClass)
+        setSeries('')
+        setSeriesConfirmed(false)
+        setSubjects((item.series as Record<string, string[] | undefined>)[''] ?? [])
+      }}>{item.label}</button>)}</div></fieldset>
+      {needsSeries && <fieldset><legend className="mb-2">Ta série</legend><div className="flex flex-wrap gap-2">{Object.keys(entry.series).map(name => <button key={name} type="button" aria-pressed={seriesConfirmed && series === name} className={`min-h-11 min-w-11 rounded-xl border px-3 ${seriesConfirmed && series === name ? 'border-primary bg-primary/10 text-primary' : 'border-border'}`} onClick={() => { if (series !== name) { setSeries(name); setSubjects((entry.series as Record<string, string[] | undefined>)[name] ?? []) } setSeriesConfirmed(true) }}>{name}</button>)}</div></fieldset>}
     </>}
     {step === 2 && <>
       <h2 className="text-2xl font-semibold text-foreground">Quelles matières révises-tu ?</h2>
@@ -111,7 +121,7 @@ export default function Onboarding() {
     {busy && <p role="status">Préparation de tes {revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes… Cela peut prendre un instant.</p>}
     <div className="flex flex-wrap items-center gap-4">
       {step > 1 && <button type="button" disabled={busy} className="rounded-xl border border-border px-4 py-3" onClick={() => depth ? navigate(-1) : setSearch({ etape: String(step - 1) }, { replace: true })}>Retour</button>}
-      <Button type="submit" disabled={busy || (step === 2 && !subjects.length) || (step === 4 && !title.trim())}>{step === 4 ? 'Créer mes cartes et commencer' : 'Continuer'}</Button>
+      <Button type="submit" disabled={busy || (needsSeries && (!series || !seriesConfirmed)) || (step === 2 && !subjects.length) || (step === 4 && !title.trim())}>{step === 4 ? 'Créer mes cartes et commencer' : 'Continuer'}</Button>
     </div>
   </form>
 }
