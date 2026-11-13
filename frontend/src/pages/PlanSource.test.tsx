@@ -45,6 +45,24 @@ test.each([['accueil', PlanToday], ['plan', Plan]] as const)('%s distingue surch
     expect(host.textContent).toContain('Grosse journée de cours')
     expect(host.textContent).toContain('Trop de cartes prévues ce jour')
     expect(host.textContent).not.toContain('0 carte à revoir')
-    expect(host.textContent).toContain('Ajoute un chapitre d’Anglais')
+    expect(host.textContent).toContain('Sans chapitre : Anglais')
+    expect(host.textContent).not.toContain('Ajoute un chapitre')
+    expect([...host.querySelectorAll('a')].filter(link => link.textContent === 'Ajouter un chapitre')).toHaveLength(1)
+  } finally { act(() => root.unmount()); host.remove() }
+})
+
+test('plan : une seule phrase « Sans chapitre » pour toute la page, rien si tout est couvert', async () => {
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const day = (date: string, subjects: string[]) => ({ date, heavy: false, overloaded: false, rest: false, capacityCards: 10, items: [], actions: subjects.map(subject => ({ kind: 'addChapter', subject })) })
+  try {
+    api.plan.mockResolvedValue({ offline: false, plan: { today: '2026-11-09', exams: [], days: [day('2026-11-09', ['Français', 'Anglais']), day('2026-11-10', ['Français'])] } })
+    await act(async () => root.render(<MemoryRouter><Plan /></MemoryRouter>))
+    expect(host.textContent?.match(/Sans chapitre/g)).toHaveLength(1)
+    expect(host.textContent).toContain('Sans chapitre : Français, Anglais')
+    api.plan.mockResolvedValue({ offline: false, plan: { today: '2026-11-09', exams: [], days: [day('2026-11-09', [])] } })
+    await act(async () => root.render(<MemoryRouter><span /></MemoryRouter>))
+    await act(async () => root.render(<MemoryRouter><Plan /></MemoryRouter>))
+    expect(host.textContent).not.toContain('Sans chapitre')
   } finally { act(() => root.unmount()); host.remove() }
 })
