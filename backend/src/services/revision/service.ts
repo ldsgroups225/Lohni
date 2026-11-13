@@ -199,7 +199,7 @@ export class RevisionService {
       const xp = journalXP(rows)
       const days = new Set(rows.filter(row => row.session_complete).map(row => row.local_date))
       // shortcut: seuls les jours sans carte constatés par une visite sont neutres ; historiser les échéances si ce suivi doit être exhaustif.
-      const sessions = await this.dependencies.db.all("SELECT local_date, state FROM revision_sessions WHERE device_id = ? AND kind = 'daily'", [context.deviceId])
+      const sessions = await this.dependencies.db.all("SELECT local_date, state FROM revision_sessions WHERE device_id = ? AND kind = 'daily' AND NOT (COALESCE(json_extract(state, '$.stale'), 0) = 1 AND json_extract(state, '$.position') = 0)", [context.deviceId])
       const emptyDays = new Set(sessions.filter(row => JSON.parse(row.state).cards.length === 0).map(row => row.local_date))
       for (const row of sessions) if (JSON.parse(row.state).cards.length > 0 && !days.has(row.local_date)) emptyDays.delete(row.local_date)
       let date = Date.parse(context.localDate)
@@ -325,15 +325,16 @@ export class RevisionService {
     const introduced = await db.all(`SELECT DISTINCT j.card_id FROM revision_journal j JOIN revision_sessions s ON s.id = j.session_id WHERE j.device_id = ? AND j.local_date = ? AND s.kind = 'daily' AND json_extract(j.scheduling, '$.log.state') = 0`, [context.deviceId, context.localDate])
     const reviewed = new Set((await db.all('SELECT card_id FROM revision_journal WHERE device_id = ? AND local_date = ?', [context.deviceId, context.localDate])).map(row => row.card_id))
     const introducedIds = new Set(introduced.map(row => row.card_id))
+    const completedReviewsToday = (await db.all(`SELECT DISTINCT j.card_id FROM revision_journal j JOIN revision_sessions s ON s.id = j.session_id WHERE j.device_id = ? AND j.local_date = ? AND s.kind = 'daily' AND json_extract(j.scheduling, '$.log.state') != 0`, [context.deviceId, context.localDate])).filter(row => !introducedIds.has(row.card_id)).length
     const timetable = await this.readTimetable(context.deviceId)
     const weekday = (date: string) => new Date(`${date}T00:00:00Z`).getUTCDay()
     const duration = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3))
     const heavy = (date: string) => timetable.filter(block => block.day === weekday(date)).reduce((sum, block) => sum + duration(block.end) - duration(block.start), 0) >= policy.heavyDayHours * 60
-    const plan = buildPlan({ heavy, capacity: (date, base) => heavy(date) ? base * policy.heavyDayFactor : base,
+    const plan = buildPlan({ heavy, completedReviewsToday, capacity: (date, base) => heavy(date) ? base * policy.heavyDayFactor : base,
       subjectOrder: date => timetable.filter(block => block.day === (weekday(date) + 1) % 7 && profile.subjects.includes(block.subject)).map(block => block.subject), today: context.localDate, exams, dailyMinutes: settings?.daily_minutes ?? policy.defaultDailyMinutes,
       restDays: settings ? JSON.parse(settings.rest_days) : [], chapters: chapters.map(chapter => {
         const dueByDate: Record<string, number> = {}
-        for (const card of chapter.cards) if (card.reviews > 0 && !introducedIds.has(card.id) && (!reviewed.has(card.id) || card.due.slice(0, 10) > context.localDate)) {
+        for (const card of chapter.cards) if (card.reviews > 0 && (!reviewed.has(card.id) || card.due.slice(0, 10) > context.localDate)) {
           const date = card.due.slice(0, 10)
           dueByDate[date] = (dueByDate[date] ?? 0) + 1
         }
@@ -494,7 +495,7 @@ export class RevisionService {
   async getSession(context: RevisionContext, continueSession = false): Promise<RevisionSession> {
     return this.execute(context, async () => {
       const db = this.dependencies.db
-      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = 'daily' AND COALESCE(json_extract(state, '$.stale'), 0) = 0 AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY (json_extract(state, '$.position') > 0) DESC, rowid DESC LIMIT 1", [context.deviceId, context.localDate])
+      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = 'daily' AND COALESCE(json_extract(state, '$.stale'), 0) = 0 AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY (json_extract(state, '$.position') > 0 AND NOT json_extract(state, '$.complete')) DESC, rowid DESC LIMIT 1", [context.deviceId, context.localDate])
       if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return this.sessionResult(JSON.parse(saved.state))
       const profile = await this.requireProfile(context.deviceId)
       profile.examDate = (await this.nextExam(context))?.date

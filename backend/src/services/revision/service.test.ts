@@ -896,3 +896,47 @@ test('une séance express vide indique son mode', async () => {
   const exam = await service.saveExam(context(), { title: 'Brevet', date: '2026-11-10', subjects: ['Mathématiques'] })
   expect(await service.getExamSession(context(), exam.id)).toMatchObject({ kind: 'express', cards: [], complete: true })
 })
+
+test('les révisions terminées consomment le budget quotidien des nouvelles cartes', async () => {
+  await setup(15, '2026-11-10')
+  await service.saveSettings(context(), { dailyMinutes: 45, restDays: [] })
+  await finish(await service.getSession(context()))
+  now = new Date('2026-11-10T12:00:00Z')
+  await service.deleteExam(context(), (await service.listExams(context()))[0].id)
+  await service.saveSettings(context(), { dailyMinutes: 15, restDays: [] })
+  await service.saveExam(context(), { title: 'Prochain', date: '2026-11-11', subjects: ['Mathématiques'] })
+  generated = cards(20)
+  await service.generateChapter(context(), { title: 'Nouveau', subject: 'Mathématiques' })
+  const first = await service.getSession(context())
+  expect(first.cards).toHaveLength(20)
+  await finish(first)
+  expect((await service.getSession(context(), true)).cards).toHaveLength(0)
+})
+
+test('une continuation non commencée est reprise avant le récapitulatif', async () => {
+  await setup(32, '2026-11-10')
+  await service.saveSettings(context(), { dailyMinutes: 45, restDays: [] })
+  await finish(await service.getSession(context()))
+  const continuation = await service.getSession(context(), true)
+  expect(continuation.cards).toHaveLength(10)
+  expect((await service.getSession(context())).id).toBe(continuation.id)
+})
+
+test('le plan conserve les révisions futures des cartes découvertes aujourd’hui', async () => {
+  now = new Date('2026-11-10T23:55:00Z')
+  await setup(2, '2026-11-13')
+  await finish(await service.getSession(context()))
+  expect((await service.listChapters(context()))[0].cards[0].due.slice(0, 10)).toBe('2026-11-11')
+  expect((await service.getPlan(context())).days[1].items.reduce((sum, item) => sum + item.dueCards, 0)).toBe(2)
+})
+
+test('un jour ouvert puis marqué repos reste neutre pour la série', async () => {
+  await setup(1)
+  await finish(await service.getSession(context()))
+  now = new Date('2026-11-10T12:00:00Z')
+  expect((await service.getSession(context())).cards).toHaveLength(1)
+  await service.saveSettings(context(), { dailyMinutes: 15, restDays: [2] })
+  expect((await service.getSession(context())).cards).toHaveLength(0)
+  now = new Date('2026-11-11T12:00:00Z')
+  expect((await service.getProgress(context())).streak).toBe(1)
+})

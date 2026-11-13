@@ -5,6 +5,7 @@ export type PlanInput = {
   today: string; exams: RevisionExam[]
   chapters: { id: string; title: string; subject: string; unseenCards: number; dueByDate: Record<string, number>; hasCards?: boolean }[]
   dailyMinutes: number; restDays: number[]
+  completedReviewsToday?: number
   capacity?: (date: string, baseCards: number) => number; subjectOrder?: (date: string) => string[]; heavy?: (date: string) => boolean
 }
 export type PlanItem = { subject: string; chapterId: string; chapterTitle: string; examId: string | null; dueCards: number; newCards: number; minutes: number }
@@ -34,7 +35,7 @@ export function buildPlan(input: PlanInput): RevisionPlan {
   const used = (day: PlanDay) => day.items.reduce((sum, entry) => sum + entry.dueCards + entry.newCards, 0)
   const newCount = (day: PlanDay) => day.items.reduce((sum, entry) => sum + entry.newCards, 0)
   const maxNew = Math.floor(policy.maxNewCards * input.dailyMinutes / policy.defaultDailyMinutes)
-  const room = (day: PlanDay) => Math.max(0, Math.min(day.capacityCards - used(day), maxNew - newCount(day)))
+  const room = (day: PlanDay) => Math.max(0, Math.min(day.capacityCards - used(day) - (day.date === input.today ? input.completedReviewsToday ?? 0 : 0), maxNew - newCount(day)))
   for (const chapter of input.chapters) for (const [date, count] of Object.entries(chapter.dueByDate)) {
     const day = result.days.find(day => !day.rest && day.date >= (date < input.today ? input.today : date))
     if (day) item(day, chapter).dueCards += count
