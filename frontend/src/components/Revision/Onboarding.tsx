@@ -46,7 +46,7 @@ export default function Onboarding() {
   useEffect(() => {
     if (!finishing.current || depth) return
     finishing.current = false
-    void (async () => { await navigate('/', { replace: true }); await navigate('/revision') })()
+    void (async () => { await navigate('/', { replace: true }); await navigate('/revision', { state: { onboardingComplete: true } }) })()
   }, [location.key, depth, navigate])
   const [reaction, setReaction] = useState(0)
   const [happy, setHappy] = useState(false)

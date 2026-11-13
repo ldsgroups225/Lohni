@@ -46,7 +46,8 @@ export function navigationTransitions<T extends Router>(router: T): T {
         }
         if (next.pathname !== previous.pathname) {
           document.documentElement.dataset.nav = tab ? 'tab' : state.historyAction === 'POP' ? 'pop' : next.state?.navigationTab ? 'tab' : 'push'
-          const viewTransitionOpts = typeof document.startViewTransition === 'function' && !prefersReducedMotion()
+          // La première séance ne doit pas attendre une transition native bloquée.
+          const viewTransitionOpts = typeof document.startViewTransition === 'function' && !prefersReducedMotion() && !(state.historyAction === 'PUSH' && next.state?.onboardingComplete)
             ? { currentLocation: previous, nextLocation: next } : undefined
           previous = next
           for (const listener of [...subscribers]) listener(state, { ...options, flushSync: !!viewTransitionOpts, viewTransitionOpts })

@@ -104,3 +104,19 @@ test('le routeur declenche la transition native lors du changement de page', asy
     expect(start).toHaveBeenCalledTimes(1)
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); vi.unstubAllGlobals(); delete (document as Partial<Document>).startViewTransition }
 })
+
+test('seule l’ouverture initiale de la séance après accueil évite la transition native', async () => {
+  Object.defineProperty(document, 'startViewTransition', { configurable: true, value: vi.fn() })
+  vi.stubGlobal('matchMedia', () => ({ matches: false }))
+  const router = navigationTransitions(createMemoryRouter([{ path: '*', element: <p>Écran</p> }], { initialEntries: ['/'] }))
+  const transitions: boolean[] = []
+  const unsubscribe = router.subscribe((_state, options) => transitions.push(!!options.viewTransitionOpts))
+  try {
+    await router.navigate('/revision', { state: { onboardingComplete: true } })
+    await router.navigate(-1)
+    await router.navigate(1)
+    expect(transitions).toEqual([false, true, true])
+  } finally {
+    unsubscribe(); router.dispose(); vi.unstubAllGlobals(); delete (document as Partial<Document>).startViewTransition; delete document.documentElement.dataset.nav
+  }
+})
