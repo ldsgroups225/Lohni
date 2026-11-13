@@ -7,6 +7,7 @@ export const REVISION_POLICY = {
   maxTextChars: 100000,
   maxTitleChars: 200,
   maxExams: 10,
+  maxExamHorizonDays: 400,
   maxTimetableBlocks: 60,
   maxTimetablePhotos: 3,
   heavyDayHours: 6,

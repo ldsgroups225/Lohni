@@ -132,3 +132,15 @@ test('un accueil local du jour reste visible pendant la mise à jour', async () 
     expect(host.textContent).not.toContain('Onboarding')
   } finally { act(() => root.unmount()); host.remove(); router.dispose(); localStorage.removeItem('lohni-device-id'); invalidateRevisionCache() }
 })
+
+test('le compte à rebours ouvre l’examen dans le plan', async () => {
+  api.home.mockResolvedValueOnce({ profile: { schoolClass: '3e' }, state: 'empty', cardCount: 0, totalCards: 0, daysUntilExam: 3, nextExam: { id: 'brevet', title: 'Brevet', date: '2026-11-12' } })
+  api.progress.mockResolvedValue(null)
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Home /> }])
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.querySelector('a[href="/plan#exam-brevet"]')?.textContent).toContain('Brevet dans 3 jours')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove() }
+})

@@ -99,7 +99,7 @@ export default function Home() {
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <p className="rounded-full border border-border px-3 py-1.5">{curriculum.find(item => item.schoolClass === home.profile.schoolClass)?.label ?? home.profile.schoolClass}{home.profile.series ? ` · Série ${home.profile.series}` : ''}</p>
           {progress && <p className="flex items-center gap-1.5 rounded-full bg-tint px-3 py-1.5"><span className="text-primary"><FlameIcon /></span><strong className="text-base"><AnimatedNumber value={progress.streak} from={streakFrom} /></strong> jour{progress.streak > 1 ? 's' : ''} de série</p>}
-          {home.daysUntilExam !== null && <p className="rounded-full border border-border px-3 py-1.5">{home.daysUntilExam > 0 ? `${home.nextExam?.title ?? "Examen"} dans ${home.daysUntilExam} jour${home.daysUntilExam > 1 ? 's' : ''}` : `${home.nextExam?.title ?? 'Examen'} aujourd’hui`}</p>}
+          {home.daysUntilExam !== null && home.nextExam && <Link to={`/plan#exam-${encodeURIComponent(home.nextExam.id)}`} className="rounded-full border border-border px-3 py-1.5">{home.daysUntilExam > 0 ? `${home.nextExam?.title ?? "Examen"} dans ${home.daysUntilExam} jour${home.daysUntilExam > 1 ? 's' : ''}` : `${home.nextExam?.title ?? 'Examen'} aujourd’hui`}</Link>}
         </div>
         <Card className="space-y-4 p-5">
           <h2 className="text-2xl font-semibold text-foreground">{home.state === 'done' ? 'Session du jour terminée !' : home.state === 'empty' ? 'Aucune carte à réviser' : 'Session du jour'}</h2>

@@ -734,11 +734,7 @@ export function syncRevisionAnswers(): Promise<void> {
       while (navigator.onLine && cachedDevice() === device) {
         const queued = readOffline().pending[0];
         if (!queued) break;
-        let session: RevisionSession | undefined;
-        try { session = await revisionRequest<RevisionSession>('/session/answer', 'POST', queued.answer, queued.localDate, 8000); }
-        catch (error) {
-          if (!(error instanceof APIError && error.status === 400 && error.code === 'REVISION_LOCAL_DATE_OUT_OF_RANGE')) throw error;
-        }
+        const session = await revisionRequest<RevisionSession>('/session/answer', 'POST', queued.answer, queued.localDate, 8000);
         if (cachedDevice() !== device) break;
         await updateOffline(state => {
           if (cachedDevice() !== device) return;
@@ -950,13 +946,6 @@ export const revisionAPI = {
     const session = await revisionRequest<RevisionSession>('/session/answer', 'POST', { ...input, answerId }, undefined, 8000)
     if (cachedDevice() !== device) throw new Error('L’appareil a changé. Recharge la page avant de continuer.')
     examAnswerIds.delete(key)
-    await updateOffline(state => {
-      const daily = state.session
-      if (cachedDevice() !== device || !daily || daily.localDate !== revisionLocalDate() || state.pending.length) return
-      daily.cards = [...daily.cards.slice(0, daily.position), ...daily.cards.slice(daily.position).filter(card => card.id !== input.cardId)]
-      daily.complete = daily.position >= daily.cards.length
-      delete daily.summary
-    })
     invalidateRevisionCache('/home', '/progress', '/plan:source')
     return session
   },

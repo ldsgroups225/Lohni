@@ -64,3 +64,13 @@ test('le plafond quotidien est partagé entre chapitres', () => {
   ], dailyMinutes: 15, restDays: [] })
   expect(plan.days[0].items.reduce((sum, item) => sum + item.newCards, 0)).toBe(10)
 })
+
+test('borne le plan même avec un examen anciennement enregistré très loin', () => {
+  const plan = buildPlan({ today: '2026-11-09', exams: [{ id: 'a', title: 'Examen', date: '9999-12-31', subjects: ['Maths'], chapterIds: [] }], chapters: [], dailyMinutes: 15, restDays: [] })
+  expect(plan.days.length).toBeLessThanOrEqual(400)
+})
+
+test('signale une journée surchargée par les seules cartes dues', () => {
+  const plan = buildPlan({ today: '2026-11-09', exams: [{ id: 'a', title: 'Examen', date: '2026-11-12', subjects: ['Maths'], chapterIds: [] }], chapters: [{ id: 'c', title: 'Calcul', subject: 'Maths', unseenCards: 0, dueByDate: { '2026-11-09': 25 } }], dailyMinutes: 15, restDays: [] })
+  expect(plan.days[0]).toMatchObject({ overloaded: true, capacityCards: 20, items: [{ dueCards: 25 }] })
+})

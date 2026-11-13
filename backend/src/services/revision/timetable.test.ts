@@ -41,6 +41,7 @@ test('jour chargé et matière du lendemain orientent le plan et la séance', as
   await service.saveTimetable(context, [block, { day: 2, start: '08:00', end: '09:00', subject: 'Histoire' }])
   const day = (await service.getPlan(context)).days[0]
   expect(day.capacityCards).toBe(10)
+  expect(day.heavy).toBe(true)
   expect(day.items.map(item => item.subject)).toEqual(['Histoire', 'Mathématiques'])
   expect((await service.getSession(context)).cards.map(card => card.chapterId)).toEqual([history.id, math.id])
 })
@@ -57,4 +58,11 @@ test('un simple cours reste hors de la séance même si une ancienne matière po
   await service.saveProfile(context, { schoolClass: '3e', subjects: ['Mathématiques'] })
   await service.saveTimetable(context, [{ ...block, day: 2 }])
   expect((await service.getSession(context)).cards).toEqual([])
+})
+test('les photos identiques fusionnent leurs blocs, sans masquer les vrais chevauchements', async () => {
+  const path = join(directory, 'photo.jpg'); await writeFile(path, 'photo')
+  const file = { path, filename: 'photo.jpg', mimeType: 'image/jpeg' }
+  expect((await service.readTimetablePhotos(context, [file, file])).blocks).toEqual([block])
+  service = new RevisionService({ db, now: () => new Date('2026-11-09T12:00:00Z'), generateCards: async () => ({ summary: 'Cours', notes: [] }), readTimetable: async () => [block, { ...block, start: '13:00' }] })
+  await expect(service.readTimetablePhotos(context, [file])).rejects.toThrow('chevaucher')
 })

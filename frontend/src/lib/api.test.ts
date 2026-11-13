@@ -40,7 +40,7 @@ function queueTwoAnswers() {
   ] }))
 }
 
-test('une réponse refusée pour date est retirée sans bloquer la suivante ni les mutations', async () => {
+test('une réponse refusée pour date reste en attente', async () => {
   queueTwoAnswers()
   const replayed: string[] = []
   const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
@@ -60,9 +60,8 @@ test('une réponse refusée pour date est retirée sans bloquer la suivante ni l
   }))
 
   await api.syncRevisionAnswers()
-  expect(replayed).toEqual(['expired', 'next'])
-  expect(api.revisionSyncStatus()).toMatchObject({ pending: 0, error: '' })
-  await expect(api.revisionAPI.saveProfile(profile)).resolves.toEqual(profile)
+  expect(replayed).toEqual(['expired'])
+  expect(api.revisionSyncStatus()).toMatchObject({ pending: 2, error: 'Date locale trop éloignée.' })
 })
 
 test.each([
@@ -212,7 +211,7 @@ test('le dernier plan reste disponible hors ligne sans modifier la file de répo
   } finally { vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } }) }
 })
 
-test('les réponses d’examen ne sont pas mises en file et retirent la carte de la séance quotidienne en cache', async () => {
+test('les réponses d’examen préservent les positions de la séance quotidienne en cache', async () => {
   vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } })
   const date = new Date()
   const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -223,7 +222,19 @@ test('les réponses d’examen ne sont pas mises en file et retirent la carte de
   const saved = JSON.parse(required(entries.get(offlineKey)))
   expect(saved.pending).toEqual([])
   expect(saved.session.id).toBe('daily')
-  expect(saved.session.cards.map((card: { id: string }) => card.id)).toEqual(['other'])
+  expect(saved.session.cards.map((card: { id: string }) => card.id)).toEqual(['card', 'other'])
+})
+
+test('plusieurs réponses en attente sont synchronisées dans l’ordre', async () => {
+  queueTwoAnswers()
+  const replayed: string[] = []
+  vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+    replayed.push(JSON.parse(init.body as string).answerId)
+    return new Response(JSON.stringify({ ok: true, data: { id: 'current', position: 1 } }), { headers: { 'Content-Type': 'application/json' } })
+  }))
+  await api.syncRevisionAnswers()
+  expect(replayed).toEqual(['expired', 'next'])
+  expect(api.revisionSyncStatus().pending).toBe(0)
 })
 
 test('un contexte non sécurisé affiche le message HTTPS avant toute requête', async () => {
@@ -234,6 +245,8 @@ test('un contexte non sécurisé affiche le message HTTPS avant toute requête',
   expect(fetch).not.toHaveBeenCalled()
   vi.unstubAllGlobals()
 })
+
+
 
 
 

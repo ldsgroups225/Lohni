@@ -679,6 +679,7 @@ test('le jour du dernier examen les cartes dues restent disponibles sans nouvell
   const session = await service.getSession(context())
   expect(session.cards).toHaveLength(2)
   expect(session.cards.every(card => card.reviews > 0)).toBe(true)
+  expect((await service.getPlan(context())).days[0].items[0]).toMatchObject({ dueCards: 2, newCards: 0 })
 })
 
 test('un chapitre déjà révisé aujourd’hui ne devient pas un chapitre manquant', async () => {
@@ -746,7 +747,7 @@ test('la révision express garde le calendrier et compte pour la série', async 
   await expect(service.getExamSession(context(), exam.id)).rejects.toBeInstanceOf(RevisionError)
 })
 
-test('une séance ouverte ne repropose pas les cartes répondues dans une autre séance', async () => {
+test('une séance ouverte conserve les positions des cartes répondues dans une autre séance', async () => {
   await setup(8)
   const exam = await service.saveExam(context(), { title: 'Brevet', date: '2026-11-13', subjects: ['Mathématiques'] })
   const daily = await service.getSession(context())
@@ -754,5 +755,85 @@ test('une séance ouverte ne repropose pas les cartes répondues dans une autre 
   await finish(examSession)
   const resumed = await service.getSession(context())
   expect(resumed.id).toBe(daily.id)
-  expect(resumed.cards.every(card => !examSession.cards.some(seen => seen.id === card.id))).toBe(true)
+  expect(resumed.cards.map(card => card.id)).toEqual(daily.cards.map(card => card.id))
+})
+
+test('une réponse quotidienne en attente reste valable après une réponse d’examen', async () => {
+  const chapter = await setup(4)
+  const exam = await service.saveExam(context(), { title: 'Brevet', date: '2026-11-13', subjects: ['Mathématiques'], chapterIds: [chapter.id] })
+  const daily = await service.getSession(context())
+  const examSession = await service.getExamSession(context(), exam.id)
+  expect(examSession.cards[0].id).toBe(daily.cards[0].id)
+  await respond(examSession, true)
+  const first = { sessionId: daily.id, cardId: daily.cards[0].id, position: 0, knew: true, durationMs: 1, answerId: randomUUID() }
+  const beforeCard = (await service.listChapters(context()))[0].cards.find(card => card.id === first.cardId)
+  const after = await service.answer(context(), first)
+  expect((await service.listChapters(context()))[0].cards.find(card => card.id === first.cardId)).toMatchObject({ reviews: beforeCard!.reviews, due: beforeCard!.due })
+  expect(after.position).toBe(1)
+  expect(await service.answer(context(), first)).toEqual(after)
+  const second = await service.answer(context(), { ...first, answerId: randomUUID(), cardId: daily.cards[1].id, position: 1 })
+  expect(second.position).toBe(2)
+})
+
+test('refuse les examens au-delà de 400 jours par les deux formulaires', async () => {
+  await setup()
+  const exam = { title: 'Brevet', date: '2027-12-15', subjects: ['Mathématiques'] }
+  await expect(service.saveExam(context(), exam)).rejects.toBeInstanceOf(RevisionError)
+  await expect(service.saveProfile(context(), { schoolClass: '3e', subjects: exam.subjects, examDate: exam.date })).rejects.toBeInstanceOf(RevisionError)
+  await expect(service.saveExam(context(), { ...exam, date: '2027-12-14' })).resolves.toBeDefined()
+})
+
+test('un examen ultérieur inclut les cartes du chapitre partagé', async () => {
+  const chapter = await setup(10)
+  await service.saveExam(context(), { title: 'Premier', date: '2026-11-13', subjects: ['Mathématiques'], chapterIds: [chapter.id] })
+  const later = await service.saveExam(context(), { title: 'Second', date: '2026-11-15', subjects: ['Mathématiques'], chapterIds: [chapter.id] })
+  const first = await service.getExamSession(context(), later.id)
+  expect(first.cards.length).toBeGreaterThan(0)
+  await finish(first)
+  expect((await service.getExamSession(context(), later.id, true)).cards.length).toBeGreaterThan(0)
+})
+
+test('le jour du dernier examen figure dans le plan sans nouvelles cartes', async () => {
+  await setup(2, '2026-11-09')
+  const day = (await service.getPlan(context())).days[0]
+  expect(day.date).toBe('2026-11-09')
+  expect(day.items.reduce((sum, item) => sum + item.newCards, 0)).toBe(0)
+  expect((await service.getSession(context())).cards).toHaveLength(0)
+})
+
+test('le repos et les réglages actualisent seulement les séances non commencées', async () => {
+  await setup(5)
+  const initial = await service.getSession(context())
+  await service.saveSettings(context(), { dailyMinutes: 15, restDays: [1] })
+  expect((await service.getSession(context())).cards).toEqual([])
+  await service.saveSettings(context(), { dailyMinutes: 15, restDays: [] })
+  const started = await service.answer(context(), { sessionId: initial.id, cardId: initial.cards[0].id, position: 0, knew: true, durationMs: 1 })
+  await service.saveSettings(context(), { dailyMinutes: 30, restDays: [1] })
+  expect((await service.getSession(context())).id).toBe(started.id)
+})
+
+test('les cartes dues passent avant les nouvelles de la matière du lendemain', async () => {
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques', 'Français'], examDate: '2026-11-11' })
+  generated = cards(10)
+  await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Calcul' })
+  let session = await service.getSession(context())
+  while (!session.complete) session = await respond(session, true)
+  now = new Date('2026-11-12T12:00:00Z')
+  generated = cards(25)
+  const french = await service.generateChapter(context(), { subject: 'Français', title: 'Lecture' })
+  await service.saveTimetable(context(), [{ day: 5, start: '08:00', end: '09:00', subject: 'Français' }])
+  const daily = await service.getSession(context())
+  expect(daily.cards[0].chapterId).not.toBe(french.id)
+})
+
+test('un plan signale la surcharge des seules cartes dues', async () => {
+  await setup(30)
+  const exam = await service.saveExam(context(), { title: 'Brevet', date: '2026-11-14', subjects: ['Mathématiques'] })
+  await finish(await service.getSession(context()))
+  await finish(await service.getExamSession(context(), exam.id, true))
+  now = new Date('2026-11-10T12:00:00Z')
+  await service.saveTimetable(context(), [{ day: 2, start: '08:00', end: '14:00', subject: 'Mathématiques' }])
+  const day = (await service.getPlan(context())).days[0]
+  expect(day.items.reduce((sum, item) => sum + item.dueCards, 0)).toBeGreaterThan(day.capacityCards)
+  expect(day.overloaded).toBe(true)
 })

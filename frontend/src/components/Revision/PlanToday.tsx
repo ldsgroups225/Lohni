@@ -15,6 +15,7 @@ export function PlanToday() {
     {!plan.exams.length ? <Link className="underline" to="/me">Ajoute une date d’examen</Link> : <>
       {plan.exams.filter(exam => exam.overloaded).map(exam => <p key={exam.id}>Plan trop chargé pour {exam.title}</p>)}
       {plan.days[0]?.rest && <p>Repos</p>}
+      {!plan.days[0]?.rest && (plan.days[0]?.heavy || plan.days[0]?.overloaded) && <p>Journée chargée</p>}
       {plan.days[0]?.items.map(item => <p key={item.chapterId}><strong>{item.subject}</strong> · {item.chapterTitle} : {item.dueCards} carte{item.dueCards > 1 ? 's' : ''} à revoir, {item.newCards} nouvelle{item.newCards > 1 ? 's' : ''} · {item.minutes.toLocaleString('fr-FR')} min</p>)}
       {plan.days[0]?.actions.map(action => <Link className="block underline" key={action.subject} to="/import">Ajoute un chapitre de {action.subject}</Link>)}
       <Link className="block underline" to="/plan">Voir le plan</Link>

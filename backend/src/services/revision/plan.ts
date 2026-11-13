@@ -5,10 +5,10 @@ export type PlanInput = {
   today: string; exams: RevisionExam[]
   chapters: { id: string; title: string; subject: string; unseenCards: number; dueByDate: Record<string, number>; hasCards?: boolean }[]
   dailyMinutes: number; restDays: number[]
-  capacity?: (date: string, baseCards: number) => number; subjectOrder?: (date: string) => string[]
+  capacity?: (date: string, baseCards: number) => number; subjectOrder?: (date: string) => string[]; heavy?: (date: string) => boolean
 }
 export type PlanItem = { subject: string; chapterId: string; chapterTitle: string; examId: string | null; dueCards: number; newCards: number; minutes: number }
-export type PlanDay = { date: string; rest: boolean; capacityCards: number; minutes: number; items: PlanItem[]; actions: { kind: 'addChapter'; subject: string }[] }
+export type PlanDay = { date: string; rest: boolean; heavy: boolean; overloaded: boolean; capacityCards: number; minutes: number; items: PlanItem[]; actions: { kind: 'addChapter'; subject: string }[] }
 export type RevisionPlan = { today: string; exams: { id: string; title: string; date: string; overloaded: boolean }[]; days: PlanDay[] }
 
 const nextDate = (date: string) => new Date(Date.parse(date) + 86400000).toISOString().slice(0, 10)
@@ -19,10 +19,10 @@ export function buildPlan(input: PlanInput): RevisionPlan {
   const result: RevisionPlan = { today: input.today, exams: exams.map(({ id, title, date }) => ({ id, title, date, overloaded: false })), days: [] }
   if (!exams.length) return result
   const last = exams[exams.length - 1].date
-  for (let date = input.today; date < last; date = nextDate(date)) {
+  for (let date = input.today, count = 0; (date < last || date === input.today) && count < policy.maxExamHorizonDays; date = nextDate(date), count++) {
     const rest = input.restDays.includes(new Date(`${date}T00:00:00Z`).getUTCDay())
     const base = Math.floor(input.dailyMinutes * policy.sessionCards / policy.sessionMinutes)
-    result.days.push({ date, rest, capacityCards: rest ? 0 : Math.max(0, Math.floor(input.capacity?.(date, base) ?? base)), minutes: 0, items: [], actions: [] })
+    result.days.push({ date, rest, heavy: input.heavy?.(date) ?? false, overloaded: false, capacityCards: rest ? 0 : Math.max(0, Math.floor(input.capacity?.(date, base) ?? base)), minutes: 0, items: [], actions: [] })
   }
   const covered = (chapter: PlanInput['chapters'][number], exam: RevisionExam) => exam.subjects.includes(chapter.subject) && (!exam.chapterIds.length || exam.chapterIds.includes(chapter.id))
   const nearest = (chapter: PlanInput['chapters'][number]) => exams.find(exam => covered(chapter, exam))
@@ -90,6 +90,7 @@ export function buildPlan(input: PlanInput): RevisionPlan {
     day.items.sort((a, b) => (order.indexOf(a.subject) < 0 ? order.length : order.indexOf(a.subject)) - (order.indexOf(b.subject) < 0 ? order.length : order.indexOf(b.subject)))
     for (const entry of day.items) entry.minutes = minutes(entry.dueCards + entry.newCards)
     day.minutes = minutes(used(day))
+    day.overloaded = used(day) > day.capacityCards
   }
   return result
 }

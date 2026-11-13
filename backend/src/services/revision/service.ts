@@ -166,7 +166,8 @@ export class RevisionService {
         if (!Array.isArray(result)) throw new Error('Lecture invalide')
         extracted.push(...result)
       }
-      const blocks = this.validateTimetable(extracted)
+      const unique = new Map(extracted.map(block => [JSON.stringify([block?.day, block?.start, block?.end, typeof block?.subject === 'string' ? block.subject.trim() : block?.subject]), block]))
+      const blocks = this.validateTimetable([...unique.values()])
       if (!blocks.length) throw new Error('Lecture vide')
       return { blocks, unknownSubjects: [...new Set(blocks.map(block => block.subject).filter(subject => !profile.subjects.includes(subject)))] }
     } catch (error) {
@@ -188,6 +189,7 @@ export class RevisionService {
       await this.dependencies.db.run(`INSERT INTO revision_settings(device_id, daily_minutes, rest_days) VALUES (?, ?, ?)
         ON CONFLICT(device_id) DO UPDATE SET daily_minutes=excluded.daily_minutes, rest_days=excluded.rest_days`,
       [context.deviceId, input.dailyMinutes, JSON.stringify(input.restDays)])
+      await this.refreshSessions(context.deviceId, true)
       return { dailyMinutes: input.dailyMinutes, restDays: [...input.restDays] }
     })
   }
@@ -279,6 +281,7 @@ export class RevisionService {
     return this.execute(context, async () => {
       if (!input || typeof input.schoolClass !== 'string' || !input.schoolClass.trim() || !Array.isArray(input.subjects) || !input.subjects.length || input.subjects.some(s => typeof s !== 'string' || !s.trim())) throw new RevisionError('Classe et matières requises.')
       if (input.examDate !== undefined && !validDate(input.examDate)) throw new RevisionError('Date d’examen invalide.')
+      if (input.examDate && Date.parse(input.examDate) - Date.parse(context.localDate) > policy.maxExamHorizonDays * 86400000) throw new RevisionError('La date d’examen est trop éloignée.')
       if (input.series !== undefined && !nonempty(input.series)) throw new RevisionError('Série invalide.')
       const db = this.dependencies.db
       await db.run(`INSERT INTO revision_profiles(device_id, school_class, series) VALUES (?, ?, ?)
@@ -324,7 +327,8 @@ export class RevisionService {
     const timetable = await this.readTimetable(context.deviceId)
     const weekday = (date: string) => new Date(`${date}T00:00:00Z`).getUTCDay()
     const duration = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3))
-    const plan = buildPlan({ capacity: (date, base) => timetable.filter(block => block.day === weekday(date)).reduce((sum, block) => sum + duration(block.end) - duration(block.start), 0) >= policy.heavyDayHours * 60 ? base * policy.heavyDayFactor : base,
+    const heavy = (date: string) => timetable.filter(block => block.day === weekday(date)).reduce((sum, block) => sum + duration(block.end) - duration(block.start), 0) >= policy.heavyDayHours * 60
+    const plan = buildPlan({ heavy, capacity: (date, base) => heavy(date) ? base * policy.heavyDayFactor : base,
       subjectOrder: date => timetable.filter(block => block.day === (weekday(date) + 1) % 7 && profile.subjects.includes(block.subject)).map(block => block.subject), today: context.localDate, exams, dailyMinutes: settings?.daily_minutes ?? policy.defaultDailyMinutes,
       restDays: settings ? JSON.parse(settings.rest_days) : [], chapters: chapters.map(chapter => {
         const dueByDate: Record<string, number> = {}
@@ -343,6 +347,7 @@ export class RevisionService {
         item.minutes = Math.ceil((item.newCards + item.dueCards) * policy.sessionMinutes / policy.sessionCards)
       }
       today.minutes = Math.ceil(today.items.reduce((sum, item) => sum + item.newCards + item.dueCards, 0) * policy.sessionMinutes / policy.sessionCards)
+      today.overloaded = today.items.reduce((sum, item) => sum + item.newCards + item.dueCards, 0) > today.capacityCards
     }
     return plan
   }
@@ -353,6 +358,7 @@ export class RevisionService {
     const db = this.dependencies.db
     const profile = await this.requireProfile(context.deviceId)
     if (!input || !nonempty(input.title) || input.title.length > policy.maxTitleChars || !validDate(input.date) || !Array.isArray(input.subjects) || !input.subjects.length || input.subjects.some(subject => !profile.subjects.includes(subject)) || (input.chapterIds !== undefined && (!Array.isArray(input.chapterIds) || input.chapterIds.some(id => typeof id !== 'string')))) throw new RevisionError('Examen invalide : vérifie le titre, la date et les matières.')
+    if (Date.parse(input.date) - Date.parse(context.localDate) > policy.maxExamHorizonDays * 86400000) throw new RevisionError('La date d’examen est trop éloignée.')
     const exams = await this.readExams(context.deviceId)
     if (input.id !== undefined && (typeof input.id !== 'string' || !exams.some(exam => exam.id === input.id))) throw new RevisionError('Examen introuvable.')
     if (!input.id && exams.length >= policy.maxExams) throw new RevisionError(`Tu peux ajouter ${policy.maxExams} examens au maximum.`)
@@ -487,7 +493,7 @@ export class RevisionService {
   async getSession(context: RevisionContext, continueSession = false): Promise<RevisionSession> {
     return this.execute(context, async () => {
       const db = this.dependencies.db
-      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = 'daily' AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate])
+      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = 'daily' AND COALESCE(json_extract(state, '$.stale'), 0) = 0 AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY (json_extract(state, '$.position') > 0) DESC, rowid DESC LIMIT 1", [context.deviceId, context.localDate])
       if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return this.sessionResult(JSON.parse(saved.state))
       const profile = await this.requireProfile(context.deviceId)
       profile.examDate = (await this.nextExam(context))?.date
@@ -503,7 +509,7 @@ export class RevisionService {
       const exam = (await this.readExams(context.deviceId)).find(item => item.id === examId)
       if (!exam || exam.date < context.localDate) throw new RevisionError('Examen introuvable ou déjà passé.')
       const kind = Date.parse(exam.date) - Date.parse(context.localDate) === 86400000 ? 'express' : 'exam'
-      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = ? AND exam_id = ? AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate, kind, examId])
+      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = ? AND exam_id = ? AND COALESCE(json_extract(state, '$.stale'), 0) = 0 AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate, kind, examId])
       if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return this.sessionResult(JSON.parse(saved.state))
       const profile = await this.requireProfile(context.deviceId)
       const chapters = (await this.readChapters(context.deviceId)).filter(chapter => profile.subjects.includes(chapter.subject) && exam.subjects.includes(chapter.subject))
@@ -518,7 +524,7 @@ export class RevisionService {
         const plan = await this.readPlan(context)
         const days = continueSession ? plan.days : plan.days.slice(0, 1)
         const quotas = new Map<string, number>()
-        for (const day of days) for (const item of day.items) if (scoped.has(item.chapterId) && item.examId === examId) quotas.set(item.chapterId, (quotas.get(item.chapterId) ?? 0) + item.newCards)
+        for (const day of days) for (const item of day.items) if (scoped.has(item.chapterId)) quotas.set(item.chapterId, (quotas.get(item.chapterId) ?? 0) + item.newCards)
         for (const row of rows) if (row.reviews === 0 && (quotas.get(row.chapter_id) ?? 0) > 0) {
           selected.push(row)
           quotas.set(row.chapter_id, (quotas.get(row.chapter_id) ?? 0) - 1)
@@ -532,6 +538,8 @@ export class RevisionService {
   }
   private async selectSessionCards(context: RevisionContext, profile: ProfileInput): Promise<RevisionCard[]> {
     const db = this.dependencies.db
+    const settings = await db.get('SELECT rest_days FROM revision_settings WHERE device_id = ?', [context.deviceId])
+    if (settings && JSON.parse(settings.rest_days).includes(new Date(`${context.localDate}T00:00:00Z`).getUTCDay())) return []
     const rows = await db.all(`SELECT c.*, ch.origin, s.name AS subject FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id
       JOIN revision_subjects s ON s.id = ch.subject_id WHERE c.device_id = ? AND s.selected = 1 ORDER BY c.rowid`, [context.deviceId])
     const introduced = await db.get(`SELECT COUNT(DISTINCT j.card_id) AS count FROM revision_journal j
@@ -550,7 +558,7 @@ export class RevisionService {
     const tomorrow = (new Date(`${context.localDate}T00:00:00Z`).getUTCDay() + 1) % 7
     const preferred = new Set((await this.readTimetable(context.deviceId)).filter(block => block.day === tomorrow && profile.subjects.includes(block.subject)).map(block => block.subject))
     const rank = (row: any) => row.reviews > 0 ? 0 : JSON.parse(row.content).kind === 'mcq' ? 2 : 1
-    eligible.sort((a, b) => Number(preferred.has(b.subject)) - Number(preferred.has(a.subject)) || rank(a) - rank(b) || (a.reviews > 0 && b.reviews > 0
+    eligible.sort((a, b) => rank(a) - rank(b) || Number(preferred.has(b.subject)) - Number(preferred.has(a.subject)) || (a.reviews > 0 && b.reviews > 0
       ? this.scheduler.retrievability(JSON.parse(a.scheduling), this.dependencies.now()) - this.scheduler.retrievability(JSON.parse(b.scheduling), this.dependencies.now()) : 0))
     const plan = await this.readPlan(context)
     if (plan.exams.length) {
@@ -577,14 +585,6 @@ export class RevisionService {
     return selected.map(revisionCard)
   }
   private async sessionResult(session: RevisionSession): Promise<RevisionSession> {
-    const others = new Set((await this.dependencies.db.all(`SELECT j.card_id FROM revision_journal j JOIN revision_sessions s ON s.id = ?
-      WHERE j.device_id = s.device_id AND j.local_date = s.local_date AND j.session_id != s.id`, [session.id])).map(row => row.card_id))
-    const remaining = session.cards.slice(session.position).filter(card => !others.has(card.id))
-    if (remaining.length !== session.cards.length - session.position) {
-      session.cards = [...session.cards.slice(0, session.position), ...remaining]
-      session.complete = session.position >= session.cards.length
-      await this.dependencies.db.run('UPDATE revision_sessions SET state = ? WHERE id = ?', [JSON.stringify(session), session.id])
-    }
     const rows = await this.dependencies.db.all('SELECT knew, session_complete, position FROM revision_journal WHERE session_id = ? ORDER BY position', [session.id])
     const summary: RevisionSummary = { quiz: { total: 0, correct: 0 }, flashcards: { total: 0, knew: 0 }, missed: [] }
     const lastKnew = new Map<string, boolean>()
@@ -616,6 +616,7 @@ export class RevisionService {
       const saved = await db.get('SELECT state, kind FROM revision_sessions WHERE id = ? AND device_id = ? AND local_date = ?', [input.sessionId, context.deviceId, context.localDate])
       if (!saved) throw new RevisionError('Session introuvable.')
       const session: RevisionSession = await this.sessionResult(JSON.parse(saved.state))
+      delete (session as RevisionSession & { stale?: boolean }).stale
       if (input.answerId) {
         const replay = await db.get('SELECT session_id, card_id, position FROM revision_journal WHERE device_id = ? AND client_answer_id = ?', [context.deviceId, input.answerId])
         if (replay) {
@@ -632,12 +633,13 @@ export class RevisionService {
       if (card.kind === 'mcq' && (typeof input.choice !== 'number' || !Number.isInteger(input.choice) || input.choice < 1 || input.choice > card.options.length)) throw new RevisionError('Choisis une réponse au QCM.')
       const knew = input.knew && (card.kind !== 'mcq' || input.choice === card.correct)
       const now = this.dependencies.now()
-      const scheduled = this.scheduler.next(row.scheduling ? JSON.parse(row.scheduling) : createEmptyCard(now), now, knew ? Rating.Good : Rating.Again)
-      if (saved.kind !== 'express') {
+      const other = await db.get("SELECT j.scheduling FROM revision_journal j JOIN revision_sessions s ON s.id = j.session_id WHERE j.device_id = ? AND j.local_date = ? AND j.card_id = ? AND j.session_id != ? AND s.kind != 'express' LIMIT 1", [context.deviceId, context.localDate, card.id, session.id])
+      const scheduled = other ? JSON.parse(other.scheduling) : this.scheduler.next(row.scheduling ? JSON.parse(row.scheduling) : createEmptyCard(now), now, knew ? Rating.Good : Rating.Again)
+      if (saved.kind !== 'express' && !other) {
         await db.run('UPDATE revision_cards SET scheduling = ?, due = ?, reviews = reviews + 1 WHERE id = ? AND device_id = ?', [JSON.stringify(scheduled.card), scheduled.card.due.toISOString(), card.id, context.deviceId])
         card.due = scheduled.card.due.toISOString()
         card.reviews = row.reviews + 1
-      } else scheduled.card = JSON.parse(row.scheduling)
+      } else if (saved.kind === 'express' && !other) scheduled.card = JSON.parse(row.scheduling)
       advanceSession(session, knew, durationMs)
       await db.run(`INSERT INTO revision_journal (id, device_id, card_id, session_id, position, reviewed_at, local_date, knew, duration_ms, scheduling, session_complete, client_answer_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [randomUUID(), context.deviceId, card.id, session.id, input.position, now.toISOString(), context.localDate, Number(knew), durationMs, JSON.stringify(scheduled), Number(session.complete), input.answerId ?? null])
@@ -655,12 +657,16 @@ export class RevisionService {
       await this.refreshSessions(context.deviceId)
     })
   }
-  private async refreshSessions(deviceId: string): Promise<void> {
+  private async refreshSessions(deviceId: string, settingsChanged = false): Promise<void> {
     const db = this.dependencies.db
     const cards = new Map((await db.all(`SELECT c.*, ch.origin FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id
       JOIN revision_subjects s ON s.id = ch.subject_id WHERE c.device_id = ? AND s.selected = 1`, [deviceId])).map(row => [row.id, row]))
     for (const row of await db.all('SELECT id, state FROM revision_sessions WHERE device_id = ?', [deviceId])) {
       const session: RevisionSession = JSON.parse(row.state)
+      if (settingsChanged) {
+        if (session.position === 0) await db.run("UPDATE revision_sessions SET state = json_set(state, '$.stale', 1) WHERE id = ?", [row.id])
+        continue
+      }
       session.cards = [...session.cards.slice(0, session.position), ...session.cards.slice(session.position).flatMap(card => {
         const current = cards.get(card.id)
         return current ? [revisionCard(current)] : []

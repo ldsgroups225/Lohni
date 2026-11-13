@@ -24,3 +24,13 @@ test.each([['accueil', PlanToday], ['plan', Plan]] as const)('%s date seulement 
     expect(host.textContent).toContain('Plan du 9 novembre 2026')
   } finally { act(() => root.unmount()); host.remove() }
 })
+
+test.each([['accueil', PlanToday], ['plan', Plan]] as const)('%s affiche la journée chargée du plan hors ligne', async (_name, Screen) => {
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  api.plan.mockResolvedValue({ offline: true, plan: { today: '2026-11-09', exams: [{ id: 'e', title: 'Brevet', date: '2026-11-12' }], days: [{ date: '2026-11-09', heavy: true, overloaded: false, rest: false, capacityCards: 10, items: [], actions: [] }] } })
+  try {
+    await act(async () => root.render(<MemoryRouter><Screen /></MemoryRouter>))
+    expect(host.textContent).toContain('Journée chargée')
+  } finally { act(() => root.unmount()); host.remove() }
+})
