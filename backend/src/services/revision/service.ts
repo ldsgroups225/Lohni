@@ -36,10 +36,10 @@ export type RevisionChapter = {
   cards: RevisionCard[]; seenCards: number; mastery: number | null; status: MasteryStatus
 }
 export type RevisionProgress = {
-  streak: number; streakStarted: boolean; xp: number; learnedCards: number;
+  streak: number; streakStarted: boolean; xp: number; learnedCards: number; completedDates: string[];
   subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[]
 }
-export type RevisionHome = { profile: ProfileInput; nextExam: Pick<RevisionExam, 'id' | 'title' | 'date'> | null; daysUntilExam: number | null; totalCards: number; cardCount: number; estimatedMinutes: number; moreCards: boolean; started: boolean; state: 'ready' | 'done' | 'empty' }
+export type RevisionHome = { profile: ProfileInput; nextExam: Pick<RevisionExam, 'id' | 'title' | 'date'> | null; daysUntilExam: number | null; totalCards: number; cardCount: number; reviewCards: number; newCards: number; estimatedMinutes: number; moreCards: boolean; started: boolean; state: 'ready' | 'done' | 'empty' }
 type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; series?: string; text?: string }) => Promise<GeneratedChapter>; transcribePhoto?: (file: UpFile) => Promise<string>; readTimetable?: (file: UpFile) => Promise<TimetableBlock[]> }
 const validDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
@@ -218,7 +218,10 @@ export class RevisionService {
         return { subjectId: subject.id, name: subject.name, mastery,
           status: this.masteryStatus(mastery, own.reduce((sum, chapter) => sum + chapter.seenCards, 0), own.reduce((sum, chapter) => sum + chapter.cards.length, 0)) }
       })
-      return { xp, streak, streakStarted: days.size > 0, learnedCards: new Set(rows.filter(row => row.knew).map(row => row.card_id)).size, subjects }
+      const day = new Date(`${context.localDate}T00:00:00Z`)
+      const monday = Date.parse(context.localDate) - ((day.getUTCDay() + 6) % 7) * 86400000
+      const completedDates = [...days].filter(date => Date.parse(date) >= monday && Date.parse(date) < monday + 7 * 86400000).sort()
+      return { xp, streak, streakStarted: days.size > 0, completedDates, learnedCards: new Set(rows.filter(row => row.knew).map(row => row.card_id)).size, subjects }
     })
   }
   async listChapters(context: RevisionContext): Promise<RevisionChapter[]> {
@@ -256,7 +259,10 @@ export class RevisionService {
         AND session_complete = 1 LIMIT 1`, [context.deviceId, context.localDate])
       const nextExam = await this.nextExam(context)
       const cardCount = session.complete ? 0 : session.cards.length - session.position
+      const newCards = session.complete ? 0 : session.cards.slice(session.position).filter((card, index) =>
+        card.reviews === 0 && !session.cards.slice(0, session.position + index).some(previous => previous.id === card.id)).length
       return {
+        newCards, reviewCards: cardCount - newCards,
         profile, nextExam, totalCards: total.count, cardCount,
         moreCards: !session.complete || (await this.selectSessionCards(context, profile)).length > 0,
         daysUntilExam: nextExam ? (Date.parse(nextExam.date) - Date.parse(context.localDate)) / 86400000 : null,

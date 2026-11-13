@@ -238,6 +238,17 @@ test('plusieurs réponses en attente sont synchronisées dans l’ordre', async 
   expect(api.revisionSyncStatus().pending).toBe(0)
 })
 
+test('hors ligne, l’accueil recalcule les nouvelles cartes et les répétitions de la séance', async () => {
+  const date = [new Date().getFullYear(), String(new Date().getMonth() + 1).padStart(2, '0'), String(new Date().getDate()).padStart(2, '0')].join('-')
+  const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
+  const cards = [{ id: 'a', reviews: 0 }, { id: 'b', reviews: 0 }, { id: 'a', reviews: 0 }]
+  entries.set(offlineKey, JSON.stringify({ session: { id: 's', localDate: date, cards, position: 1, repeated: ['a'], complete: false }, pending: [], cache: { '/profile': profile, '/home': { profile, cardCount: 3, newCards: 3, reviewCards: 0 } }, cacheDates: { '/home': date } }))
+  vi.stubGlobal('navigator', { onLine: false, locks: { request: async (_name: string, save: () => void) => save() } })
+  vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('offline') }))
+  expect(await api.revisionAPI.home()).toMatchObject({ cardCount: 2, newCards: 1, reviewCards: 1 })
+  vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } })
+})
+
 test('un contexte non sécurisé affiche le message HTTPS avant toute requête', async () => {
   entries.clear()
   vi.stubGlobal('crypto', {})
@@ -246,6 +257,7 @@ test('un contexte non sécurisé affiche le message HTTPS avant toute requête',
   expect(fetch).not.toHaveBeenCalled()
   vi.unstubAllGlobals()
 })
+
 
 
 

@@ -17,8 +17,8 @@
   --color-danger: var(--lohni-danger);
   --color-on-danger: var(--lohni-on-danger);
   --color-mascot: var(--lohni-mascot);
-  --radius-card: 1rem;
-  --radius-control: 0.75rem;
+  --radius-card: 1.25rem;
+  --radius-control: 1rem;
   --ease-lohni: cubic-bezier(0.2, 0.8, 0.2, 1); /* courbe partagée, reprise de Dots Hermes */
   --ease-pop: cubic-bezier(0.3, 1.6, 0.5, 1);
   --duration-fast: 150ms;
@@ -291,3 +291,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--color-primary)
 @keyframes nav-pop-old { to { transform: translateX(100%); } }
 @keyframes nav-pop-new { from { transform: translateX(-25%); } }
 @keyframes nav-fade-out { to { opacity: 0; } }
+
+.mastery-badge { display: inline-flex; align-items: center; border-radius: .65rem; padding: .25rem .65rem; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.mastery-badge-solid { background: #ddf3e3; color: #14532d; }
+.mastery-badge-ongoing { background: #e7f4e9; color: #14532d; }
+.mastery-badge-fragile { background: #ffe6d9; color: #922c13; }
+@media (prefers-color-scheme: dark) {
+  .mastery-badge-solid, .mastery-badge-ongoing { background: #1d4930; color: #b7f0c7; }
+  .mastery-badge-fragile { background: #643321; color: #ffd4c3; }
+}
