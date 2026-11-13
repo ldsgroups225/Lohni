@@ -28,6 +28,7 @@ export default function Onboarding() {
   const [subjects, setSubjects] = useState<string[]>(() => Array.isArray(saved.subjects) ? saved.subjects.filter((name: unknown): name is string => typeof name === 'string' && available.includes(name)) : available)
   const [examDate, setExamDate] = useState(() => typeof saved.examDate === 'string' ? saved.examDate as string : '')
   const [subject, setSubject] = useState(() => typeof saved.subject === 'string' && subjects.includes(saved.subject) ? saved.subject as string : subjects[0] ?? '')
+  const selectedSubject = subjects.includes(subject) ? subject : subjects[0] ?? ''
   const needsSeries = !('' in entry.series)
   const step = needsSeries && (!series || !seriesConfirmed) ? 1 : requested > 2 && !subjects.length ? 2 : requested
   useEffect(() => {
@@ -35,8 +36,8 @@ export default function Onboarding() {
   }, [step, requested, search, setSearch, location.state])
   const [title, setTitle] = useState(() => typeof saved.title === 'string' ? saved.title as string : '')
   useEffect(() => {
-    try { sessionStorage.setItem('lohni-onboarding', JSON.stringify({ schoolClass, series, seriesConfirmed, subjects, examDate, subject, title })) } catch { /* Storage is optional. */ }
-  }, [schoolClass, series, seriesConfirmed, subjects, examDate, subject, title])
+    try { sessionStorage.setItem('lohni-onboarding', JSON.stringify({ schoolClass, series, seriesConfirmed, subjects, examDate, subject: selectedSubject, title })) } catch { /* Storage is optional. */ }
+  }, [schoolClass, series, seriesConfirmed, subjects, examDate, selectedSubject, title])
   const finishing = useRef(false)
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reprendre la navigation après chaque changement d'entrée dans l'historique.
   useEffect(() => {
@@ -55,17 +56,16 @@ export default function Onboarding() {
     event.preventDefault()
     if (submitting.current || (needsSeries && (!series || !seriesConfirmed)) || (step > 1 && !subjects.length)) return
     if (step < 4) {
-      if (step === 2 && !subjects.includes(subject)) setSubject(subjects[0])
       setStep(step + 1)
       return
     }
-    if (!subjects.includes(subject) || !title.trim()) return
+    if (!selectedSubject || !title.trim()) return
     submitting.current = true
     setBusy(true)
     setError('')
     try {
       await revisionAPI.saveProfile({ schoolClass, series: series || undefined, subjects, examDate: examDate || undefined })
-      await revisionAPI.generateChapter({ subject, title: title.trim() })
+      await revisionAPI.generateChapter({ subject: selectedSubject, title: title.trim() })
       try { sessionStorage.removeItem('lohni-onboarding') } catch { /* Storage is optional. */ }
       finishing.current = true
       if (depth) void navigate(-depth)
@@ -112,14 +112,14 @@ export default function Onboarding() {
     </>}
     {step === 4 && <>
       <h2 className="text-2xl font-semibold text-foreground">Tu étudies quoi en ce moment ?</h2>
-      <label className="block space-y-2"><span>Matière</span><select className={input} value={subject} onChange={event => setSubject(event.target.value)}>{subjects.map(name => <option key={name}>{name}</option>)}</select></label>
+      <label className="block space-y-2"><span>Matière</span><select className={input} value={selectedSubject} onChange={event => setSubject(event.target.value)}>{subjects.map(name => <option key={name}>{name}</option>)}</select></label>
       <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. : Les fractions" /></label>
       <p className="text-sm text-muted">{revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes générées par IA pour démarrer, puis quelques cartes par jour. Elles peuvent contenir des erreurs : tu peux les supprimer pendant ta session.</p>
     </>}
     </div>
     {error && <p role="alert" className="text-foreground">{error}</p>}
     {busy && <p role="status">Préparation de tes {revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes… Cela peut prendre un instant.</p>}
-    <div className="flex flex-wrap items-center gap-4">
+    <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-4 rounded-b-2xl border-t border-border bg-surface px-4 py-3 sm:-mx-6 sm:px-6">
       {step > 1 && <button type="button" disabled={busy} className="rounded-xl border border-border px-4 py-3" onClick={() => depth ? navigate(-1) : setSearch({ etape: String(step - 1) }, { replace: true })}>Retour</button>}
       <Button type="submit" disabled={busy || (needsSeries && (!series || !seriesConfirmed)) || (step === 2 && !subjects.length) || (step === 4 && !title.trim())}>{step === 4 ? 'Créer mes cartes et commencer' : 'Continuer'}</Button>
     </div>

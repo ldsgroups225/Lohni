@@ -40,6 +40,7 @@ export default function Profile() {
   const [settingsBusy, setSettingsBusy] = useState(false)
   const [settingsError, setSettingsError] = useState('')
   const [settingsSaved, setSettingsSaved] = useState(false)
+  const [resourceVersion, setResourceVersion] = useState(0)
   const entry = curriculum.find(item => item.schoolClass === profile?.schoolClass)
   const available = entry ? (entry.series as Record<string, string[] | undefined>)[profile?.series ?? ''] ?? [] : []
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
@@ -57,7 +58,7 @@ export default function Profile() {
       try { [value, stats] = await Promise.all([revisionAPI.profile(), revisionAPI.progress()]) }
       catch (cause) {
         if (active && requestDevice !== cachedDevice()) {
-          cachedProfile = null; setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true)
+          cachedProfile = null; setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true); setResourceVersion(value => value + 1)
           return load()
         }
         throw cause
@@ -65,7 +66,7 @@ export default function Profile() {
       if (!active) return
       if (requestDevice !== cachedDevice() || version !== currentRevisionCacheVersion()) {
         cachedProfile = null
-        if (requestDevice !== cachedDevice()) { setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true) }
+        if (requestDevice !== cachedDevice()) { setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true); setResourceVersion(value => value + 1) }
         return load()
       }
       if (requestEdits === edits.current && !saving.current) {
@@ -74,29 +75,33 @@ export default function Profile() {
       }
       setProgress(stats)
     }
-    const requestDevice = cachedDevice()
-    void revisionAPI.timetable().then(value => { if (active && requestDevice === cachedDevice()) setTimetableCount(value.length) }).catch(() => { if (active && requestDevice === cachedDevice()) setTimetableError(true) })
-    void revisionAPI.exams().then(value => { if (active && requestDevice === cachedDevice()) { setExams(value); setExamsLoaded(true) } }).catch(cause => { if (active && requestDevice === cachedDevice()) setError(cause instanceof Error ? cause.message : 'Impossible de charger tes examens.') })
-    void revisionAPI.chapters().then(value => { if (active && requestDevice === cachedDevice()) setChapters(value) }).catch(() => {})
     load().catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Impossible de charger ton profil.') })
       .finally(() => { if (active && !saving.current) setBusy(false) })
     return () => { active = false }
   }, [])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Recharger les ressources après la détection d’un nouvel appareil.
   useEffect(() => {
     let active = true
-    const device = cachedDevice()
-    async function load() {
+    async function load<T>(read: () => Promise<T>, accept: (value: T) => void, fail: (cause: unknown) => void): Promise<void> {
+      const device = cachedDevice()
       try {
-        const value = await revisionAPI.settings()
-        if (active && device === cachedDevice()) setSettings(value)
-      } catch {
-        if (active) setSettingsError('Impossible de charger tes réglages de révision.')
+        const value = await read()
+        if (!active) return
+        if (device !== cachedDevice()) return load(read, accept, fail)
+        accept(value)
+      } catch (cause) {
+        if (!active) return
+        if (device !== cachedDevice()) return load(read, accept, fail)
+        fail(cause)
       }
     }
-    void load()
+    void load(revisionAPI.timetable, value => { setTimetableCount(value.length); setTimetableError(false) }, () => setTimetableError(true))
+    void load(revisionAPI.exams, value => { setExams(value); setExamsLoaded(true) }, cause => setError(cause instanceof Error ? cause.message : 'Impossible de charger tes examens.'))
+    void load(revisionAPI.chapters, setChapters, () => {})
+    void load(revisionAPI.settings, value => { setSettings(value); setSettingsError('') }, () => setSettingsError('Impossible de charger tes réglages de révision.'))
     return () => { active = false }
-  }, [])
+  }, [resourceVersion])
 
   async function saveSettings(event: FormEvent) {
     event.preventDefault()

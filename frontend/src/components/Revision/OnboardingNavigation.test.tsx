@@ -4,8 +4,8 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
-const api = vi.hoisted(() => ({ saved: false }))
-vi.mock('../../lib/api', () => ({ revisionAPI: { saveProfile: async () => { api.saved = true }, generateChapter: async () => {} }, revisionPolicy: { maxTitleChars: 100 } }))
+const api = vi.hoisted(() => ({ saved: false, generateChapter: vi.fn() }))
+vi.mock('../../lib/api', () => ({ revisionAPI: { saveProfile: async () => { api.saved = true }, generateChapter: api.generateChapter }, revisionPolicy: { maxTitleChars: 100 } }))
 import Onboarding from './Onboarding'
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 function Home() { return api.saved ? <p>Accueil</p> : <Onboarding /> }
@@ -104,5 +104,27 @@ test('une ancienne série implicite ne permet pas de contourner le choix par un 
     expect(host.textContent).toContain('Étape 2 sur 4')
     expect(host.textContent).toContain('Physique-Chimie')
     expect(host.textContent).not.toContain('Allemand')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); sessionStorage.clear() }
+})
+
+ test('la matière du chapitre reste valide après Retour puis Suivant dans l’historique', async () => {
+  sessionStorage.clear(); api.saved = false; api.generateChapter.mockClear()
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Onboarding /> }, { path: '/revision', element: <p>Révision</p> }])
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    for (let i = 0; i < 3; i++) await act(async () => required(host.querySelector('form')).requestSubmit())
+    const oldSubject = required(host.querySelector('select')).value
+    await act(async () => { await router.navigate(-2) })
+    const label = required([...host.querySelectorAll('label')].find(item => item.textContent === oldSubject))
+    await act(async () => required(label.querySelector('input')).click())
+    await act(async () => { await router.navigate(2) })
+    const newSubject = required(host.querySelector('select')).value
+    expect(newSubject).not.toBe(oldSubject)
+    const title = required(host.querySelector<HTMLInputElement>('input[placeholder]'))
+    await act(async () => { required(required(Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')).set).call(title, 'Fractions'); title.dispatchEvent(new Event('input', { bubbles: true })) })
+    await act(async () => required(host.querySelector('form')).requestSubmit())
+    expect(api.generateChapter).toHaveBeenCalledWith({ subject: newSubject, title: 'Fractions' })
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); sessionStorage.clear() }
 })

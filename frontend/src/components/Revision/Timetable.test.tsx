@@ -37,12 +37,15 @@ test('une réponse tardive ne montre pas les cours du précédent appareil', asy
   localStorage.setItem('lohni-device-id', 'emploi-ancien')
   let resolve!: (value: { day: number; start: string; end: string; subject: string }[]) => void
   api.timetable.mockReturnValueOnce(new Promise(r => { resolve = r }))
+  api.timetable.mockResolvedValueOnce([{ day: 2, start: '10:00', end: '11:00', subject: 'Nouveau cours' }])
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
   try {
     await act(async () => root.render(<Timetable profile={{ schoolClass: '3e', subjects: ['Mathématiques'] }} onProfile={() => {}} />))
     localStorage.setItem('lohni-device-id', 'emploi-nouveau')
     await act(async () => resolve([{ day: 1, start: '08:00', end: '09:00', subject: 'Ancien cours' }]))
-    expect(host.querySelector('input[maxlength]')).toBeNull()
+    expect((host.querySelector('input[maxlength]') as HTMLInputElement).value).toBe('Nouveau cours')
+    expect(host.textContent).not.toContain('Ancien cours')
+    expect(Array.from(host.querySelectorAll('button')).find(button => button.textContent?.includes('Ajouter un cours'))?.disabled).toBe(false)
   } finally { act(() => root.unmount()); host.remove(); localStorage.removeItem('lohni-device-id') }
 })

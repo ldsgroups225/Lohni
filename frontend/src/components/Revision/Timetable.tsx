@@ -14,7 +14,24 @@ export default function Timetable({ profile, onProfile }: { profile: RevisionPro
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
-  useEffect(() => { let active = true; const device = cachedDevice(); revisionAPI.timetable().then(value => { if (active && device === cachedDevice()) setBlocks(value) }).catch(() => { if (active && device === cachedDevice()) setError('Impossible de charger ton emploi du temps.') }); return () => { active = false } }, [])
+  useEffect(() => {
+    let active = true
+    async function load(): Promise<void> {
+      const device = cachedDevice()
+      try {
+        const value = await revisionAPI.timetable()
+        if (!active) return
+        if (device !== cachedDevice()) return load()
+        setBlocks(value)
+      } catch {
+        if (!active) return
+        if (device !== cachedDevice()) return load()
+        setError('Impossible de charger ton emploi du temps.')
+      }
+    }
+    void load()
+    return () => { active = false }
+  }, [])
   const unknown = [...new Set((blocks ?? []).map(block => block.subject.trim()).filter(subject => subject && !profile.subjects.includes(subject)))]
   const update = (index: number, patch: Partial<TimetableBlock>) => { setBlocks(current => current?.map((block, i) => i === index ? { ...block, ...patch } : block) ?? null); setSaved(false) }
   async function save() {

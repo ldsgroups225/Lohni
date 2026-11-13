@@ -6,7 +6,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import Profile from './Profile'
 
-const api = vi.hoisted(() => ({ timetable: async () => [], readTimetablePhotos: vi.fn(), saveTimetable: vi.fn(), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn() }))
+const api = vi.hoisted(() => ({ timetable: vi.fn(async () => []), readTimetablePhotos: vi.fn(), saveTimetable: vi.fn(), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn() }))
 vi.mock('../lib/api', () => ({ revisionAPI: api }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 beforeEach(() => { vi.resetAllMocks() })
@@ -246,4 +246,49 @@ test('Moi résume le parcours et ouvre les écrans dédiés', async () => {
     await act(async () => required(host.querySelector('form')).requestSubmit())
     expect(api.saveProfile).toHaveBeenCalledWith(expect.objectContaining({ schoolClass: '5e', subjects: ['Mathématiques', 'Matière personnelle'] }))
   } finally { close() }
+})
+
+ test('les ressources de Moi reprennent sur le nouvel appareil après une réponse ancienne', async () => {
+  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress)
+  let exams!: (value: never[]) => void, chapters!: (value: never[]) => void, settings!: (value: { dailyMinutes: number; restDays: number[] }) => void, timetable!: (value: never[]) => void
+  api.exams.mockReturnValueOnce(new Promise(r => { exams = r })).mockResolvedValue([])
+  api.chapters.mockReturnValueOnce(new Promise(r => { chapters = r })).mockResolvedValue([{ id: 'new', subject: 'Mathématiques', title: 'Nouveau chapitre' }] as never[])
+  api.settings.mockReturnValueOnce(new Promise(r => { settings = r })).mockResolvedValue({ dailyMinutes: 30, restDays: [] })
+  api.timetable.mockReturnValueOnce(new Promise(r => { timetable = r })).mockResolvedValue([{ day: 1, start: '08:00', end: '09:00', subject: 'Mathématiques' }] as never[])
+  const { host, close } = await setup('ressources-ancien', '/me/examens')
+  try {
+    localStorage.setItem('lohni-device-id', 'ressources-nouveau')
+    await act(async () => { exams([{ id: 'old', title: 'Ancien examen' }] as never[]); chapters([{ id: 'old', title: 'Ancien chapitre' }] as never[]); settings({ dailyMinutes: 15, restDays: [] }); timetable([]) })
+    expect(host.textContent).not.toContain('Ancien examen')
+    const add = required([...host.querySelectorAll('button')].find(item => item.textContent === 'Ajouter un examen'))
+    expect(add.disabled).toBe(false)
+    await act(async () => add.click())
+    await act(async () => required(host.querySelector<HTMLInputElement>('input[type=checkbox]')).click())
+    expect(host.textContent).toContain('Nouveau chapitre')
+    expect(host.textContent).not.toContain('Ancien chapitre')
+    expect(api.settings).toHaveBeenCalledTimes(2)
+    expect(api.timetable).toHaveBeenCalledTimes(2)
+  } finally { close() }
+})
+
+ test('le rythme et le résumé affichent les nouvelles données après changement d’appareil', async () => {
+  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress)
+  let resolveSettings!: (value: { dailyMinutes: number; restDays: number[] }) => void
+  api.settings.mockReturnValueOnce(new Promise(r => { resolveSettings = r })).mockResolvedValue({ dailyMinutes: 30, restDays: [] })
+  const rhythm = await setup('rythme-ancien', '/me/rythme')
+  try {
+    localStorage.setItem('lohni-device-id', 'rythme-nouveau')
+    await act(async () => resolveSettings({ dailyMinutes: 15, restDays: [] }))
+    const checked = required(rhythm.host.querySelector<HTMLInputElement>('input[type=radio]:checked'))
+    expect(checked.parentElement?.textContent).toContain('30 min')
+    expect(required([...rhythm.host.querySelectorAll('button')].find(button => button.textContent === 'Enregistrer les réglages')).disabled).toBe(false)
+  } finally { rhythm.close() }
+  let resolveTimetable!: (value: never[]) => void
+  api.timetable.mockReturnValueOnce(new Promise(r => { resolveTimetable = r })).mockResolvedValue([{ day: 1, start: '08:00', end: '09:00', subject: 'Mathématiques' }] as never[])
+  const summary = await setup('resume-ancien', '/me')
+  try {
+    localStorage.setItem('lohni-device-id', 'resume-nouveau')
+    await act(async () => resolveTimetable([]))
+    expect(summary.host.textContent).toContain('1 cours')
+  } finally { summary.close() }
 })
