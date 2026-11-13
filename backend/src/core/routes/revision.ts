@@ -3,12 +3,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { parseMultipart } from '../../lib/parser/upload'
 import { RevisionError, RevisionService, type RevisionContext } from '../../services/revision/service'
-import { generateCards, transcribePhoto } from '../../services/revision/generator'
+import { generateCards, transcribePhoto, readTimetable } from '../../services/revision/generator'
 import { REVISION_POLICY as policy } from '../../services/revision/policy'
 import { sqlite } from '../../utils/database/sqlite'
 import { config } from '../../config/env'
 
-const revision = new RevisionService({ db: sqlite, now: () => new Date(), generateCards, transcribePhoto })
+const revision = new RevisionService({ db: sqlite, now: () => new Date(), generateCards, transcribePhoto, readTimetable })
 
 export function revisionRoutes(app: any) {
   const route = (method: string, path: string, handle: (context: RevisionContext, req: any) => Promise<unknown>) => {
@@ -24,6 +24,17 @@ export function revisionRoutes(app: any) {
       }
     })
   }
+  route('get', '/revision/timetable', context => revision.getTimetable(context))
+  route('put', '/revision/timetable', (context, req) => revision.saveTimetable(context, req.body))
+  route('post', '/revision/timetable/photos', async (context, req) => {
+    const directory = await mkdtemp(join(tmpdir(), 'lohni-timetable-'))
+    try {
+      let upload: Awaited<ReturnType<typeof parseMultipart>>
+      try { upload = await parseMultipart(req, { directory, limits: { files: policy.maxTimetablePhotos, fileSize: policy.maxUploadMB * 1024 * 1024, fields: 1, fieldSize: 4096 } }) }
+      catch { throw new RevisionError(`Choisis au plus ${policy.maxTimetablePhotos} photos de ${policy.maxUploadMB} Mo maximum.`) }
+      return await revision.readTimetablePhotos(context, upload.files)
+    } finally { await rm(directory, { recursive: true, force: true }) }
+  })
   route('get', '/revision/plan', context => revision.getPlan(context))
   route('get', '/revision/exams/:id/session', (context, req) => revision.getExamSession(context, req.params.id))
   route('post', '/revision/exams/:id/session/continue', (context, req) => revision.getExamSession(context, req.params.id, true))

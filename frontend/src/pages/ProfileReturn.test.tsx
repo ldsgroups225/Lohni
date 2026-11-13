@@ -6,7 +6,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import Profile from './Profile'
 
-const api = vi.hoisted(() => ({ exams: vi.fn(async () => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn() }))
+const api = vi.hoisted(() => ({ timetable: async () => [], readTimetablePhotos: vi.fn(), saveTimetable: vi.fn(), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn() }))
 vi.mock('../lib/api', () => ({ revisionAPI: api }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 beforeEach(() => { vi.resetAllMocks() })
@@ -194,5 +194,27 @@ test('un changement d’appareil pendant une revalidation échouée masque aussi
     await act(async () => reject(new Error('Les données ont changé. Actualise la page.')))
     expect(host.querySelector('form')).toBeNull()
     expect(host.textContent).not.toContain('Les données ont changé')
+  } finally { close() }
+})
+
+test('la relecture des photos demande un choix avant enregistrement', async () => {
+  api.profile.mockResolvedValue(profile)
+  api.progress.mockResolvedValue(progress)
+  api.settings.mockResolvedValue({ dailyMinutes: 15, restDays: [] })
+  api.readTimetablePhotos.mockResolvedValue({ blocks: [{ day: 1, start: '08:00', end: '09:00', subject: 'Sport' }], unknownSubjects: ['Sport'] })
+  api.saveTimetable.mockImplementation(async value => value)
+  const { host, close } = await setup('profil-emploi')
+  try {
+    const file = required(host.querySelector<HTMLInputElement>('input[type=file]'))
+    Object.defineProperty(file, 'files', { configurable: true, value: [new File(['photo'], 'photo.jpg', { type: 'image/jpeg' })] })
+    await act(async () => { file.dispatchEvent(new Event('change', { bubbles: true })) })
+    expect(host.textContent).toContain('Relis et corrige')
+    const save = required([...host.querySelectorAll('button')].find(item => item.textContent?.includes('Enregistrer l’emploi du temps')))
+    expect(save.disabled).toBe(true)
+    const choice = required([...host.querySelectorAll('select')].find(item => item.textContent?.includes('Garder comme simple cours')))
+    await act(async () => { choice.value = 'simple'; choice.dispatchEvent(new Event('change', { bubbles: true })) })
+    await act(async () => { save.click() })
+    expect(api.saveTimetable).toHaveBeenCalledWith([{ day: 1, start: '08:00', end: '09:00', subject: 'Sport' }])
+    expect(api.saveProfile).not.toHaveBeenCalled()
   } finally { close() }
 })

@@ -854,7 +854,7 @@ async function revisionMutation<T>(path: string, method: string, body?: unknown)
   const result = await revisionRequest<T>(path, method, body);
   if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
   if (path === '/profile') invalidateRevisionCache()
-  else invalidateRevisionCache('/home', '/progress', '/chapters')
+  else invalidateRevisionCache('/home', '/progress', '/chapters', '/plan')
   await updateOffline(state => { if (device === cachedDevice()) {
     if (state.cacheDates) { delete state.cacheDates['/home']; delete state.cacheDates['/progress']; }
     if (path === '/profile') { state.cache['/profile'] = result; delete state.cache['/home']; }
@@ -879,7 +879,12 @@ window.setInterval(() => { if (revisionSyncStatus().pending) void syncRevisionAn
 export type RevisionImportedChapter = { id: string; title: string; summary: string; origin: 'import' };
 export type RevisionImportQuota = { remaining: number; resetsAt: string };
 
+export type TimetableBlock = { day: number; start: string; end: string; subject: string };
+
 export const revisionAPI = {
+  timetable: () => revisionRequest<TimetableBlock[]>('/timetable'),
+  saveTimetable: (blocks: TimetableBlock[]) => revisionMutation<TimetableBlock[]>('/timetable', 'PUT', blocks),
+  readTimetablePhotos: (files: File[]) => { const form = new FormData(); files.forEach(file => { form.append('file', file) }); return revisionMutation<{ blocks: TimetableBlock[]; unknownSubjects: string[] }>('/timetable/photos', 'POST', form); },
   home: async () => {
     let home: RevisionHome | null;
     try { home = await cachedRevisionRead<RevisionHome | null>('/home'); }
