@@ -20,7 +20,7 @@ beforeEach(() => { state.values = [] })
 test('accueil : libellé de classe, maîtrise vide et accès aux cours sans promesse pour demain', () => {
   state.values = [home, progress, false, '', '', 0]
   const html = render(<Home />)
-  expect(html).toContain('Terminale · BAC · Série C')
+  expect(html).toContain('Terminale C')
   expect(html).toContain("Aucune carte n&#x27;est à réviser aujourd&#x27;hui.")
   expect(html).toContain('href="/courses"')
   expect(html).toContain('Voir mes cours')

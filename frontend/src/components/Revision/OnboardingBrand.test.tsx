@@ -6,6 +6,6 @@ import Onboarding from './Onboarding'
 
 test('le premier lancement accueille avec Lohni et son slogan', () => {
   const html = renderToStaticMarkup(<MemoryRouter><Onboarding /></MemoryRouter>)
-  expect(html).toContain('La connaissance, un peu chaque jour.')
+  expect(html).toContain('Choisis ta langue et ton pays')
   expect(html).toContain('aria-label="Lohni, au repos"')
 })

@@ -300,3 +300,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--color-primary)
   .mastery-badge-solid, .mastery-badge-ongoing { background: #1d4930; color: #b7f0c7; }
   .mastery-badge-fragile { background: #643321; color: #ffd4c3; }
 }
+
+/* Les actions des chapitres ne sont pas des en-têtes d’accordéon. */
+summary.course-summary { margin-inline: 0; }
+summary.course-summary::after { content: none; }
+summary.course-summary.flex { justify-content: center; }
+summary.course-summary.grid { display: grid; }

@@ -292,3 +292,38 @@ test('Moi résume le parcours et ouvre les écrans dédiés', async () => {
     expect(summary.host.textContent).toContain('1 cours')
   } finally { summary.close() }
 })
+
+ test('le résumé du rythme signale un échec de lecture', async () => {
+  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress)
+  api.settings.mockRejectedValue(new Error('Réglages indisponibles'))
+  api.exams.mockResolvedValue([]); api.timetable.mockResolvedValue([]); api.chapters.mockResolvedValue([])
+  const { host, close } = await setup('profil-rythme-erreur', '/me')
+  try { expect(required(host.querySelector('a[href="/me/rythme"]')).textContent).toContain('Chargement impossible') } finally { close() }
+})
+
+test('modifier le prénom le conserve sur cet appareil sans le transmettre au profil', async () => {
+  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress)
+  api.saveProfile.mockResolvedValue(profile)
+  const { host, close } = await setup('profil-prenom', '/me/profil')
+  try {
+    const input = required(host.querySelector<HTMLInputElement>('input[autocomplete="given-name"]'))
+    await act(async () => { required(required(Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')).set).call(input, 'Awa'); input.dispatchEvent(new Event('input', { bubbles: true })) })
+    await act(async () => required(host.querySelector('form')).requestSubmit())
+    expect(localStorage.getItem('lohni-first-name:profil-prenom')).toBe('Awa')
+    expect(api.saveProfile).toHaveBeenCalledWith({ ...profile, examDate: undefined })
+  } finally { close(); localStorage.removeItem('lohni-first-name:profil-prenom') }
+})
+
+test('un changement d’appareil ne copie pas le prénom en cours de modification', async () => {
+  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress); api.saveProfile.mockResolvedValue(profile)
+  localStorage.removeItem('lohni-first-name:autre-prenom')
+  localStorage.setItem('lohni-first-name:ancien-prenom', 'Awa')
+  const { host, close } = await setup('ancien-prenom', '/me/profil')
+  try {
+    expect(required(host.querySelector<HTMLInputElement>('input[autocomplete="given-name"]')).value).toBe('Awa')
+    localStorage.setItem('lohni-device-id', 'autre-prenom')
+    await act(async () => required(host.querySelector('form')).requestSubmit())
+    expect(localStorage.getItem('lohni-first-name:autre-prenom')).toBeNull()
+    expect(api.saveProfile).not.toHaveBeenCalled()
+  } finally { close(); localStorage.removeItem('lohni-first-name:ancien-prenom'); localStorage.removeItem('lohni-first-name:autre-prenom') }
+})

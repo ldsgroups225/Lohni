@@ -3,6 +3,8 @@ import { Button } from '../ui/Button'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import curriculum from '../../data/curriculum-ci.json'
+import { cachedDevice } from '../../lib/cachedDevice'
+import { readFirstName, writeFirstName } from '../../lib/localFirstName'
 import { revisionAPI, revisionPolicy } from '../../lib/api'
 
 export default function Onboarding() {
@@ -11,8 +13,10 @@ export default function Onboarding() {
   const [search, setSearch] = useSearchParams()
   const depth = typeof location.state?.onboardingDepth === 'number' ? location.state.onboardingDepth : 0
   const requestedStep = Number(search.get('etape'))
-  const requested = Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 4 ? requestedStep : 1
-  const setStep = (next: number) => { const params = new URLSearchParams(search); params.set('etape', String(next)); setSearch(params, { state: { ...location.state, onboardingDepth: depth + 1 } }) }
+  const requested = Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 6 ? requestedStep : 1
+  const setStep = (next: number) => { setReaction(value => value + 1); const params = new URLSearchParams(search); params.set('etape', String(next)); setSearch(params, { state: { ...location.state, onboardingDepth: depth + 1 } }) }
+  const [nameDevice] = useState(cachedDevice)
+  const [firstName, setFirstName] = useState(() => readFirstName(true))
   const [saved] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('lohni-onboarding') ?? '{}') ?? {} } catch { return {} }
   })
@@ -29,7 +33,7 @@ export default function Onboarding() {
   const [subject, setSubject] = useState(() => typeof saved.subject === 'string' && subjects.includes(saved.subject) ? saved.subject as string : subjects[0] ?? '')
   const selectedSubject = subjects.includes(subject) ? subject : subjects[0] ?? ''
   const needsSeries = !('' in entry.series)
-  const step = needsSeries && (!series || !seriesConfirmed) ? 1 : requested > 2 && !subjects.length ? 2 : requested
+  const step = requested > 3 && needsSeries && (!series || !seriesConfirmed) ? 3 : requested > 4 && !subjects.length ? 4 : requested
   useEffect(() => {
     if (step !== requested) { const params = new URLSearchParams(search); params.set('etape', String(step)); setSearch(params, { replace: true, state: location.state }) }
   }, [step, requested, search, setSearch, location.state])
@@ -44,6 +48,14 @@ export default function Onboarding() {
     finishing.current = false
     void (async () => { await navigate('/', { replace: true }); await navigate('/revision') })()
   }, [location.key, depth, navigate])
+  const [reaction, setReaction] = useState(0)
+  const [happy, setHappy] = useState(false)
+  useEffect(() => {
+    if (!reaction) return
+    setHappy(true)
+    const timer = window.setTimeout(() => setHappy(false), 900)
+    return () => window.clearTimeout(timer)
+  }, [reaction])
   const [busy, setBusy] = useState(false)
   const submitting = useRef(false)
   const [error, setError] = useState('')
@@ -53,18 +65,20 @@ export default function Onboarding() {
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (submitting.current || (needsSeries && (!series || !seriesConfirmed)) || (step > 1 && !subjects.length)) return
-    if (step < 4) {
+    if (submitting.current || (step >= 3 && needsSeries && (!series || !seriesConfirmed)) || (step > 3 && !subjects.length)) return
+    if (step < 6) {
       setStep(step + 1)
       return
     }
     if (!selectedSubject || !title.trim()) return
+    if (nameDevice !== cachedDevice() || !writeFirstName(firstName.trim())) { setError('Impossible d’enregistrer ton prénom sur cet appareil.'); return }
     submitting.current = true
     setBusy(true)
     setError('')
     try {
       await revisionAPI.saveProfile({ schoolClass, series: series || undefined, subjects, examDate: examDate || undefined })
       await revisionAPI.generateChapter({ subject: selectedSubject, title: title.trim() })
+      writeFirstName('', true)
       try { sessionStorage.removeItem('lohni-onboarding') } catch { /* Storage is optional. */ }
       finishing.current = true
       if (depth) void navigate(-depth)
@@ -76,13 +90,13 @@ export default function Onboarding() {
 
   return <form onSubmit={submit} className="mx-auto flex min-h-dvh w-full max-w-xl flex-col bg-background px-4 pt-6 text-foreground" aria-busy={busy}>
     <div className="flex items-center gap-3">
-      <div className="flex flex-1 gap-1.5" aria-hidden="true">{[1, 2, 3, 4].map(index => <span key={index} className={`h-1.5 flex-1 rounded-full ${index <= step ? 'bg-primary' : 'bg-border'}`} />)}</div>
-      <span className="text-sm font-semibold text-muted">Étape {step} sur 4</span>
+      <div className="flex flex-1 gap-1.5" aria-hidden="true">{[1, 2, 3, 4, 5, 6].map(index => <span key={index} className={`h-1.5 flex-1 rounded-full ${index <= step ? 'bg-primary' : 'bg-border'}`} />)}</div>
+      <span className="text-sm font-semibold text-muted"><span className="sr-only">Étape </span>{step} sur 6</span>
     </div>
     <div className="mt-6 flex items-center gap-4">
-      <span className="shrink-0"><Mascotte humeur={error ? "désolée" : busy ? "pensive" : "au repos"} taille={70} /></span>
-      <div><h2 className="text-2xl font-bold leading-tight text-foreground">{['Dans quelle classe es-tu ?', 'Quelles matières révises-tu ?', 'Quand passes-tu ton examen ?', 'Tu étudies quoi en ce moment ?'][step - 1]}</h2>
-      {step === 1 && <p className="mt-2 text-sm text-muted">La connaissance, un peu chaque jour. Programme de Côte d’Ivoire. Aucun compte à créer.</p>}</div>
+      <span className="shrink-0"><Mascotte humeur={error ? "désolée" : busy ? "pensive" : happy ? "contente" : "au repos"} taille={70} /></span>
+      <div><h2 className="text-2xl font-extrabold leading-tight text-foreground">{['Choisis ta langue et ton pays', 'Comment t’appelles-tu ?', 'Dans quelle classe es-tu ?', 'Quelles matières révises-tu ?', 'Quand passes-tu ton examen ?', 'Tu étudies quoi en ce moment ?'][step - 1]}</h2>
+      {step === 3 && <p className="mt-2 text-sm text-muted">Programme de Côte d’Ivoire. Aucun compte à créer.</p>}</div>
     </div>
     <div key={step} className="motion-enter mt-5 flex-1 space-y-4">
     {step === 1 && <>
@@ -90,28 +104,36 @@ export default function Onboarding() {
         <label className="block text-sm">Pays<select className={input} value="ci" onChange={() => {}}><option value="ci">Côte d’Ivoire</option></select></label>
         <label className="block text-sm">Langue<select className={input} value="fr" onChange={() => {}}><option value="fr">Français</option></select></label>
       </div>
+    </>}
+    {step === 2 && <>
+      <label className="block space-y-2"><span>Prénom (facultatif)</span><input className={input} autoComplete="given-name" value={firstName} onChange={event => { const value = event.target.value; setFirstName(value); if (nameDevice === cachedDevice()) writeFirstName(value, true) }} /></label>
+      <p className="text-sm text-muted">Ton prénom reste sur cet appareil.</p>
+      <button type="button" className="min-h-11 underline" onClick={() => { setFirstName(''); if (nameDevice === cachedDevice()) writeFirstName('', true); setStep(3) }}>Passer cette étape</button>
+    </>}
+    {step === 3 && <>
       {[[curriculum.slice(0, 4), 'Collège'], [curriculum.slice(4), 'Lycée']].map(([items, label]) => <fieldset key={label as string}><legend className="mb-2 font-semibold">{label as string}</legend><div className={`grid gap-2 ${label === 'Collège' ? 'grid-cols-4' : 'grid-cols-3'}`}>{(items as typeof curriculum).map(item => <button key={item.schoolClass} type="button" aria-pressed={schoolClass === item.schoolClass} className={`min-h-13 rounded-2xl border px-1 font-semibold ${schoolClass === item.schoolClass ? 'border-primary bg-tint text-primary' : 'border-border bg-surface'}`} onClick={() => {
         if (schoolClass === item.schoolClass) return
+        setReaction(value => value + 1)
         setSchoolClass(item.schoolClass)
         setSeries('')
         setSeriesConfirmed(false)
         setSubjects((item.series as Record<string, string[] | undefined>)[''] ?? [])
-      }}>{item.schoolClass === 'terminale' ? 'Terminale' : item.label}</button>)}</div></fieldset>)}
-      {needsSeries && <fieldset className="rounded-2xl border border-border bg-surface p-4"><legend className="px-2 font-semibold">Ta série</legend><div className="flex flex-wrap gap-2">{Object.keys(entry.series).map(name => <button key={name} type="button" aria-pressed={seriesConfirmed && series === name} className={`min-h-12 min-w-11 flex-1 rounded-xl border px-3 font-semibold ${seriesConfirmed && series === name ? 'border-primary bg-tint text-primary' : 'border-border bg-background'}`} onClick={() => { if (series !== name) { setSeries(name); setSubjects((entry.series as Record<string, string[] | undefined>)[name] ?? []) } setSeriesConfirmed(true) }}>{name}</button>)}</div><p className="mt-3 text-sm text-muted">Tu peux changer ta série dans Moi.</p></fieldset>}
+      }}>{({ '3e': '3ᵉ', '2nde': '2de', '1ere': '1re', terminale: 'Terminale' } as Record<string, string>)[item.schoolClass] ?? item.label}</button>)}</div></fieldset>)}
+      {needsSeries && <fieldset className="rounded-2xl border border-border bg-surface p-4"><legend className="px-2 font-semibold">Ta série</legend><div className="flex flex-wrap gap-2">{Object.keys(entry.series).map(name => <button key={name} type="button" aria-pressed={seriesConfirmed && series === name} className={`min-h-12 min-w-11 flex-1 rounded-xl border px-3 font-semibold ${seriesConfirmed && series === name ? 'border-primary bg-tint text-primary' : 'border-border bg-background'}`} onClick={() => { setReaction(value => value + 1); if (series !== name) { setSeries(name); setSubjects((entry.series as Record<string, string[] | undefined>)[name] ?? []) } setSeriesConfirmed(true) }}>{name}</button>)}</div><p className="mt-3 text-sm text-muted">Tu peux changer ta série dans Moi.</p></fieldset>}
     </>}
-    {step === 2 && <>
+    {step === 4 && <>
       <p>Décoche celles que tu ne suis pas, y compris la langue que tu n’étudies pas.</p>
       <fieldset className="grid gap-3 sm:grid-cols-2"><legend className="sr-only">Tes matières</legend>{available.map(name => <label key={name} className="flex items-center gap-3 rounded-xl border border-border p-3">
         <input type="checkbox" checked={subjects.includes(name)} onChange={event => setSubjects(event.target.checked ? [...subjects, name] : subjects.filter(item => item !== name))} />{name}
       </label>)}</fieldset>
       {subjects.length === 0 && <p role="status">Choisis au moins une matière.</p>}
     </>}
-    {step === 3 && <>
+    {step === 5 && <>
       <p>Cette date aide à répartir tes révisions. Tu peux la renseigner plus tard.</p>
       <label className="block space-y-2"><span>Date d’examen (facultative)</span><input className={input} type="date" value={examDate} onChange={event => setExamDate(event.target.value)} /></label>
-      <button type="button" className="block underline" onClick={() => { setExamDate(''); setStep(4) }}>Je ne connais pas encore la date</button>
+      <button type="button" className="block underline" onClick={() => { setExamDate(''); setStep(6) }}>Je ne connais pas encore la date</button>
     </>}
-    {step === 4 && <>
+    {step === 6 && <>
       <label className="block space-y-2"><span>Matière</span><select className={input} value={selectedSubject} onChange={event => setSubject(event.target.value)}>{subjects.map(name => <option key={name}>{name}</option>)}</select></label>
       <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. : Les fractions" /></label>
       <p className="text-sm text-muted">{revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes générées par IA pour démarrer, puis quelques cartes par jour. Elles peuvent contenir des erreurs : tu peux les supprimer pendant ta session.</p>
@@ -121,7 +143,7 @@ export default function Onboarding() {
     {busy && <p role="status">Préparation de tes {revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes… Cela peut prendre un instant.</p>}
     <div className="sticky bottom-0 z-10 -mx-4 mt-4 flex items-center gap-3 bg-background px-4 py-4">
       {step > 1 && <button type="button" disabled={busy} className="rounded-xl border border-border px-4 py-3" onClick={() => depth ? navigate(-1) : setSearch({ etape: String(step - 1) }, { replace: true })}>Retour</button>}
-      <Button className="min-h-14 flex-1" type="submit" disabled={busy || (needsSeries && (!series || !seriesConfirmed)) || (step === 2 && !subjects.length) || (step === 4 && !title.trim())}>{step === 4 ? 'Créer mes cartes et commencer' : 'Continuer'}</Button>
+      <Button className="min-h-14 flex-1" type="submit" disabled={busy || (step === 3 && needsSeries && (!series || !seriesConfirmed)) || (step === 4 && !subjects.length) || (step === 6 && !title.trim())}>{step === 6 ? 'Créer mes cartes et commencer' : 'Continuer'}</Button>
     </div>
   </form>
 }

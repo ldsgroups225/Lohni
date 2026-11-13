@@ -10,6 +10,7 @@ import { Link, useLocation } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import { REVISION_POLICY as policy } from '../../../backend/src/services/revision/policy'
 import { revisionAPI, type RevisionProfile, type RevisionProgress, type RevisionExam, type RevisionChapter, type RevisionSettings } from '../lib/api'
+import { readFirstName, writeFirstName } from '../lib/localFirstName'
 import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 
 let cachedProfile: { device: string | null; version: number; day: string; profile: RevisionProfile | null; progress: RevisionProgress } | null = null
@@ -30,6 +31,8 @@ export default function Profile() {
   const saving = useRef(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [firstName, setFirstName] = useState(() => readFirstName())
+  const nameDevice = useRef(device)
   const [exams, setExams] = useState<RevisionExam[]>([])
   const [examsLoaded, setExamsLoaded] = useState(false)
   const [timetableCount, setTimetableCount] = useState<number | null>(null)
@@ -52,6 +55,7 @@ export default function Profile() {
       if (pending) await pending.catch(() => {})
       if (!active) return
       const requestDevice = cachedDevice()
+      if (nameDevice.current !== requestDevice) { nameDevice.current = requestDevice; setFirstName(readFirstName()) }
       const version = currentRevisionCacheVersion()
       const requestEdits = edits.current
       let value: RevisionProfile | null, stats: RevisionProgress
@@ -126,6 +130,7 @@ export default function Profile() {
   async function save(event: FormEvent) {
     event.preventDefault()
     if (!profile || profileSave) return
+    if (page === 'profil' && nameDevice.current !== cachedDevice()) { setError('L’appareil a changé. Recharge la page avant de continuer.'); return }
     saving.current = true
     setBusy(true)
     setSaved(false)
@@ -139,6 +144,7 @@ export default function Profile() {
         cachedProfile = null; setProfile(null); setProgress(null)
         throw new Error('L’appareil a changé. Recharge la page avant de continuer.')
       }
+      if (page === 'profil' && !writeFirstName(firstName.trim())) throw new Error('Impossible d’enregistrer ton prénom sur cet appareil.')
       setProfile(value)
       dirty.current = false
       cachedProfile = progress ? { device: cachedDevice(), version: currentRevisionCacheVersion(), day: new Date().toDateString(), profile: value, progress } : null
@@ -148,14 +154,14 @@ export default function Profile() {
     finally { profileSave = null; saving.current = false; setBusy(false) }
   }
 
-  return <main className="loop-screen min-h-dvh px-4 pt-8 pb-36 md:pl-28">
-    <div className="mx-auto max-w-xl space-y-6">
+  return <main className="loop-screen min-h-dvh px-4 pt-4 pb-36 md:pl-28">
+    <div className="mx-auto max-w-xl space-y-4">
       <header className="flex items-center gap-3">
-        {!error && progress && <span className="shrink-0"><Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={64} /></span>}
-        {!error && !busy && !profile && !progress && <span className="shrink-0"><Mascotte humeur="au repos" taille={64} /></span>}
+        {!error && progress && <span className="shrink-0"><Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={56} /></span>}
+        {!error && !busy && !profile && !progress && <span className="shrink-0"><Mascotte humeur="au repos" taille={56} /></span>}
         <div className="min-w-0 flex-1">{page && <Link className="inline-flex min-h-11 items-center text-primary underline" to="/me">← Retour à Moi</Link>}
-        <h1 className="text-2xl font-bold text-foreground">{({ profil: 'Mon profil', examens: 'Examens', matieres: 'Matières', 'emploi-du-temps': 'Emploi du temps', rythme: 'Rythme de révision' } as Record<string, string>)[page] ?? 'Moi'}</h1>
-        {!page && profile && <p className="text-sm text-muted">{entry?.label ?? profile.schoolClass}{profile.series ? ` · Série ${profile.series}` : ''}</p>}</div>
+        <h1 className="text-[26px] font-extrabold text-foreground">{({ profil: 'Mon profil', examens: 'Examens', matieres: 'Matières', 'emploi-du-temps': 'Emploi du temps', rythme: 'Rythme de révision' } as Record<string, string>)[page] ?? 'Moi'}</h1>
+        {!page && profile && <p className="text-sm text-muted">{entry?.label.split(' · ')[0] ?? profile.schoolClass}{profile.series ? ` · Série ${profile.series}` : ''}</p>}</div>
         {!page && profile && <Link className="inline-flex min-h-11 items-center rounded-2xl border border-border bg-surface px-4 font-semibold" to="/me/profil">Modifier</Link>}
       </header>
       {busy && !profile && <PendingRead title="Mon parcours" label="On récupère ton parcours…" />}
@@ -167,19 +173,19 @@ export default function Profile() {
       </dl>}
       {!page && profile && <>
         <h2 className="font-semibold text-muted">Mon organisation</h2>
-        <section aria-label="Mon organisation" className="overflow-hidden rounded-2xl border border-border bg-surface">
+        <section aria-label="Mon organisation" style={{ marginBlockStart: 4 }} className="overflow-hidden rounded-2xl border border-border bg-surface">
           {[
             ['/me/examens', 'Examens', examsLoaded ? (exams.length ? exams.map(item => `${item.title} · ${new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`).join(', ') : 'Aucun examen ajouté') : 'Chargement…'],
             ['/me/matieres', 'Matières', `${profile.subjects.length} matière${profile.subjects.length > 1 ? 's' : ''}`],
             ['/me/emploi-du-temps', 'Emploi du temps', timetableError ? 'Chargement impossible' : timetableCount === null ? 'Chargement…' : timetableCount ? `${timetableCount} cours ajouté${timetableCount > 1 ? 's' : ''}` : 'Aucun cours ajouté'],
-            ['/me/rythme', 'Rythme de révision', settings ? `${settings.dailyMinutes} min par jour · ${settings.restDays.length} jour${settings.restDays.length > 1 ? 's' : ''} de repos` : 'Chargement…'],
+            ['/me/rythme', 'Rythme de révision', settings ? `${settings.dailyMinutes} min par jour · ${settings.restDays.length} jour${settings.restDays.length > 1 ? 's' : ''} de repos` : settingsError ? 'Chargement impossible' : 'Chargement…'],
             ['/plan', 'Mon plan', !examsLoaded ? 'Voir mon plan de révision' : exams.length ? 'Voir mon plan de révision' : 'Ajoute un examen pour préparer ton plan'],
-          ].map(([to, title, detail]) => <Link key={to} to={to} className="flex min-h-16 items-center justify-between gap-4 border-b border-border p-4 last:border-b-0"><span><strong className="block text-foreground">{title}</strong><span className="text-sm text-muted">{detail}</span></span><span aria-hidden="true">›</span></Link>)}
+          ].map(([to, title, detail]) => <Link key={to} to={to} className="flex min-h-16 items-center justify-between gap-4 border-b border-border px-4 py-2.5 last:border-b-0"><span><strong className="block text-foreground">{title}</strong><span className="text-sm text-muted">{detail}</span></span><span aria-hidden="true">›</span></Link>)}
         </section>
       </>}
       {profile && (page === 'profil' || page === 'matieres') ? <form onSubmit={save} className="space-y-5 rounded-2xl border border-border p-6" aria-busy={busy}>
         <h2 className="text-xl text-foreground">{page === 'profil' ? 'Mon parcours' : 'Mes matières'}</h2>
-        {page === 'profil' && <><label className="block space-y-2"><span>Ma classe</span><select className={input} disabled={busy} value={profile.schoolClass} onChange={event => {
+        {page === 'profil' && <><label className="block space-y-2"><span>Prénom (facultatif)</span><input className={input} autoComplete="given-name" disabled={busy} value={firstName} onChange={event => { setFirstName(event.target.value); setSaved(false) }} /><small className="block text-muted">Ton prénom reste sur cet appareil.</small></label><label className="block space-y-2"><span>Ma classe</span><select className={input} disabled={busy} value={profile.schoolClass} onChange={event => {
           const next = curriculum.find(item => item.schoolClass === event.target.value)
           if (!next) return
           const series = Object.keys(next.series)[0]

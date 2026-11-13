@@ -20,7 +20,7 @@ const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foregr
 function DeferredDetails({ summary, children }: { summary: ReactNode; children: ReactNode }) {
   const [opened, setOpened] = useState(false)
   return <details className="min-w-0 open:col-span-2" onToggle={event => { if (event.currentTarget.open) setOpened(true) }}>
-    <summary className="flex min-h-11 cursor-pointer list-none items-center justify-center rounded-xl border border-border bg-tint px-3 py-2 text-center font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-primary">{summary}</summary>
+    <summary className="course-summary flex min-h-11 cursor-pointer list-none items-center justify-center rounded-xl border border-border bg-background px-3 py-2 text-center font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-primary">{summary}</summary>
     {opened && children}
   </details>
 }
@@ -107,13 +107,13 @@ export default function Courses() {
     return () => { active = false }
   }, [load])
 
-  return <main className="loop-screen min-h-dvh px-4 pt-8 pb-36 md:pl-28">
-    <div className="mx-auto max-w-2xl space-y-6">
+  return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28">
+    <div className="mx-auto max-w-2xl space-y-4">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold text-foreground">Cours</h1>
-        <ButtonLink to="/import" aria-label="Importer mon cours" className="px-4 py-3">＋ Importer</ButtonLink>
+        <h1 className="text-3xl font-extrabold text-foreground">Cours</h1>
+        <ButtonLink to="/import" aria-label="Importer mon cours" className="min-h-11 px-4 py-2">＋ Importer</ButtonLink>
       </header>
-      <nav aria-label="S’entraîner" className="space-y-3">
+      <nav aria-label="S’entraîner" className="space-y-2">
         <h2 className="font-semibold text-muted">S’entraîner</h2>
         <div className="grid grid-cols-4 gap-2">
           {([
@@ -121,13 +121,12 @@ export default function Courses() {
             ['/quiz', HelpIcon, 'Quiz'],
             ['/debate', DebateIcon, 'Débat'],
             ['/tools', HeadphonesIcon, 'Podcast'],
-          ] satisfies [string, () => ReactNode, string][]).map(([to, Icon, label]) => <Link key={to} to={to} className="flex min-h-20 min-w-0 flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-1 py-3 text-sm text-foreground">
+          ] satisfies [string, () => ReactNode, string][]).map(([to, Icon, label]) => <Link key={to} to={to} className="flex min-h-[76px] min-w-0 flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-1 py-3 text-sm text-foreground">
             <span aria-hidden="true" className="text-primary"><Icon /></span>
             <span className="font-semibold">{label}</span>
           </Link>)}
         </div>
       </nav>
-      <Link to="/planner" className="inline-flex min-h-11 items-center text-sm text-muted underline">Planning des devoirs</Link>
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
         <button type="button" className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Réessayer</button>
       </div>}
@@ -140,14 +139,14 @@ export default function Courses() {
       </section>}
       {[...new Set(chapters.map(chapter => chapter.subject))].map((subject, subjectIndex) => {
         const own = chapters.filter(chapter => chapter.subject === subject)
-        return <section key={subject} style={{ animationDelay: listDelay(subjectIndex) }} className={`${animateEntry ? 'motion-list ' : ''}space-y-4`} aria-busy={busy}>
-          <h2 className="text-xl font-semibold text-foreground">{subject}</h2>
-          {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: listDelay(index) }} className={`${animateEntry ? 'motion-list ' : ''}space-y-4 rounded-2xl border border-border bg-surface p-5`}>
+        return <section key={subject} style={{ animationDelay: listDelay(subjectIndex), marginBlockStart: 8 }} className={`${animateEntry ? 'motion-list ' : ''}space-y-2`} aria-busy={busy}>
+          <h2 className="text-sm font-semibold text-muted">{subject}</h2>
+          {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: listDelay(index) }} className={`${animateEntry ? 'motion-list ' : ''}space-y-1 rounded-2xl border border-border bg-surface p-4`}>
             <div className="flex items-start gap-2">
-              <h3 className="min-w-0 flex-1 break-words text-lg font-bold text-foreground">{chapter.title}</h3>
+              <h3 className="min-w-0 flex-1 break-words text-lg font-extrabold text-foreground">{chapter.title}</h3>
               <MasteryBadge status={chapter.status} />
               <details className="relative">
-                <summary aria-label={`Options du chapitre ${chapter.title}`} className="grid size-11 cursor-pointer list-none place-items-center rounded-xl text-xl text-muted focus-visible:outline-2 focus-visible:outline-primary">⋮</summary>
+                <summary aria-label={`Options du chapitre ${chapter.title}`} className="course-summary grid size-11 cursor-pointer list-none place-items-center rounded-xl text-xl text-muted focus-visible:outline-2 focus-visible:outline-primary">⋮</summary>
                 <div className="absolute right-0 z-10 w-max rounded-xl border border-border bg-surface p-2 shadow-lg">
                   <button type="button" className="min-h-11 px-3 text-sm text-danger disabled:opacity-50" disabled={busy || stale} onClick={() => {
                     void confirmDialog(`Supprimer le chapitre « ${chapter.title} » et toutes ses cartes ? Cette action est définitive.`).then(ok => { if (ok) void run(async () => {
@@ -160,7 +159,7 @@ export default function Courses() {
               </details>
             </div>
             <Progress className={`mastery-progress w-full ${chapter.status === 'Solide' ? '[&::-webkit-progress-value]:!bg-success [&::-moz-progress-bar]:!bg-success' : ''}`} value={chapter.cards.length ? chapter.seenCards / chapter.cards.length : 0} max={1} aria-label={`Cartes vues du chapitre ${chapter.title}`} />
-            <p className="text-sm text-muted">{chapter.seenCards} carte{chapter.seenCards === 1 ? '' : 's'} vue{chapter.seenCards === 1 ? '' : 's'} sur {chapter.cards.length} · {chapter.mastery === null ? 'rappel estimé indisponible' : `rappel estimé ${Math.round(chapter.mastery)} %`}
+            <p className="text-sm text-muted">{chapter.seenCards} carte{chapter.seenCards === 1 ? '' : 's'} vue{chapter.seenCards === 1 ? '' : 's'} sur {chapter.cards.length}{chapter.mastery !== null && ` · rappel estimé ${Math.round(chapter.mastery)} %`}
               {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && ` · encore ${Math.ceil(chapter.cards.length * revisionPolicy.minimumSeenRatio) - chapter.seenCards} pour faire évoluer la maîtrise`}</p>
             <div className="grid grid-cols-2 gap-2">
             <DeferredDetails summary="Résumé"><MarkdownView md={chapter.summary} /></DeferredDetails>
@@ -187,6 +186,7 @@ export default function Courses() {
           </article>)}
         </section>
       })}
+      <Link to="/planner" className="inline-flex min-h-11 items-center text-sm text-muted underline">Planning des devoirs</Link>
     </div>
   </main>
 }

@@ -37,7 +37,7 @@ test('accueil : une ligne de contexte avec l’examen en lien, et seules les mat
   const chapters = [{ id: 'c', subjectId: 'm', subject: 'Maths', title: 'Fractions', status: 'En cours', mastery: 50, seenCards: 1, cards: [{}, {}] }]
   state.values = [{ profile: { schoolClass: 'Terminale', series: 'D' }, state: 'ready', totalCards: 1, cardCount: 1, daysUntilExam: 30, nextExam: { id: 'e1', title: 'BAC blanc' } }, { streak: 2, xp: 1, streakStarted: true, subjects }, false, '', '', 0, chapters, null]
   const html = renderToStaticMarkup(<MemoryRouter><Home /></MemoryRouter>)
-  expect(html).toMatch(/Terminale · Série D · <a[^>]*href="\/plan#exam-e1"[^>]*>BAC blanc dans 30 jours<\/a>/)
+  expect(html).toMatch(/Terminale D · <a[^>]*href="\/plan#exam-e1"[^>]*>BAC blanc dans 30 jours<\/a>/)
   expect(html).toContain('Maths')
   expect(html).not.toContain('Français')
   expect(html).not.toContain('Pas encore révisée')
