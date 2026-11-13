@@ -655,7 +655,7 @@ export type RevisionSession = {
 };
 export type MasteryStatus = 'Fragile' | 'En cours' | 'Solide';
 export type RevisionProgress = {
-  streak: number; streakStarted: boolean; xp: number; learnedCards: number;
+  streak: number; streakStarted: boolean; xp: number; learnedCards: number; completedDates?: string[];
   subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[];
 };
 export type RevisionChapter = {
@@ -667,7 +667,7 @@ export type RevisionCardInput = { kind: 'basic'; question: string; answer: strin
 };
 export type RevisionHome = {
   profile: RevisionProfile; nextExam: Pick<RevisionExam, 'id' | 'title' | 'date'> | null; daysUntilExam: number | null; totalCards: number;
-  cardCount: number; estimatedMinutes: number; moreCards: boolean; started: boolean; state: 'ready' | 'done' | 'empty';
+  cardCount: number; reviewCards?: number; newCards?: number; estimatedMinutes: number; moreCards: boolean; started: boolean; state: 'ready' | 'done' | 'empty';
 };
 
 const revisionHttpsError = 'Ouvre Lohni en HTTPS dans un navigateur à jour pour sauvegarder tes réponses hors ligne.';
@@ -917,7 +917,9 @@ export const revisionAPI = {
     const session = readOffline().session;
     if (home && session && (session.localDate === revisionLocalDate() || readOffline().pending.length) && (!navigator.onLine || readOffline().pending.length)) {
       const cardCount = session.complete ? 0 : session.cards.length - session.position;
-      return { ...home, moreCards: false, started: !session.complete && session.position > 0, state: session.complete ? 'done' as const : 'ready' as const, cardCount, estimatedMinutes: Math.ceil(cardCount * revisionPolicy.sessionMinutes / revisionPolicy.sessionCards) };
+      const newCards = session.complete ? 0 : session.cards.slice(session.position).filter((card, index) =>
+        card.reviews === 0 && !session.cards.slice(0, session.position + index).some(previous => previous.id === card.id)).length;
+      return { ...home, newCards, reviewCards: cardCount - newCards, moreCards: false, started: !session.complete && session.position > 0, state: session.complete ? 'done' as const : 'ready' as const, cardCount, estimatedMinutes: Math.ceil(cardCount * revisionPolicy.sessionMinutes / revisionPolicy.sessionCards) };
     }
     return home;
   },

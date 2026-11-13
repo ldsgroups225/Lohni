@@ -63,8 +63,8 @@ export default function Sidebar() {
           window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
         }
       }} aria-current={active === tab.to ? 'page' : undefined}
-        className={`relative flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 rounded-control p-2 text-xs focus-visible:outline-2 focus-visible:outline-secondary ${active === tab.to ? 'text-foreground' : 'text-muted hover:bg-tint hover:text-foreground'}`}>
-        <span className={active === tab.to ? 'text-primary' : undefined}><tab.icon /></span>
+        className={`relative flex min-h-14 flex-1 md:flex-none flex-col items-center justify-center gap-1 rounded-control p-2 text-xs focus-visible:outline-2 focus-visible:outline-secondary ${active === tab.to ? 'font-bold text-primary' : 'text-muted hover:bg-tint hover:text-foreground'}`}>
+        <span><tab.icon /></span>
         {tab.label}
       </Link>)}
     </div>

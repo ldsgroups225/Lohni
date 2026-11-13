@@ -362,7 +362,7 @@ test('les XP récompensent les réponses et une seule fin de session, même apr�
   expect((await service.getSession(context())).earnedXP).toBe(72)
   await service.getSession(context(), true)
   expect(await service.getProgress(context())).toMatchObject({ xp: 72, streak: 1 })
-  expect(await service.getProgress({ ...context(), deviceId: randomUUID() })).toEqual({ xp: 0, streak: 0, streakStarted: false, learnedCards: 0, subjects: [] })
+  expect(await service.getProgress({ ...context(), deviceId: randomUUID() })).toEqual({ xp: 0, streak: 0, streakStarted: false, learnedCards: 0, completedDates: [], subjects: [] })
 })
 
 test('la série suit les jours locaux terminés, sans doubler le même jour, et casse après un jour sauté', async () => {
@@ -939,4 +939,29 @@ test('un jour ouvert puis marqué repos reste neutre pour la série', async () =
   expect((await service.getSession(context())).cards).toHaveLength(0)
   now = new Date('2026-11-11T12:00:00Z')
   expect((await service.getProgress(context())).streak).toBe(1)
+})
+
+test('l’accueil répartit les positions restantes, y compris les répétitions', async () => {
+  await setup(2)
+  expect(await service.getHome(context())).toMatchObject({ cardCount: 2, newCards: 2, reviewCards: 0 })
+  let session = await respond(await service.getSession(context()), false)
+  expect(await service.getHome(context())).toMatchObject({ cardCount: 2, newCards: 1, reviewCards: 1 })
+  session = await finish(session)
+  expect(await service.getHome(context())).toMatchObject({ cardCount: 0, newCards: 0, reviewCards: 0 })
+  now = new Date('2026-11-10T12:00:00Z')
+  expect(await service.getHome(context())).toMatchObject({ cardCount: 2, newCards: 0, reviewCards: 2 })
+})
+
+test('les dates terminées suivent la semaine locale et restent isolées', async () => {
+  now = new Date('2026-11-08T12:00:00Z')
+  await setup(1)
+  await finish(await service.getSession(context()))
+  now = new Date('2026-11-09T23:30:00Z')
+  const local = { ...context(), localDate: '2026-11-10' }
+  let session = await service.getSession(local)
+  while (!session.complete) session = await service.answer(local, { sessionId: session.id, cardId: session.cards[session.position].id, position: session.position, knew: true, durationMs: 1000 })
+  expect((await service.getProgress(local)).completedDates).toEqual(['2026-11-10'])
+  expect((await service.getProgress({ ...local, deviceId: randomUUID() })).completedDates).toEqual([])
+  now = new Date('2026-11-16T12:00:00Z')
+  expect((await service.getProgress(context())).completedDates).toEqual([])
 })
