@@ -139,7 +139,7 @@ export class RevisionService {
     return this.execute(context, async () => {
       const blocks = this.validateTimetable(input)
       await this.dependencies.db.run('INSERT INTO revision_timetable VALUES (?, ?) ON CONFLICT(device_id) DO UPDATE SET blocks = excluded.blocks', [context.deviceId, JSON.stringify(blocks)])
-      await this.refreshSessions(context.deviceId)
+      await this.refreshSessions(context.deviceId, true)
       return blocks
     })
   }
@@ -369,12 +369,12 @@ export class RevisionService {
     return exam
   }
   async saveExam(context: RevisionContext, input: { id?: string; title: string; date: string; subjects: string[]; chapterIds?: string[] }): Promise<RevisionExam> {
-    return this.execute(context, async () => { const exam = await this.writeExam(context, input); await this.refreshSessions(context.deviceId); return exam })
+    return this.execute(context, async () => { const exam = await this.writeExam(context, input); await this.refreshSessions(context.deviceId, true); return exam })
   }
   async deleteExam(context: RevisionContext, id: string): Promise<void> {
     return this.execute(context, async () => {
       if (!nonempty(id) || !(await this.dependencies.db.run('DELETE FROM revision_exams WHERE id = ? AND device_id = ?', [id, context.deviceId])).changes) throw new RevisionError('Examen introuvable.')
-      await this.refreshSessions(context.deviceId)
+      await this.refreshSessions(context.deviceId, true)
     })
   }
   async generateChapter(context: RevisionContext, input: { title: string; subject: string }) {

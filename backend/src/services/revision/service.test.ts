@@ -837,3 +837,12 @@ test('un plan signale la surcharge des seules cartes dues', async () => {
   expect(day.items.reduce((sum, item) => sum + item.dueCards, 0)).toBeGreaterThan(day.capacityCards)
   expect(day.overloaded).toBe(true)
 })
+
+test('un examen ajouté actualise la séance du jour non commencée', async () => {
+  await setup(5)
+  const initial = await service.getSession(context())
+  expect(initial.cards).toHaveLength(5)
+  await service.saveExam(context(), { title: 'Contrôle', date: context().localDate, subjects: ['Mathématiques'] })
+  expect((await service.getPlan(context())).days[0].items).toEqual([])
+  expect((await service.getSession(context())).cards).toEqual([])
+})

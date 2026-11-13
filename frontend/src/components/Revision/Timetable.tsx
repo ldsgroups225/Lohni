@@ -22,7 +22,7 @@ export default function Timetable({ profile, onProfile }: { profile: RevisionPro
     try {
       const subjects = [...profile.subjects, ...unknown.filter(subject => choices[subject] === 'add' && !profile.subjects.includes(subject))]
       if (subjects.length !== profile.subjects.length) onProfile(await revisionAPI.saveProfile({ ...profile, subjects, examDate: undefined }))
-      const mapped = blocks.map(block => ({ ...block, subject: choices[block.subject]?.startsWith('link:') ? choices[block.subject].slice(5) : block.subject }))
+      const mapped = blocks.map(block => { const subject = block.subject.trim(); return { ...block, subject: choices[subject]?.startsWith('link:') ? choices[subject].slice(5) : subject } })
       setBlocks(await revisionAPI.saveTimetable(mapped)); setReview(false); setChoices({}); setSaved(true)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer ton emploi du temps.') }
     finally { setBusy(false) }
@@ -40,12 +40,12 @@ export default function Timetable({ profile, onProfile }: { profile: RevisionPro
       <label className="block">Matière<input className={input} maxLength={policy.maxTitleChars} value={block.subject} onChange={event => update(index, { subject: event.target.value })} /></label>
       <Button type="button" onClick={() => setBlocks(blocks.filter((_, i) => i !== index))}>Supprimer ce cours</Button>
     </fieldset>)}
-    {review && unknown.filter(subject => blocks?.some(block => block.subject === subject)).map(subject => <label key={subject} className="block space-y-2">Que faire de « {subject} » ?
+    {review && unknown.map(subject => <label key={subject} className="block space-y-2">Que faire de « {subject} » ?
       <select className={input} value={choices[subject] ?? ''} onChange={event => setChoices({ ...choices, [subject]: event.target.value })}>
         <option value="">Choisis une action</option><option value="simple">Garder comme simple cours</option><option value="add">Ajouter à mes matières</option>{profile.subjects.map(item => <option key={item} value={`link:${item}`}>Rattacher à {item}</option>)}
       </select></label>)}
     {blocks && <div className="flex flex-wrap gap-3"><Button type="button" disabled={busy || blocks.length >= policy.maxTimetableBlocks} onClick={() => { setBlocks([...blocks, { day: 1, start: '08:00', end: '09:00', subject: '' }]); setSaved(false) }}>Ajouter un cours</Button>
-      <Button type="button" disabled={busy || (review && unknown.some(subject => blocks.some(block => block.subject === subject) && !choices[subject]))} onClick={() => void save()}>Enregistrer l’emploi du temps</Button></div>}
+      <Button type="button" disabled={busy || (review && unknown.some(subject => !choices[subject]))} onClick={() => void save()}>Enregistrer l’emploi du temps</Button></div>}
     <label className="block space-y-2">Importer des photos ({policy.maxTimetablePhotos} maximum)<input className={input} type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} onChange={async event => {
       const files = Array.from(event.target.files ?? []); event.target.value = ''
       if (!files.length) return
