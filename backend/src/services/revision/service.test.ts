@@ -862,3 +862,37 @@ test('une séance livrée reste utilisable après le recalcul du plan', async ()
   expect((await service.answer(context(), answer)).position).toBe(1)
   expect((await service.answer(context(), answer)).position).toBe(1)
 })
+
+test('la séance quotidienne et sa continuation respectent les nouvelles cartes prévues aujourd’hui', async () => {
+  now = new Date('2026-11-13T12:00:00Z')
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques', 'Français', 'Anglais'], examDate: '2026-12-03' })
+  generated = { summary: 'Cours', notes: [{ content: 'Notions', cards: [...cards(5).notes.flatMap(note => note.cards), ...Array.from({ length: 5 }, (_, i) => ({ kind: 'mcq' as const, question: `QCM ${i}`, answer: 'Réponse', options: ['Oui', 'Non', 'Peut-être', 'Jamais'], correct: 1 }))] }] }
+  await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Fractions' })
+  await service.saveSettings(context(), { dailyMinutes: 30, restDays: [0] })
+  await service.saveExam(context(), { title: 'Devoir', date: '2026-11-18', subjects: ['Mathématiques'] })
+  await service.saveTimetable(context(), [1, 2, 3, 4, 5].map(day => ({ day, start: '08:00', end: '17:00', subject: 'Mathématiques' })))
+  const planned = (await service.getPlan(context())).days[0].items.reduce((n, item) => n + item.newCards, 0)
+  expect(planned).toBe(3)
+  const first = await service.getSession(context())
+  expect(first.cards).toHaveLength(planned)
+  await finish(first)
+  expect((await service.getSession(context(), true)).cards).toHaveLength(0)
+  expect(await service.getHome(context())).toMatchObject({ state: 'done', moreCards: false })
+})
+
+test('une séance d’examen prend de l’avance quand les cartes du jour sont terminées', async () => {
+  await setup(10)
+  const exam = await service.saveExam(context(), { title: 'Brevet', date: '2026-11-14', subjects: ['Mathématiques'] })
+  await finish(await service.getSession(context()))
+  const later = (await service.getPlan(context())).days.slice(1).reduce((n, day) => n + day.items.reduce((sum, item) => sum + item.newCards, 0), 0)
+  expect(later).toBeGreaterThan(0)
+  const session = await service.getExamSession(context(), exam.id)
+  expect(session.cards.length).toBeGreaterThan(0)
+  expect(session.cards.length).toBeLessThanOrEqual(20)
+})
+
+test('une séance express vide indique son mode', async () => {
+  await setup(1)
+  const exam = await service.saveExam(context(), { title: 'Brevet', date: '2026-11-10', subjects: ['Mathématiques'] })
+  expect(await service.getExamSession(context(), exam.id)).toMatchObject({ kind: 'express', cards: [], complete: true })
+})

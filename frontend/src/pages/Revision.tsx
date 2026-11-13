@@ -279,8 +279,8 @@ export default function Revision() {
         ) : (!busy || !!session) && <>
           {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} pending={sync.pending} moreCards={moreCards} busy={busy || !validated} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onContinue={() => void run(async () => display(await (examId ? revisionAPI.examSession(examId, true) : revisionAPI.continue())))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
             {!error && <Mascotte humeur="au repos" taille={112} />}
-            <h2 className="text-xl">Aucune carte à réviser pour le moment</h2>
-            <p>Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.</p>
+            <h2 className="text-xl">{session.kind === 'express' ? 'Rien de fragile à revoir pour cet examen. Bravo !' : 'Aucune carte à réviser pour le moment'}</h2>
+            {session.kind !== 'express' && <p>Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.</p>}
             <button type="button" className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await (examId ? revisionAPI.examSession(examId, true) : revisionAPI.continue())))}>Continuer</button>
           </section>)}
           {!examId && profile && !(session && session.position > 0) && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-border p-6">

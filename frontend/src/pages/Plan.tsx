@@ -1,3 +1,4 @@
+import { deSubject } from '../components/Revision/subjectLabel'
 import { ExamButton } from '../components/Revision/ExamButton'
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
@@ -22,9 +23,10 @@ export default function Plan() {
       {plan.exams.map(exam => <article id={`exam-${exam.id}`} key={exam.id} className="rounded-xl border border-border p-4"><h3 className="font-semibold">{exam.title}</h3><p>{frenchDate(exam.date)}</p>{exam.overloaded && <p>Plan trop chargé pour {exam.title}</p>}<ExamButton id={exam.id} date={exam.date} /></article>)}
       {plan.days.map(day => <section key={day.date} className="rounded-xl border border-border p-4"><h2 className="font-semibold">{frenchDate(day.date)}</h2>
         {day.rest && <p>Repos</p>}
-        {!day.rest && (day.heavy || day.overloaded) && <p>Journée chargée</p>}
-        {day.items.map(item => <p key={item.chapterId}><strong>{item.subject}</strong> · {item.chapterTitle} : {item.dueCards} carte{item.dueCards > 1 ? 's' : ''} à revoir, {item.newCards} nouvelle{item.newCards > 1 ? 's' : ''} · {item.minutes.toLocaleString('fr-FR')} min</p>)}
-        {day.actions.map(action => <Link key={action.subject} className="block underline" to="/import">Ajoute un chapitre de {action.subject}</Link>)}
+        {!day.rest && day.heavy && <p>Grosse journée de cours</p>}
+        {!day.rest && day.overloaded && <p>Trop de cartes prévues ce jour</p>}
+        {day.items.map(item => <p key={item.chapterId}><strong>{item.subject}</strong> · {item.chapterTitle} : {item.dueCards > 0 && <>{item.dueCards} carte{item.dueCards > 1 ? 's' : ''} à revoir, </>}{item.newCards} nouvelle{item.newCards > 1 ? 's' : ''} · {item.minutes.toLocaleString('fr-FR')} min</p>)}
+        {day.actions.map(action => <Link key={action.subject} className="block underline" to="/import">Ajoute un chapitre {deSubject(action.subject)}</Link>)}
       </section>)}
     </>}
   </ToolPage>

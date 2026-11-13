@@ -31,6 +31,20 @@ test.each([['accueil', PlanToday], ['plan', Plan]] as const)('%s affiche la jour
   api.plan.mockResolvedValue({ offline: true, plan: { today: '2026-11-09', exams: [{ id: 'e', title: 'Brevet', date: '2026-11-12' }], days: [{ date: '2026-11-09', heavy: true, overloaded: false, rest: false, capacityCards: 10, items: [], actions: [] }] } })
   try {
     await act(async () => root.render(<MemoryRouter><Screen /></MemoryRouter>))
-    expect(host.textContent).toContain('Journée chargée')
+    expect(host.textContent).toContain('Grosse journée de cours')
+  } finally { act(() => root.unmount()); host.remove() }
+})
+
+
+test.each([['accueil', PlanToday], ['plan', Plan]] as const)('%s distingue surcharge et cours, sans afficher zéro carte à revoir', async (_name, Screen) => {
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  api.plan.mockResolvedValue({ offline: true, plan: { today: '2026-11-09', exams: [{ id: 'e', title: 'Brevet', date: '2026-11-12' }], days: [{ date: '2026-11-09', heavy: true, overloaded: true, rest: false, capacityCards: 10, items: [{ chapterId: 'c', chapterTitle: 'Cours', subject: 'Maths', dueCards: 0, newCards: 3, minutes: 3 }], actions: [{ kind: 'addChapter', subject: 'Anglais' }] }] } })
+  try {
+    await act(async () => root.render(<MemoryRouter><Screen /></MemoryRouter>))
+    expect(host.textContent).toContain('Grosse journée de cours')
+    expect(host.textContent).toContain('Trop de cartes prévues ce jour')
+    expect(host.textContent).not.toContain('0 carte à revoir')
+    expect(host.textContent).toContain('Ajoute un chapitre d’Anglais')
   } finally { act(() => root.unmount()); host.remove() }
 })

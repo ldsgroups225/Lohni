@@ -635,6 +635,7 @@ export type RevisionCard = {
   options?: string[]; correct?: number; origin: 'ai' | 'import'; due: string; reviews: number;
 };
 export type RevisionSession = {
+  kind?: 'exam' | 'express';
   id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number;
   summary?: {
     quiz: { total: number; correct: number };

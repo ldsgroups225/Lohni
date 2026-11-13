@@ -24,7 +24,7 @@ export type ProfileInput = { schoolClass: string; series?: string; subjects: str
 export type TimetableBlock = { day: number; start: string; end: string; subject: string }
 export type RevisionSettings = { dailyMinutes: number; restDays: number[] }
 export type RevisionCard = GeneratedCard & { id: string; chapterId: string; origin: 'ai' | 'import'; due: string; reviews: number }
-export type RevisionSession = { id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number; summary?: RevisionSummary }
+export type RevisionSession = { kind?: 'exam' | 'express'; id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number; summary?: RevisionSummary }
 export type RevisionSummary = {
   quiz: { total: number; correct: number }; flashcards: { total: number; knew: number };
   missed: { cardId: string; question: string; kind: 'basic' | 'mcq' }[]
@@ -511,7 +511,7 @@ export class RevisionService {
       if (!exam || exam.date < context.localDate) throw new RevisionError('Examen introuvable ou déjà passé.')
       const kind = Date.parse(exam.date) - Date.parse(context.localDate) === 86400000 ? 'express' : 'exam'
       const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = ? AND exam_id = ? AND COALESCE(json_extract(state, '$.stale'), 0) = 0 AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate, kind, examId])
-      if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return this.sessionResult(JSON.parse(saved.state))
+      if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return { ...await this.sessionResult(JSON.parse(saved.state)), kind }
       const profile = await this.requireProfile(context.deviceId)
       const chapters = (await this.readChapters(context.deviceId)).filter(chapter => profile.subjects.includes(chapter.subject) && exam.subjects.includes(chapter.subject))
       const chapterIds = exam.chapterIds.filter(id => chapters.some(chapter => chapter.id === id))
@@ -523,18 +523,19 @@ export class RevisionService {
       const selected = [...due]
       if (kind === 'exam') {
         const plan = await this.readPlan(context)
-        const days = continueSession ? plan.days : plan.days.slice(0, 1)
-        const quotas = new Map<string, number>()
-        for (const day of days) for (const item of day.items) if (scoped.has(item.chapterId)) quotas.set(item.chapterId, (quotas.get(item.chapterId) ?? 0) + item.newCards)
-        for (const row of rows) if (row.reviews === 0 && (quotas.get(row.chapter_id) ?? 0) > 0) {
-          selected.push(row)
-          quotas.set(row.chapter_id, (quotas.get(row.chapter_id) ?? 0) - 1)
+        const selectDays = (days: typeof plan.days) => {
+          for (const day of days) for (const item of day.items) if (scoped.has(item.chapterId)) {
+            const available = rows.filter(row => row.chapter_id === item.chapterId && row.reviews === 0 && !selected.includes(row))
+            selected.push(...available.slice(0, item.newCards))
+          }
         }
+        selectDays(continueSession ? plan.days : plan.days.slice(0, 1))
+        if (!selected.length) selectDays(plan.days.slice(1))
       }
       const cards = selected.slice(0, policy.sessionCards).map(revisionCard)
       const session: RevisionSession = { id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: cards.length === 0, repeated: [], elapsedMs: 0, earnedXP: 0 }
       await db.run('INSERT INTO revision_sessions (id, device_id, local_date, state, kind, exam_id) VALUES (?, ?, ?, ?, ?, ?)', [session.id, context.deviceId, context.localDate, JSON.stringify(session), kind, examId])
-      return this.sessionResult(session)
+      return { ...await this.sessionResult(session), kind }
     })
   }
   private async selectSessionCards(context: RevisionContext, profile: ProfileInput): Promise<RevisionCard[]> {
