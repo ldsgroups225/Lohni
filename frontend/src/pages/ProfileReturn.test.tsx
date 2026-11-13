@@ -6,12 +6,30 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import Profile from './Profile'
 
-const api = vi.hoisted(() => ({ profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn() }))
+const api = vi.hoisted(() => ({ profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn() }))
 vi.mock('../lib/api', () => ({ revisionAPI: api }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 beforeEach(() => { vi.resetAllMocks() })
 const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
 const progress = { xp: 10, streak: 1, learnedCards: 2, subjects: [] }
+
+test('Moi enregistre les minutes et les jours de repos', async () => {
+  api.profile.mockResolvedValue(profile)
+  api.progress.mockResolvedValue(progress)
+  api.settings.mockResolvedValue({ dailyMinutes: 15, restDays: [] })
+  api.saveSettings.mockImplementation(async value => value)
+  const { host, close } = await setup('profil-reglages')
+  try {
+    const section = required([...host.querySelectorAll('section')].find(item => item.textContent?.includes('Réglages de révision')))
+    const radio = [...section.querySelectorAll<HTMLInputElement>('input[type=radio]')][1]
+    const monday = required(section.querySelector<HTMLInputElement>('input[type=checkbox]'))
+    await act(async () => { radio.click(); monday.click() })
+    await act(async () => required(section.querySelector('form')).requestSubmit())
+    expect(api.saveSettings).toHaveBeenCalledWith({ dailyMinutes: 30, restDays: [1] })
+    expect(section.textContent).toContain('Tes réglages sont enregistrés.')
+    expect(host.textContent).toContain('PageLM')
+  } finally { close() }
+})
 
 async function setup(device: string) {
   localStorage.setItem('lohni-device-id', device)

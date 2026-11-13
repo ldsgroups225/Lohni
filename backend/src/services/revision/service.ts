@@ -19,6 +19,7 @@ export type GeneratedCard = { kind: 'basic'; question: string; answer: string } 
 }
 export type GeneratedChapter = { summary: string; notes: { content: string; cards: GeneratedCard[] }[] }
 export type ProfileInput = { schoolClass: string; series?: string; subjects: string[]; examDate?: string }
+export type RevisionSettings = { dailyMinutes: number; restDays: number[] }
 export type RevisionCard = GeneratedCard & { id: string; chapterId: string; origin: 'ai' | 'import'; due: string; reviews: number }
 export type RevisionSession = { id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number; summary?: RevisionSummary }
 export type RevisionSummary = {
@@ -60,6 +61,7 @@ export class RevisionService {
         `CREATE TABLE IF NOT EXISTS revision_imports (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, server_date TEXT NOT NULL)`,
         `CREATE INDEX IF NOT EXISTS revision_imports_daily ON revision_imports(device_id, server_date)`,
         `CREATE TABLE IF NOT EXISTS revision_profiles (device_id TEXT PRIMARY KEY, school_class TEXT NOT NULL, series TEXT, exam_date TEXT, xp INTEGER NOT NULL DEFAULT 0)`,
+        `CREATE TABLE IF NOT EXISTS revision_settings (device_id TEXT PRIMARY KEY, daily_minutes INTEGER NOT NULL, rest_days TEXT NOT NULL)`,
         `CREATE TABLE IF NOT EXISTS revision_subjects (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, name TEXT NOT NULL, UNIQUE(device_id, name))`,
         `CREATE TABLE IF NOT EXISTS revision_chapters (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, subject_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL, origin TEXT NOT NULL)`,
         `CREATE TABLE IF NOT EXISTS revision_notes (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, chapter_id TEXT NOT NULL, content TEXT NOT NULL)`,
@@ -96,6 +98,22 @@ export class RevisionService {
   }
   async getProfile(context: RevisionContext): Promise<ProfileInput | null> {
     return this.execute(context, () => this.readProfile(context.deviceId))
+  }
+  async getSettings(context: RevisionContext): Promise<RevisionSettings> {
+    return this.execute(context, async () => {
+      const row = await this.dependencies.db.get('SELECT daily_minutes, rest_days FROM revision_settings WHERE device_id = ?', [context.deviceId])
+      return row ? { dailyMinutes: row.daily_minutes, restDays: JSON.parse(row.rest_days) } : { dailyMinutes: policy.defaultDailyMinutes, restDays: [] }
+    })
+  }
+  async saveSettings(context: RevisionContext, input: RevisionSettings): Promise<RevisionSettings> {
+    return this.execute(context, async () => {
+      if (!input || !policy.dailyMinutesChoices.some(minutes => minutes === input.dailyMinutes)) throw new RevisionError('Durée quotidienne invalide.')
+      if (!Array.isArray(input.restDays) || input.restDays.length > 6 || input.restDays.some(day => !Number.isInteger(day) || day < 0 || day > 6) || new Set(input.restDays).size !== input.restDays.length) throw new RevisionError('Jours de repos invalides.')
+      await this.dependencies.db.run(`INSERT INTO revision_settings(device_id, daily_minutes, rest_days) VALUES (?, ?, ?)
+        ON CONFLICT(device_id) DO UPDATE SET daily_minutes=excluded.daily_minutes, rest_days=excluded.rest_days`,
+      [context.deviceId, input.dailyMinutes, JSON.stringify(input.restDays)])
+      return { dailyMinutes: input.dailyMinutes, restDays: [...input.restDays] }
+    })
   }
   async getProgress(context: RevisionContext): Promise<RevisionProgress> {
     return this.execute(context, async () => {

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { SQLiteDatabase } from '../../utils/database/sqlite'
-import { RevisionService, type GeneratedChapter } from './service'
+import { RevisionError, RevisionService, type GeneratedChapter } from './service'
 
 let directory: string
 let db: SQLiteDatabase
@@ -32,6 +32,25 @@ beforeEach(async () => {
   service = new RevisionService({ db, now: () => now, generateCards: async () => generated })
 })
 afterEach(async () => { await db.close(); await rm(directory, { recursive: true, force: true }) })
+
+test('les réglages sont persistés et isolés par appareil', async () => {
+  const other = { ...context(), deviceId: randomUUID() }
+  expect(await service.getSettings(context())).toEqual({ dailyMinutes: 15, restDays: [] })
+  expect(await service.saveSettings(context(), { dailyMinutes: 30, restDays: [1, 0] })).toEqual({ dailyMinutes: 30, restDays: [1, 0] })
+  const reopened = new RevisionService({ db, now: () => now, generateCards: async () => generated })
+  expect(await reopened.getSettings(context())).toEqual({ dailyMinutes: 30, restDays: [1, 0] })
+  expect(await reopened.getSettings(other)).toEqual({ dailyMinutes: 15, restDays: [] })
+})
+
+test('les réglages invalides sont refusés sans modifier les réglages enregistrés', async () => {
+  await service.saveSettings(context(), { dailyMinutes: 45, restDays: [6] })
+  for (const input of [null, {}, { dailyMinutes: 20, restDays: [] }, { dailyMinutes: 15, restDays: [1, 1] },
+    { dailyMinutes: 15, restDays: [0, 1, 2, 3, 4, 5, 6] }, { dailyMinutes: 15, restDays: [-1] },
+    { dailyMinutes: 15, restDays: [1.5] }, { dailyMinutes: 15, restDays: ['1'] }]) {
+    await expect(service.saveSettings(context(), input as never)).rejects.toBeInstanceOf(RevisionError)
+  }
+  expect(await service.getSettings(context())).toEqual({ dailyMinutes: 45, restDays: [6] })
+})
 
 test('un chapitre généré devient une session persistée, isolée par appareil', async () => {
   await setup()

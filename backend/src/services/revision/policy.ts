@@ -1,4 +1,6 @@
 export const REVISION_POLICY = {
+  dailyMinutesChoices: [15, 30, 45],
+  defaultDailyMinutes: 15,
   dailyImports: 3,
   dailyGenerations: 3,
   maxUploadMB: 10,

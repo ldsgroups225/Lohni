@@ -6,7 +6,8 @@ import Mascotte from '../components/Mascotte/Mascotte'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
-import { revisionAPI, type RevisionProfile, type RevisionProgress } from '../lib/api'
+import { revisionAPI, type RevisionProfile, type RevisionProgress, type RevisionSettings } from '../lib/api'
+import { REVISION_POLICY as policy } from '../../../backend/src/services/revision/policy'
 import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 
 let cachedProfile: { device: string | null; version: number; day: string; profile: RevisionProfile | null; progress: RevisionProgress } | null = null
@@ -26,6 +27,10 @@ export default function Profile() {
   const saving = useRef(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [settings, setSettings] = useState<RevisionSettings | null>(null)
+  const [settingsBusy, setSettingsBusy] = useState(false)
+  const [settingsError, setSettingsError] = useState('')
+  const [settingsSaved, setSettingsSaved] = useState(false)
   const entry = curriculum.find(item => item.schoolClass === profile?.schoolClass)
   const available = entry ? (entry.series as Record<string, string[] | undefined>)[profile?.series ?? ''] ?? [] : []
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
@@ -64,6 +69,32 @@ export default function Profile() {
       .finally(() => { if (active && !saving.current) setBusy(false) })
     return () => { active = false }
   }, [])
+
+  useEffect(() => {
+    let active = true
+    const device = cachedDevice()
+    async function load() {
+      try {
+        const value = await revisionAPI.settings()
+        if (active && device === cachedDevice()) setSettings(value)
+      } catch {
+        if (active) setSettingsError('Impossible de charger tes réglages de révision.')
+      }
+    }
+    void load()
+    return () => { active = false }
+  }, [])
+
+  async function saveSettings(event: FormEvent) {
+    event.preventDefault()
+    if (!settings || settingsBusy) return
+    setSettingsBusy(true); setSettingsError(''); setSettingsSaved(false)
+    try {
+      setSettings(await revisionAPI.saveSettings(settings))
+      setSettingsSaved(true)
+    } catch (cause) { setSettingsError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer tes réglages.') }
+    finally { setSettingsBusy(false) }
+  }
 
   function update(values: Partial<RevisionProfile>) {
     edits.current++
@@ -131,6 +162,24 @@ export default function Profile() {
         <Button type="submit" disabled={busy || !profile.subjects.length}>Enregistrer</Button>
         {saved && <p role="status" className="text-foreground">Ton profil est enregistré.</p>}
       </form> : !busy && !error && <p><Link to="/" className="underline">Commencer mon parcours</Link> pour créer mon profil.</p>}
+      <section className="space-y-4 rounded-2xl border border-border p-6">
+        <h2 className="text-xl text-foreground">Réglages de révision</h2>
+        {settingsError && <p role="alert">{settingsError}</p>}
+        {settings && <form onSubmit={saveSettings} className="space-y-4" aria-busy={settingsBusy}>
+          <fieldset disabled={settingsBusy} className="space-y-2"><legend>Minutes par jour</legend>
+            {policy.dailyMinutesChoices.map(minutes => <label key={minutes} className="mr-4 inline-flex items-center gap-2"><input type="radio" name="dailyMinutes" checked={settings.dailyMinutes === minutes} onChange={() => { setSettings({ ...settings, dailyMinutes: minutes }); setSettingsSaved(false) }} />{minutes} min</label>)}
+          </fieldset>
+          <fieldset disabled={settingsBusy} className="grid grid-cols-2 gap-2"><legend>Jours de repos</legend>
+            {['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map((day, index) => {
+              const value = (index + 1) % 7
+              const checked = settings.restDays.includes(value)
+              return <label key={day} className="flex items-center gap-2"><input type="checkbox" checked={checked} disabled={!checked && settings.restDays.length === 6} onChange={() => { setSettings({ ...settings, restDays: checked ? settings.restDays.filter(item => item !== value) : [...settings.restDays, value] }); setSettingsSaved(false) }} />{day}</label>
+            })}
+          </fieldset>
+          <Button type="submit" disabled={settingsBusy}>Enregistrer les réglages</Button>
+          {settingsSaved && <p role="status">Tes réglages sont enregistrés.</p>}
+        </form>}
+      </section>
       <footer className="text-xs text-muted">À propos · Lohni est basé sur <a href="https://github.com/CaviraOSS/PageLM" className="text-primary underline">PageLM</a> de nullure et recabasic, sous licence PageLM Community License.</footer>
     </div>
   </main>

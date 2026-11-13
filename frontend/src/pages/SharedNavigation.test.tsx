@@ -14,7 +14,7 @@ test('le profil et la progression chargés à l’accueil sont réutilisés dans
   window.matchMedia = () => ({ matches: true, addEventListener() {}, removeEventListener() {} } as unknown as MediaQueryList)
   const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-    if (url.endsWith('/profile')) return new Promise<Response>(() => {})
+    if (url.endsWith('/profile') || url.endsWith('/settings')) return new Promise<Response>(() => {})
     const data = url.endsWith('/home') ? { profile, state: 'empty', cardCount: 0, totalCards: 0, daysUntilExam: null } : url.endsWith('/progress') ? { xp: 10, streak: 1, learnedCards: 2, subjects: [] } : []
     return new Response(JSON.stringify({ ok: true, data }), { headers: { 'Content-Type': 'application/json' } })
   }))
