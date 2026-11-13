@@ -626,6 +626,7 @@ export function err(e: unknown) {
 
 export { revisionPolicy };
 
+export type RevisionExam = { id: string; title: string; date: string; subjects: string[]; chapterIds: string[] };
 export type RevisionProfile = { schoolClass: string; series?: string; subjects: string[]; examDate?: string };
 export type RevisionCard = {
   id: string; chapterId: string; kind: 'basic' | 'mcq'; question: string; answer: string;
@@ -652,7 +653,7 @@ export type RevisionCardInput = { kind: 'basic'; question: string; answer: strin
   kind: 'mcq'; question: string; answer: string; options: string[]; correct: number;
 };
 export type RevisionHome = {
-  profile: RevisionProfile; daysUntilExam: number | null; totalCards: number;
+  profile: RevisionProfile; nextExam: Pick<RevisionExam, 'id' | 'title' | 'date'> | null; daysUntilExam: number | null; totalCards: number;
   cardCount: number; estimatedMinutes: number; moreCards: boolean; started: boolean; state: 'ready' | 'done' | 'empty';
 };
 
@@ -779,7 +780,7 @@ function cachedRevisionRead<T>(path: string): Promise<T> {
     const version = currentRevisionCacheVersion()
     const day = revisionLocalDate()
     const saved = readOffline()
-    const cached = path === '/profile' || (saved.cacheDates?.[path] === day && !saved.pending.length) ? saved.cache[path] : undefined
+    const cached = (path === '/profile' || path === '/exams') || (saved.cacheDates?.[path] === day && !saved.pending.length) ? saved.cache[path] : undefined
     try {
       if (!navigator.onLine) throw new RevisionConnectionError('Hors ligne. Connecte-toi pour charger ces données.')
       const result = await revisionRequest<T>(path, 'GET', undefined, undefined, 8000)
@@ -853,6 +854,12 @@ async function revisionMutation<T>(path: string, method: string, body?: unknown)
   await updateOffline(state => { if (device === cachedDevice()) {
     if (state.cacheDates) { delete state.cacheDates['/home']; delete state.cacheDates['/progress']; }
     if (path === '/profile') { state.cache['/profile'] = result; delete state.cache['/home']; }
+    if (path === '/exams' || path.startsWith('/exams/')) {
+      const exams = (state.cache['/exams'] as RevisionExam[] | undefined) ?? [];
+      const id = path.startsWith('/exams/') ? decodeURIComponent(path.slice('/exams/'.length)) : undefined;
+      state.cache['/exams'] = method === 'DELETE' ? exams.filter(exam => exam.id !== id) : [...exams.filter(exam => exam.id !== (result as RevisionExam).id), result as RevisionExam];
+      delete state.cache['/home'];
+    }
   } });
   if (path === '/profile') {
     if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
@@ -876,10 +883,17 @@ export const revisionAPI = {
       const saved = readOffline();
       const profile = saved.cache['/profile'] as RevisionProfile | undefined;
       if (!(error instanceof RevisionConnectionError) || !profile || !saved.session) throw error;
-      home = { profile, daysUntilExam: profile.examDate ? Math.max(0, (Date.parse(profile.examDate) - Date.parse(revisionLocalDate())) / 86400000) : null,
+      home = { profile, nextExam: null, daysUntilExam: null,
         totalCards: saved.session.cards.length, cardCount: 0, estimatedMinutes: 0, moreCards: false, started: false, state: 'empty' };
     }
-    if (home) rememberRevisionSnapshot('/profile', home.profile);
+    if (home) {
+      rememberRevisionSnapshot('/profile', home.profile);
+      try {
+        const exams = await cachedRevisionRead<RevisionExam[]>('/exams');
+        const next = exams.filter(exam => exam.date >= revisionLocalDate()).sort ( (a, b) => a.date.localeCompare(b.date))[0];
+        home = { ...home, nextExam: next ? { id: next.id, title: next.title, date: next.date } : null, daysUntilExam: next ? (Date.parse(next.date) - Date.parse(revisionLocalDate())) / 86400000 : null };
+      } catch (error) { if (!(error instanceof RevisionConnectionError)) throw error; home = { ...home, nextExam: null, daysUntilExam: null }; }
+    }
     const session = readOffline().session;
     if (home && session && (session.localDate === revisionLocalDate() || readOffline().pending.length) && (!navigator.onLine || readOffline().pending.length)) {
       const cardCount = session.complete ? 0 : session.cards.length - session.position;
@@ -888,6 +902,9 @@ export const revisionAPI = {
     return home;
   },
   progress: () => cachedRevisionRead<RevisionProgress>('/progress'),
+  exams: () => cachedRevisionRead<RevisionExam[]>('/exams'),
+  saveExam: (exam: Omit<RevisionExam, 'id'> & { id?: string }) => revisionMutation<RevisionExam>(exam.id ? `/exams/${encodeURIComponent(exam.id)}` : '/exams', exam.id ? 'PUT' : 'POST', exam),
+  deleteExam: (id: string) => revisionMutation<null>(`/exams/${encodeURIComponent(id)}`, 'DELETE'),
   profile: () => cachedRevisionRead<RevisionProfile | null>('/profile'),
   chapters: () => sharedRevisionRead('/chapters', () => revisionRequest<RevisionChapter[]>('/chapters')),
   deleteChapter: (id: string) => revisionMutation<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),

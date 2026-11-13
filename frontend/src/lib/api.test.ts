@@ -179,6 +179,21 @@ test('le démarrage et les lectures partagent la synchronisation des réponses',
   await vi.waitFor(() => expect(api.revisionSyncStatus().pending).toBe(2))
 })
 
+test('hors ligne, le compte à rebours utilise les examens en cache et ignore les examens passés', async () => {
+  const { invalidateRevisionCache } = await import('./cachedDevice'); invalidateRevisionCache()
+  const today = new Date(); const day = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-')
+  const future = new Date(`${day}T00:00:00Z`); future.setUTCDate(future.getUTCDate() + 3)
+  const past = new Date(`${day}T00:00:00Z`); past.setUTCDate(past.getUTCDate() - 1)
+  const profile = { schoolClass: '3e', subjects: ['Mathématiques'], examDate: '2099-01-01' }
+  entries.set(offlineKey, JSON.stringify({ pending: [], cache: { '/profile': profile, '/exams': [
+    { id: 'past', title: 'Ancien', date: past.toISOString().slice(0, 10), subjects: ['Mathématiques'], chapterIds: [] },
+    { id: 'next', title: 'Brevet', date: future.toISOString().slice(0, 10), subjects: ['Mathématiques'], chapterIds: [] },
+  ] }, session: { id: 's', localDate: day, cards: [], position: 0, complete: true } }))
+  vi.stubGlobal('navigator', { onLine: false, locks: { request: async (_name: string, save: () => void) => save() } })
+  expect(await api.revisionAPI.home()).toMatchObject({ nextExam: { id: 'next', title: 'Brevet' }, daysUntilExam: 3 })
+  vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } })
+})
+
 test('un contexte non sécurisé affiche le message HTTPS avant toute requête', async () => {
   entries.clear()
   vi.stubGlobal('crypto', {})
@@ -187,3 +202,4 @@ test('un contexte non sécurisé affiche le message HTTPS avant toute requête',
   expect(fetch).not.toHaveBeenCalled()
   vi.unstubAllGlobals()
 })
+

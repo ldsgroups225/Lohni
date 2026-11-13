@@ -4,6 +4,7 @@ export const REVISION_POLICY = {
   maxUploadMB: 10,
   maxTextChars: 100000,
   maxTitleChars: 200,
+  maxExams: 10,
   maxQuestionChars: 10000,
   generatedBasicCards: 5,
   generatedMCQCards: 5,

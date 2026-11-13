@@ -24,6 +24,10 @@ export function revisionRoutes(app: any) {
       }
     })
   }
+  route('get', '/revision/exams', context => revision.listExams(context))
+  route('post', '/revision/exams', (context, req) => revision.saveExam(context, req.body))
+  route('put', '/revision/exams/:id', (context, req) => revision.saveExam(context, { ...req.body, id: req.params.id }))
+  route('delete', '/revision/exams/:id', (context, req) => revision.deleteExam(context, req.params.id))
   route('get', '/revision/profile', context => revision.getProfile(context))
   route('get', '/revision/progress', context => revision.getProgress(context))
   route('get', '/revision/home', context => revision.getHome(context))

@@ -19,6 +19,7 @@ export type GeneratedCard = { kind: 'basic'; question: string; answer: string } 
 }
 export type GeneratedChapter = { summary: string; notes: { content: string; cards: GeneratedCard[] }[] }
 export type ProfileInput = { schoolClass: string; series?: string; subjects: string[]; examDate?: string }
+export type RevisionExam = { id: string; title: string; date: string; subjects: string[]; chapterIds: string[] }
 export type RevisionCard = GeneratedCard & { id: string; chapterId: string; origin: 'ai' | 'import'; due: string; reviews: number }
 export type RevisionSession = { id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number; summary?: RevisionSummary }
 export type RevisionSummary = {
@@ -35,7 +36,7 @@ export type RevisionProgress = {
   streak: number; streakStarted: boolean; xp: number; learnedCards: number;
   subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[]
 }
-export type RevisionHome = { profile: ProfileInput; daysUntilExam: number | null; totalCards: number; cardCount: number; estimatedMinutes: number; moreCards: boolean; started: boolean; state: 'ready' | 'done' | 'empty' }
+export type RevisionHome = { profile: ProfileInput; nextExam: Pick<RevisionExam, 'id' | 'title' | 'date'> | null; daysUntilExam: number | null; totalCards: number; cardCount: number; estimatedMinutes: number; moreCards: boolean; started: boolean; state: 'ready' | 'done' | 'empty' }
 type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; series?: string; text?: string }) => Promise<GeneratedChapter>; transcribePhoto?: (file: UpFile) => Promise<string> }
 const validDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
@@ -60,6 +61,8 @@ export class RevisionService {
         `CREATE TABLE IF NOT EXISTS revision_imports (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, server_date TEXT NOT NULL)`,
         `CREATE INDEX IF NOT EXISTS revision_imports_daily ON revision_imports(device_id, server_date)`,
         `CREATE TABLE IF NOT EXISTS revision_profiles (device_id TEXT PRIMARY KEY, school_class TEXT NOT NULL, series TEXT, exam_date TEXT, xp INTEGER NOT NULL DEFAULT 0)`,
+        `CREATE TABLE IF NOT EXISTS revision_exams (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, title TEXT NOT NULL, date TEXT NOT NULL, subjects TEXT NOT NULL, chapter_ids TEXT NOT NULL)`,
+        `CREATE TABLE IF NOT EXISTS revision_migrations (name TEXT PRIMARY KEY)`,
         `CREATE TABLE IF NOT EXISTS revision_subjects (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, name TEXT NOT NULL, UNIQUE(device_id, name))`,
         `CREATE TABLE IF NOT EXISTS revision_chapters (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, subject_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL, origin TEXT NOT NULL)`,
         `CREATE TABLE IF NOT EXISTS revision_notes (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, chapter_id TEXT NOT NULL, content TEXT NOT NULL)`,
@@ -74,6 +77,15 @@ export class RevisionService {
       await dependencies.db.run('CREATE UNIQUE INDEX IF NOT EXISTS revision_answer_replay ON revision_journal(device_id, client_answer_id)')
       if (!await this.columnExists('revision_subjects', 'selected')) {
         await dependencies.db.run('ALTER TABLE revision_subjects ADD COLUMN selected INTEGER NOT NULL DEFAULT 1')
+      }
+      if (!await dependencies.db.get("SELECT name FROM revision_migrations WHERE name = 'exams'")) {
+        const profiles = await dependencies.db.all('SELECT device_id, exam_date FROM revision_profiles WHERE exam_date IS NOT NULL')
+        for (const profile of profiles) {
+          const existing = await dependencies.db.get('SELECT id FROM revision_exams WHERE device_id = ? LIMIT 1', [profile.device_id])
+          const subjects = (await dependencies.db.all('SELECT name FROM revision_subjects WHERE device_id = ? AND selected = 1 ORDER BY rowid', [profile.device_id])).map(row => row.name)
+          if (!existing && validDate(profile.exam_date) && subjects.length) await dependencies.db.run('INSERT INTO revision_exams VALUES (?, ?, ?, ?, ?, ?)', [randomUUID(), profile.device_id, 'Examen', profile.exam_date, JSON.stringify(subjects), '[]'])
+        }
+        await dependencies.db.run("INSERT INTO revision_migrations VALUES ('exams')")
       }
       if (!await this.columnExists('revision_journal', 'session_complete')) {
         await dependencies.db.run('ALTER TABLE revision_journal ADD COLUMN session_complete INTEGER NOT NULL DEFAULT 0')
@@ -95,7 +107,11 @@ export class RevisionService {
     return this.dependencies.db.transaction(operation)
   }
   async getProfile(context: RevisionContext): Promise<ProfileInput | null> {
-    return this.execute(context, () => this.readProfile(context.deviceId))
+    return this.execute(context, async () => {
+      const profile = await this.readProfile(context.deviceId)
+      if (profile) profile.examDate = (await this.nextExam(context))?.date
+      return profile
+    })
   }
   async getProgress(context: RevisionContext): Promise<RevisionProgress> {
     return this.execute(context, async () => {
@@ -157,11 +173,12 @@ export class RevisionService {
         WHERE c.device_id = ? AND s.selected = 1`, [context.deviceId])
       const completed = await this.dependencies.db.get(`SELECT id FROM revision_journal WHERE device_id = ? AND local_date = ?
         AND session_complete = 1 LIMIT 1`, [context.deviceId, context.localDate])
+      const nextExam = await this.nextExam(context)
       const cardCount = session.complete ? 0 : session.cards.length - session.position
       return {
-        profile, totalCards: total.count, cardCount,
+        profile, nextExam, totalCards: total.count, cardCount,
         moreCards: !session.complete || (await this.selectSessionCards(context, profile)).length > 0,
-        daysUntilExam: profile.examDate ? Math.max(0, (Date.parse(profile.examDate) - Date.parse(context.localDate)) / 86400000) : null,
+        daysUntilExam: nextExam ? (Date.parse(nextExam.date) - Date.parse(context.localDate)) / 86400000 : null,
         estimatedMinutes: Math.ceil(cardCount * policy.sessionMinutes / policy.sessionCards),
         started: !session.complete && session.position > 0,
         state: session.complete ? (completed ? 'done' : 'empty') : 'ready',
@@ -172,7 +189,7 @@ export class RevisionService {
     const db = this.dependencies.db
     const profile = await db.get('SELECT * FROM revision_profiles WHERE device_id = ?', [deviceId])
     if (!profile) return null
-    return { schoolClass: profile.school_class, series: profile.series ?? undefined, examDate: profile.exam_date ?? undefined,
+    return { schoolClass: profile.school_class, series: profile.series ?? undefined, examDate: undefined,
       subjects: (await db.all('SELECT name FROM revision_subjects WHERE device_id = ? AND selected = 1 ORDER BY rowid', [deviceId])).map(s => s.name) }
   }
   private async requireProfile(deviceId: string): Promise<ProfileInput> {
@@ -186,14 +203,53 @@ export class RevisionService {
       if (input.examDate !== undefined && !validDate(input.examDate)) throw new RevisionError('Date d’examen invalide.')
       if (input.series !== undefined && !nonempty(input.series)) throw new RevisionError('Série invalide.')
       const db = this.dependencies.db
-      await db.run(`INSERT INTO revision_profiles(device_id, school_class, series, exam_date) VALUES (?, ?, ?, ?)
-        ON CONFLICT(device_id) DO UPDATE SET school_class=excluded.school_class, series=excluded.series, exam_date=excluded.exam_date`,
-        [context.deviceId, input.schoolClass.trim(), input.series ?? null, input.examDate ?? null])
+      await db.run(`INSERT INTO revision_profiles(device_id, school_class, series) VALUES (?, ?, ?)
+        ON CONFLICT(device_id) DO UPDATE SET school_class=excluded.school_class, series=excluded.series`,
+        [context.deviceId, input.schoolClass.trim(), input.series ?? null])
       await db.run('UPDATE revision_subjects SET selected = 0 WHERE device_id = ?', [context.deviceId])
       for (const subject of input.subjects) await db.run(`INSERT INTO revision_subjects(id, device_id, name) VALUES (?, ?, ?)
         ON CONFLICT(device_id, name) DO UPDATE SET selected = 1`, [randomUUID(), context.deviceId, subject.trim()])
+      if (input.examDate !== undefined) {
+        const previous = (await this.readExams(context.deviceId)).find(exam => exam.title === 'Examen')
+        await this.writeExam(context, { id: previous?.id, title: 'Examen', date: input.examDate, subjects: input.subjects, chapterIds: [] })
+      }
       await this.refreshSessions(context.deviceId)
-      return this.requireProfile(context.deviceId)
+      const profile = await this.requireProfile(context.deviceId)
+      profile.examDate = (await this.nextExam(context))?.date
+      return profile
+    })
+  }
+  private async readExams(deviceId: string): Promise<RevisionExam[]> {
+    const rows = await this.dependencies.db.all('SELECT * FROM revision_exams WHERE device_id = ? ORDER BY date, rowid', [deviceId])
+    return rows.map(row => ({ id: row.id, title: row.title, date: row.date, subjects: JSON.parse(row.subjects), chapterIds: JSON.parse(row.chapter_ids) }))
+  }
+  private async nextExam(context: RevisionContext): Promise<Pick<RevisionExam, 'id' | 'title' | 'date'> | null> {
+    const exam = (await this.readExams(context.deviceId)).find(item => item.date >= context.localDate)
+    return exam ? { id: exam.id, title: exam.title, date: exam.date } : null
+  }
+  async listExams(context: RevisionContext): Promise<RevisionExam[]> {
+    return this.execute(context, () => this.readExams(context.deviceId))
+  }
+  private async writeExam(context: RevisionContext, input: { id?: string; title: string; date: string; subjects: string[]; chapterIds?: string[] }): Promise<RevisionExam> {
+    const db = this.dependencies.db
+    const profile = await this.requireProfile(context.deviceId)
+    if (!input || !nonempty(input.title) || input.title.length > policy.maxTitleChars || !validDate(input.date) || !Array.isArray(input.subjects) || !input.subjects.length || input.subjects.some(subject => !profile.subjects.includes(subject)) || (input.chapterIds !== undefined && (!Array.isArray(input.chapterIds) || input.chapterIds.some(id => typeof id !== 'string')))) throw new RevisionError('Examen invalide : vérifie le titre, la date et les matières.')
+    const exams = await this.readExams(context.deviceId)
+    if (input.id !== undefined && (typeof input.id !== 'string' || !exams.some(exam => exam.id === input.id))) throw new RevisionError('Examen introuvable.')
+    if (!input.id && exams.length >= policy.maxExams) throw new RevisionError(`Tu peux ajouter ${policy.maxExams} examens au maximum.`)
+    const chapters = await this.readChapters(context.deviceId)
+    if ((input.chapterIds ?? []).some(id => !chapters.some(chapter => chapter.id === id && input.subjects.includes(chapter.subject)))) throw new RevisionError('Chapitre invalide pour cet examen.')
+    const exam = { id: input.id ?? randomUUID(), title: input.title.trim(), date: input.date, subjects: [...new Set(input.subjects)], chapterIds: [...new Set(input.chapterIds ?? [])] }
+    await db.run('INSERT INTO revision_exams VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET title=excluded.title, date=excluded.date, subjects=excluded.subjects, chapter_ids=excluded.chapter_ids', [exam.id, context.deviceId, exam.title, exam.date, JSON.stringify(exam.subjects), JSON.stringify(exam.chapterIds)])
+    return exam
+  }
+  async saveExam(context: RevisionContext, input: { id?: string; title: string; date: string; subjects: string[]; chapterIds?: string[] }): Promise<RevisionExam> {
+    return this.execute(context, async () => { const exam = await this.writeExam(context, input); await this.refreshSessions(context.deviceId); return exam })
+  }
+  async deleteExam(context: RevisionContext, id: string): Promise<void> {
+    return this.execute(context, async () => {
+      if (!nonempty(id) || !(await this.dependencies.db.run('DELETE FROM revision_exams WHERE id = ? AND device_id = ?', [id, context.deviceId])).changes) throw new RevisionError('Examen introuvable.')
+      await this.refreshSessions(context.deviceId)
     })
   }
   async generateChapter(context: RevisionContext, input: { title: string; subject: string }) {
@@ -315,6 +371,7 @@ export class RevisionService {
       const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate])
       if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return this.sessionResult(JSON.parse(saved.state))
       const profile = await this.requireProfile(context.deviceId)
+      profile.examDate = (await this.nextExam(context))?.date
       const cards = await this.selectSessionCards(context, profile)
       const session: RevisionSession = { id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: cards.length === 0, repeated: [], elapsedMs: 0, earnedXP: 0 }
       await db.run('INSERT INTO revision_sessions VALUES (?, ?, ?, ?)', [session.id, context.deviceId, context.localDate, JSON.stringify(session)])

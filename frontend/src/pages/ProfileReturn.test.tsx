@@ -6,7 +6,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import Profile from './Profile'
 
-const api = vi.hoisted(() => ({ profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn() }))
+const api = vi.hoisted(() => ({ exams: vi.fn(async () => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn() }))
 vi.mock('../lib/api', () => ({ revisionAPI: api }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 beforeEach(() => { vi.resetAllMocks() })
