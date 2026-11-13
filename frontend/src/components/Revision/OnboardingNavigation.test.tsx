@@ -39,15 +39,13 @@ test('recharger en cours de parcours conserve la classe choisie', async () => {
   const router = createMemoryRouter([{ path: '/', element: <Onboarding /> }])
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    const select = required(host.querySelector('select'))
-    const chosen = select.options[1].value
-    await act(async () => { select.value = chosen; select.dispatchEvent(new Event('change', { bubbles: true })) })
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === '5ᵉ')).click())
     await act(async () => required(host.querySelector('form')).requestSubmit())
     act(() => root.unmount())
     root = createRoot(host)
     await act(async () => root.render(<RouterProvider router={router} />))
     await act(async () => { await router.navigate(-1) })
-    expect(required(host.querySelector('select')).value).toBe(chosen)
+    expect(required([...host.querySelectorAll('button')].find(button => button.textContent === '5ᵉ')).getAttribute('aria-pressed')).toBe('true')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); sessionStorage.clear() }
 })
 
@@ -90,4 +88,21 @@ test('après le parcours, un retour mène à l’accueil puis à la page précé
     await act(async () => { await router.navigate(-1) })
     expect(host.textContent).toBe('Hors application')
   } finally { act(() => root.unmount()); router.dispose(); host.remove() }
+})
+
+test('une ancienne série implicite ne permet pas de contourner le choix par un lien direct', async () => {
+  sessionStorage.setItem('lohni-onboarding', JSON.stringify({ schoolClass: 'terminale', series: 'A1', subjects: ['Français'], subject: 'Français', title: 'Chapitre' }))
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Onboarding /> }], { initialEntries: ['/?etape=4'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.textContent).toContain('Étape 1 sur 4')
+    expect(required([...host.querySelectorAll('button')].find(button => button.textContent === 'Continuer')).disabled).toBe(true)
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'D')).click())
+    await act(async () => required(host.querySelector('form')).requestSubmit())
+    expect(host.textContent).toContain('Étape 2 sur 4')
+    expect(host.textContent).toContain('Physique-Chimie')
+    expect(host.textContent).not.toContain('Allemand')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); sessionStorage.clear() }
 })
