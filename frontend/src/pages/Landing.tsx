@@ -83,7 +83,7 @@ export default function Landing() {
     const q = (override ?? prompt).trim();
     if (!q && !stagedFile) return;
 
-    if (mode === "Quiz") {
+    if (mode === "Quiz" && override === undefined) {
       navigate(`/quiz?topic=${encodeURIComponent(q)}`, { state: { topic: q } });
       return;
     }

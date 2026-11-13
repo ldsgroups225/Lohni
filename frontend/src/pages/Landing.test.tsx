@@ -20,6 +20,8 @@ test('les suggestions utilisent le vrai chapitre fragile et transmettent son con
     await act(async () => root.render(<RouterProvider router={router} />))
     expect(host.textContent).toContain('Chapitre fragile · SVT')
     expect(host.textContent).not.toContain('cartes fragiles')
+    await act(async () => required(host.querySelector('button[aria-label="Mode"]')).click())
+    await act(async () => required([...host.querySelectorAll('[role=menuitem]')].find(item => item.textContent === 'Quiz') as HTMLButtonElement | undefined).click())
     const button = required([...host.querySelectorAll('button')].find(item => item.textContent?.includes('Consolider Cellules')))
     await act(async () => button.click())
     expect(api.chatJSON).toHaveBeenCalledWith({ q: 'Aide-moi à consolider Cellules en SVT\n\nRéponds de façon moyenne.' })
