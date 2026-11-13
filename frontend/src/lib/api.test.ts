@@ -194,6 +194,16 @@ test('hors ligne, le compte à rebours utilise les examens en cache et ignore le
   vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } })
 })
 
+test('le dernier plan reste disponible hors ligne sans modifier la file de réponses', async () => {
+  const plan = { today: '2026-11-09', exams: [], days: [] }
+  entries.set(offlineKey, JSON.stringify({ pending: [{ localDate: '2026-11-09', answer: { answerId: 'en-attente' } }], cache: { '/plan': plan }, cacheDates: { '/plan': '2026-11-09' } }))
+  vi.stubGlobal('navigator', { onLine: false, locks: { request: async (_name: string, save: () => void) => save() } })
+  try {
+    await expect(api.revisionAPI.plan()).resolves.toEqual(plan)
+    expect(JSON.parse(required(entries.get(offlineKey))).pending).toHaveLength(1)
+  } finally { vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } }) }
+})
+
 test('un contexte non sécurisé affiche le message HTTPS avant toute requête', async () => {
   entries.clear()
   vi.stubGlobal('crypto', {})
@@ -202,4 +212,5 @@ test('un contexte non sécurisé affiche le message HTTPS avant toute requête',
   expect(fetch).not.toHaveBeenCalled()
   vi.unstubAllGlobals()
 })
+
 

@@ -15,7 +15,7 @@ test('le profil et la progression chargés à l’accueil sont réutilisés dans
   const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     if (url.endsWith('/profile') || url.endsWith('/settings')) return new Promise<Response>(() => {})
-    const data = url.endsWith('/home') ? { profile, state: 'empty', cardCount: 0, totalCards: 0, daysUntilExam: null } : url.endsWith('/progress') ? { xp: 10, streak: 1, learnedCards: 2, subjects: [] } : []
+    const data = url.endsWith('/plan') ? { today: '2026-11-09', exams: [], days: [] } : url.endsWith('/home') ? { profile, state: 'empty', cardCount: 0, totalCards: 0, daysUntilExam: null } : url.endsWith('/progress') ? { xp: 10, streak: 1, learnedCards: 2, subjects: [] } : []
     return new Response(JSON.stringify({ ok: true, data }), { headers: { 'Content-Type': 'application/json' } })
   }))
   const router = createMemoryRouter([{ path: '/', element: <Home /> }, { path: '/me', element: <Profile /> }, { path: '/autre', element: <p>Autre</p> }])

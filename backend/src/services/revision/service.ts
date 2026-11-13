@@ -8,6 +8,8 @@ import { REVISION_POLICY as policy } from './policy'
 import { advanceSession, answerXP } from './session'
 import { createEmptyCard, fsrs, Rating } from 'ts-fsrs'
 import { validItem } from '../quiz/validation'
+import { buildPlan, type RevisionExam, type RevisionPlan } from './plan'
+export type { RevisionExam } from './plan'
 
 export class RevisionError extends Error {
   constructor(message: string, readonly code?: string) { super(message) }
@@ -19,7 +21,6 @@ export type GeneratedCard = { kind: 'basic'; question: string; answer: string } 
 }
 export type GeneratedChapter = { summary: string; notes: { content: string; cards: GeneratedCard[] }[] }
 export type ProfileInput = { schoolClass: string; series?: string; subjects: string[]; examDate?: string }
-export type RevisionExam = { id: string; title: string; date: string; subjects: string[]; chapterIds: string[] }
 export type RevisionSettings = { dailyMinutes: number; restDays: number[] }
 export type RevisionCard = GeneratedCard & { id: string; chapterId: string; origin: 'ai' | 'import'; due: string; reviews: number }
 export type RevisionSession = { id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number; summary?: RevisionSummary }
@@ -245,6 +246,41 @@ export class RevisionService {
     const exam = (await this.readExams(context.deviceId)).find(item => item.date >= context.localDate)
     return exam ? { id: exam.id, title: exam.title, date: exam.date } : null
   }
+  async getPlan(context: RevisionContext): Promise<RevisionPlan> {
+    return this.execute(context, () => this.readPlan(context))
+  }
+  private async readPlan(context: RevisionContext): Promise<RevisionPlan> {
+    const db = this.dependencies.db
+    const profile = await this.requireProfile(context.deviceId)
+    const exams = (await this.readExams(context.deviceId)).map(exam => ({ ...exam, subjects: exam.subjects.filter(subject => profile.subjects.includes(subject)) }))
+    const settings = await db.get('SELECT daily_minutes, rest_days FROM revision_settings WHERE device_id = ?', [context.deviceId])
+    const chapters = (await this.readChapters(context.deviceId)).filter(chapter => profile.subjects.includes(chapter.subject))
+    const introduced = await db.all(`SELECT DISTINCT j.card_id FROM revision_journal j WHERE j.device_id = ? AND j.local_date = ? AND json_extract(j.scheduling, '$.log.state') = 0`, [context.deviceId, context.localDate])
+    const reviewed = new Set((await db.all('SELECT card_id FROM revision_journal WHERE device_id = ? AND local_date = ?', [context.deviceId, context.localDate])).map(row => row.card_id))
+    const introducedIds = new Set(introduced.map(row => row.card_id))
+    const plan = buildPlan({ today: context.localDate, exams, dailyMinutes: settings?.daily_minutes ?? policy.defaultDailyMinutes,
+      restDays: settings ? JSON.parse(settings.rest_days) : [], chapters: chapters.map(chapter => {
+        const dueByDate: Record<string, number> = {}
+        for (const card of chapter.cards) if (card.reviews > 0 && !introducedIds.has(card.id) && (!reviewed.has(card.id) || card.due.slice(0, 10) > context.localDate)) {
+          const date = card.due.slice(0, 10)
+          dueByDate[date] = (dueByDate[date] ?? 0) + 1
+        }
+        return { id: chapter.id, title: chapter.title, subject: chapter.subject,
+          unseenCards: chapter.cards.filter(card => card.reviews === 0 || introducedIds.has(card.id)).length, dueByDate }
+      }) })
+    const today = plan.days[0]
+    if (today) {
+      const missing = new Set(exams.filter(exam => exam.date >= context.localDate).flatMap(exam => exam.subjects.filter(subject => !chapters.some(chapter => chapter.subject === subject && chapter.cards.length > 0 && (!exam.chapterIds.length || exam.chapterIds.includes(chapter.id))))))
+      today.actions = [...missing].map(subject => ({ kind: 'addChapter', subject }))
+      for (const item of today.items) {
+        const chapter = chapters.find(entry => entry.id === item.chapterId)!
+        item.newCards = Math.max(0, item.newCards - chapter.cards.filter(card => introducedIds.has(card.id)).length)
+        item.minutes = (item.newCards + item.dueCards) * policy.sessionMinutes / policy.sessionCards
+      }
+      today.minutes = today.items.reduce((sum, item) => sum + item.minutes, 0)
+    }
+    return plan
+  }
   async listExams(context: RevisionContext): Promise<RevisionExam[]> {
     return this.execute(context, () => this.readExams(context.deviceId))
   }
@@ -416,6 +452,24 @@ export class RevisionService {
     const rank = (row: any) => row.reviews > 0 ? 0 : JSON.parse(row.content).kind === 'mcq' ? 2 : 1
     eligible.sort((a, b) => rank(a) - rank(b) || (a.reviews > 0 && b.reviews > 0
       ? this.scheduler.retrievability(JSON.parse(a.scheduling), this.dependencies.now()) - this.scheduler.retrievability(JSON.parse(b.scheduling), this.dependencies.now()) : 0))
+    const plan = await this.readPlan(context)
+    if (plan.exams.length) {
+      const day = plan.days[0]
+      if (!day) {
+        const settings = await db.get('SELECT rest_days FROM revision_settings WHERE device_id = ?', [context.deviceId])
+        const restDays: number[] = settings ? JSON.parse(settings.rest_days) : []
+        return restDays.includes(new Date(`${context.localDate}T00:00:00Z`).getUTCDay()) ? [] : eligible.filter(row => row.reviews > 0).slice(0, policy.sessionCards).map(revisionCard)
+      }
+      if (day.rest) return []
+      const quotas = new Map(day.items.map(item => [item.chapterId, item.newCards]))
+      return eligible.filter(row => {
+        if (row.reviews > 0) return true
+        const remaining = quotas.get(row.chapter_id) ?? 0
+        if (!remaining) return false
+        quotas.set(row.chapter_id, remaining - 1)
+        return true
+      }).slice(0, policy.sessionCards).map(revisionCard)
+    }
     let newCount = 0
     let newMcqCount = 0
     const mcqQuota = quota + introduced.count - introducedMcq.count

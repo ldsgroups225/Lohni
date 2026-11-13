@@ -66,8 +66,8 @@ test('un chapitre généré devient une session persistée, isolée par appareil
 })
 
 test.each([
-  [undefined, 5], ['2026-11-08', 5], ['2026-11-09', 5],
-  ['2026-11-10', 10], ['2026-11-19', 4], ['2027-01-01', 3],
+  [undefined, 5], ['2026-11-08', 5], ['2026-11-09', 0],
+  ['2026-11-10', 20], ['2026-11-19', 4], ['2027-01-01', 1],
 ])('dose les nouvelles cartes avec une date %s : %s cartes', async (examDate, expected) => {
   await setup(32, examDate)
   expect((await service.getSession(context())).cards).toHaveLength(expected)
@@ -175,7 +175,7 @@ test('quinze recto-verso et cinq QCM dus gardent leur place avant un quota de ci
   expect(session.cards.filter(card => card.kind === 'mcq')).toHaveLength(5)
 })
 
-test.each<[string | undefined, number, number]>([[undefined, 5, 5], ['2026-11-13', 3, 3]])('dose séparément les nouveaux recto-verso et QCM : %s', async (examDate, basics, mcqs) => {
+test.each<[string | undefined, number, number]>([[undefined, 5, 5], ['2026-11-13', 3, 7]])('dose séparément les nouveaux recto-verso et QCM : %s', async (examDate, basics, mcqs) => {
   await setup(12, examDate)
   generated = { summary: 'QCM', notes: Array.from({ length: 25 }, (_, i) => ({ content: `QCM ${i}`, cards: [{
     kind: 'mcq' as const, question: `QCM ${i}`, answer: 'A', options: ['A', 'B', 'C', 'D'], correct: 1,
@@ -203,7 +203,7 @@ test('les QCM déjà découverts ne réduisent pas le quota recalculé après un
   await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Nouveau chapitre' })
 
   const continued = await service.getSession(context(), true)
-  expect(continued.cards.map(card => card.kind)).toEqual(['basic', 'basic', 'mcq', 'mcq'])
+  expect(continued.cards.map(card => card.kind)).toEqual(['basic', 'basic', 'basic'])
   await finish(continued)
   expect((await service.getSession(context(), true)).cards).toEqual([])
 })
@@ -255,7 +255,8 @@ test('un QCM fragile reste prioritaire quand les cartes dues dépassent le plafo
     await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'], examDate: new Date(now.getTime() + 86400000).toISOString().slice(0, 10) })
     let session = await service.getSession(context())
     while (!session.complete) session = await respond(session, session.cards[session.position].kind === 'basic', 1)
-    await finish(await service.getSession(context(), true))
+    let continued = await service.getSession(context(), true)
+    while (!continued.complete) continued = await respond(continued, continued.cards[continued.position].kind === 'basic', 1)
   }
   now = new Date('2026-12-10T12:00:00Z')
   const session = await service.getSession(context())
@@ -612,4 +613,76 @@ test('une carte ratée puis réussie à sa reprise quitte la liste des ratées m
   session = await respond(session, true)
   expect(session.complete).toBe(true)
   expect(session.summary).toEqual({ quiz: { total: 0, correct: 0 }, flashcards: { total: 2, knew: 1 }, missed: [] })
+})
+
+test('la séance du jour suit le plan et reprend les cartes prévues par chapitre', async () => {
+  await setup(8, '2026-11-11')
+  const plan = await service.getPlan(context())
+  expect(plan.days[0].items[0]).toMatchObject({ chapterTitle: 'Fractions', newCards: 4 })
+  expect((await service.getSession(context())).cards).toHaveLength(4)
+})
+
+test('le plan regroupe deux examens et rattrape un jour manqué', async () => {
+  const chapter = await setup(8)
+  await service.saveExam(context(), { title: 'Brevet', date: '2026-11-13', subjects: ['Mathématiques'], chapterIds: [chapter.id] })
+  await service.saveExam(context(), { title: 'Concours', date: '2026-11-15', subjects: ['Mathématiques'], chapterIds: [chapter.id] })
+  const first = await service.getPlan(context())
+  expect(first.days[0].items[0].newCards).toBe(2)
+  expect(first.days.flatMap(day => day.items).every(item => item.examId === first.exams[0].id)).toBe(true)
+  now = new Date('2026-11-11T12:00:00Z')
+  const caughtUp = await service.getPlan(context())
+  expect(caughtUp.days[0].items[0].newCards).toBe(4)
+})
+
+test('un plan trop chargé reste visible et les séances continuent au-delà du plafond', async () => {
+  await setup(30, '2026-11-10')
+  expect((await service.getPlan(context())).exams[0].overloaded).toBe(true)
+  let session = await service.getSession(context())
+  expect(session.cards).toHaveLength(20)
+  await finish(session)
+  expect(await service.getHome(context())).toMatchObject({ moreCards: true })
+  session = await service.getSession(context(), true)
+  expect(session.cards).toHaveLength(10)
+  await finish(session)
+  expect((await service.getSession(context(), true)).cards).toHaveLength(0)
+})
+
+test('les jours de repos suivent le jour de la date locale', async () => {
+  now = new Date('2026-11-09T23:30:00Z')
+  const local = { ...context(), localDate: '2026-11-10' }
+  await service.saveProfile(local, { schoolClass: '3e', subjects: ['Mathématiques'], examDate: '2026-11-12' })
+  await service.generateChapter(local, { subject: 'Mathématiques', title: 'Fractions' })
+  await service.saveSettings(local, { dailyMinutes: 15, restDays: [2] })
+  const plan = await service.getPlan(local)
+  expect(plan.days[0]).toMatchObject({ date: '2026-11-10', rest: true, capacityCards: 0, items: [] })
+  expect((await service.getSession(local)).cards).toHaveLength(0)
+  expect(plan.days[1].items[0].newCards).toBe(5)
+})
+
+test('le plan demande un chapitre manquant et ignore les références périmées', async () => {
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques', 'Français'] })
+  const chapter = await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Fractions' })
+  await service.saveExam(context(), { title: 'Brevet', date: '2026-11-12', subjects: ['Mathématiques', 'Français'], chapterIds: [chapter.id] })
+  await service.deleteChapter(context(), chapter.id)
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'] })
+  const plan = await service.getPlan(context())
+  expect(plan.days[0].actions).toEqual([{ kind: 'addChapter', subject: 'Mathématiques' }])
+  expect(plan.days.flatMap(day => day.items)).toEqual([])
+})
+
+test('le jour du dernier examen les cartes dues restent disponibles sans nouvelles cartes', async () => {
+  await setup(2, '2026-11-10')
+  await finish(await service.getSession(context()))
+  now = new Date('2026-11-10T12:00:00Z')
+  const session = await service.getSession(context())
+  expect(session.cards).toHaveLength(2)
+  expect(session.cards.every(card => card.reviews > 0)).toBe(true)
+})
+
+test('un chapitre déjà révisé aujourd’hui ne devient pas un chapitre manquant', async () => {
+  await setup(1, '2026-11-12')
+  await finish(await service.getSession(context()))
+  now = new Date('2026-11-10T12:00:00Z')
+  await finish(await service.getSession(context()))
+  expect((await service.getPlan(context())).days[0].actions).toEqual([])
 })

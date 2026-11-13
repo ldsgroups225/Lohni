@@ -1,3 +1,4 @@
+import type { RevisionPlan } from '../../../backend/src/services/revision/plan';
 import { cachedDevice, currentRevisionCacheVersion, invalidateRevisionCache, rememberRevisionSnapshot } from "./cachedDevice";
 import { env } from "../config/env";
 import { REVISION_POLICY as revisionPolicy } from "../../../backend/src/services/revision/policy";
@@ -781,7 +782,7 @@ function cachedRevisionRead<T>(path: string): Promise<T> {
     const version = currentRevisionCacheVersion()
     const day = revisionLocalDate()
     const saved = readOffline()
-    const cached = (path === '/profile' || path === '/exams') || (saved.cacheDates?.[path] === day && !saved.pending.length) ? saved.cache[path] : undefined
+    const cached = (path === '/profile' || path === '/exams' || path === '/plan') || (saved.cacheDates?.[path] === day && !saved.pending.length) ? saved.cache[path] : undefined
     try {
       if (!navigator.onLine) throw new RevisionConnectionError('Hors ligne. Connecte-toi pour charger ces données.')
       const result = await revisionRequest<T>(path, 'GET', undefined, undefined, 8000)
@@ -902,6 +903,7 @@ export const revisionAPI = {
     }
     return home;
   },
+  plan: () => cachedRevisionRead<RevisionPlan>('/plan'),
   progress: () => cachedRevisionRead<RevisionProgress>('/progress'),
   exams: () => cachedRevisionRead<RevisionExam[]>('/exams'),
   saveExam: (exam: Omit<RevisionExam, 'id'> & { id?: string }) => revisionMutation<RevisionExam>(exam.id ? `/exams/${encodeURIComponent(exam.id)}` : '/exams', exam.id ? 'PUT' : 'POST', exam),
@@ -941,3 +943,5 @@ export function prepareRevisionStartup() {
     void syncRevisionAnswers()
   } catch { /* The page reports unavailable storage or device support. */ }
 }
+
+export type { RevisionPlan };

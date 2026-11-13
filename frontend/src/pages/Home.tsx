@@ -1,3 +1,4 @@
+import { PlanToday } from '../components/Revision/PlanToday'
 import { ButtonLink } from '../components/ui/Button'
 import { PendingRead } from '../components/ui/PendingRead'
 import { humeurSerie, listDelay } from '../components/ui/revisionPresentation'
@@ -113,6 +114,7 @@ export default function Home() {
           {home.totalCards === 0 && <ButtonLink className="block w-full rounded-2xl p-5 text-xl" to="/revision">Préparer un chapitre</ButtonLink>}
           <Link to="/import" className="block text-primary underline">Importer mon cours</Link>
         </Card>
+        <PlanToday />
         {progress && <section className="space-y-4" aria-label="Maîtrise par matière"><h2 className="text-xl font-semibold text-foreground">Tes matières</h2>{progress.subjects.map((subject, index) => {
           const own = chapters?.filter(chapter => chapter.subjectId === subject.subjectId)
           const seen = own?.reduce((sum, chapter) => sum + chapter.seenCards, 0)
