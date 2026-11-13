@@ -825,6 +825,7 @@ async function revisionSession(continueSession = false): Promise<RevisionSession
     throw error;
   }
 }
+const examAnswerIds = new Map<string, string>();
 async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<RevisionSession> {
   let next: RevisionSession | undefined;
   await updateOffline(state => {
@@ -925,6 +926,34 @@ export const revisionAPI = {
     form.append('q', JSON.stringify({ title: input.title, subject: input.subject }));
     form.append('file', input.file);
     return revisionMutation<RevisionImportedChapter>('/import', 'POST', form);
+  },
+  examSession: async (id: string, continuing = false) => {
+    if (!navigator.onLine) throw new Error('Connecte-toi pour lancer une révision d’examen.')
+    await syncRevisionAnswers()
+    if (readOffline().pending.length) throw new Error('Reconnecte-toi pour envoyer tes réponses avant de continuer.')
+    const device = revisionDeviceId()
+    const session = await revisionRequest<RevisionSession>(`/exams/${encodeURIComponent(id)}/session${continuing ? '/continue' : ''}`, continuing ? 'POST' : 'GET', undefined, undefined, 8000)
+    if (cachedDevice() !== device) throw new Error('L’appareil a changé. Recharge la page avant de continuer.')
+    return session
+  },
+  examAnswer: async (input: Omit<RevisionAnswer, 'answerId'>) => {
+    if (!navigator.onLine) throw new Error('Connecte-toi pour continuer cette révision d’examen.')
+    const device = revisionDeviceId()
+    const key = `${device}:${input.sessionId}:${input.position}`
+    const answerId = examAnswerIds.get(key) ?? crypto.randomUUID()
+    examAnswerIds.set(key, answerId)
+    const session = await revisionRequest<RevisionSession>('/session/answer', 'POST', { ...input, answerId }, undefined, 8000)
+    if (cachedDevice() !== device) throw new Error('L’appareil a changé. Recharge la page avant de continuer.')
+    examAnswerIds.delete(key)
+    await updateOffline(state => {
+      const daily = state.session
+      if (cachedDevice() !== device || !daily || daily.localDate !== revisionLocalDate() || state.pending.length) return
+      daily.cards = [...daily.cards.slice(0, daily.position), ...daily.cards.slice(daily.position).filter(card => card.id !== input.cardId)]
+      daily.complete = daily.position >= daily.cards.length
+      delete daily.summary
+    })
+    invalidateRevisionCache('/home', '/progress', '/plan:source')
+    return session
   },
   session: () => revisionSession(),
   continue: async () => { const session = await revisionSession(true); invalidateRevisionCache('/home', '/progress'); return session; },

@@ -25,6 +25,8 @@ export function revisionRoutes(app: any) {
     })
   }
   route('get', '/revision/plan', context => revision.getPlan(context))
+  route('get', '/revision/exams/:id/session', (context, req) => revision.getExamSession(context, req.params.id))
+  route('post', '/revision/exams/:id/session/continue', (context, req) => revision.getExamSession(context, req.params.id, true))
   route('get', '/revision/exams', context => revision.listExams(context))
   route('post', '/revision/exams', (context, req) => revision.saveExam(context, req.body))
   route('put', '/revision/exams/:id', (context, req) => revision.saveExam(context, { ...req.body, id: req.params.id }))

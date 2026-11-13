@@ -1,3 +1,4 @@
+import { ExamButton } from '../components/Revision/ExamButton'
 import { Button } from '../components/ui/Button'
 import { PendingRead } from '../components/ui/PendingRead'
 import { humeurSerie } from '../components/ui/revisionPresentation'
@@ -170,7 +171,7 @@ export default function Profile() {
       </form> : !busy && !error && <p><Link to="/" className="underline">Commencer mon parcours</Link> pour créer mon profil.</p>}
       {profile && <section className="space-y-4 rounded-2xl border border-border p-6">
         <h2 className="text-xl text-foreground">Examens</h2>
-        {exams.map(item => <div key={item.id} className="space-y-2 border-b border-border pb-3"><p>{item.title} · {item.date}</p><p>{item.subjects.join(', ')}</p><div className="flex gap-3"><Button type="button" onClick={() => setExam(item)}>Modifier</Button><Button type="button" onClick={async () => { try { await revisionAPI.deleteExam(item.id); setExams(current => current.filter(value => value.id !== item.id)); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Suppression impossible.') } }}>Supprimer</Button></div></div>)}
+        {exams.map(item => <div key={item.id} className="space-y-2 border-b border-border pb-3"><p>{item.title} · {item.date}</p><p>{item.subjects.join(', ')}</p><ExamButton id={item.id} date={item.date} /><div className="flex gap-3"><Button type="button" onClick={() => setExam(item)}>Modifier</Button><Button type="button" onClick={async () => { try { await revisionAPI.deleteExam(item.id); setExams(current => current.filter(value => value.id !== item.id)); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Suppression impossible.') } }}>Supprimer</Button></div></div>)}
         {!exam && <Button type="button" disabled={!examsLoaded || exams.length >= policy.maxExams} onClick={() => setExam({ title: '', date: '', subjects: [], chapterIds: [] })}>Ajouter un examen</Button>}
         {exam && <form className="space-y-4" onSubmit={async event => { event.preventDefault(); try { const value = await revisionAPI.saveExam(exam); setExams(current => [...current.filter(item => item.id !== value.id), value]); setExam(null); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Enregistrement impossible.') } }}>
           <label className="block space-y-2">Intitulé<input className={input} required maxLength={policy.maxTitleChars} value={exam.title} onChange={event => setExam({ ...exam, title: event.target.value })} /></label>

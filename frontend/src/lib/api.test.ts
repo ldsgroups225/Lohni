@@ -212,6 +212,20 @@ test('le dernier plan reste disponible hors ligne sans modifier la file de répo
   } finally { vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } }) }
 })
 
+test('les réponses d’examen ne sont pas mises en file et retirent la carte de la séance quotidienne en cache', async () => {
+  vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } })
+  const date = new Date()
+  const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const daily = { id: 'daily', localDate, cards: [{ id: 'card' }, { id: 'other' }], position: 0, complete: false, repeated: [], elapsedMs: 0, earnedXP: 0 }
+  entries.set(offlineKey, JSON.stringify({ session: daily, pending: [], cache: {} }))
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: true, data: { ...daily, id: 'exam' } }), { headers: { 'Content-Type': 'application/json' } })))
+  await api.revisionAPI.examAnswer({ sessionId: 'exam', cardId: 'card', position: 0, knew: true, durationMs: 1 })
+  const saved = JSON.parse(required(entries.get(offlineKey)))
+  expect(saved.pending).toEqual([])
+  expect(saved.session.id).toBe('daily')
+  expect(saved.session.cards.map((card: { id: string }) => card.id)).toEqual(['other'])
+})
+
 test('un contexte non sécurisé affiche le message HTTPS avant toute requête', async () => {
   entries.clear()
   vi.stubGlobal('crypto', {})
@@ -220,5 +234,6 @@ test('un contexte non sécurisé affiche le message HTTPS avant toute requête',
   expect(fetch).not.toHaveBeenCalled()
   vi.unstubAllGlobals()
 })
+
 
 

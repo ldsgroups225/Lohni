@@ -1,3 +1,4 @@
+import { ExamButton } from '../components/Revision/ExamButton'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { frenchDate } from '../components/Revision/PlanToday'
@@ -16,7 +17,7 @@ export default function Plan() {
       {result?.offline && <p>Plan du {frenchDate(plan.today)}</p>}
       <h2 className="text-xl font-semibold">Examens à venir</h2>
       {!plan.exams.length && <Link to="/me" className="underline">Ajoute une date d’examen</Link>}
-      {plan.exams.map(exam => <article key={exam.id} className="rounded-xl border border-border p-4"><h3 className="font-semibold">{exam.title}</h3><p>{frenchDate(exam.date)}</p>{exam.overloaded && <p>Plan trop chargé pour {exam.title}</p>}</article>)}
+      {plan.exams.map(exam => <article key={exam.id} className="rounded-xl border border-border p-4"><h3 className="font-semibold">{exam.title}</h3><p>{frenchDate(exam.date)}</p>{exam.overloaded && <p>Plan trop chargé pour {exam.title}</p>}<ExamButton id={exam.id} date={exam.date} /></article>)}
       {plan.days.map(day => <section key={day.date} className="rounded-xl border border-border p-4"><h2 className="font-semibold">{frenchDate(day.date)}</h2>
         {day.rest && <p>Repos</p>}
         {day.items.map(item => <p key={item.chapterId}><strong>{item.subject}</strong> · {item.chapterTitle} : {item.dueCards} carte{item.dueCards > 1 ? 's' : ''} à revoir, {item.newCards} nouvelle{item.newCards > 1 ? 's' : ''} · {item.minutes.toLocaleString('fr-FR')} min</p>)}
