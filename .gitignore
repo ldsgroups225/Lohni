@@ -22,3 +22,6 @@ database.sqlite
 # TypeScript build info
 tsconfig.tsbuildinfo
 vite.config.tsbuildinfo
+# npm only: pnpm files appear when a tool runs pnpm by mistake
+pnpm-lock.yaml
+pnpm-workspace.yaml
