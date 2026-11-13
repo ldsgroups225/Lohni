@@ -224,7 +224,7 @@ export default function Debate() {
     const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setArgument(e.target.value);
         e.target.style.height = "auto";
-        e.target.style.height = `${e.target.scrollHeight}px`;
+        e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -418,8 +418,8 @@ export default function Debate() {
             <div className="flex-shrink-0 border-b border-border bg-surface backdrop-blur-sm">
                 <div className="px-6 py-4">
                     <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                            <h1 className="text-xl font-bold text-foreground mb-1">
+                        <div className="min-w-0 flex-1">
+                            <h1 title={session?.topic} className="line-clamp-2 text-xl font-bold text-foreground mb-1">
                                 {session?.topic || "Debate"}
                             </h1>
                             <div className="flex items-center gap-3 text-sm">
@@ -549,14 +549,14 @@ export default function Debate() {
                                         : "Écris ton argument…"
                             }
                             disabled={isStreaming || isDebateEnded}
-                            className="flex-1 px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed custom-scroll"
+                            className="min-w-0 flex-1 px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed custom-scroll"
                             rows={1}
-                            style={{ minHeight: "50px", maxHeight: "200px" }}
+                            style={{ minHeight: "50px", maxHeight: "120px" }}
                         />
                         <button type="button"
                             onClick={submitArgument}
                             disabled={!argument.trim() || isStreaming || isDebateEnded}
-                            className={`px-6 py-3 rounded-xl font-semibold transition-[transform,opacity] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${session?.position === "for"
+                            className={`self-start px-6 py-3 rounded-xl font-semibold transition-[transform,opacity] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${session?.position === "for"
                                 ? "bg-gradient-to-r from-secondary to-secondary hover:from-secondary hover:to-secondary text-on-secondary"
                                 : "bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary text-on-primary"
                                 }`}

@@ -1,3 +1,4 @@
+// biome-ignore-all lint/a11y/useSemanticElements: Le fieldset natif empêche le positionnement de la face de carte.
 // biome-ignore-all lint/a11y/noNoninteractiveTabindex: La carte doit recevoir les flèches et les touches de retournement.
 import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import MarkdownView from '../Chat/MarkdownView'
@@ -24,7 +25,7 @@ type Props = {
  *  Le glissement n'est actif qu'une fois la réponse vue. Flèches du clavier et boutons restent disponibles.
  *  Pendant le geste, la carte suit le doigt sans rendu React ; au lâcher, un ressort repart de la vitesse réelle. */
 export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwipe }: Props) {
-  const card = useRef<HTMLFieldSetElement>(null)
+  const card = useRef<HTMLDivElement>(null)
   const x = useRef(0)
   const stop = useRef<(() => void) | null>(null)
   const drag = useRef<{ id: number; origin: number; start: number; points: [number, number][]; moved: boolean } | null>(null)
@@ -104,13 +105,13 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
     e.preventDefault()
   }
 
-  const face = 'absolute inset-0 flex touch-pan-y overflow-y-auto rounded-3xl border border-[color:var(--swipe-border)] bg-surface px-6 pb-10 pt-6 [backface-visibility:hidden]'
+  const face = 'absolute inset-x-0 top-0 bottom-10 flex touch-pan-y overflow-y-auto px-6 py-6 [backface-visibility:hidden]'
   return (
-    <div className="motion-card flex min-h-[55dvh] flex-1 flex-col">
-      <fieldset
-        ref={card} aria-roledescription="carte" aria-label={revealed ? 'Réponse' : 'Question'} aria-describedby="swipe-hint" tabIndex={0}
+    <div className="motion-card flex min-h-[55dvh] flex-1 shrink-0 flex-col">
+      <div
+        role="group" ref={card} aria-roledescription="carte" aria-label={revealed ? 'Réponse' : 'Question'} aria-describedby="swipe-hint" tabIndex={0}
         onKeyDown={key} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel}
-        className="relative flex-1 touch-pan-y select-none will-change-transform [perspective:1000px]"
+        className="relative flex-1 touch-pan-y select-none rounded-3xl border border-[color:var(--swipe-border)] bg-surface will-change-transform [perspective:1000px]"
       >
         <div className="absolute inset-0 transition-transform duration-[360ms] ease-[var(--ease-lohni)] [transform-style:preserve-3d]" style={{ transform: `rotateY(${revealed ? 180 : 0}deg)` }}>
           <div className={face} aria-hidden={revealed}>
@@ -129,7 +130,7 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
         <p id="swipe-hint" className="pointer-events-none absolute inset-x-0 bottom-3 text-center text-xs text-muted">
           {!revealed ? 'Touche la carte pour voir la réponse' : hint ? 'Glisse la carte à gauche ou à droite' : '← Je ne savais pas · Je savais →'}
         </p>
-      </fieldset>
+      </div>
       {/* Sans geste : flèches du clavier ou ces boutons, masqués à l'écran mais lus et focalisables. */}
       {revealed && <div className="sr-only focus-within:not-sr-only focus-within:mt-2 focus-within:grid focus-within:grid-cols-2 focus-within:gap-3">
         <button type="button" disabled={!enabled} onClick={() => rate(false)} className="rounded-xl border border-border bg-surface px-2 py-3 text-foreground disabled:opacity-50">Je ne savais pas</button>

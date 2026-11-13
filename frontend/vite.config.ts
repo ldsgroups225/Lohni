@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
         const mascotAssets = readdirSync(path.resolve(import.meta.dirname, 'public/mascotte'))
           .filter(name => name.endsWith('.webp')).map(name => `/mascotte/${name}`);
         const assets = ['/', '/app.css', '/logo.png', '/fonts/schibsted_grotesk.woff2', '/manifest.webmanifest',
-          '/icons/lohni-180.png', '/icons/lohni-192.png', '/icons/lohni-512.png',
+          '/icons/lohni-180.png', '/icons/lohni-192.png', '/icons/lohni-512.png', '/icons/lohni-any-192.png', '/icons/lohni-any-512.png',
           ...mascotAssets,
           ...Object.keys(bundle).filter(name => name !== 'index.html').map(name => `/${name}`)];
         const template = readFileSync(path.resolve(import.meta.dirname, 'sw.js'), 'utf8');

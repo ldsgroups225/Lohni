@@ -10,7 +10,9 @@
   "background_color": "#fff8f1",
   "theme_color": "#fff8f1",
   "icons": [
-    { "src": "/icons/lohni-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icons/lohni-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icons/lohni-any-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/lohni-any-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/lohni-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/lohni-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
