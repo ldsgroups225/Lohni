@@ -1,3 +1,4 @@
+import { ZapIcon, PaperclipIcon } from '../ui/NavigationIcons'
 import { useState, useRef } from "react"
 import { withOccurrenceKeys } from "../../lib/occurrenceKeys"
 
@@ -34,7 +35,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
     return (
         <div className="rounded-xl border border-border bg-surface p-4">
             <h2 className="text-foreground font-medium mb-3 flex items-center gap-2">
-                <span aria-hidden="true">⚡</span>
+                <ZapIcon />
                 Ajouter une tâche
             </h2>
 
@@ -63,7 +64,7 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                         title="Ajouter les fichiers du devoir"
                         aria-label="Joindre des fichiers au devoir"
                     >
-                        <span aria-hidden="true">📎</span>
+                        <PaperclipIcon />
                     </button>
                     <button type="button"
                         onClick={handleSubmit}

@@ -1,3 +1,4 @@
+import { ZapIcon, TrophyIcon, DumbbellIcon, ThumbsUpIcon, ThumbsDownIcon, ScaleIcon, FlagIcon, BotIcon, HandshakeIcon, ChartIcon, TrendingDownIcon, AlertIcon } from '../components/ui/NavigationIcons'
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import { useOverlayNavigation } from "../lib/useOverlayNavigation";
@@ -375,7 +376,7 @@ export default function Debate() {
                                         : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
                                 >
-                                    <div className="text-2xl mb-1">👍</div>
+                                    <div className="mb-1"><ThumbsUpIcon className="size-8" /></div>
                                     <div>Pour</div>
                                     <div className="text-xs mt-1 opacity-80">Défendre cette idée</div>
                                 </button>
@@ -387,7 +388,7 @@ export default function Debate() {
                                         : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
                                 >
-                                    <div className="text-2xl mb-1">👎</div>
+                                    <div className="mb-1"><ThumbsDownIcon className="size-8" /></div>
                                     <div>Contre</div>
                                     <div className="text-xs mt-1 opacity-80">Contester cette idée</div>
                                 </button>
@@ -456,7 +457,7 @@ export default function Debate() {
                 {messages.length === 0 && !isStreaming && (
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center space-y-4 max-w-md">
-                            <div className="text-6xl animate-[fadeIn_0.5s_ease-in-out]">⚖️</div>
+                            <div className="animate-[fadeIn_0.5s_ease-in-out]"><ScaleIcon className="size-16" /></div>
                             <h2 className="text-2xl font-bold text-foreground animate-[fadeIn_0.6s_ease-in-out]">
                                 Prêt à débattre !
                             </h2>
@@ -577,7 +578,7 @@ export default function Debate() {
                             disabled={isStreaming || messages.length === 0 || isDebateEnded}
                             className="px-4 py-2 bg-tint hover:bg-tint border border-border hover:border-border text-foreground hover:text-foreground rounded-lg transition-[transform,opacity] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
                         >
-                            🏳️ Terminer le débat
+                            <FlagIcon /> Terminer le débat
                         </button>
                     </div>
                 </div>
@@ -590,7 +591,7 @@ export default function Debate() {
                             {/* Header */}
                             <div className="text-center space-y-4">
                                 <div className="text-6xl">
-                                    {analysis.winner === "user" ? "🏆" : analysis.winner === "ai" ? "🤖" : "🤝"}
+                                    {analysis.winner === "user" ? <TrophyIcon className="size-16" /> : analysis.winner === "ai" ? <BotIcon className="size-16" /> : <HandshakeIcon className="size-16" />}
                                 </div>
                                 <h2 className="text-3xl font-bold text-foreground">
                                     {analysis.winner === "user"
@@ -604,7 +605,7 @@ export default function Debate() {
 
                             {/* Overall Assessment */}
                             <div className="bg-surface border border-border rounded-xl p-6">
-                                <h3 className="text-xl font-bold text-foreground mb-3">📊 Bilan général</h3>
+                                <h3 className="text-xl font-bold text-foreground mb-3"><ChartIcon /> Bilan général</h3>
                                 <p className="text-foreground leading-relaxed">{analysis.overallAssessment}</p>
                             </div>
 
@@ -613,7 +614,7 @@ export default function Debate() {
                                 {/* User Performance */}
                                 <div className="space-y-4">
                                     <div className="bg-tint border border-success rounded-xl p-5">
-                                        <h3 className="text-lg font-bold text-foreground mb-3">💪 Tes points forts</h3>
+                                        <h3 className="text-lg font-bold text-foreground mb-3"><DumbbellIcon /> Tes points forts</h3>
                                         <ul className="space-y-2">
                                             {withOccurrenceKeys(analysis.userStrengths, value => value).map(({ value: strength, key }) => (
                                                 <li key={key} className="text-foreground text-sm flex items-start gap-2">
@@ -625,7 +626,7 @@ export default function Debate() {
                                     </div>
                                     {analysis.userWeaknesses.length > 0 && (
                                         <div className="bg-tint border border-danger rounded-xl p-5">
-                                            <h3 className="text-lg font-bold text-foreground mb-3">📉 Points à améliorer</h3>
+                                            <h3 className="text-lg font-bold text-foreground mb-3"><TrendingDownIcon /> Points à améliorer</h3>
                                             <ul className="space-y-2">
                                                 {withOccurrenceKeys(analysis.userWeaknesses, value => value).map(({ value: weakness, key }) => (
                                                     <li key={key} className="text-foreground text-sm flex items-start gap-2">
@@ -641,7 +642,7 @@ export default function Debate() {
                                 {/* AI Performance */}
                                 <div className="space-y-4">
                                     <div className="bg-tint border border-border rounded-xl p-5">
-                                        <h3 className="text-lg font-bold text-foreground mb-3">🤖 Points forts de l’IA</h3>
+                                        <h3 className="text-lg font-bold text-foreground mb-3"><BotIcon /> Points forts de l’IA</h3>
                                         <ul className="space-y-2">
                                             {withOccurrenceKeys(analysis.aiStrengths, value => value).map(({ value: strength, key }) => (
                                                 <li key={key} className="text-foreground text-sm flex items-start gap-2">
@@ -653,7 +654,7 @@ export default function Debate() {
                                     </div>
                                     {analysis.aiWeaknesses.length > 0 && (
                                         <div className="bg-tint border border-danger rounded-xl p-5">
-                                            <h3 className="text-lg font-bold text-foreground mb-3">📉 Points faibles de l’IA</h3>
+                                            <h3 className="text-lg font-bold text-foreground mb-3"><TrendingDownIcon /> Points faibles de l’IA</h3>
                                             <ul className="space-y-2">
                                                 {withOccurrenceKeys(analysis.aiWeaknesses, value => value).map(({ value: weakness, key }) => (
                                                     <li key={key} className="text-foreground text-sm flex items-start gap-2">
@@ -670,7 +671,7 @@ export default function Debate() {
                             {/* Key Moments */}
                             {analysis.keyMoments.length > 0 && (
                                 <div className="bg-surface border border-border rounded-xl p-6">
-                                    <h3 className="text-xl font-bold text-foreground mb-4">⚡ Moments clés</h3>
+                                    <h3 className="text-xl font-bold text-foreground mb-4"><ZapIcon /> Moments clés</h3>
                                     <ul className="space-y-3">
                                         {withOccurrenceKeys(analysis.keyMoments, value => value).map(({ value: moment, key }, idx) => (
                                             <li key={key} className="text-foreground flex items-start gap-3">
@@ -725,7 +726,7 @@ export default function Debate() {
             {error && (
                 <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-4 right-4 z-[var(--z-toast)] bg-tint border border-primary rounded-xl p-4 text-foreground shadow-lg md:left-auto md:right-6 md:max-w-md">
                     <div className="flex items-start gap-3">
-                        <span className="text-xl">⚠️</span>
+                        <AlertIcon className="size-6 shrink-0" />
                         <div className="flex-1">{error}</div>
                         <button type="button"
                             onClick={() => setError(null)}

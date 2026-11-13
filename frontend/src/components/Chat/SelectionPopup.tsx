@@ -1,3 +1,4 @@
+import { NoteIcon, HelpIcon } from '../ui/NavigationIcons'
 import type React from "react";
 
 type Props = {
@@ -19,13 +20,13 @@ export default function SelectionPopup({ selected, addNote, askDoubt, popupRef }
         onClick={() => addNote(selected.text)}
         className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground px-3 py-1.5 rounded-lg text-xs transition-[transform,opacity] duration-200 active:scale-95 mr-1"
       >
-        📝 Enregistrer une note
+        <span className="inline-flex items-center gap-1.5 [&>svg]:size-4"><NoteIcon />Enregistrer une note</span>
       </button>
       <button type="button"
         onClick={() => askDoubt(selected.text)}
         className="bg-surface hover:bg-tint border border-border hover:border-border text-foreground px-3 py-1.5 rounded-lg text-xs transition-[transform,opacity] duration-200 active:scale-95 ml-1"
       >
-        ❓ Demander une explication
+        <span className="inline-flex items-center gap-1.5 [&>svg]:size-4"><HelpIcon />Demander une explication</span>
       </button>
     </div>
   );

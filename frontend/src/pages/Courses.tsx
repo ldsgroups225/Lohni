@@ -1,3 +1,4 @@
+import { HelpIcon, ClipboardIcon, DebateIcon, HeadphonesIcon, CalendarIcon } from '../components/ui/NavigationIcons'
 import { usePersistentDetails } from '../lib/usePersistentDetails'
 import { withOccurrenceKeys } from '../lib/occurrenceKeys'
 import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
@@ -179,14 +180,14 @@ export default function Courses() {
       <details className="rounded-2xl border border-border p-5" {...more}>
         <summary className="cursor-pointer font-semibold text-foreground">Plus</summary>
         <nav aria-label="Autres outils" className="mt-3 space-y-2">
-          {[
-            ['/exam', '📝', 'Examens', 'Entraîne-toi sur des sujets d’examen'],
-            ['/debate', '🗣️', 'Débat', 'Défends ton point de vue face à l’IA'],
-            ['/tools', '🎧', 'Podcast et outils', 'Podcast, fiches de cours, audio en texte'],
-            ['/planner', '🗓️', 'Planning', 'Organise tes devoirs et tes priorités'],
-            ['/quiz', '❓', 'Quiz libre', 'Teste-toi sur le sujet de ton choix'],
-          ].map(([to, icon, label, hint]) => <Link key={to} to={to} className="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-foreground">
-            <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-lg bg-tint text-xl">{icon}</span>
+          {([
+            ['/exam', ClipboardIcon, 'Examens', 'Entraîne-toi sur des sujets d’examen'],
+            ['/debate', DebateIcon, 'Débat', 'Défends ton point de vue face à l’IA'],
+            ['/tools', HeadphonesIcon, 'Podcast et outils', 'Podcast, fiches de cours, audio en texte'],
+            ['/planner', CalendarIcon, 'Planning', 'Organise tes devoirs et tes priorités'],
+            ['/quiz', HelpIcon, 'Quiz libre', 'Teste-toi sur le sujet de ton choix'],
+          ] satisfies [string, () => ReactNode, string, string][]).map(([to, Icon, label, hint]) => <Link key={to} to={to} className="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-foreground">
+            <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-lg bg-tint text-xl"><Icon /></span>
             <span className="min-w-0 flex-1"><span className="block font-semibold">{label}</span><span className="block text-sm text-muted">{hint}</span></span>
             <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="m9 5 7 7-7 7" /></svg>
           </Link>)}
