@@ -7,6 +7,7 @@ import { confirmDialog } from '../lib/confirm'
 import { listDelay } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { Progress } from '../components/ui/Progress'
+import MasteryBadge from '../components/ui/MasteryBadge'
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
@@ -144,7 +145,7 @@ export default function Courses() {
           {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: listDelay(index) }} className={`${animateEntry ? 'motion-list ' : ''}space-y-4 rounded-2xl border border-border bg-surface p-5`}>
             <div className="flex items-start gap-2">
               <h3 className="min-w-0 flex-1 break-words text-lg font-bold text-foreground">{chapter.title}</h3>
-              <span className={`rounded-xl px-3 py-1 text-xs font-semibold ${chapter.status === 'Solide' ? 'bg-success/15 text-success' : 'bg-primary/10 text-primary'}`}>{chapter.status}</span>
+              <MasteryBadge status={chapter.status} />
               <details className="relative">
                 <summary aria-label={`Options du chapitre ${chapter.title}`} className="grid size-11 cursor-pointer list-none place-items-center rounded-xl text-xl text-muted focus-visible:outline-2 focus-visible:outline-primary">⋮</summary>
                 <div className="absolute right-0 z-10 w-max rounded-xl border border-border bg-surface p-2 shadow-lg">
