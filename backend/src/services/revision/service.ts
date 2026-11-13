@@ -295,6 +295,7 @@ export class RevisionService {
         await this.writeExam(context, { id: previous?.id, title: 'Examen', date: input.examDate, subjects: input.subjects, chapterIds: [] })
       }
       await this.refreshSessions(context.deviceId)
+      await this.refreshSessions(context.deviceId, true)
       const profile = await this.requireProfile(context.deviceId)
       profile.examDate = (await this.nextExam(context))?.date
       return profile

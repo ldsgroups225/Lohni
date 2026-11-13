@@ -846,3 +846,19 @@ test('un examen ajouté actualise la séance du jour non commencée', async () =
   expect((await service.getPlan(context())).days[0].items).toEqual([])
   expect((await service.getSession(context())).cards).toEqual([])
 })
+
+test('une date enregistrée dans le profil actualise la séance non commencée', async () => {
+  await setup(5)
+  expect((await service.getSession(context())).cards).toHaveLength(5)
+  await service.saveProfile(context(), { schoolClass: '3e', subjects: ['Mathématiques'], examDate: context().localDate })
+  expect((await service.getSession(context())).cards).toEqual([])
+})
+
+test('une séance livrée reste utilisable après le recalcul du plan', async () => {
+  await setup(5)
+  const delivered = await service.getSession(context())
+  await service.saveExam(context(), { title: 'Contrôle', date: context().localDate, subjects: ['Mathématiques'] })
+  const answer = { sessionId: delivered.id, cardId: delivered.cards[0].id, position: 0, knew: true, durationMs: 1, answerId: randomUUID() }
+  expect((await service.answer(context(), answer)).position).toBe(1)
+  expect((await service.answer(context(), answer)).position).toBe(1)
+})
