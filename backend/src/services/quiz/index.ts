@@ -90,8 +90,14 @@ async function ask(topicIn: any, sys: string) {
 export async function handleQuiz(topic: string, language: "en" | "fr" = "en"): Promise<QuizItem[]> {
   const french = (prompt: string) => language === "fr" ? `${prompt.replace("plain English", "français")}\nToutes les questions, options et explications doivent être en français.` : prompt
   const parsed = await ask(topic, french(SYS))
-  if (validQuiz(parsed)) return normalizeQuiz(parsed)
+  if (validQuiz(parsed)) {
+    const normalized = normalizeQuiz(parsed)
+    if (validQuiz(normalized)) return normalized
+  }
   const parsed2 = await ask(topic, french(SYS_STRICT))
-  if (!validQuiz(parsed2)) throw new InvalidQuizError("Invalid quiz JSON from model")
-  return normalizeQuiz(parsed2)
+  if (validQuiz(parsed2)) {
+    const normalized = normalizeQuiz(parsed2)
+    if (validQuiz(normalized)) return normalized
+  }
+  throw new InvalidQuizError("Invalid quiz JSON from model")
 }

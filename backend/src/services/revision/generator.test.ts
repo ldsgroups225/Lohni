@@ -128,3 +128,29 @@ test('une panne du fournisseur conserve son message distinct et reste réessayab
   logging.mockRestore()
   await db.close()
 })
+
+test.each([
+  ['option vide', { options: ['Un', 'Deux', ' ', 'Quatre'] }],
+  ['options identiques', { options: ['Un', 'Deux', 'Un', 'Quatre'] }],
+  ['option vide après normalisation', { options: ['Un', 'Deux', '3) ', 'Quatre'] }],
+  ['options identiques après normalisation', { options: ['Un', 'Deux', '3) Un', 'Quatre'] }],
+  ['index fractionnaire', { correct: 1.5 }],
+  ['question vide', { question: ' ' }],
+  ['explication vide', { explanation: ' ' }],
+])('un QCM avec %s est repris puis reste réessayable après épuisement', async (_label, change) => {
+  const db = new SQLiteDatabase(join(directory, `${randomUUID()}.sqlite`))
+  const service = new RevisionService({ db, now: () => new Date('2026-11-13T12:00:00Z'), generateCards })
+  const ctx = context()
+  await service.saveProfile(ctx, { schoolClass: 'terminale', series: 'D', subjects: ['Mathématiques'] })
+  const input = { subject: 'Mathématiques', title: randomUUID() }
+  const invalid = JSON.stringify(JSON.parse(quiz).map((item: object) => ({ ...item, ...change })))
+  model.call.mockResolvedValue({ content: lesson(5) })
+  model.invoke.mockResolvedValueOnce({ content: invalid }).mockResolvedValueOnce({ content: invalid }).mockResolvedValueOnce({ content: invalid }).mockResolvedValueOnce({ content: quiz })
+  await expect(service.generateChapter(ctx, input)).rejects.toThrow('L’IA n’a pas préparé les QCM attendus. Réessaie ce chapitre.')
+  expect(model.invoke).toHaveBeenCalledTimes(2)
+  expect(await service.listChapters(ctx)).toEqual([])
+  await expect(service.generateChapter(ctx, input)).resolves.toMatchObject({ title: input.title })
+  expect(model.invoke).toHaveBeenCalledTimes(4)
+  expect((await service.getHome(ctx))?.totalCards).toBe(10)
+  await db.close()
+})

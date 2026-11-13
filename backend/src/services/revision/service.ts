@@ -49,8 +49,7 @@ export const validUUID = (value: unknown): value is string => typeof value === '
 const revisionCard = (row: { content: string; id: string; chapter_id: string; origin: RevisionCard['origin']; due: string; reviews: number }): RevisionCard =>
   ({ ...JSON.parse(row.content), id: row.id, chapterId: row.chapter_id, origin: row.origin, due: row.due, reviews: row.reviews })
 const validCard = (card: GeneratedCard) => card && nonempty(card.question) && nonempty(card.answer)
-  && (card.kind === 'basic' || (card.kind === 'mcq' && validItem({ ...card, id: 1, hint: '', explanation: card.answer })
-    && Number.isInteger(card.correct) && card.options.every(nonempty) && new Set(card.options).size === card.options.length))
+  && (card.kind === 'basic' || (card.kind === 'mcq' && validItem({ ...card, id: 1, hint: '', explanation: card.answer })))
 const journalXP = (rows: { knew: number; session_complete: number }[]) => rows.reduce((total, row) =>
   total + answerXP(Boolean(row.knew), Boolean(row.session_complete)), 0)
 
