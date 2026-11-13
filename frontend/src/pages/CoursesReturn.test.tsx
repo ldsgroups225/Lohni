@@ -12,7 +12,24 @@ vi.mock('../lib/api', () => ({ revisionAPI: api, revisionPolicy: { minimumSeenRa
 vi.mock('../components/Chat/MarkdownView', () => ({ default: ({ md }: { md: string }) => <span>{md}</span> }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
-test('au retour les cours et Plus ouvert sont affichés avant la revalidation', async () => {
+const outils = (host: HTMLElement) => required(host.querySelector('nav[aria-label="S’entraîner"]'))
+
+test('S’entraîner est visible sans chapitre, avant les chapitres', async () => {
+  localStorage.setItem('lohni-device-id', 'appareil-vide')
+  api.chapters.mockReset().mockResolvedValue([])
+  api.progress.mockReset().mockResolvedValue({ xp: 0, streak: 0 })
+  const router = createMemoryRouter([{ path: '/courses', element: <Courses /> }], { initialEntries: ['/courses'] })
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect([...outils(host).querySelectorAll('a')].map(a => [a.textContent, a.getAttribute('href')])).toEqual([['Examens', '/exam'], ['Quiz', '/quiz'], ['Débat', '/debate'], ['Podcast', '/tools'], ['Planning', '/planner']])
+    expect(host.textContent).toContain('S’entraîner')
+    expect(host.querySelector('details')).toBeNull()
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
+})
+
+test('au retour les cours et S’entraîner sont affichés avant la revalidation', async () => {
   localStorage.setItem('lohni-device-id', 'appareil-a')
   sessionStorage.clear()
   api.chapters.mockResolvedValueOnce([{ id: '1', subject: 'Mathématiques', title: 'Les suites', status: 'En cours', origin: 'ai', mastery: null, seenCards: 0, cards: [], summary: '' }]).mockReturnValue(new Promise(() => {}))
@@ -24,12 +41,11 @@ test('au retour les cours et Plus ouvert sont affichés avant la revalidation', 
     await act(async () => root.render(<RouterProvider router={router} />))
     expect(host.textContent).toContain('Les suites')
     expect(host.querySelector('.motion-list')).not.toBeNull()
-    const details = required([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Plus'))
-    await act(async () => { details.open = true; details.dispatchEvent(new Event('toggle')) })
+    expect(outils(host).compareDocumentPosition(required(host.querySelector('article'))) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     await act(async () => { await router.navigate('/quiz') })
     await act(async () => { await router.navigate(-1) })
     expect(host.textContent).toContain('Les suites')
-    expect([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Plus')?.open).toBe(true)
+    expect(outils(host).querySelectorAll('a')).toHaveLength(5)
     expect(host.textContent).not.toContain('On prépare tes cours…')
     expect(host.querySelector('.motion-list')).toBeNull()
   } finally {
