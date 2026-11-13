@@ -144,3 +144,19 @@ test('le compte à rebours ouvre l’examen dans le plan', async () => {
     expect(host.querySelector('a[href="/plan#exam-brevet"]')?.textContent).toContain('Brevet dans 3 jours')
   } finally { act(() => root.unmount()); router.dispose(); host.remove() }
 })
+
+test('l’accueil affiche les chapitres et la répartition réelle de la séance', async () => {
+  localStorage.setItem('lohni-device-id', 'accueil-chapitres')
+  api.home.mockResolvedValueOnce({ profile: { schoolClass: '3e' }, state: 'ready', cardCount: 3, reviewCards: 2, newCards: 1, totalCards: 4, estimatedMinutes: 2, daysUntilExam: null })
+  api.chapters.mockResolvedValueOnce([{ id: 'c', subjectId: 's', subject: 'SVT', title: 'Cellules', cards: [{}, {}], seenCards: 1, mastery: 50, status: 'En cours' }] as never)
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Home /> }])
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.textContent).toContain('2 à revoir')
+    expect(host.textContent).toContain('1 nouvelle')
+    expect(host.textContent).toContain('Cellules')
+    expect(host.textContent).toContain('1 carte vue sur 2')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
+})
