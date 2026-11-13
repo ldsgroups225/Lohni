@@ -252,9 +252,13 @@ export class RevisionService {
   private async readPlan(context: RevisionContext): Promise<RevisionPlan> {
     const db = this.dependencies.db
     const profile = await this.requireProfile(context.deviceId)
-    const exams = (await this.readExams(context.deviceId)).map(exam => ({ ...exam, subjects: exam.subjects.filter(subject => profile.subjects.includes(subject)) }))
+    const savedExams = await this.readExams(context.deviceId)
     const settings = await db.get('SELECT daily_minutes, rest_days FROM revision_settings WHERE device_id = ?', [context.deviceId])
     const chapters = (await this.readChapters(context.deviceId)).filter(chapter => profile.subjects.includes(chapter.subject))
+    const exams = savedExams.map(exam => {
+      const subjects = exam.subjects.filter(subject => profile.subjects.includes(subject))
+      return { ...exam, subjects, chapterIds: exam.chapterIds.filter(id => chapters.some(chapter => chapter.id === id && subjects.includes(chapter.subject))) }
+    })
     const introduced = await db.all(`SELECT DISTINCT j.card_id FROM revision_journal j WHERE j.device_id = ? AND j.local_date = ? AND json_extract(j.scheduling, '$.log.state') = 0`, [context.deviceId, context.localDate])
     const reviewed = new Set((await db.all('SELECT card_id FROM revision_journal WHERE device_id = ? AND local_date = ?', [context.deviceId, context.localDate])).map(row => row.card_id))
     const introducedIds = new Set(introduced.map(row => row.card_id))
@@ -266,18 +270,16 @@ export class RevisionService {
           dueByDate[date] = (dueByDate[date] ?? 0) + 1
         }
         return { id: chapter.id, title: chapter.title, subject: chapter.subject,
-          unseenCards: chapter.cards.filter(card => card.reviews === 0 || introducedIds.has(card.id)).length, dueByDate }
+          unseenCards: chapter.cards.filter(card => card.reviews === 0 || introducedIds.has(card.id)).length, hasCards: chapter.cards.length > 0, dueByDate }
       }) })
     const today = plan.days[0]
     if (today) {
-      const missing = new Set(exams.filter(exam => exam.date >= context.localDate).flatMap(exam => exam.subjects.filter(subject => !chapters.some(chapter => chapter.subject === subject && chapter.cards.length > 0 && (!exam.chapterIds.length || exam.chapterIds.includes(chapter.id))))))
-      today.actions = [...missing].map(subject => ({ kind: 'addChapter', subject }))
       for (const item of today.items) {
         const chapter = chapters.find(entry => entry.id === item.chapterId)!
         item.newCards = Math.max(0, item.newCards - chapter.cards.filter(card => introducedIds.has(card.id)).length)
-        item.minutes = (item.newCards + item.dueCards) * policy.sessionMinutes / policy.sessionCards
+        item.minutes = Math.ceil((item.newCards + item.dueCards) * policy.sessionMinutes / policy.sessionCards)
       }
-      today.minutes = today.items.reduce((sum, item) => sum + item.minutes, 0)
+      today.minutes = Math.ceil(today.items.reduce((sum, item) => sum + item.newCards + item.dueCards, 0) * policy.sessionMinutes / policy.sessionCards)
     }
     return plan
   }

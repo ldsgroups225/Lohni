@@ -30,7 +30,7 @@ test('le premier chapitre fournit dix cartes IA et un accueil prêt à lancer la
   await service.saveProfile(context, { schoolClass: '3e', subjects: ['Mathématiques', 'Français'], examDate: '2026-11-19' })
   await service.generateChapter(context, { subject: 'Mathématiques', title: 'Les fractions' })
   const home = await service.getHome(context)
-  expect(home).toMatchObject({ daysUntilExam: 10, cardCount: 1, estimatedMinutes: 1, state: 'ready', totalCards: 10 })
+  expect(home).toMatchObject({ daysUntilExam: 10, cardCount: 3, estimatedMinutes: 3, state: 'ready', totalCards: 10 })
   expect((await service.getSession(context)).cards.every(card => card.origin === 'ai')).toBe(true)
 })
 

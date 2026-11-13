@@ -3,7 +3,7 @@ export type RevisionExam = { id: string; title: string; date: string; subjects: 
 
 export type PlanInput = {
   today: string; exams: RevisionExam[]
-  chapters: { id: string; title: string; subject: string; unseenCards: number; dueByDate: Record<string, number> }[]
+  chapters: { id: string; title: string; subject: string; unseenCards: number; dueByDate: Record<string, number>; hasCards?: boolean }[]
   dailyMinutes: number; restDays: number[]
   capacity?: (date: string, baseCards: number) => number; subjectOrder?: (date: string) => string[]
 }
@@ -12,7 +12,7 @@ export type PlanDay = { date: string; rest: boolean; capacityCards: number; minu
 export type RevisionPlan = { today: string; exams: { id: string; title: string; date: string; overloaded: boolean }[]; days: PlanDay[] }
 
 const nextDate = (date: string) => new Date(Date.parse(date) + 86400000).toISOString().slice(0, 10)
-const minutes = (cards: number) => cards * policy.sessionMinutes / policy.sessionCards
+const minutes = (cards: number) => Math.ceil(cards * policy.sessionMinutes / policy.sessionCards)
 
 export function buildPlan(input: PlanInput): RevisionPlan {
   const exams = input.exams.filter(exam => exam.date >= input.today).sort((a, b) => a.date.localeCompare(b.date))
@@ -32,6 +32,9 @@ export function buildPlan(input: PlanInput): RevisionPlan {
     return value
   }
   const used = (day: PlanDay) => day.items.reduce((sum, entry) => sum + entry.dueCards + entry.newCards, 0)
+  const newCount = (day: PlanDay) => day.items.reduce((sum, entry) => sum + entry.newCards, 0)
+  const maxNew = Math.floor(policy.maxNewCards * input.dailyMinutes / policy.defaultDailyMinutes)
+  const room = (day: PlanDay) => Math.max(0, Math.min(day.capacityCards - used(day), maxNew - newCount(day)))
   for (const chapter of input.chapters) for (const [date, count] of Object.entries(chapter.dueByDate)) {
     const day = result.days.find(day => !day.rest && day.date >= (date < input.today ? input.today : date))
     if (day) item(day, chapter).dueCards += count
@@ -45,27 +48,42 @@ export function buildPlan(input: PlanInput): RevisionPlan {
       for (let index = 0; index < eligible.length; index++) {
         const day = eligible[index]
         const share = Math.ceil(remaining / (eligible.length - index))
-        remaining -= share
         let excess = share
         for (const target of [day, ...eligible.slice(0, index).reverse()]) {
-          const count = Math.min(excess, Math.max(0, target.capacityCards - used(target)))
+          const count = Math.min(excess, room(target))
           if (count) item(target, chapter).newCards += count
           excess -= count
+          remaining -= count
         }
-        if (excess) { item(day, chapter).newCards += excess; result.exams.find(entry => entry.id === exam.id)!.overloaded = true }
       }
       if (remaining) result.exams.find(entry => entry.id === exam.id)!.overloaded = true
     } else {
       let remaining = chapter.unseenCards
       for (const day of eligible) {
         const already = day.items.filter(entry => !entry.examId).reduce((sum, entry) => sum + entry.newCards, 0)
-        const count = Math.min(remaining, Math.max(0, policy.defaultNewCards - already), Math.max(0, day.capacityCards - used(day)))
+        const count = Math.min(remaining, Math.max(0, policy.defaultNewCards - already), room(day))
         if (count) item(day, chapter).newCards += count
         remaining -= count
       }
     }
   }
-  const missing = new Set(exams.flatMap(exam => exam.subjects.filter(subject => !input.chapters.some(chapter => chapter.subject === subject && covered(chapter, exam) && (chapter.unseenCards || Object.values(chapter.dueByDate).some(Boolean))))))
+  for (let index = 0; index < result.days.length; index++) {
+    const day = result.days[index]
+    if (day.rest) continue
+    let needed = Math.min(policy.minNewCards - newCount(day), room(day))
+    for (const later of result.days.slice(index + 1)) {
+      for (const entry of later.items) {
+        if (needed <= 0) break
+        const chapter = chapters.find(value => value.id === entry.chapterId)
+        if (!chapter) continue
+        const count = Math.min(needed, entry.newCards)
+        if (count) { entry.newCards -= count; item(day, chapter).newCards += count; needed -= count }
+      }
+      if (needed <= 0) break
+    }
+  }
+  for (const day of result.days) day.items = day.items.filter(entry => entry.newCards || entry.dueCards)
+  const missing = new Set(exams.flatMap(exam => exam.subjects.filter(subject => !input.chapters.some(chapter => chapter.subject === subject && covered(chapter, exam) && (chapter.hasCards ?? (chapter.unseenCards > 0 || Object.values(chapter.dueByDate).some(Boolean)))))))
   if (result.days[0]) result.days[0].actions = [...missing].map(subject => ({ kind: 'addChapter', subject }))
   for (const day of result.days) {
     const order = input.subjectOrder?.(day.date) ?? []

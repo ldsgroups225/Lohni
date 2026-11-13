@@ -775,8 +775,7 @@ async function sharedRevisionRead<T>(path: string, read: () => Promise<T>): Prom
   revisionReads.set(key, request)
   return request
 }
-function cachedRevisionRead<T>(path: string): Promise<T> {
-  return sharedRevisionRead(path, async () => {
+async function cachedRevisionReadSource<T>(path: string): Promise<{ value: T; offline: boolean }> {
     await syncRevisionAnswers()
     const device = cachedDevice()
     const version = currentRevisionCacheVersion()
@@ -793,12 +792,14 @@ function cachedRevisionRead<T>(path: string): Promise<T> {
           state.cacheDates[path] = day
         }
       })
-      return result
+      return { value: result, offline: false }
     } catch (error) {
-      if (error instanceof RevisionConnectionError && cached !== undefined) return cached as T
+      if (error instanceof RevisionConnectionError && cached !== undefined) return { value: cached as T, offline: true }
       throw error
     }
-  })
+}
+function cachedRevisionRead<T>(path: string): Promise<T> {
+  return sharedRevisionRead(path, async () => (await cachedRevisionReadSource<T>(path)).value)
 }
 async function revisionSession(continueSession = false): Promise<RevisionSession> {
   await syncRevisionAnswers();
@@ -903,7 +904,7 @@ export const revisionAPI = {
     }
     return home;
   },
-  plan: () => cachedRevisionRead<RevisionPlan>('/plan'),
+  plan: () => sharedRevisionRead('/plan:source', async () => { const { value, offline } = await cachedRevisionReadSource<RevisionPlan>('/plan'); return { plan: value, offline }; }),
   progress: () => cachedRevisionRead<RevisionProgress>('/progress'),
   exams: () => cachedRevisionRead<RevisionExam[]>('/exams'),
   saveExam: (exam: Omit<RevisionExam, 'id'> & { id?: string }) => revisionMutation<RevisionExam>(exam.id ? `/exams/${encodeURIComponent(exam.id)}` : '/exams', exam.id ? 'PUT' : 'POST', exam),

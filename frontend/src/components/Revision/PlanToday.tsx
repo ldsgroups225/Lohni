@@ -6,11 +6,12 @@ import { Card } from '../ui/Card'
 export const frenchDate = (date: string) => new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`))
 
 export function PlanToday() {
-  const [plan, setPlan] = useState<RevisionPlan | null>(null)
-  useEffect(() => { let active = true; void revisionAPI.plan().then(value => { if (active) setPlan(value) }).catch(() => {}); return () => { active = false } }, [])
+  const [result, setResult] = useState<{ plan: RevisionPlan; offline: boolean } | null>(null)
+  const plan = result?.plan ?? null
+  useEffect(() => { let active = true; void revisionAPI.plan().then(value => { if (active) setResult(value) }).catch(() => {}); return () => { active = false } }, [])
   if (!plan) return null
   return <Card className="space-y-3 p-5"><h2 className="text-xl font-semibold">Aujourd’hui</h2>
-    <p className="text-sm text-muted">Plan du {frenchDate(plan.today)}</p>
+    {result?.offline && <p className="text-sm text-muted">Plan du {frenchDate(plan.today)}</p>}
     {!plan.exams.length ? <Link className="underline" to="/me">Ajoute une date d’examen</Link> : <>
       {plan.exams.filter(exam => exam.overloaded).map(exam => <p key={exam.id}>Plan trop chargé pour {exam.title}</p>)}
       {plan.days[0]?.rest && <p>Repos</p>}
