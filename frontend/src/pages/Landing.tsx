@@ -88,14 +88,15 @@ export default function Landing() {
       return;
     }
 
+    const question = `${q}\n\nRéponds de façon ${responseLength.toLowerCase()}.`;
     setBusy(true);
     try {
       if (stagedFile) {
-        const { chatId } = await chatMultipart(q || " ", [stagedFile]);
+        const { chatId } = await chatMultipart(question, [stagedFile]);
         navigate(`/chat?chatId=${encodeURIComponent(chatId)}&q=${encodeURIComponent(q)}`);
         return;
       }
-      const r = await chatJSON({ q });
+      const r = await chatJSON({ q: question });
       navigate(`/chat?chatId=${encodeURIComponent(r.chatId)}&q=${encodeURIComponent(q)}`);
     } catch {
       adaptiveToast.error("Impossible de démarrer la discussion", "Impossible de joindre le Tuteur. Réessaie d’envoyer ta question.");

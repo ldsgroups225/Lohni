@@ -22,7 +22,7 @@ test('les suggestions utilisent le vrai chapitre fragile et transmettent son con
     expect(host.textContent).not.toContain('cartes fragiles')
     const button = required([...host.querySelectorAll('button')].find(item => item.textContent?.includes('Consolider Cellules')))
     await act(async () => button.click())
-    expect(api.chatJSON).toHaveBeenCalledWith({ q: 'Aide-moi à consolider Cellules en SVT' })
+    expect(api.chatJSON).toHaveBeenCalledWith({ q: 'Aide-moi à consolider Cellules en SVT\n\nRéponds de façon moyenne.' })
     expect(host.textContent).toContain('Discussion ouverte')
   } finally { act(() => root.unmount()); router.dispose(); host.remove() }
 })
