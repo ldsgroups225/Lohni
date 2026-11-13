@@ -112,7 +112,7 @@ test('les flèches du clavier répondent seulement une fois la réponse vue', as
 
 test('la carte est un groupe étiqueté dont la face cachée est masquée aux lecteurs d’écran', async () => {
   await render({ revealed: false })
-  expect(card().tagName).toBe('FIELDSET'); expect(card().getAttribute('aria-label')).toBe('Question')
+  expect(card().getAttribute('role')).toBe('group'); expect(card().getAttribute('aria-label')).toBe('Question')
   const faces = [...host.querySelectorAll('[aria-hidden]')].map(face => face.getAttribute('aria-hidden'))
   expect(faces).toEqual(['false', 'true'])
 })

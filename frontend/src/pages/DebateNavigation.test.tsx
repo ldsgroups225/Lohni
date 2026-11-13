@@ -31,7 +31,12 @@ test('retour ferme le bilan et permet de relire le debat', async () => {
   const router = createMemoryRouter([{ path: '/debate', element: <Debate /> }], { initialEntries: ['/debate?debateId=1'] })
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    expect(host.querySelector('textarea')?.placeholder).toBe('Écris ton argument…')
+    const textarea = required(host.querySelector('textarea'))
+    expect(textarea.placeholder).toBe('Écris ton argument…')
+    Object.defineProperty(textarea, 'scrollHeight', { value: 1000, configurable: true })
+    await act(async () => { const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set; setter?.call(textarea, 'Un argument'); textarea.dispatchEvent(new Event('input', { bubbles: true })) })
+    expect(Number.parseInt(textarea.style.height, 10)).toBeLessThanOrEqual(128)
+    expect(required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Argumenter'))).className).toContain('self-start')
     await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Terminer le débat'))).click())
     await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Terminer')).click())
     expect(host.textContent).toContain('Analyse du débat')
