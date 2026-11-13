@@ -9,6 +9,7 @@ import Courses from './pages/Courses'
 import ImportCourse from './pages/ImportCourse' ;
 
 // Secondary tools load on demand.
+const Plan = lazy(() => import('./pages/Plan'))
 const Chat = lazy(() => import('./pages/Chat'))
 const Quiz = lazy(() => import('./pages/Quiz'))
 const Tools = lazy(() => import('./pages/Tools'))
@@ -29,6 +30,7 @@ export const routes = createRoutesFromElements(
     <Route path="debate" element={<Debate />} />
     <Route path="cards" element={<Navigate to="/courses" replace />} />
     <Route path="me" element={<Profile />} />
+    <Route path="plan" element={<Plan />} />
     <Route path="revision" element={<Revision />} />
     <Route path="courses" element={<Courses />} />
     <Route path="import" element={<ImportCourse />} />

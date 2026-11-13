@@ -41,7 +41,7 @@ test('modifier son profil remplace ses choix sans effacer les cours ni la progre
   const session = await service.getSession(context)
   await service.answer(context, { sessionId: session.id, cardId: session.cards[0].id, position: 0, knew: true, durationMs: 1000 })
   expect(await service.saveProfile(context, { schoolClass: 'terminale', series: 'A1', subjects: ['Français'] }))
-    .toEqual({ schoolClass: 'terminale', series: 'A1', subjects: ['Français'], examDate: undefined })
+    .toEqual({ schoolClass: 'terminale', series: 'A1', subjects: ['Français'], examDate: '2027-06-01' })
   expect(await service.listChapters(context)).toHaveLength(2)
   expect(await service.getProgress(context)).toMatchObject({ xp: 10, subjects: [{ name: 'Français' }] })
   const remaining = await service.getSession(context)

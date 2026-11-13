@@ -179,6 +179,65 @@ test('le démarrage et les lectures partagent la synchronisation des réponses',
   await vi.waitFor(() => expect(api.revisionSyncStatus().pending).toBe(2))
 })
 
+test('hors ligne, le compte à rebours utilise les examens en cache et ignore les examens passés', async () => {
+  const { invalidateRevisionCache } = await import('./cachedDevice'); invalidateRevisionCache()
+  const today = new Date(); const day = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-')
+  const future = new Date(`${day}T00:00:00Z`); future.setUTCDate(future.getUTCDate() + 3)
+  const past = new Date(`${day}T00:00:00Z`); past.setUTCDate(past.getUTCDate() - 1)
+  const profile = { schoolClass: '3e', subjects: ['Mathématiques'], examDate: '2099-01-01' }
+  entries.set(offlineKey, JSON.stringify({ pending: [], cache: { '/profile': profile, '/exams': [
+    { id: 'past', title: 'Ancien', date: past.toISOString().slice(0, 10), subjects: ['Mathématiques'], chapterIds: [] },
+    { id: 'next', title: 'Brevet', date: future.toISOString().slice(0, 10), subjects: ['Mathématiques'], chapterIds: [] },
+  ] }, session: { id: 's', localDate: day, cards: [], position: 0, complete: true } }))
+  vi.stubGlobal('navigator', { onLine: false, locks: { request: async (_name: string, save: () => void) => save() } })
+  expect(await api.revisionAPI.home()).toMatchObject({ nextExam: { id: 'next', title: 'Brevet' }, daysUntilExam: 3 })
+  vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } })
+})
+
+test('le plan distingue une réponse en ligne d’une copie de secours', async () => {
+  const plan = { today: '2026-11-09', exams: [], days: [] }
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: true, data: plan }), { headers: { 'Content-Type': 'application/json' } })))
+  expect(await api.revisionAPI.plan()).toEqual({ plan, offline: false })
+  vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('offline') }))
+  expect(await api.revisionAPI.plan()).toEqual({ plan, offline: true })
+})
+
+test('le dernier plan reste disponible hors ligne sans modifier la file de réponses', async () => {
+  const plan = { today: '2026-11-09', exams: [], days: [] }
+  entries.set(offlineKey, JSON.stringify({ pending: [{ localDate: '2026-11-09', answer: { answerId: 'en-attente' } }], cache: { '/plan': plan }, cacheDates: { '/plan': '2026-11-09' } }))
+  vi.stubGlobal('navigator', { onLine: false, locks: { request: async (_name: string, save: () => void) => save() } })
+  try {
+    await expect(api.revisionAPI.plan()).resolves.toEqual({ plan, offline: true })
+    expect(JSON.parse(required(entries.get(offlineKey))).pending).toHaveLength(1)
+  } finally { vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } }) }
+})
+
+test('les réponses d’examen préservent les positions de la séance quotidienne en cache', async () => {
+  vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } })
+  const date = new Date()
+  const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const daily = { id: 'daily', localDate, cards: [{ id: 'card' }, { id: 'other' }], position: 0, complete: false, repeated: [], elapsedMs: 0, earnedXP: 0 }
+  entries.set(offlineKey, JSON.stringify({ session: daily, pending: [], cache: {} }))
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: true, data: { ...daily, id: 'exam' } }), { headers: { 'Content-Type': 'application/json' } })))
+  await api.revisionAPI.examAnswer({ sessionId: 'exam', cardId: 'card', position: 0, knew: true, durationMs: 1 })
+  const saved = JSON.parse(required(entries.get(offlineKey)))
+  expect(saved.pending).toEqual([])
+  expect(saved.session.id).toBe('daily')
+  expect(saved.session.cards.map((card: { id: string }) => card.id)).toEqual(['card', 'other'])
+})
+
+test('plusieurs réponses en attente sont synchronisées dans l’ordre', async () => {
+  queueTwoAnswers()
+  const replayed: string[] = []
+  vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+    replayed.push(JSON.parse(init.body as string).answerId)
+    return new Response(JSON.stringify({ ok: true, data: { id: 'current', position: 1 } }), { headers: { 'Content-Type': 'application/json' } })
+  }))
+  await api.syncRevisionAnswers()
+  expect(replayed).toEqual(['expired', 'next'])
+  expect(api.revisionSyncStatus().pending).toBe(0)
+})
+
 test('un contexte non sécurisé affiche le message HTTPS avant toute requête', async () => {
   entries.clear()
   vi.stubGlobal('crypto', {})
@@ -187,3 +246,8 @@ test('un contexte non sécurisé affiche le message HTTPS avant toute requête',
   expect(fetch).not.toHaveBeenCalled()
   vi.unstubAllGlobals()
 })
+
+
+
+
+

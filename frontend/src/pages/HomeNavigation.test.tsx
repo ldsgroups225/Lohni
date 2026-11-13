@@ -4,7 +4,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
-const api = vi.hoisted(() => ({ home: vi.fn(), chapters: vi.fn(async () => []), progress: vi.fn(async (): Promise<unknown> => null), profile: vi.fn(), saveProfile: vi.fn() }))
+const api = vi.hoisted(() => ({ timetable: async () => [], home: vi.fn(), plan: vi.fn(async () => ({ plan: { today: '2026-11-09', exams: [], days: [] }, offline: false })), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), progress: vi.fn(async (): Promise<unknown> => null), profile: vi.fn(), saveProfile: vi.fn() }))
 vi.mock('../lib/api', () => ({ revisionAPI: api, revisionDeviceId: () => 'device' }))
 vi.mock('../components/Revision/Onboarding', () => ({ default: () => <p>Onboarding</p> }))
 import Home from './Home'
@@ -131,4 +131,16 @@ test('un accueil local du jour reste visible pendant la mise à jour', async () 
     expect(host.textContent).toContain('2 cartes')
     expect(host.textContent).not.toContain('Onboarding')
   } finally { act(() => root.unmount()); host.remove(); router.dispose(); localStorage.removeItem('lohni-device-id'); invalidateRevisionCache() }
+})
+
+test('le compte à rebours ouvre l’examen dans le plan', async () => {
+  api.home.mockResolvedValueOnce({ profile: { schoolClass: '3e' }, state: 'empty', cardCount: 0, totalCards: 0, daysUntilExam: 3, nextExam: { id: 'brevet', title: 'Brevet', date: '2026-11-12' } })
+  api.progress.mockResolvedValue(null)
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Home /> }])
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.querySelector('a[href="/plan#exam-brevet"]')?.textContent).toContain('Brevet dans 3 jours')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove() }
 })

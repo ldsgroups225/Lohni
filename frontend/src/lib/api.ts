@@ -1,3 +1,4 @@
+import type { RevisionPlan } from '../../../backend/src/services/revision/plan';
 import { cachedDevice, currentRevisionCacheVersion, invalidateRevisionCache, rememberRevisionSnapshot } from "./cachedDevice";
 import { env } from "../config/env";
 import { REVISION_POLICY as revisionPolicy } from "../../../backend/src/services/revision/policy";
@@ -626,12 +627,15 @@ export function err(e: unknown) {
 
 export { revisionPolicy };
 
+export type RevisionExam = { id: string; title: string; date: string; subjects: string[]; chapterIds: string[] };
 export type RevisionProfile = { schoolClass: string; series?: string; subjects: string[]; examDate?: string };
+export type RevisionSettings = { dailyMinutes: number; restDays: number[] };
 export type RevisionCard = {
   id: string; chapterId: string; kind: 'basic' | 'mcq'; question: string; answer: string;
   options?: string[]; correct?: number; origin: 'ai' | 'import'; due: string; reviews: number;
 };
 export type RevisionSession = {
+  kind?: 'exam' | 'express';
   id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number;
   summary?: {
     quiz: { total: number; correct: number };
@@ -652,7 +656,7 @@ export type RevisionCardInput = { kind: 'basic'; question: string; answer: strin
   kind: 'mcq'; question: string; answer: string; options: string[]; correct: number;
 };
 export type RevisionHome = {
-  profile: RevisionProfile; daysUntilExam: number | null; totalCards: number;
+  profile: RevisionProfile; nextExam: Pick<RevisionExam, 'id' | 'title' | 'date'> | null; daysUntilExam: number | null; totalCards: number;
   cardCount: number; estimatedMinutes: number; moreCards: boolean; started: boolean; state: 'ready' | 'done' | 'empty';
 };
 
@@ -772,14 +776,13 @@ async function sharedRevisionRead<T>(path: string, read: () => Promise<T>): Prom
   revisionReads.set(key, request)
   return request
 }
-function cachedRevisionRead<T>(path: string): Promise<T> {
-  return sharedRevisionRead(path, async () => {
+async function cachedRevisionReadSource<T>(path: string): Promise<{ value: T; offline: boolean }> {
     await syncRevisionAnswers()
     const device = cachedDevice()
     const version = currentRevisionCacheVersion()
     const day = revisionLocalDate()
     const saved = readOffline()
-    const cached = path === '/profile' || (saved.cacheDates?.[path] === day && !saved.pending.length) ? saved.cache[path] : undefined
+    const cached = (path === '/profile' || path === '/exams' || path === '/plan') || (saved.cacheDates?.[path] === day && !saved.pending.length) ? saved.cache[path] : undefined
     try {
       if (!navigator.onLine) throw new RevisionConnectionError('Hors ligne. Connecte-toi pour charger ces données.')
       const result = await revisionRequest<T>(path, 'GET', undefined, undefined, 8000)
@@ -790,12 +793,14 @@ function cachedRevisionRead<T>(path: string): Promise<T> {
           state.cacheDates[path] = day
         }
       })
-      return result
+      return { value: result, offline: false }
     } catch (error) {
-      if (error instanceof RevisionConnectionError && cached !== undefined) return cached as T
+      if (error instanceof RevisionConnectionError && cached !== undefined) return { value: cached as T, offline: true }
       throw error
     }
-  })
+}
+function cachedRevisionRead<T>(path: string): Promise<T> {
+  return sharedRevisionRead(path, async () => (await cachedRevisionReadSource<T>(path)).value)
 }
 async function revisionSession(continueSession = false): Promise<RevisionSession> {
   await syncRevisionAnswers();
@@ -821,6 +826,7 @@ async function revisionSession(continueSession = false): Promise<RevisionSession
     throw error;
   }
 }
+const examAnswerIds = new Map<string, string>();
 async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<RevisionSession> {
   let next: RevisionSession | undefined;
   await updateOffline(state => {
@@ -849,10 +855,16 @@ async function revisionMutation<T>(path: string, method: string, body?: unknown)
   const result = await revisionRequest<T>(path, method, body);
   if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
   if (path === '/profile') invalidateRevisionCache()
-  else invalidateRevisionCache('/home', '/progress', '/chapters')
+  else invalidateRevisionCache('/home', '/progress', '/chapters', '/plan')
   await updateOffline(state => { if (device === cachedDevice()) {
     if (state.cacheDates) { delete state.cacheDates['/home']; delete state.cacheDates['/progress']; }
     if (path === '/profile') { state.cache['/profile'] = result; delete state.cache['/home']; }
+    if (path === '/exams' || path.startsWith('/exams/')) {
+      const exams = (state.cache['/exams'] as RevisionExam[] | undefined) ?? [];
+      const id = path.startsWith('/exams/') ? decodeURIComponent(path.slice('/exams/'.length)) : undefined;
+      state.cache['/exams'] = method === 'DELETE' ? exams.filter(exam => exam.id !== id) : [...exams.filter(exam => exam.id !== (result as RevisionExam).id), result as RevisionExam];
+      delete state.cache['/home'];
+    }
   } });
   if (path === '/profile') {
     if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
@@ -868,7 +880,12 @@ window.setInterval(() => { if (revisionSyncStatus().pending) void syncRevisionAn
 export type RevisionImportedChapter = { id: string; title: string; summary: string; origin: 'import' };
 export type RevisionImportQuota = { remaining: number; resetsAt: string };
 
+export type TimetableBlock = { day: number; start: string; end: string; subject: string };
+
 export const revisionAPI = {
+  timetable: () => revisionRequest<TimetableBlock[]>('/timetable'),
+  saveTimetable: (blocks: TimetableBlock[]) => revisionMutation<TimetableBlock[]>('/timetable', 'PUT', blocks),
+  readTimetablePhotos: (files: File[]) => { const form = new FormData(); files.forEach(file => { form.append('file', file) }); return revisionMutation<{ blocks: TimetableBlock[]; unknownSubjects: string[] }>('/timetable/photos', 'POST', form); },
   home: async () => {
     let home: RevisionHome | null;
     try { home = await cachedRevisionRead<RevisionHome | null>('/home'); }
@@ -876,10 +893,17 @@ export const revisionAPI = {
       const saved = readOffline();
       const profile = saved.cache['/profile'] as RevisionProfile | undefined;
       if (!(error instanceof RevisionConnectionError) || !profile || !saved.session) throw error;
-      home = { profile, daysUntilExam: profile.examDate ? Math.max(0, (Date.parse(profile.examDate) - Date.parse(revisionLocalDate())) / 86400000) : null,
+      home = { profile, nextExam: null, daysUntilExam: null,
         totalCards: saved.session.cards.length, cardCount: 0, estimatedMinutes: 0, moreCards: false, started: false, state: 'empty' };
     }
-    if (home) rememberRevisionSnapshot('/profile', home.profile);
+    if (home) {
+      rememberRevisionSnapshot('/profile', home.profile);
+      try {
+        const exams = await cachedRevisionRead<RevisionExam[]>('/exams');
+        const next = exams.filter(exam => exam.date >= revisionLocalDate()).sort ( (a, b) => a.date.localeCompare(b.date))[0];
+        home = { ...home, nextExam: next ? { id: next.id, title: next.title, date: next.date } : null, daysUntilExam: next ? (Date.parse(next.date) - Date.parse(revisionLocalDate())) / 86400000 : null };
+      } catch (error) { if (!(error instanceof RevisionConnectionError)) throw error; home = { ...home, nextExam: null, daysUntilExam: null }; }
+    }
     const session = readOffline().session;
     if (home && session && (session.localDate === revisionLocalDate() || readOffline().pending.length) && (!navigator.onLine || readOffline().pending.length)) {
       const cardCount = session.complete ? 0 : session.cards.length - session.position;
@@ -887,8 +911,14 @@ export const revisionAPI = {
     }
     return home;
   },
+  plan: () => sharedRevisionRead('/plan:source', async () => { const { value, offline } = await cachedRevisionReadSource<RevisionPlan>('/plan'); return { plan: value, offline }; }),
   progress: () => cachedRevisionRead<RevisionProgress>('/progress'),
+  exams: () => cachedRevisionRead<RevisionExam[]>('/exams'),
+  saveExam: (exam: Omit<RevisionExam, 'id'> & { id?: string }) => revisionMutation<RevisionExam>(exam.id ? `/exams/${encodeURIComponent(exam.id)}` : '/exams', exam.id ? 'PUT' : 'POST', exam),
+  deleteExam: (id: string) => revisionMutation<null>(`/exams/${encodeURIComponent(id)}`, 'DELETE'),
   profile: () => cachedRevisionRead<RevisionProfile | null>('/profile'),
+  settings: () => revisionRequest<RevisionSettings>('/settings'),
+  saveSettings: (settings: RevisionSettings) => revisionMutation<RevisionSettings>('/settings', 'PUT', settings),
   chapters: () => sharedRevisionRead('/chapters', () => revisionRequest<RevisionChapter[]>('/chapters')),
   deleteChapter: (id: string) => revisionMutation<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),
   updateCard: (id: string, card: RevisionCardInput) => revisionMutation<null>(`/cards/${encodeURIComponent(id)}`, 'PUT', card),
@@ -902,6 +932,27 @@ export const revisionAPI = {
     form.append('q', JSON.stringify({ title: input.title, subject: input.subject }));
     form.append('file', input.file);
     return revisionMutation<RevisionImportedChapter>('/import', 'POST', form);
+  },
+  examSession: async (id: string, continuing = false) => {
+    if (!navigator.onLine) throw new Error('Connecte-toi pour lancer une révision d’examen.')
+    await syncRevisionAnswers()
+    if (readOffline().pending.length) throw new Error('Reconnecte-toi pour envoyer tes réponses avant de continuer.')
+    const device = revisionDeviceId()
+    const session = await revisionRequest<RevisionSession>(`/exams/${encodeURIComponent(id)}/session${continuing ? '/continue' : ''}`, continuing ? 'POST' : 'GET', undefined, undefined, 8000)
+    if (cachedDevice() !== device) throw new Error('L’appareil a changé. Recharge la page avant de continuer.')
+    return session
+  },
+  examAnswer: async (input: Omit<RevisionAnswer, 'answerId'>) => {
+    if (!navigator.onLine) throw new Error('Connecte-toi pour continuer cette révision d’examen.')
+    const device = revisionDeviceId()
+    const key = `${device}:${input.sessionId}:${input.position}`
+    const answerId = examAnswerIds.get(key) ?? crypto.randomUUID()
+    examAnswerIds.set(key, answerId)
+    const session = await revisionRequest<RevisionSession>('/session/answer', 'POST', { ...input, answerId }, undefined, 8000)
+    if (cachedDevice() !== device) throw new Error('L’appareil a changé. Recharge la page avant de continuer.')
+    examAnswerIds.delete(key)
+    invalidateRevisionCache('/home', '/progress', '/plan:source')
+    return session
   },
   session: () => revisionSession(),
   continue: async () => { const session = await revisionSession(true); invalidateRevisionCache('/home', '/progress'); return session; },
@@ -921,3 +972,5 @@ export function prepareRevisionStartup() {
     void syncRevisionAnswers()
   } catch { /* The page reports unavailable storage or device support. */ }
 }
+
+export type { RevisionPlan };
