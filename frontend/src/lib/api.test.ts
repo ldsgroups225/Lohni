@@ -40,7 +40,7 @@ function queueTwoAnswers() {
   ] }))
 }
 
-test('une réponse refusée pour date reste en attente', async () => {
+test('une réponse refusée pour date est retirée sans bloquer la suivante ni les mutations', async () => {
   queueTwoAnswers()
   const replayed: string[] = []
   const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
@@ -60,8 +60,9 @@ test('une réponse refusée pour date reste en attente', async () => {
   }))
 
   await api.syncRevisionAnswers()
-  expect(replayed).toEqual(['expired'])
-  expect(api.revisionSyncStatus()).toMatchObject({ pending: 2, error: 'Date locale trop éloignée.' })
+  expect(replayed).toEqual(['expired', 'next'])
+  expect(api.revisionSyncStatus()).toMatchObject({ pending: 0, error: '' })
+  await expect(api.revisionAPI.saveProfile(profile)).resolves.toEqual(profile)
 })
 
 test.each([

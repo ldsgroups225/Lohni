@@ -734,7 +734,11 @@ export function syncRevisionAnswers(): Promise<void> {
       while (navigator.onLine && cachedDevice() === device) {
         const queued = readOffline().pending[0];
         if (!queued) break;
-        const session = await revisionRequest<RevisionSession>('/session/answer', 'POST', queued.answer, queued.localDate, 8000);
+        let session: RevisionSession | undefined;
+        try { session = await revisionRequest<RevisionSession>('/session/answer', 'POST', queued.answer, queued.localDate, 8000); }
+        catch (error) {
+          if (!(error instanceof APIError && error.status === 400 && error.code === 'REVISION_LOCAL_DATE_OUT_OF_RANGE')) throw error;
+        }
         if (cachedDevice() !== device) break;
         await updateOffline(state => {
           if (cachedDevice() !== device) return;
