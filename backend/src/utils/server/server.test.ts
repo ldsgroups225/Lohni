@@ -26,3 +26,12 @@ test('route les paramètres répétés et rejette les chemins WebSocket de trave
     expect(socket.destroy).toHaveBeenCalledOnce()
   } finally { create.mockRestore() }
 })
+
+test('laisse aux requêtes lentes plus de temps que le délai du client', () => {
+  const fakeServer = { on: () => {}, setTimeout: vi.fn(), listen: vi.fn() }
+  const create = vi.spyOn(http, 'createServer').mockImplementation((() => fakeServer) as any)
+  try {
+    server().listen(0)
+    expect(fakeServer.setTimeout.mock.calls[0][0]).toBeGreaterThan(90000)
+  } finally { create.mockRestore() }
+})

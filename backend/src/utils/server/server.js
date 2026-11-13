@@ -117,7 +117,8 @@ function server() {
     };
     const add = (a, b, c) => { ROUTES.push({ method: a.toUpperCase(), path: b, handler: c }); };
     const use = (a) => { WARES.push(a); };
-    const listen = (a, b) => { SERVER.setTimeout(10000); SERVER.listen(a, b); };
+    // Above the client timeout (90 s): a shorter socket timeout cut model-backed requests mid-flight (502 while the work finished).
+    const listen = (a, b) => { SERVER.setTimeout(120000); SERVER.listen(a, b); };
     const all = (a, b) => { add('ALL', a, b); };
     const getRoutes = () => ROUTES.reduce((acc, { method, path }) => {
         if (!acc[method]) acc[method] = [];
