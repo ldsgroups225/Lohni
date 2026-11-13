@@ -17,7 +17,7 @@ import { SwipeCard } from '../components/Revision/SwipeCard'
 import { SessionRecap } from '../components/Revision/SessionRecap'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { chatJSON, revisionAPI, revisionPolicy, revisionSyncStatus, syncRevisionAnswers, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress } from '../lib/api'
+import { chatJSON, revisionAPI, revisionPolicy, revisionSyncStatus, syncRevisionAnswers, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress, type RevisionChapter } from '../lib/api'
 
 let cachedRevision: { device: string | null; version: number; day: string; profile: RevisionProfile; session: RevisionSession } | null = null
 
@@ -29,6 +29,7 @@ export default function Revision() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState<RevisionProfile | null>(() => (!examId ? cachedRevision?.profile : null) ?? null)
   const [session, setSession] = useState<RevisionSession | null>(() => (!examId ? cachedRevision?.session : null) ?? null)
+  const [chapters, setChapters] = useState<RevisionChapter[]>([])
   const [progress, setProgress] = useState<RevisionProgress | null>(null)
   const [busy, setBusy] = useState(true)
   const [validated, setValidated] = useState(false)
@@ -57,6 +58,8 @@ export default function Revision() {
     if (!examId && profile && session && validated) cachedRevision = { device: cachedDevice(), version: currentRevisionCacheVersion(), day, profile, session }
   }, [profile, session, day, validated, examId])
   const card = session?.cards[session.position]
+  const chapterId = card?.chapterId
+  const chapter = chapters.find(value => value.id === chapterId)
   useLeaveConfirmation(!!session && !session.complete && !!card, 'Quitter la session ? Ta progression est enregistrée.')
   // Après un QCM : fait défiler jusqu'à l'indice et « Continuer », avec une marge sous le bouton.
   // Deuxième passage : le Markdown se charge à la demande et peut allonger la page après le premier.
@@ -145,6 +148,13 @@ export default function Revision() {
     void load()
     return () => { active = false }
   }, [display, examId])
+  useEffect(() => {
+    if (!validated || !chapterId) return
+    let active = true
+    const device = cachedDevice()
+    revisionAPI.chapters().then(values => { if (active && device === cachedDevice()) setChapters(values) }).catch(() => {})
+    return () => { active = false }
+  }, [validated, chapterId])
   // biome-ignore lint/correctness/useExhaustiveDependencies: Recharger le bilan pour chaque nouvelle session terminée.
   useEffect(() => {
     setMoreCards(false)
@@ -249,10 +259,9 @@ export default function Revision() {
         </aside>}
         {session && !session.complete && card ? (
           <section className="flex flex-1 flex-col space-y-4" aria-label="Session de révision" aria-busy={busy}>
-            {card.kind === 'basic' ? <>
-              {card.origin === 'ai' && <p className="text-center text-xs text-muted">Générée par IA · Peut contenir des erreurs</p>}
-              <SwipeCard key={`${card.id}-${session.position}`} question={card.question} answer={card.answer} revealed={revealed} enabled={!busy && validated} onToggle={() => setRevealed(value => !value)} onSwipe={answer} />
-            </> : <article key={`${card.id}-${session.position}-${revealed}`} className={`shrink-0 space-y-4 rounded-2xl border border-border bg-surface p-5 ${revealed && card.kind !== 'mcq' ? 'motion-flip' : 'motion-enter'}`}>
+            {card.kind === 'basic' ? <SwipeCard key={`${card.id}-${session.position}`} question={card.question} answer={card.answer} context={chapter ? `${chapter.subject} · ${chapter.title}` : undefined} origin={card.origin} onExplain={() => explain(card)} explainDisabled={busy || !sync.online} revealed={revealed} enabled={!busy && validated} onToggle={() => setRevealed(value => !value)} onSwipe={answer} />
+            : <article key={`${card.id}-${session.position}-${revealed}`} className={`shrink-0 space-y-4 rounded-2xl border border-border bg-surface p-5 ${revealed && card.kind !== 'mcq' ? 'motion-flip' : 'motion-enter'}`}>
+              {chapter && <p className="text-xs font-semibold uppercase tracking-wide text-muted">{chapter.subject} · {chapter.title}</p>}
               {card.origin === 'ai' && <p className="text-xs text-muted">Générée par IA · Peut contenir des erreurs</p>}
               <h2 className="text-xl text-foreground"><MarkdownView md={card.question} inline /></h2>
               {card.kind === 'mcq' && <fieldset disabled={busy || !validated || !!verdict} className="space-y-3">

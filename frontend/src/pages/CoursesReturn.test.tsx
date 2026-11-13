@@ -23,7 +23,7 @@ test('S’entraîner est visible sans chapitre, avant les chapitres', async () =
   const root = createRoot(host)
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    expect([...outils(host).querySelectorAll('a')].map(a => [a.textContent, a.getAttribute('href')])).toEqual([['Examens', '/exam'], ['Quiz', '/quiz'], ['Débat', '/debate'], ['Podcast', '/tools'], ['Planning', '/planner']])
+    expect([...outils(host).querySelectorAll('a')].map(a => [a.textContent, a.getAttribute('href')])).toEqual([['Examens', '/exam'], ['Quiz', '/quiz'], ['Débat', '/debate'], ['Podcast', '/tools']])
     expect(host.textContent).toContain('S’entraîner')
     expect(host.querySelector('details')).toBeNull()
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
@@ -45,7 +45,8 @@ test('au retour les cours et S’entraîner sont affichés avant la revalidation
     await act(async () => { await router.navigate('/quiz') })
     await act(async () => { await router.navigate(-1) })
     expect(host.textContent).toContain('Les suites')
-    expect(outils(host).querySelectorAll('a')).toHaveLength(5)
+    expect(outils(host).querySelectorAll('a')).toHaveLength(4)
+    expect(host.querySelector('a[href="/planner"]')).not.toBeNull()
     expect(host.textContent).not.toContain('On prépare tes cours…')
     expect(host.querySelector('.motion-list')).toBeNull()
   } finally {
@@ -97,10 +98,10 @@ test('le résumé et les cartes sont accessibles à la demande sans charger leur
     await act(async () => root.render(<RouterProvider router={router} />))
     expect(host.textContent).not.toContain('Résumé de test')
     expect(host.textContent).not.toContain('Question de test')
-    const details = required([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Relire le résumé'))
+    const details = required([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Résumé'))
     await act(async () => { details.open = true; details.dispatchEvent(new Event('toggle')) })
     expect(host.textContent).toContain('Résumé de test')
-    const cards = required([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Voir les cartes (1)'))
+    const cards = required([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === '1 carte'))
     await act(async () => { cards.open = true; cards.dispatchEvent(new Event('toggle')) })
     await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'Modifier')).click())
     const question = required(host.querySelector('textarea'))
@@ -128,7 +129,7 @@ test('une revalidation terminée ne réactive pas le formulaire pendant son enre
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
     await act(async () => { await router.navigate('/autre'); await router.navigate(-1) })
-    const cards = required([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === 'Voir les cartes (1)'))
+    const cards = required([...host.querySelectorAll('details')].find(element => element.querySelector('summary')?.textContent === '1 carte'))
     await act(async () => { cards.open = true; cards.dispatchEvent(new Event('toggle')) })
     await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'Modifier')).click())
     await act(async () => required(host.querySelector('form')).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))

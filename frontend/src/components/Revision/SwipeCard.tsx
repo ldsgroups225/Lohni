@@ -17,6 +17,10 @@ type Props = {
   answer: string
   revealed: boolean
   enabled: boolean
+  context?: string
+  origin?: string
+  onExplain?: () => void
+  explainDisabled?: boolean
   onToggle: () => void
   onSwipe: (knew: boolean) => void
 }
@@ -24,7 +28,7 @@ type Props = {
 /** Carte plein écran : toucher retourne, glisser à droite = « Je savais », à gauche = « Je ne savais pas ».
  *  Le glissement n'est actif qu'une fois la réponse vue. Flèches du clavier et boutons restent disponibles.
  *  Pendant le geste, la carte suit le doigt sans rendu React ; au lâcher, un ressort repart de la vitesse réelle. */
-export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwipe }: Props) {
+export function SwipeCard({ question, answer, revealed, enabled, context, origin, onExplain, explainDisabled, onToggle, onSwipe }: Props) {
   const card = useRef<HTMLDivElement>(null)
   const x = useRef(0)
   const stop = useRef<(() => void) | null>(null)
@@ -105,32 +109,29 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
     e.preventDefault()
   }
 
-  const face = 'absolute inset-x-0 top-0 bottom-11 flex touch-pan-y overflow-y-auto px-6 py-6 [backface-visibility:hidden]'
   return (
     <div className="motion-card flex min-h-[55dvh] flex-1 shrink-0 flex-col">
       <div
         role="group" ref={card} aria-roledescription="carte" aria-label={revealed ? 'Réponse' : 'Question'} aria-describedby="swipe-hint" tabIndex={0}
         onKeyDown={key} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel}
-        className="relative flex-1 touch-pan-y select-none rounded-3xl border border-[color:var(--swipe-border)] bg-surface will-change-transform [perspective:1000px]"
+        className="flex min-h-[55dvh] flex-1 touch-pan-y select-none flex-col rounded-3xl border border-[color:var(--swipe-border)] bg-surface p-5 will-change-transform"
       >
-        <div className="absolute inset-0 transition-transform duration-[360ms] ease-[var(--ease-lohni)] [transform-style:preserve-3d]" style={{ transform: `rotateY(${revealed ? 180 : 0}deg)` }}>
-          <div className={face} aria-hidden={revealed}>
-            <div className="m-auto w-full text-center">
-              <p className="mb-3 text-xs uppercase tracking-wide text-muted">Question</p>
-              <div className="text-2xl font-semibold leading-snug text-foreground"><CardMarkdown md={question} inline /></div>
-            </div>
-          </div>
-          <div className={face} style={{ transform: 'rotateY(180deg)' }} aria-hidden={!revealed}>
-            <div className="m-auto w-full text-center">
-              <p className="mb-3 text-xs uppercase tracking-wide text-muted">Réponse</p>
-              <div className="text-xl leading-relaxed text-foreground"><CardMarkdown md={answer} /></div>
-            </div>
+        <div className="flex-1 overflow-y-auto break-words">
+          {context && <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted">{context}</p>}
+          <div className="text-2xl font-bold leading-snug text-foreground"><CardMarkdown md={question} inline /></div>
+          <div className="mt-6 border-t border-border pt-5" hidden={!revealed}>
+            <p className="mb-4 text-xs font-bold uppercase tracking-wide text-success">Réponse</p>
+            <div className="text-xl leading-relaxed text-foreground"><CardMarkdown md={answer} /></div>
           </div>
         </div>
-        <p id="swipe-hint" className="pointer-events-none absolute inset-x-0 bottom-3 whitespace-nowrap text-center text-sm text-muted">
-          {!revealed ? 'Touche la carte pour voir la réponse' : hint ? 'Glisse la carte à gauche ou à droite' : <>← <b className="font-semibold text-foreground">Je ne savais pas</b> · <b className="font-semibold text-foreground">Je savais</b> →</>}
-        </p>
+        <div className="mt-5 flex items-center justify-between gap-3 border-t border-border pt-4 text-xs text-muted">
+          <span>{origin === 'ai' ? 'Générée par IA · peut contenir des erreurs' : 'Cours importé'}</span>
+          {onExplain && <button type="button" disabled={explainDisabled} onPointerDown={event => event.stopPropagation()} onPointerUp={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} onClick={onExplain} className="min-h-11 shrink-0 text-sm font-semibold text-primary underline disabled:opacity-50">Explique-moi</button>}
+        </div>
       </div>
+      <p id="swipe-hint" className="py-3 text-center text-sm text-muted">
+        {!revealed ? 'Touche la carte pour voir la réponse' : hint ? 'Glisse la carte à gauche ou à droite' : <>← <b className="font-semibold text-foreground">Je ne savais pas</b> · <b className="font-semibold text-foreground">Je savais</b> →</>}
+      </p>
       {/* Sans geste : flèches du clavier ou ces boutons, masqués à l'écran mais lus et focalisables. */}
       {revealed && <div className="sr-only focus-within:not-sr-only focus-within:mt-2 focus-within:grid focus-within:grid-cols-2 focus-within:gap-3">
         <button type="button" disabled={!enabled} onClick={() => rate(false)} className="rounded-xl border border-border bg-surface px-2 py-3 text-foreground disabled:opacity-50">Je ne savais pas</button>

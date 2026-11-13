@@ -9,7 +9,7 @@ const api = vi.hoisted(() => {
   return { session, answer: vi.fn(async () => ({ ...session, position: 1 })) }
 })
 vi.mock('../../lib/api', () => ({
-  revisionAPI: { profile: async () => ({ schoolClass: '3e', subjects: ['Mathématiques'] }), session: async () => api.session, answer: api.answer },
+  revisionAPI: { profile: async () => ({ schoolClass: '3e', subjects: ['Mathématiques'] }), session: async () => api.session, chapters: async () => [], answer: api.answer },
   revisionPolicy: {}, revisionSyncStatus: () => ({ online: true, pending: 0 }), syncRevisionAnswers: () => {}, chatJSON: async () => ({ chatId: '1' }),
 }))
 import Revision from '../../pages/Revision'

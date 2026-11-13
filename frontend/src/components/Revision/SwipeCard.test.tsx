@@ -110,11 +110,10 @@ test('les flèches du clavier répondent seulement une fois la réponse vue', as
   expect(onSwipe).toHaveBeenCalledTimes(1); expect(onSwipe).toHaveBeenCalledWith(true)
 })
 
-test('la carte est un groupe étiqueté dont la face cachée est masquée aux lecteurs d’écran', async () => {
+test('la carte est un groupe étiqueté dont la réponse est masquée avant révélation', async () => {
   await render({ revealed: false })
   expect(card().getAttribute('role')).toBe('group'); expect(card().getAttribute('aria-label')).toBe('Question')
-  const faces = [...host.querySelectorAll('[aria-hidden]')].map(face => face.getAttribute('aria-hidden'))
-  expect(faces).toEqual(['false', 'true'])
+  expect(card().querySelector('[hidden]')?.textContent).toContain('R')
 })
 
 test('relâcher un glissement après une flèche du clavier ne coupe pas la sortie en cours', async () => {
@@ -152,4 +151,22 @@ test('l’indice suit l’état : question, glissement trop tôt, puis notation'
   await render({ revealed: true })
   expect(hintText()).toBe('← Je ne savais pas · Je savais →')
   expect([...host.querySelectorAll('#swipe-hint b')].map(b => b.textContent)).toEqual(['Je ne savais pas', 'Je savais'])
+})
+
+test('la réponse révélée conserve la question dans la carte', async () => {
+  await render({ revealed: true })
+  expect(card().textContent).toContain('Q ?')
+  expect(card().textContent).toContain('R')
+  expect(card().querySelector('[aria-hidden="true"]')).toBeNull()
+})
+
+test('le contexte et le lien vers le tuteur restent dans la carte sans la retourner', async () => {
+  const explain = vi.fn()
+  await act(async () => root.render(<SwipeCard question="Q ?" answer="R" context="SVT · Photosynthèse" origin="ai" revealed enabled onToggle={onToggle} onSwipe={onSwipe} onExplain={explain} />))
+  expect(card().textContent).toContain('SVT · Photosynthèse')
+  expect(card().textContent).toContain('Générée par IA')
+  const button = required([...card().querySelectorAll('button')].find(item => item.textContent === 'Explique-moi'))
+  act(() => button.click())
+  expect(explain).toHaveBeenCalledOnce()
+  expect(onToggle).not.toHaveBeenCalled()
 })
