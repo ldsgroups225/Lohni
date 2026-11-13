@@ -105,7 +105,7 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
     e.preventDefault()
   }
 
-  const face = 'absolute inset-x-0 top-0 bottom-10 flex touch-pan-y overflow-y-auto px-6 py-6 [backface-visibility:hidden]'
+  const face = 'absolute inset-x-0 top-0 bottom-11 flex touch-pan-y overflow-y-auto px-6 py-6 [backface-visibility:hidden]'
   return (
     <div className="motion-card flex min-h-[55dvh] flex-1 shrink-0 flex-col">
       <div
@@ -127,8 +127,8 @@ export function SwipeCard({ question, answer, revealed, enabled, onToggle, onSwi
             </div>
           </div>
         </div>
-        <p id="swipe-hint" className="pointer-events-none absolute inset-x-0 bottom-3 text-center text-xs text-muted">
-          {!revealed ? 'Touche la carte pour voir la réponse' : hint ? 'Glisse la carte à gauche ou à droite' : '← Je ne savais pas · Je savais →'}
+        <p id="swipe-hint" className="pointer-events-none absolute inset-x-0 bottom-3 whitespace-nowrap text-center text-sm text-muted">
+          {!revealed ? 'Touche la carte pour voir la réponse' : hint ? 'Glisse la carte à gauche ou à droite' : <>← <b className="font-semibold text-foreground">Je ne savais pas</b> · <b className="font-semibold text-foreground">Je savais</b> →</>}
         </p>
       </div>
       {/* Sans geste : flèches du clavier ou ces boutons, masqués à l'écran mais lus et focalisables. */}

@@ -140,3 +140,16 @@ test('sans geste : deux boutons masqués à l’écran mais présents une fois l
   act(() => springs[0].opts.onDone?.())
   expect(onSwipe).toHaveBeenCalledTimes(1); expect(onSwipe).toHaveBeenCalledWith(true)
 })
+
+test('l’indice suit l’état : question, glissement trop tôt, puis notation', async () => {
+  const hintText = () => host.querySelector('#swipe-hint')?.textContent
+  await render({ revealed: false })
+  expect(hintText()).toBe('Touche la carte pour voir la réponse')
+  drag(200, [[20, 100]], 300) // glisser avant la révélation
+  await render({ revealed: true })
+  expect(hintText()).toBe('Glisse la carte à gauche ou à droite')
+  await act(async () => root.unmount()); root = createRoot(host)
+  await render({ revealed: true })
+  expect(hintText()).toBe('← Je ne savais pas · Je savais →')
+  expect([...host.querySelectorAll('#swipe-hint b')].map(b => b.textContent)).toEqual(['Je ne savais pas', 'Je savais'])
+})
