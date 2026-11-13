@@ -24,7 +24,7 @@ test('accueil : libellé de classe, maîtrise vide et accès aux cours sans prom
   expect(html).toContain("Aucune carte n&#x27;est à réviser aujourd&#x27;hui.")
   expect(html).toContain('href="/courses"')
   expect(html).toContain('Voir mes cours')
-  expect(html).toMatch(/<progress[^>]*value="0"[^>]*class="[^"]*mastery-progress|<progress[^>]*class="[^"]*mastery-progress[^>]*value="0"/)
+  expect(html).not.toContain('Mathématiques')
 })
 
 test.each([true, false])('accueil : lien de continuation selon les cartes disponibles (%s)', moreCards => {

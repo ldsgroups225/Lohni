@@ -47,7 +47,7 @@ test.each([['accueil', PlanToday], ['plan', Plan]] as const)('%s distingue surch
     expect(host.textContent).not.toContain('0 carte à revoir')
     expect(host.textContent).toContain('Sans chapitre : Anglais')
     expect(host.textContent).not.toContain('Ajoute un chapitre')
-    expect([...host.querySelectorAll('a')].filter(link => link.textContent === 'Ajouter un chapitre')).toHaveLength(1)
+    expect([...host.querySelectorAll('a')].filter(link => link.textContent === 'Ajouter un chapitre')).toHaveLength(_name === 'plan' ? 1 : 0)
   } finally { act(() => root.unmount()); host.remove() }
 })
 

@@ -17,6 +17,7 @@ export function PlanToday() {
   ]
   return <div className="space-y-2 text-sm text-muted">
     {result?.offline && <p>Plan du {frenchDate(plan.today)}</p>}
+    {(plan.days[0]?.actions?.length ?? 0) > 0 && <p>Sans chapitre : {plan.days[0]?.actions.map(action => action.subject).join(', ')}</p>}
     {warnings.map(warning => <p key={warning}>{warning}</p>)}
     {!plan.exams.length ? <Link className="underline" to="/me/examens">Ajoute une date d’examen</Link> : <Link className="underline" to="/plan">Voir le plan</Link>}
   </div>
