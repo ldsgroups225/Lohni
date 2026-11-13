@@ -38,14 +38,14 @@ const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
 const sync = { online: true, pending: 0 }
 test('aucune mascotte ne distrait pendant une carte', () => {
   const card = { id: '1', kind: 'basic', question: 'Combien font 1 + 1 ?', answer: '2', origin: 'ai' }
-  state.values = [profile, { cards: [card], position: 0, complete: false }, null, false, sync, '', false, undefined, '', '', null]
+  state.values = [profile, { cards: [card], position: 0, complete: false }, [], null, false, true, sync, '', false, undefined, '', '', null]
   const html = render(<Revision />)
   expect(html).toContain('Combien font 1 + 1 ?')
   expect(html).not.toContain('aria-label="Lohni,')
 })
 
 test('la fin de session affiche la mascotte en fête', () => {
-  state.values = [profile, { cards: [], position: 1, complete: true, earnedXP: 10 }, null, false, sync, '', false, undefined, '', '', null]
+  state.values = [profile, { cards: [], position: 1, complete: true, earnedXP: 10 }, [], null, false, true, sync, '', false, undefined, '', '', null]
   const html = render(<Revision />)
   expect(html).toContain('Session terminée !')
   expect(html).toContain('aria-label="Lohni, en fête"')
