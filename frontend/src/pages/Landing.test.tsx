@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act } from 'react'
+import { required } from '../test/required'
 import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
@@ -19,7 +20,7 @@ test('les suggestions utilisent le vrai chapitre fragile et transmettent son con
     await act(async () => root.render(<RouterProvider router={router} />))
     expect(host.textContent).toContain('Chapitre fragile · SVT')
     expect(host.textContent).not.toContain('cartes fragiles')
-    const button = [...host.querySelectorAll('button')].find(item => item.textContent?.includes('Consolider Cellules'))!
+    const button = required([...host.querySelectorAll('button')].find(item => item.textContent?.includes('Consolider Cellules')))
     await act(async () => button.click())
     expect(api.chatJSON).toHaveBeenCalledWith({ q: 'Aide-moi à consolider Cellules en SVT' })
     expect(host.textContent).toContain('Discussion ouverte')

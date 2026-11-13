@@ -104,20 +104,21 @@ export default function Landing() {
     }
   };
 
+  const fragileChapter = chapters?.find(chapter => chapter.status === 'Fragile');
   const subjects = [...new Set((chapters ?? []).map(chapter => chapter.subject))];
   return <main className="min-h-dvh bg-background px-4 pt-6 pb-28 text-foreground md:pl-28">
     <div className="mx-auto max-w-xl space-y-4">
       <h1 className="text-2xl font-bold">Que veux-tu comprendre ?</h1>
       <AdaptiveErrorBoundary mode="manual" severity="medium" title="La saisie est indisponible" description="Impossible de charger la zone de saisie. Actualise la page pour continuer." theme={{ backgroundColor: 'var(--color-surface)', textColor: 'var(--color-foreground)', primaryColor: 'var(--color-primary)', fontFamily: "'Schibsted Grotesk', sans-serif", borderRadius: '24px' }}>
         <PromptBox value={prompt} onChange={setPrompt} onSend={() => void onSend()} onPickFile={onPickFile} onRemoveFile={onRemoveFile} stagedFileName={stagedFile?.name ?? null} busy={busy} onDragOver={onDropZoneDragOver} onDrop={onDropZoneDrop}>
-          <div data-dropdown onKeyDown={event => menuKeys(event, showMode, setShowMode)} className="relative">
+          <fieldset data-dropdown onKeyDown={event => menuKeys(event, showMode, setShowMode)} className="relative">
             <button type="button" aria-label="Mode" aria-haspopup="menu" aria-expanded={showMode} aria-controls="menu-mode" onClick={() => setShowMode(!showMode)} className="min-h-11 rounded-xl border border-border bg-background px-3 text-sm font-semibold">{mode}</button>
             {showMode && <div id="menu-mode" role="menu" className="absolute top-full left-0 z-20 mt-1 w-36 rounded-xl border border-border bg-surface p-1 shadow-lg">{(['Discussion', 'Quiz'] as const).map(opt => <button key={opt} type="button" role="menuitem" className="block min-h-11 w-full rounded-lg px-3 text-left hover:bg-tint" onClick={event => { setMode(opt); setShowMode(false); event.currentTarget.closest<HTMLElement>('[data-dropdown]')?.querySelector<HTMLElement>('[aria-haspopup]')?.focus(); }}>{opt}</button>)}</div>}
-          </div>
-          <div data-dropdown onKeyDown={event => menuKeys(event, showLength, setShowLength)} className="relative">
+          </fieldset>
+          <fieldset data-dropdown onKeyDown={event => menuKeys(event, showLength, setShowLength)} className="relative">
             <button type="button" aria-label="Longueur de réponse" aria-haspopup="menu" aria-expanded={showLength} aria-controls="menu-length" onClick={() => setShowLength(!showLength)} className="min-h-11 rounded-xl border border-border bg-background px-3 text-sm font-semibold">Réponse {responseLength.toLowerCase()}</button>
             {showLength && <div id="menu-length" role="menu" className="absolute top-full right-0 z-20 mt-1 w-36 rounded-xl border border-border bg-surface p-1 shadow-lg">{(['Courte', 'Moyenne', 'Longue'] as const).map(opt => <button key={opt} type="button" role="menuitem" className="block min-h-11 w-full rounded-lg px-3 text-left hover:bg-tint" onClick={event => { setResponseLength(opt); setShowLength(false); event.currentTarget.closest<HTMLElement>('[data-dropdown]')?.querySelector<HTMLElement>('[aria-haspopup]')?.focus(); }}>{opt}</button>)}</div>}
-          </div>
+          </fieldset>
         </PromptBox>
       </AdaptiveErrorBoundary>
       <section className="space-y-2"><h2 className="text-sm font-bold text-muted">Depuis tes cours</h2>
@@ -125,7 +126,7 @@ export default function Landing() {
           const question = index === 0 ? `Explique-moi ${chapter.title} en ${chapter.subject}` : `Donne-moi un exercice sur ${chapter.title} en ${chapter.subject}`;
           return <button key={chapter.id} type="button" disabled={busy} onClick={() => void onSend(question)} className="block min-h-16 w-full rounded-2xl border border-border bg-surface p-4 text-left"><strong className="block break-words">{index === 0 ? `Explique-moi ${chapter.title}` : `Un exercice sur ${chapter.title}`}</strong><span className="text-sm text-muted">{chapter.subject} · {chapter.title}</span></button>;
         })}
-        {chapters?.find(chapter => chapter.status === 'Fragile') && (() => { const chapter = chapters.find(item => item.status === 'Fragile')!; return <button type="button" disabled={busy} onClick={() => void onSend(`Aide-moi à consolider ${chapter.title} en ${chapter.subject}`)} className="block min-h-16 w-full rounded-2xl border border-primary bg-tint p-4 text-left text-primary"><strong className="block break-words">Consolider {chapter.title}</strong><span className="text-sm">Chapitre fragile · {chapter.subject}</span></button>; })()}
+        {fragileChapter && <button type="button" disabled={busy} onClick={() => void onSend(`Aide-moi à consolider ${fragileChapter.title} en ${fragileChapter.subject}`)} className="block min-h-16 w-full rounded-2xl border border-primary bg-tint p-4 text-left text-primary"><strong className="block break-words">Consolider {fragileChapter.title}</strong><span className="text-sm">Chapitre fragile · {fragileChapter.subject}</span></button>}
       </section>
       {subjects.length > 0 && <section className="space-y-2"><h2 className="text-sm font-bold text-muted">Tes matières</h2><div className="flex flex-wrap gap-2">{subjects.map(subject => <button key={subject} type="button" onClick={() => setPrompt(`Aide-moi en ${subject}`)} className="min-h-11 rounded-full border border-border bg-surface px-4 font-semibold">{subject}</button>)}</div></section>}
       <details className="rounded-2xl border border-border bg-surface p-4" {...chatsDetails}><summary className="min-h-11 cursor-pointer font-semibold">Mes discussions</summary><ul className="space-y-3">{chats.map(chat => <li key={chat.id}><Link to={`/chat?chatId=${encodeURIComponent(chat.id)}`} className="block min-h-11 truncate text-primary underline">{chat.title || 'Discussion sans titre'}</Link></li>)}</ul>{!chats.length && <p className="text-sm text-muted">Aucune discussion pour le moment.</p>}</details>
