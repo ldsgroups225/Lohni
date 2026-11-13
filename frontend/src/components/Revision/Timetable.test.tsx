@@ -32,3 +32,17 @@ test('la matière corrigée avec des espaces demande un choix et peut être ratt
     expect(api.saveTimetable).toHaveBeenCalledWith([{ day: 1, start: '08:00', end: '09:00', subject: 'Mathématiques' }])
   } finally { act(() => root.unmount()); host.remove() }
 })
+
+test('une réponse tardive ne montre pas les cours du précédent appareil', async () => {
+  localStorage.setItem('lohni-device-id', 'emploi-ancien')
+  let resolve!: (value: { day: number; start: string; end: string; subject: string }[]) => void
+  api.timetable.mockReturnValueOnce(new Promise(r => { resolve = r }))
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<Timetable profile={{ schoolClass: '3e', subjects: ['Mathématiques'] }} onProfile={() => {}} />))
+    localStorage.setItem('lohni-device-id', 'emploi-nouveau')
+    await act(async () => resolve([{ day: 1, start: '08:00', end: '09:00', subject: 'Ancien cours' }]))
+    expect(host.querySelector('input[maxlength]')).toBeNull()
+  } finally { act(() => root.unmount()); host.remove(); localStorage.removeItem('lohni-device-id') }
+})

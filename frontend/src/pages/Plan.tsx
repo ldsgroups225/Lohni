@@ -19,7 +19,7 @@ export default function Plan() {
     {plan && <>
       {result?.offline && <p>Plan du {frenchDate(plan.today)}</p>}
       <h2 className="text-xl font-semibold">Examens à venir</h2>
-      {!plan.exams.length && <Link to="/me" className="underline">Ajoute une date d’examen</Link>}
+      {!plan.exams.length && <Link to="/me/examens" className="underline">Ajoute une date d’examen</Link>}
       {plan.exams.map(exam => <article id={`exam-${exam.id}`} key={exam.id} className="rounded-xl border border-border p-4"><h3 className="font-semibold">{exam.title}</h3><p>{frenchDate(exam.date)}</p>{exam.overloaded && <p>Plan trop chargé pour {exam.title}</p>}<ExamButton id={exam.id} date={exam.date} /></article>)}
       {missing.length > 0 && <p>Sans chapitre : {missing.join(', ')}. <Link className="underline" to="/import">Ajouter un chapitre</Link></p>}
       {plan.days.map(day => <section key={day.date} className="rounded-xl border border-border p-4"><h2 className="font-semibold">{frenchDate(day.date)}</h2>

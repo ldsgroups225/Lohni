@@ -29,7 +29,8 @@ export const routes = createRoutesFromElements(
     <Route path="planner" element={<PlannerPage />} />
     <Route path="debate" element={<Debate />} />
     <Route path="cards" element={<Navigate to="/courses" replace />} />
-    <Route path="me" element={<Profile />} />
+    <Route path="me" element={<Profile key="moi" />} />
+    {['profil', 'examens', 'matieres', 'emploi-du-temps', 'rythme'].map(page => <Route key={page} path={`me/${page}`} element={<Profile key={page} />} />)}
     <Route path="plan" element={<Plan />} />
     <Route path="revision" element={<Revision />} />
     <Route path="courses" element={<Courses />} />

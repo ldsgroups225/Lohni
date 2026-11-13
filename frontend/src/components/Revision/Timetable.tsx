@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { REVISION_POLICY as policy } from '../../../../backend/src/services/revision/policy'
 import { revisionAPI, type RevisionProfile, type TimetableBlock } from '../../lib/api'
 import { Button } from '../ui/Button'
+import { cachedDevice } from '../../lib/cachedDevice'
 
 const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
@@ -13,7 +14,7 @@ export default function Timetable({ profile, onProfile }: { profile: RevisionPro
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
-  useEffect(() => { let active = true; revisionAPI.timetable().then(value => { if (active) setBlocks(value) }).catch(() => { if (active) setError('Impossible de charger ton emploi du temps.') }); return () => { active = false } }, [])
+  useEffect(() => { let active = true; const device = cachedDevice(); revisionAPI.timetable().then(value => { if (active && device === cachedDevice()) setBlocks(value) }).catch(() => { if (active && device === cachedDevice()) setError('Impossible de charger ton emploi du temps.') }); return () => { active = false } }, [])
   const unknown = [...new Set((blocks ?? []).map(block => block.subject.trim()).filter(subject => subject && !profile.subjects.includes(subject)))]
   const update = (index: number, patch: Partial<TimetableBlock>) => { setBlocks(current => current?.map((block, i) => i === index ? { ...block, ...patch } : block) ?? null); setSaved(false) }
   async function save() {
@@ -38,13 +39,13 @@ export default function Timetable({ profile, onProfile }: { profile: RevisionPro
       <label className="block">Début<input className={input} type="time" value={block.start} onChange={event => update(index, { start: event.target.value })} /></label>
       <label className="block">Fin<input className={input} type="time" value={block.end} onChange={event => update(index, { end: event.target.value })} /></label>
       <label className="block">Matière<input className={input} maxLength={policy.maxTitleChars} value={block.subject} onChange={event => update(index, { subject: event.target.value })} /></label>
-      <Button type="button" onClick={() => setBlocks(blocks.filter((_, i) => i !== index))}>Supprimer ce cours</Button>
+      <Button className="!bg-surface !text-foreground border border-border" type="button" onClick={() => setBlocks(blocks.filter((_, i) => i !== index))}>Supprimer ce cours</Button>
     </fieldset>)}
     {review && unknown.map(subject => <label key={subject} className="block space-y-2">Que faire de « {subject} » ?
       <select className={input} value={choices[subject] ?? ''} onChange={event => setChoices({ ...choices, [subject]: event.target.value })}>
         <option value="">Choisis une action</option><option value="simple">Garder comme simple cours</option><option value="add">Ajouter à mes matières</option>{profile.subjects.map(item => <option key={item} value={`link:${item}`}>Rattacher à {item}</option>)}
       </select></label>)}
-    {blocks && <div className="flex flex-wrap gap-3"><Button type="button" disabled={busy || blocks.length >= policy.maxTimetableBlocks} onClick={() => { setBlocks([...blocks, { day: 1, start: '08:00', end: '09:00', subject: '' }]); setSaved(false) }}>Ajouter un cours</Button>
+    {blocks && <div className="flex flex-wrap gap-3"><Button className="!bg-surface !text-foreground border border-border" type="button" disabled={busy || blocks.length >= policy.maxTimetableBlocks} onClick={() => { setBlocks([...blocks, { day: 1, start: '08:00', end: '09:00', subject: '' }]); setSaved(false) }}>Ajouter un cours</Button>
       <Button type="button" disabled={busy || (review && unknown.some(subject => !choices[subject]))} onClick={() => void save()}>Enregistrer l’emploi du temps</Button></div>}
     <label className="block space-y-2">Importer des photos ({policy.maxTimetablePhotos} maximum)<input className={input} type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} onChange={async event => {
       const files = Array.from(event.target.files ?? []); event.target.value = ''

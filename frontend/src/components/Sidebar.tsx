@@ -45,7 +45,7 @@ export default function Sidebar() {
     return () => window.removeEventListener('resize', move)
   }, [pathname, cardVisible])
   if ((pathname === '/revision' && cardVisible)) return null
-  const active = pathname === '/chat' ? '/tutor'
+  const active = pathname.startsWith('/me/') ? '/me' : pathname === '/chat' ? '/tutor'
     : ['/import', '/cards', '/exam', '/debate', '/tools', '/planner', '/quiz'].includes(pathname) ? '/courses'
     : ['/revision', '/plan'].includes(pathname) ? '/' : pathname
   return <nav aria-label="Navigation principale" className="fixed inset-x-0 bottom-0 z-[var(--z-nav)] border-t border-border bg-surface px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:inset-x-auto md:left-3 md:top-4 md:bottom-4 md:w-20 md:rounded-card md:border md:px-1 md:py-6">

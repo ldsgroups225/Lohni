@@ -13,7 +13,7 @@ export function PlanToday() {
   const missing = (plan.days[0]?.actions ?? []).map(action => action.subject)
   return <Card className="space-y-3 p-5"><h2 className="text-xl font-semibold">Aujourd’hui</h2>
     {result?.offline && <p className="text-sm text-muted">Plan du {frenchDate(plan.today)}</p>}
-    {!plan.exams.length ? <Link className="underline" to="/me">Ajoute une date d’examen</Link> : <>
+    {!plan.exams.length ? <Link className="underline" to="/me/examens">Ajoute une date d’examen</Link> : <>
       {plan.exams.filter(exam => exam.overloaded).map(exam => <p key={exam.id}>Plan trop chargé pour {exam.title}</p>)}
       {plan.days[0]?.rest && <p>Repos</p>}
       {!plan.days[0]?.rest && plan.days[0]?.heavy && <p>Grosse journée de cours</p>}

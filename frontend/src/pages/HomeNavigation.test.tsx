@@ -4,7 +4,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
-const api = vi.hoisted(() => ({ timetable: async () => [], home: vi.fn(), plan: vi.fn(async () => ({ plan: { today: '2026-11-09', exams: [], days: [] }, offline: false })), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), progress: vi.fn(async (): Promise<unknown> => null), profile: vi.fn(), saveProfile: vi.fn() }))
+const api = vi.hoisted(() => ({ timetable: async () => [], home: vi.fn(), plan: vi.fn(async () => ({ plan: { today: '2026-11-09', exams: [], days: [] }, offline: false })), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), progress: vi.fn(async (): Promise<unknown> => null), profile: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(async () => ({ dailyMinutes: 15, restDays: [] })) }))
 vi.mock('../lib/api', () => ({ revisionAPI: api, revisionDeviceId: () => 'device' }))
 vi.mock('../components/Revision/Onboarding', () => ({ default: () => <p>Onboarding</p> }))
 import Home from './Home'
@@ -59,10 +59,10 @@ test('après modification du profil une erreur réseau ne réaffiche pas l’anc
   api.progress.mockResolvedValue({ xp: 10, streak: 1, learnedCards: 0, subjects: [] })
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
-  const router = createMemoryRouter([{ path: '/', element: <Home /> }, { path: '/me', element: <Profile /> }])
+  const router = createMemoryRouter([{ path: '/', element: <Home /> }, { path: '/me/*', element: <Profile /> }])
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    await act(async () => { await router.navigate('/me') })
+    await act(async () => { await router.navigate('/me/profil') })
     const select = required(host.querySelector('select'))
     await act(async () => { select.value = '5e'; select.dispatchEvent(new Event('change', { bubbles: true })) })
     await act(async () => required(host.querySelector('form')).requestSubmit())
