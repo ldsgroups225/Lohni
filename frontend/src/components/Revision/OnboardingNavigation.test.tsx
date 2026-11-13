@@ -128,3 +128,21 @@ test('une ancienne série implicite ne permet pas de contourner le choix par un 
     expect(api.generateChapter).toHaveBeenCalledWith({ subject: newSubject, title: 'Fractions' })
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); sessionStorage.clear() }
 })
+
+test('les classes sont regroupées et la série doit être choisie explicitement', async () => {
+  sessionStorage.clear()
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Onboarding /> }])
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    const groups = [...host.querySelectorAll('fieldset')]
+    expect(groups.find(group => group.querySelector('legend')?.textContent === 'Collège')?.querySelectorAll('button')).toHaveLength(4)
+    expect(groups.find(group => group.querySelector('legend')?.textContent === 'Lycée')?.querySelectorAll('button')).toHaveLength(3)
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'Terminale')).click())
+    expect(required([...host.querySelectorAll('button')].find(button => button.textContent === 'Continuer')).disabled).toBe(true)
+    expect(host.textContent).not.toContain('coefficients')
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'D')).click())
+    expect(required([...host.querySelectorAll('button')].find(button => button.textContent === 'Continuer')).disabled).toBe(false)
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); sessionStorage.clear() }
+})

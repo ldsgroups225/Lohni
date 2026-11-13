@@ -150,21 +150,23 @@ export default function Profile() {
 
   return <main className="loop-screen min-h-dvh px-4 pt-8 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-6">
-      <header className="flex items-center justify-between gap-3">
-        <div>{page && <Link className="inline-flex min-h-11 items-center text-primary underline" to="/me">← Retour à Moi</Link>}
-        <h1 className="text-2xl font-semibold text-foreground">{({ profil: 'Mon profil', examens: 'Examens', matieres: 'Matières', 'emploi-du-temps': 'Emploi du temps', rythme: 'Rythme de révision' } as Record<string, string>)[page] ?? 'Moi'}</h1></div>
-        {!error && progress && <Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={64} />}
-        {!error && !busy && !profile && !progress && <Mascotte humeur="au repos" taille={64} />}
+      <header className="flex items-center gap-3">
+        {!error && progress && <span className="shrink-0"><Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={64} /></span>}
+        {!error && !busy && !profile && !progress && <span className="shrink-0"><Mascotte humeur="au repos" taille={64} /></span>}
+        <div className="min-w-0 flex-1">{page && <Link className="inline-flex min-h-11 items-center text-primary underline" to="/me">← Retour à Moi</Link>}
+        <h1 className="text-2xl font-bold text-foreground">{({ profil: 'Mon profil', examens: 'Examens', matieres: 'Matières', 'emploi-du-temps': 'Emploi du temps', rythme: 'Rythme de révision' } as Record<string, string>)[page] ?? 'Moi'}</h1>
+        {!page && profile && <p className="text-sm text-muted">{entry?.label ?? profile.schoolClass}{profile.series ? ` · Série ${profile.series}` : ''}</p>}</div>
+        {!page && profile && <Link className="inline-flex min-h-11 items-center rounded-2xl border border-border bg-surface px-4 font-semibold" to="/me/profil">Modifier</Link>}
       </header>
       {busy && !profile && <PendingRead title="Mon parcours" label="On récupère ton parcours…" />}
       {error && <div role="alert"><Mascotte humeur="désolée" taille={96} /><p>{error}</p></div>}
-      {!page && progress && <dl className="grid grid-cols-3 gap-2 rounded-2xl border border-border p-3 text-center text-sm">
-        <div><dt>XP</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.xp} /></dd></div>
-        <div><dt>Série</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.streak} /></dd></div>
-        <div><dt>Cartes</dt><dd className="text-xl text-foreground"><AnimatedNumber value={progress.learnedCards} /></dd></div>
+      {!page && progress && <dl className="grid grid-cols-3 gap-2 text-sm">
+        <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-3"><dt className="order-2 text-muted">XP</dt><dd className="order-1 text-2xl font-bold text-foreground"><AnimatedNumber value={progress.xp} /></dd></div>
+        <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-3"><dt className="order-2 text-muted">de série</dt><dd className="order-1 text-2xl font-bold text-foreground"><AnimatedNumber value={progress.streak} /> j</dd></div>
+        <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-3"><dt className="order-2 text-muted">cartes</dt><dd className="order-1 text-2xl font-bold text-foreground"><AnimatedNumber value={progress.learnedCards} /></dd></div>
       </dl>}
       {!page && profile && <>
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-4"><p>{entry?.label ?? profile.schoolClass}{profile.series ? ` · Série ${profile.series}` : ''}</p><Link className="inline-flex min-h-11 items-center rounded-xl border border-border px-4" to="/me/profil">Modifier</Link></div>
+        <h2 className="font-semibold text-muted">Mon organisation</h2>
         <section aria-label="Mon organisation" className="overflow-hidden rounded-2xl border border-border bg-surface">
           {[
             ['/me/examens', 'Examens', examsLoaded ? (exams.length ? exams.map(item => `${item.title} · ${new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`).join(', ') : 'Aucun examen ajouté') : 'Chargement…'],
@@ -227,7 +229,7 @@ export default function Profile() {
           {settingsSaved && <p role="status">Tes réglages sont enregistrés.</p>}
         </form>}
       </section>}
-      {!page && <footer className="text-xs text-muted">À propos · Lohni est basé sur <a href="https://github.com/CaviraOSS/PageLM" className="inline-flex min-h-11 items-center text-primary underline">PageLM</a> de nullure et recabasic, sous licence PageLM Community License.</footer>}
+      {!page && <footer className="text-center text-xs text-muted">À propos · Lohni est basé sur <a href="https://github.com/CaviraOSS/PageLM" className="inline-flex min-h-11 items-center text-primary underline">PageLM</a> de nullure et recabasic, sous licence PageLM Community License.</footer>}
     </div>
   </main>
 }
