@@ -3,18 +3,19 @@ import { useState, useRef } from "react"
 import { withOccurrenceKeys } from "../../lib/occurrenceKeys"
 
 interface QuickAddProps {
-    onAdd: (data: { text?: string; files?: File[] }) => Promise<void>
+    onAdd: (data: { text?: string; files?: File[] }) => Promise<boolean>
     loading: boolean
+    error?: string
 }
 
-export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
+export default function QuickAdd({ onAdd, loading, error }: QuickAddProps) {
     const [text, setText] = useState("")
     const [selectedFiles, setSelectedFiles] = useState<File[]>([])
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     const handleSubmit = async () => {
         if (!text.trim() && selectedFiles.length === 0) return
-        await onAdd({ text, files: selectedFiles })
+        if (!(await onAdd({ text, files: selectedFiles }))) return
         setText("")
         setSelectedFiles([])
     }
@@ -74,6 +75,8 @@ export default function QuickAdd({ onAdd, loading }: QuickAddProps) {
                         {loading ? "Ajout…" : "Ajouter la tâche"}
                     </button>
                 </div>
+
+                {error && <p role="alert" className="rounded-lg border border-primary bg-tint px-3 py-2 text-sm text-foreground">{error}</p>}
 
                 {/* Selected Files Display */}
                 {selectedFiles.length > 0 && (

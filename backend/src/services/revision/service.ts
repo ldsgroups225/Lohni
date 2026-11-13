@@ -44,7 +44,8 @@ type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input
 const validDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0
-const validUUID = (value: unknown): value is string => typeof value === 'string' && /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(value)
+export const DEVICE_ID_ERROR = 'Identifiant appareil invalide.'
+export const validUUID = (value: unknown): value is string => typeof value === 'string' && /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(value)
 const revisionCard = (row: { content: string; id: string; chapter_id: string; origin: RevisionCard['origin']; due: string; reviews: number }): RevisionCard =>
   ({ ...JSON.parse(row.content), id: row.id, chapterId: row.chapter_id, origin: row.origin, due: row.due, reviews: row.reviews })
 const validCard = (card: GeneratedCard) => card && nonempty(card.question) && nonempty(card.answer)
@@ -106,7 +107,7 @@ export class RevisionService {
     return (await this.dependencies.db.all(`PRAGMA table_info(${table})`)).some(column => column.name === name)
   }
   private async execute<T>(context: RevisionContext, operation: () => Promise<T>): Promise<T> {
-    if (!context || !validUUID(context.deviceId)) throw new RevisionError('Identifiant appareil invalide.')
+    if (!context || !validUUID(context.deviceId)) throw new RevisionError(DEVICE_ID_ERROR)
     if (!validDate(context.localDate)) throw new RevisionError('Date locale invalide.')
     const serverDate = this.dependencies.now().toISOString().slice(0, 10)
     if (Math.abs(Date.parse(context.localDate) - Date.parse(serverDate)) > 86400000) throw new RevisionError('Date locale trop éloignée. Règle la date de ton appareil à un jour au plus de la date UTC du serveur.', 'REVISION_LOCAL_DATE_OUT_OF_RANGE')

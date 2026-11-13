@@ -1,5 +1,5 @@
 import type { Task, Slot, PlanPolicy, CreateTaskRequest, UpdateTaskRequest, PlannerGenerateRequest, MaterialsRequest } from "./types"
-import { createTask, getTask, updateTask, deleteTask, listTasks } from "./store"
+import type { PlannerStore } from "./store"
 import { parseTask, generateSteps, replan } from "./ai"
 import { planTask, planTasks, weeklyPlan, defaultPolicy } from "./scheduler"
 import { handleAsk } from "../../lib/ai/ask"
@@ -8,11 +8,11 @@ import crypto from "node:crypto"
 export class PlannerService {
     private policy: PlanPolicy
 
-    constructor(policy?: PlanPolicy) {
+    constructor(private store: PlannerStore, policy?: PlanPolicy) {
         this.policy = policy || defaultPolicy()
     }
 
-    async createTaskFromRequest(req: CreateTaskRequest): Promise<Task> {
+    async createTaskFromRequest(device: string, req: CreateTaskRequest): Promise<Task> {
         let taskData: Partial<Task>
 
         if (req.text) {
@@ -41,7 +41,7 @@ export class PlannerService {
         const steps = await generateSteps(tempTask)
         taskData.steps = steps
 
-        const task = await createTask({
+        const task = await this.store.createTask(device, {
             title: taskData.title || "Untitled Task",
             course: taskData.course,
             type: taskData.type,
@@ -54,20 +54,20 @@ export class PlannerService {
         })
 
         if (req.files && req.files.length > 0) {
-            await this.addFilesToTask(task.id, req.files)
-            const updatedTask = await getTask(task.id)
+            await this.addFilesToTask(device, task.id, req.files)
+            const updatedTask = await this.store.getTask(device, task.id)
             return updatedTask || task
         }
 
         return task
     }
 
-    async getTask(id: string): Promise<Task | null> {
-        return getTask(id)
+    async getTask(device: string, id: string): Promise<Task | null> {
+        return this.store.getTask(device, id)
     }
 
-    async updateTask(id: string, req: UpdateTaskRequest): Promise<Task | null> {
-        const existing = await getTask(id)
+    async updateTask(device: string, id: string, req: UpdateTaskRequest): Promise<Task | null> {
+        const existing = await this.store.getTask(device, id)
         if (!existing) return null
 
         let steps = existing.steps
@@ -76,36 +76,36 @@ export class PlannerService {
             steps = await generateSteps(updatedTask)
         }
 
-        return updateTask(id, { ...req, steps })
+        return this.store.updateTask(device, id, { ...req, steps })
     }
 
-    async deleteTask(id: string): Promise<boolean> {
-        return deleteTask(id)
+    async deleteTask(device: string, id: string): Promise<boolean> {
+        return this.store.deleteTask(device, id)
     }
 
-    async listTasks(filter?: { status?: string; dueBefore?: string; course?: string }): Promise<Task[]> {
-        return listTasks(filter)
+    async listTasks(device: string, filter?: { status?: string; dueBefore?: string; course?: string }): Promise<Task[]> {
+        return this.store.listTasks(device, filter)
     }
 
-    async planSingleTask(taskId: string): Promise<Task | null> {
-        const task = await getTask(taskId)
+    async planSingleTask(device: string, taskId: string): Promise<Task | null> {
+        const task = await this.store.getTask(device, taskId)
         if (!task) return null
 
         const plannedTask = planTask(task, this.policy)
-        await updateTask(taskId, { plan: plannedTask.plan })
+        await this.store.updateTask(device, taskId, { plan: plannedTask.plan })
 
         return plannedTask
     }
 
-    async generateWeeklyPlan(req?: PlannerGenerateRequest): Promise<{ tasks: Task[]; plan: any }> {
+    async generateWeeklyPlan(device: string, req?: PlannerGenerateRequest): Promise<{ tasks: Task[]; plan: any }> {
         const policy = { ...this.policy, ...req?.policy }
 
-        const tasks = await listTasks({ status: 'todo' })
+        const tasks = await this.store.listTasks(device, { status: 'todo' })
 
         const plannedTasks = planTasks(tasks, policy)
 
         for (const task of plannedTasks) {
-            await updateTask(task.id, { plan: task.plan })
+            await this.store.updateTask(device, task.id, { plan: task.plan })
         }
 
         const plan = weeklyPlan(plannedTasks, policy)
@@ -113,12 +113,12 @@ export class PlannerService {
         return { tasks: plannedTasks, plan }
     }
 
-    async getTodaySessions(): Promise<{ task: Task; slots: Slot[] }[]> {
+    async getTodaySessions(device: string): Promise<{ task: Task; slots: Slot[] }[]> {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
 
-        const tasks = await listTasks({ status: 'todo' })
+        const tasks = await this.store.listTasks(device, { status: 'todo' })
         const todaySessions: { task: Task; slots: Slot[] }[] = []
 
         for (const task of tasks) {
@@ -141,8 +141,8 @@ export class PlannerService {
         })
     }
 
-    async updateSlot(taskId: string, slotId: string, updates: { done?: boolean; skip?: boolean }): Promise<Task | null> {
-        const task = await getTask(taskId)
+    async updateSlot(device: string, taskId: string, slotId: string, updates: { done?: boolean; skip?: boolean }): Promise<Task | null> {
+        const task = await this.store.getTask(device, taskId)
         if (!task?.plan?.slots) return null
 
         const slotIndex = task.plan.slots.findIndex(s => s.id === slotId)
@@ -155,23 +155,23 @@ export class PlannerService {
         }
 
         if (updates.skip) {
-            await this.replanTask(taskId)
-            return getTask(taskId)
+            await this.replanTask(device, taskId)
+            return this.store.getTask(device, taskId)
         }
 
         const updatedPlan = { ...task.plan, slots: updatedSlots }
-        return updateTask(taskId, { plan: updatedPlan })
+        return this.store.updateTask(device, taskId, { plan: updatedPlan })
     }
 
-    async replanTask(taskId: string): Promise<Task | null> {
-        const task = await getTask(taskId)
+    async replanTask(device: string, taskId: string): Promise<Task | null> {
+        const task = await this.store.getTask(device, taskId)
         if (!task?.plan) return null
 
         const now = new Date()
         const missedSlots = task.plan.slots.filter(s => new Date(s.end) < now && !s.done)
         const remainingSlots = task.plan.slots.filter(s => new Date(s.start) >= now)
 
-        const allTasks = await listTasks({ status: 'todo' })
+        const allTasks = await this.store.listTasks(device, { status: 'todo' })
 
         const newSlots = replan(missedSlots, remainingSlots, allTasks, task.plan.policy)
         const taskSlots = newSlots.filter(s => s.taskId === taskId)
@@ -182,11 +182,11 @@ export class PlannerService {
             lastPlannedAt: new Date().toISOString()
         }
 
-        return updateTask(taskId, { plan: updatedPlan })
+        return this.store.updateTask(device, taskId, { plan: updatedPlan })
     }
 
-    async generateMaterials(taskId: string, req: MaterialsRequest): Promise<any> {
-        const task = await getTask(taskId)
+    async generateMaterials(device: string, taskId: string, req: MaterialsRequest): Promise<any> {
+        const task = await this.store.getTask(device, taskId)
         if (!task) throw new Error('Task not found')
 
         const content = `${task.title}\n${task.notes || ''}\nSteps: ${task.steps?.join(', ') || ''}`
@@ -255,8 +255,8 @@ export class PlannerService {
         return response.answer
     }
 
-    async getUpcomingDeadlines(): Promise<{ urgent: Task[]; atRisk: Task[]; upcoming: Task[] }> {
-        const tasks = await listTasks({ status: 'todo' })
+    async getUpcomingDeadlines(device: string): Promise<{ urgent: Task[]; atRisk: Task[]; upcoming: Task[] }> {
+        const tasks = await this.store.listTasks(device, { status: 'todo' })
         const now = new Date()
 
         const urgent: Task[] = []
@@ -281,8 +281,8 @@ export class PlannerService {
         return { urgent, atRisk, upcoming }
     }
 
-    async getUserStats(): Promise<any> {
-        const allTasks = await listTasks()
+    async getUserStats(device: string): Promise<any> {
+        const allTasks = await this.store.listTasks(device)
         const completedTasks = allTasks.filter(t => t.status === 'done')
 
         const totalPlannedMinutes = allTasks.reduce((sum, task) => {
@@ -308,11 +308,10 @@ export class PlannerService {
         }
     }
 
-    async addFilesToTask(taskId: string, files: any[]): Promise<any[]> {
-        const task = await getTask(taskId)
+    async addFilesToTask(device: string, taskId: string, files: any[]): Promise<any[]> {
+        const task = await this.store.getTask(device, taskId)
         if (!task) throw new Error("Task not found")
 
-        const { saveTaskFile } = await import("./store.js")
         const uploadedFiles: any[] = []
 
         for (const file of files) {
@@ -326,20 +325,20 @@ export class PlannerService {
                 uploadedAt: new Date().toISOString()
             }
 
-            await saveTaskFile(taskFile)
+            await this.store.saveTaskFile(device, taskFile)
             uploadedFiles.push(taskFile)
         }
 
         return uploadedFiles
     }
 
-    async removeFileFromTask(taskId: string, fileId: string): Promise<boolean> {
-        const task = await getTask(taskId)
+    async removeFileFromTask(device: string, taskId: string, fileId: string): Promise<boolean> {
+        const task = await this.store.getTask(device, taskId)
         if (!task) return false
 
-        const { deleteTaskFile } = await import("./store.js")
         try {
-            await deleteTaskFile(fileId)
+            if (!(await this.store.getTaskFiles(device, taskId)).some(f => f.id === fileId)) return false
+            await this.store.deleteTaskFile(device, fileId)
             return true
         } catch {
             return false
@@ -363,5 +362,3 @@ export class PlannerService {
         return validTasks > 0 ? totalAccuracy / validTasks : 1.0
     }
 }
-
-export const plannerService = new PlannerService()
