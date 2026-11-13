@@ -21,6 +21,7 @@ export type GeneratedCard = { kind: 'basic'; question: string; answer: string } 
 }
 export type GeneratedChapter = { summary: string; notes: { content: string; cards: GeneratedCard[] }[] }
 export type ProfileInput = { schoolClass: string; series?: string; subjects: string[]; examDate?: string }
+export type TimetableBlock = { day: number; start: string; end: string; subject: string }
 export type RevisionSettings = { dailyMinutes: number; restDays: number[] }
 export type RevisionCard = GeneratedCard & { id: string; chapterId: string; origin: 'ai' | 'import'; due: string; reviews: number }
 export type RevisionSession = { id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number; summary?: RevisionSummary }
@@ -39,7 +40,7 @@ export type RevisionProgress = {
   subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[]
 }
 export type RevisionHome = { profile: ProfileInput; nextExam: Pick<RevisionExam, 'id' | 'title' | 'date'> | null; daysUntilExam: number | null; totalCards: number; cardCount: number; estimatedMinutes: number; moreCards: boolean; started: boolean; state: 'ready' | 'done' | 'empty' }
-type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; series?: string; text?: string }) => Promise<GeneratedChapter>; transcribePhoto?: (file: UpFile) => Promise<string> }
+type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; series?: string; text?: string }) => Promise<GeneratedChapter>; transcribePhoto?: (file: UpFile) => Promise<string>; readTimetable?: (file: UpFile) => Promise<TimetableBlock[]> }
 const validDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0
@@ -65,6 +66,7 @@ export class RevisionService {
         `CREATE TABLE IF NOT EXISTS revision_profiles (device_id TEXT PRIMARY KEY, school_class TEXT NOT NULL, series TEXT, exam_date TEXT, xp INTEGER NOT NULL DEFAULT 0)`,
         `CREATE TABLE IF NOT EXISTS revision_exams (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, title TEXT NOT NULL, date TEXT NOT NULL, subjects TEXT NOT NULL, chapter_ids TEXT NOT NULL)`,
         `CREATE TABLE IF NOT EXISTS revision_migrations (name TEXT PRIMARY KEY)`,
+        `CREATE TABLE IF NOT EXISTS revision_timetable (device_id TEXT PRIMARY KEY, blocks TEXT NOT NULL)`,
         `CREATE TABLE IF NOT EXISTS revision_settings (device_id TEXT PRIMARY KEY, daily_minutes INTEGER NOT NULL, rest_days TEXT NOT NULL)`,
         `CREATE TABLE IF NOT EXISTS revision_subjects (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, name TEXT NOT NULL, UNIQUE(device_id, name))`,
         `CREATE TABLE IF NOT EXISTS revision_chapters (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, subject_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL, origin TEXT NOT NULL)`,
@@ -115,6 +117,61 @@ export class RevisionService {
       if (profile) profile.examDate = (await this.nextExam(context))?.date
       return profile
     })
+  }
+  private validateTimetable(input: unknown): TimetableBlock[] {
+    if (!Array.isArray(input) || input.length > policy.maxTimetableBlocks) throw new RevisionError('Nombre de blocs de cours invalide.')
+    const time = (value: unknown) => typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)
+    const blocks = input.map(block => {
+      if (!block || !Number.isInteger(block.day) || block.day < 0 || block.day > 6 || !time(block.start) || !time(block.end) || block.start >= block.end || !nonempty(block.subject) || block.subject.length > policy.maxTitleChars) throw new RevisionError('Bloc de cours invalide : vérifie le jour, les horaires et la matière.')
+      return { day: block.day, start: block.start, end: block.end, subject: block.subject.trim() }
+    })
+    if (blocks.some((block, i) => blocks.some((other, j) => i !== j && block.day === other.day && block.start < other.end && other.start < block.end))) throw new RevisionError('Les cours ne peuvent pas se chevaucher.')
+    return blocks
+  }
+  private async readTimetable(deviceId: string): Promise<TimetableBlock[]> {
+    const row = await this.dependencies.db.get('SELECT blocks FROM revision_timetable WHERE device_id = ?', [deviceId])
+    return row ? JSON.parse(row.blocks) : []
+  }
+  async getTimetable(context: RevisionContext) { return this.execute(context, () => this.readTimetable(context.deviceId)) }
+  async saveTimetable(context: RevisionContext, input: TimetableBlock[]) {
+    return this.execute(context, async () => {
+      const blocks = this.validateTimetable(input)
+      await this.dependencies.db.run('INSERT INTO revision_timetable VALUES (?, ?) ON CONFLICT(device_id) DO UPDATE SET blocks = excluded.blocks', [context.deviceId, JSON.stringify(blocks)])
+      await this.refreshSessions(context.deviceId)
+      return blocks
+    })
+  }
+  async readTimetablePhotos(context: RevisionContext, files: UpFile[]) {
+    const profile = await this.execute(context, () => this.requireProfile(context.deviceId))
+    if (!Array.isArray(files) || !files.length || files.length > policy.maxTimetablePhotos) throw new RevisionError(`Choisis entre 1 et ${policy.maxTimetablePhotos} photos.`)
+    const images = files.map(file => {
+      const mime = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' }[extname(file?.filename ?? '').toLowerCase()]
+      if (!mime) throw new RevisionError('Format de photo non pris en charge. Choisis une image JPEG, PNG ou WebP.')
+      return { ...file, mimeType: mime }
+    })
+    const id = randomUUID()
+    await this.execute(context, async () => {
+      const quota = await this.readImportQuota(context.deviceId)
+      if (!quota.remaining) throw new RevisionError(`Tu as atteint tes ${policy.dailyImports} imports du jour. Recharge le ${quota.resetsAt.slice(0, 10)} à 00:00 UTC.`)
+      await this.dependencies.db.run('INSERT INTO revision_imports VALUES (?, ?, ?)', [id, context.deviceId, this.dependencies.now().toISOString().slice(0, 10)])
+    })
+    try {
+      if (!this.dependencies.readTimetable) throw new Error('Lecteur indisponible')
+      const extracted: TimetableBlock[] = []
+      for (const image of images) {
+        if ((await stat(image.path)).size > policy.maxUploadMB * 1024 * 1024) throw new RevisionError(`Le fichier dépasse la limite de ${policy.maxUploadMB} Mo.`)
+        const result = await this.dependencies.readTimetable(image)
+        if (!Array.isArray(result)) throw new Error('Lecture invalide')
+        extracted.push(...result)
+      }
+      const blocks = this.validateTimetable(extracted)
+      if (!blocks.length) throw new Error('Lecture vide')
+      return { blocks, unknownSubjects: [...new Set(blocks.map(block => block.subject).filter(subject => !profile.subjects.includes(subject)))] }
+    } catch (error) {
+      await this.execute(context, () => this.dependencies.db.run('DELETE FROM revision_imports WHERE id = ? AND device_id = ?', [id, context.deviceId]))
+      if (error instanceof RevisionError) throw error
+      throw new RevisionError('Impossible de lire cet emploi du temps. Prends des photos nettes et réessaie.')
+    }
   }
   async getSettings(context: RevisionContext): Promise<RevisionSettings> {
     return this.execute(context, async () => {
@@ -262,7 +319,11 @@ export class RevisionService {
     const introduced = await db.all(`SELECT DISTINCT j.card_id FROM revision_journal j WHERE j.device_id = ? AND j.local_date = ? AND json_extract(j.scheduling, '$.log.state') = 0`, [context.deviceId, context.localDate])
     const reviewed = new Set((await db.all('SELECT card_id FROM revision_journal WHERE device_id = ? AND local_date = ?', [context.deviceId, context.localDate])).map(row => row.card_id))
     const introducedIds = new Set(introduced.map(row => row.card_id))
-    const plan = buildPlan({ today: context.localDate, exams, dailyMinutes: settings?.daily_minutes ?? policy.defaultDailyMinutes,
+    const timetable = await this.readTimetable(context.deviceId)
+    const weekday = (date: string) => new Date(`${date}T00:00:00Z`).getUTCDay()
+    const duration = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3))
+    const plan = buildPlan({ capacity: (date, base) => timetable.filter(block => block.day === weekday(date)).reduce((sum, block) => sum + duration(block.end) - duration(block.start), 0) >= policy.heavyDayHours * 60 ? base * policy.heavyDayFactor : base,
+      subjectOrder: date => timetable.filter(block => block.day === (weekday(date) + 1) % 7 && profile.subjects.includes(block.subject)).map(block => block.subject), today: context.localDate, exams, dailyMinutes: settings?.daily_minutes ?? policy.defaultDailyMinutes,
       restDays: settings ? JSON.parse(settings.rest_days) : [], chapters: chapters.map(chapter => {
         const dueByDate: Record<string, number> = {}
         for (const card of chapter.cards) if (card.reviews > 0 && !introducedIds.has(card.id) && (!reviewed.has(card.id) || card.due.slice(0, 10) > context.localDate)) {
@@ -436,7 +497,7 @@ export class RevisionService {
   }
   private async selectSessionCards(context: RevisionContext, profile: ProfileInput): Promise<RevisionCard[]> {
     const db = this.dependencies.db
-    const rows = await db.all(`SELECT c.*, ch.origin FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id
+    const rows = await db.all(`SELECT c.*, ch.origin, s.name AS subject FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id
       JOIN revision_subjects s ON s.id = ch.subject_id WHERE c.device_id = ? AND s.selected = 1 ORDER BY c.rowid`, [context.deviceId])
     const introduced = await db.get(`SELECT COUNT(DISTINCT j.card_id) AS count FROM revision_journal j
       JOIN revision_cards c ON c.id = j.card_id AND c.device_id = j.device_id
@@ -451,8 +512,10 @@ export class RevisionService {
     const days = profile.examDate ? (Date.parse(profile.examDate) - Date.parse(context.localDate)) / 86400000 : 0
     const quota = (days > 0 ? Math.max(policy.minNewCards, Math.min(policy.maxNewCards, Math.ceil((unseen + introduced.count) / days))) : policy.defaultNewCards) - introduced.count
     const eligible = rows.filter(r => !reviewed.has(r.id) && (r.reviews === 0 || r.due.slice(0, 10) <= context.localDate))
+    const tomorrow = (new Date(`${context.localDate}T00:00:00Z`).getUTCDay() + 1) % 7
+    const preferred = new Set((await this.readTimetable(context.deviceId)).filter(block => block.day === tomorrow && profile.subjects.includes(block.subject)).map(block => block.subject))
     const rank = (row: any) => row.reviews > 0 ? 0 : JSON.parse(row.content).kind === 'mcq' ? 2 : 1
-    eligible.sort((a, b) => rank(a) - rank(b) || (a.reviews > 0 && b.reviews > 0
+    eligible.sort((a, b) => Number(preferred.has(b.subject)) - Number(preferred.has(a.subject)) || rank(a) - rank(b) || (a.reviews > 0 && b.reviews > 0
       ? this.scheduler.retrievability(JSON.parse(a.scheduling), this.dependencies.now()) - this.scheduler.retrievability(JSON.parse(b.scheduling), this.dependencies.now()) : 0))
     const plan = await this.readPlan(context)
     if (plan.exams.length) {

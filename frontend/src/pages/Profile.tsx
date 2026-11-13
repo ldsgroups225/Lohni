@@ -1,3 +1,4 @@
+import Timetable from '../components/Revision/Timetable'
 import { Button } from '../components/ui/Button'
 import { PendingRead } from '../components/ui/PendingRead'
 import { humeurSerie } from '../components/ui/revisionPresentation'
@@ -180,6 +181,7 @@ export default function Profile() {
           <div className="flex gap-3"><Button type="submit" disabled={!exam.subjects.length}>Enregistrer l’examen</Button><Button type="button" onClick={() => setExam(null)}>Annuler</Button></div>
         </form>}
       </section>}
+      {profile && <Timetable profile={profile} onProfile={setProfile} />}
       <section className="space-y-4 rounded-2xl border border-border p-6">
         <h2 className="text-xl text-foreground">Réglages de révision</h2>
         {settingsError && <p role="alert">{settingsError}</p>}
