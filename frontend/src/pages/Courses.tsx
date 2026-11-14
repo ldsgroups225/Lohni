@@ -8,18 +8,21 @@ import { listDelay } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { Progress } from '../components/ui/Progress'
 import MasteryBadge from '../components/ui/MasteryBadge'
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
+import { useOverlayNavigation } from '../lib/useOverlayNavigation'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
+
+const ChapterSummary = lazy(() => import('../components/Revision/ChapterSummary'))
 
 let cachedCourses: { device: string | null; version: number; day: string; chapters: RevisionChapter[]; progress: RevisionProgress } | null = null
 
 const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
-function DeferredDetails({ summary, children }: { summary: ReactNode; children: ReactNode }) {
-  const [opened, setOpened] = useState(false)
-  return <details className="min-w-0 open:col-span-2" onToggle={event => { if (event.currentTarget.open) setOpened(true) }}>
+function DeferredDetails({ summary, children, defaultOpen = false }: { summary: ReactNode; children: ReactNode; defaultOpen?: boolean }) {
+  const [opened, setOpened] = useState(defaultOpen)
+  return <details open={defaultOpen || undefined} className="min-w-0 open:col-span-2" onToggle={event => { if (event.currentTarget.open) setOpened(true) }}>
     <summary className="course-summary flex min-h-11 cursor-pointer list-none items-center justify-center rounded-xl border border-border bg-background px-3 py-2 text-center font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-primary">{summary}</summary>
     {opened && children}
   </details>
@@ -66,6 +69,9 @@ export default function Courses() {
   const [chapters, setChapters] = useState<RevisionChapter[]>(() => cachedCourses?.chapters ?? sharedChapters ?? [])
   const [, setProgress] = useState<RevisionProgress | null>(() => cachedCourses?.progress ?? sharedProgress ?? null)
   const [editing, setEditing] = useState<string | null>(null)
+  const [summaryId, setSummaryId] = useState<string | null>(null)
+  const [cardsOpen, setCardsOpen] = useState<string | null>(null)
+  const [summaryOpen, setSummaryOpen] = useOverlayNavigation('chapter-summary')
   const [stale, setStale] = useState(!!cachedCourses && cachedCourses.version !== currentRevisionCacheVersion())
   const [busy, setBusy] = useState((!cachedCourses && !sharedChapters) || stale)
   const [error, setError] = useState('')
@@ -106,6 +112,9 @@ export default function Courses() {
     }).finally(() => { if (active) setBusy(false) })
     return () => { active = false }
   }, [load])
+
+  const selectedChapter = chapters.find(chapter => chapter.id === summaryId)
+  if (summaryOpen && selectedChapter) return <Suspense fallback={<PendingRead title="Résumé" label="On prépare ton résumé…" />}><ChapterSummary {...selectedChapter} onBack={() => setSummaryOpen(false)} onCards={() => { setCardsOpen(selectedChapter.id); setSummaryOpen(false) }} /></Suspense>
 
   return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28">
     <div className="mx-auto max-w-2xl space-y-4">
@@ -162,8 +171,8 @@ export default function Courses() {
             <p className="text-sm text-muted">{chapter.seenCards} carte{chapter.seenCards === 1 ? '' : 's'} vue{chapter.seenCards === 1 ? '' : 's'} sur {chapter.cards.length}{chapter.mastery !== null && ` · rappel estimé ${Math.round(chapter.mastery)} %`}
               {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && ` · encore ${Math.ceil(chapter.cards.length * revisionPolicy.minimumSeenRatio) - chapter.seenCards} pour faire évoluer la maîtrise`}</p>
             <div className="grid grid-cols-2 gap-2">
-            <DeferredDetails summary="Résumé"><MarkdownView md={chapter.summary} /></DeferredDetails>
-            <DeferredDetails summary={`${chapter.cards.length} carte${chapter.cards.length === 1 ? '' : 's'}`}>
+            <button type="button" className="min-h-11 rounded-xl border border-border bg-background px-3 py-2 font-semibold text-foreground" onClick={() => { setSummaryId(chapter.id); setCardsOpen(null); setSummaryOpen(true) }}>Résumé</button>
+            <DeferredDetails key={`${chapter.id}-${cardsOpen === chapter.id}`} defaultOpen={cardsOpen === chapter.id} summary={`${chapter.cards.length} carte${chapter.cards.length === 1 ? '' : 's'}`}>
               <div className="mt-3 space-y-4">{chapter.cards.map(card => <article key={card.id} className="space-y-3 rounded-xl border border-border p-4">
                 {editing === card.id ? <CardEditor key={card.id} card={card} busy={busy || stale} onCancel={() => setEditing(null)} onSave={value => void run(async () => {
                   await revisionAPI.updateCard(card.id, value)
