@@ -103,7 +103,12 @@ async function req<T = unknown>(
   const { timeout = env.timeout, ...rest } = init;
   const { signal, done } = timeoutCtl(timeout);
   try {
-    const r = await fetch(url, { ...rest, signal: rest.signal ? AbortSignal.any([signal, rest.signal]) : signal });
+    let r: Response;
+    try { r = await fetch(url, { ...rest, signal: rest.signal ? AbortSignal.any([signal, rest.signal]) : signal }); }
+    catch (error) {
+      if (signal.aborted && !rest.signal?.aborted) throw new APIError('Le chargement prend trop de temps. Réessaie dans un instant.', 0, 'TIMEOUT');
+      throw error;
+    }
     if (!r.ok) {
       const txt = await r.text().catch(() => "");
       let detail: { error?: unknown; code?: unknown; chapterId?: unknown } | undefined;
@@ -269,14 +274,14 @@ export async function startExam(examId: string) {
     `${env.backend}/exam`,
     {
       method: "POST",
-      headers: plannerHeaders(true),
+      headers: deviceHeaders(true),
       body: JSON.stringify({ examId }),
     }
   )
 }
 
 export async function cancelExam(runId: string) {
-  return req(`${env.backend}/exam/${encodeURIComponent(runId)}`, { method: "DELETE", headers: plannerHeaders() })
+  return req(`${env.backend}/exam/${encodeURIComponent(runId)}`, { method: "DELETE", headers: deviceHeaders() })
 }
 
 export function connectExamStream(runId: string, onEvent: (ev: ExamEvent) => void) {
@@ -340,19 +345,11 @@ export async function quizStart(topic: string) {
 
 export async function podcastStart(payload: { topic: string; duration?: "short" | "long" }) {
   const url = `${env.backend}/podcast`
-  const res = await fetch(url, {
-    method: "POST",
-    headers: plannerHeaders(true),
-    body: JSON.stringify(payload),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error || "Failed to start podcast")
-  return data
+  return req<{ pid: string }>(url, { method: "POST", headers: deviceHeaders(true), body: JSON.stringify(payload) })
 }
 
 export async function podcastCancel(pid: string) {
-  const response = await fetch(`${env.backend}/podcast/${encodeURIComponent(pid)}`, { method: 'DELETE', headers: plannerHeaders() })
-  if (!response.ok) throw new Error('Impossible d’annuler le podcast.')
+  await req(`${env.backend}/podcast/${encodeURIComponent(pid)}`, { method: 'DELETE', headers: deviceHeaders() })
 }
 
 export function connectPodcastStream(pid: string, onEvent: (ev: any) => void) {
@@ -439,8 +436,8 @@ export type PlannerEvent =
   | { type: "slot.update"; taskId: string; slotId: string; done: boolean; skip: boolean }
   | { type: "done" };
 
-// Planner data belongs to the device: every call carries the same id as the revision calls.
-const plannerHeaders = (json = false) => {
+// Exam, podcast and planner data belong to the device: every call carries the same id as the revision calls.
+const deviceHeaders = (json = false) => {
   const h = new Headers({ "X-Device-Id": revisionDeviceId() });
   if (json) h.set("content-type", "application/json");
   return h;
@@ -449,7 +446,7 @@ const plannerHeaders = (json = false) => {
 export async function plannerIngest(text: string) {
   return req<{ ok: boolean; task: PlannerTask }>(`${env.backend}/tasks/ingest`, {
     method: "POST",
-    headers: plannerHeaders(true),
+    headers: deviceHeaders(true),
     body: JSON.stringify({ text })
   })
 }
@@ -460,13 +457,13 @@ export async function plannerList(params?: { status?: string; dueBefore?: number
   if (params?.dueBefore) q.set("dueBefore", String(params.dueBefore))
   if (params?.course) q.set("course", params.course)
   const url = `${env.backend}/tasks${q.toString() ? `?${q}` : ""}`
-  return req<{ ok: boolean; tasks: PlannerTask[] }>(url, { method: "GET", headers: plannerHeaders() })
+  return req<{ ok: boolean; tasks: PlannerTask[] }>(url, { method: "GET", headers: deviceHeaders() })
 }
 
 export async function plannerPlan(id: string, cram?: boolean) {
   return req<{ ok: boolean; task: PlannerTask & { plan?: { slots: PlannerSlot[] } } }>(`${env.backend}/tasks/${encodeURIComponent(id)}/plan`, {
     method: "POST",
-    headers: plannerHeaders(true),
+    headers: deviceHeaders(true),
     body: JSON.stringify({ cram: !!cram })
   })
 }
@@ -474,7 +471,7 @@ export async function plannerPlan(id: string, cram?: boolean) {
 export async function plannerWeekly(cram?: boolean) {
   return req<{ ok: boolean; plan: WeeklyPlan }>(`${env.backend}/planner/weekly`, {
     method: "POST",
-    headers: plannerHeaders(true),
+    headers: deviceHeaders(true),
     body: JSON.stringify({ cram: !!cram })
   })
 }
@@ -482,7 +479,7 @@ export async function plannerWeekly(cram?: boolean) {
 export async function plannerMaterials(id: string, kind: "summary" | "studyGuide" | "flashcards" | "quiz") {
   return req<{ ok: boolean; data: any }>(`${env.backend}/tasks/${encodeURIComponent(id)}/materials`, {
     method: "POST",
-    headers: plannerHeaders(true),
+    headers: deviceHeaders(true),
     body: JSON.stringify({ kind })
   })
 }
@@ -503,13 +500,13 @@ export function connectPlannerStream(onEvent: (ev: PlannerEvent) => void) {
 export async function plannerUpdate(id: string, patch: Partial<PlannerTask>) {
   return req<{ ok: boolean; task: PlannerTask }>(`${env.backend}/tasks/${encodeURIComponent(id)}`, {
     method: "PATCH",
-    headers: plannerHeaders(true),
+    headers: deviceHeaders(true),
     body: JSON.stringify(patch)
   })
 }
 
 export async function plannerDelete(id: string) {
-  return req<{ ok: boolean }>(`${env.backend}/tasks/${encodeURIComponent(id)}`, { method: "DELETE", headers: plannerHeaders() })
+  return req<{ ok: boolean }>(`${env.backend}/tasks/${encodeURIComponent(id)}`, { method: "DELETE", headers: deviceHeaders() })
 }
 
 export async function plannerCreateWithFiles(data: { text?: string; title?: string; course?: string; type?: string; files?: File[] }) {
@@ -526,7 +523,7 @@ export async function plannerCreateWithFiles(data: { text?: string; title?: stri
 
   return req<{ ok: boolean; task: PlannerTask & { files?: any[] } }>(`${env.backend}/tasks`, {
     method: "POST",
-    headers: plannerHeaders(),
+    headers: deviceHeaders(),
     body: formData,
     timeout: Math.max(env.timeout, 300000),
   })
@@ -540,7 +537,7 @@ export async function plannerUploadFiles(taskId: string, files: File[]) {
 
   return req<{ ok: boolean; files: any[] }>(`${env.backend}/tasks/${encodeURIComponent(taskId)}/files`, {
     method: "POST",
-    headers: plannerHeaders(),
+    headers: deviceHeaders(),
     body: formData,
     timeout: Math.max(env.timeout, 300000),
   })
@@ -549,7 +546,7 @@ export async function plannerUploadFiles(taskId: string, files: File[]) {
 export async function plannerDeleteFile(taskId: string, fileId: string) {
   return req<{ ok: boolean }>(`${env.backend}/tasks/${encodeURIComponent(taskId)}/files/${encodeURIComponent(fileId)}`, {
     method: "DELETE",
-    headers: plannerHeaders(),
+    headers: deviceHeaders(),
   })
 }
 
@@ -640,10 +637,6 @@ export async function analyzeDebate(debateId: string) {
   })
 }
 
-export function err(e: unknown) {
-  return e instanceof Error ? e.message : String(e);
-}
-
 export { revisionPolicy };
 
 export type RevisionExam = { id: string; title: string; date: string; subjects: string[]; chapterIds: string[] };
@@ -712,7 +705,7 @@ async function revisionRequest<T>(path: string, method = 'GET', body?: unknown, 
   } catch (error) {
     if (error instanceof TypeError) throw new RevisionConnectionError('Connexion impossible. Tes réponses restent enregistrées sur cet appareil.');
     if (signal?.aborted) throw error;
-    if (error instanceof Error && error.name === 'AbortError') throw new RevisionConnectionError('Le chargement prend trop de temps. Tes réponses restent enregistrées sur cet appareil.');
+    if (error instanceof APIError && error.code === 'TIMEOUT') throw new RevisionConnectionError('Le chargement prend trop de temps. Tes réponses restent enregistrées sur cet appareil.');
     throw error;
   }
 }

@@ -249,6 +249,33 @@ test('hors ligne, l’accueil recalcule les nouvelles cartes et les répétition
   vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } })
 })
 
+test('podcastStart en erreur serveur lève une APIError avec le message du serveur', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'Sujet trop court.' }), { status: 400, headers: { 'Content-Type': 'application/json' } })))
+  await expect(api.podcastStart({ topic: 'x' })).rejects.toMatchObject({ name: 'Error', status: 400, message: 'Sujet trop court.' })
+  await expect(api.podcastStart({ topic: 'x' })).rejects.toBeInstanceOf(api.APIError)
+})
+
+test('un appel qui dépasse le délai échoue avec un message français', async () => {
+  vi.useFakeTimers()
+  vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => new Promise((_resolve, reject) => {
+    init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+  })))
+  const pending = expect(api.podcastStart({ topic: 'x' })).rejects.toMatchObject({ code: 'TIMEOUT', message: expect.stringContaining('trop de temps') })
+  await vi.advanceTimersByTimeAsync(10 * 60_000)
+  await pending
+  vi.useRealTimers()
+})
+
+test('examen et podcast portent l’en-tête d’appareil', async () => {
+  const seen: Array<string | null> = []
+  vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+    seen.push(new Headers(init.headers).get('X-Device-Id'))
+    return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } })
+  }))
+  await api.startExam('e1'); await api.cancelExam('r1'); await api.podcastStart({ topic: 'x' }); await api.podcastCancel('p1')
+  expect(seen).toEqual([deviceId, deviceId, deviceId, deviceId])
+})
+
 test('un contexte non sécurisé affiche le message HTTPS avant toute requête', async () => {
   entries.clear()
   vi.stubGlobal('crypto', {})
