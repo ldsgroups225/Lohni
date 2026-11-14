@@ -18,7 +18,7 @@ export function revisionRoutes(app: any) {
         const data = await handle({ deviceId: req.headers['x-device-id'], localDate: req.headers['x-local-date'] }, req)
         res.send({ ok: true, data: data ?? null })
       } catch (error) {
-        if (error instanceof RevisionError) return res.status(400).send({ ok: false, error: error.message, code: error.code })
+        if (error instanceof RevisionError) return res.status(400).send({ ok: false, error: error.message, code: error.code, chapterId: error.chapterId })
         console.error('[revision]', error)
         res.status(500).send({ ok: false, error: 'La révision est indisponible. Réessaie dans un instant.' })
       }
@@ -52,6 +52,7 @@ export function revisionRoutes(app: any) {
   route('post', '/revision/chapters', (context, req) => revision.generateChapter(context, req.body))
   route('get', '/revision/chapters', context => revision.listChapters(context))
   route('get', '/revision/import/quota', context => revision.getImportQuota(context))
+  route('post', '/revision/import/:id/retry', (context, req) => revision.retryImport(context, req.params.id))
   route('post', '/revision/import', async (context, req) => {
     if (!req.headers['content-type']?.includes('multipart/form-data')) {
       const { title, subject, text } = req.body ?? {}

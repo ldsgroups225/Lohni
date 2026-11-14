@@ -86,10 +86,10 @@ const timeoutCtl = (ms: number) => {
   return { signal: c.signal, done: () => clearTimeout(t) };
 };
 
-class APIError extends Error {
+export class APIError extends Error {
   readonly status: number;
   readonly code?: string;
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, readonly chapterId?: string) {
     super(message);
     this.status = status;
     this.code = code;
@@ -106,10 +106,10 @@ async function req<T = unknown>(
     const r = await fetch(url, { signal, ...rest });
     if (!r.ok) {
       const txt = await r.text().catch(() => "");
-      let detail: { error?: unknown; code?: unknown } | undefined;
+      let detail: { error?: unknown; code?: unknown; chapterId?: unknown } | undefined;
       try { detail = JSON.parse(txt); } catch { /* Non-JSON responses keep their HTTP status. */ }
       throw new APIError(typeof detail?.error === "string" ? detail.error : `http ${r.status}: ${txt || r.statusText}`,
-        r.status, typeof detail?.code === 'string' ? detail.code : undefined);
+        r.status, typeof detail?.code === 'string' ? detail.code : undefined, typeof detail?.chapterId === 'string' ? detail.chapterId : undefined);
     }
     const ct = r.headers.get("content-type") || "";
     if (ct.includes("application/json")) return (await r.json()) as T;
@@ -273,6 +273,10 @@ export async function startExam(examId: string) {
       body: JSON.stringify({ examId }),
     }
   )
+}
+
+export async function cancelExam(runId: string) {
+  return req(`${env.backend}/exam/${encodeURIComponent(runId)}`, { method: "DELETE" })
 }
 
 export function connectExamStream(runId: string, onEvent: (ev: ExamEvent) => void) {
@@ -862,7 +866,12 @@ async function revisionMutation<T>(path: string, method: string, body?: unknown)
   await syncRevisionAnswers();
   if (readOffline().pending.length) throw new Error('Reconnecte-toi pour envoyer tes réponses avant de modifier tes cours ou ton profil.');
   const device = revisionDeviceId();
-  const result = await revisionRequest<T>(path, method, body);
+  let result: T;
+  try { result = await revisionRequest<T>(path, method, body); } catch (error) {
+    if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
+    if (error instanceof APIError && error.chapterId) invalidateRevisionCache('/home', '/progress', '/chapters', '/plan');
+    throw error;
+  }
   if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
   if (path === '/profile') invalidateRevisionCache()
   else invalidateRevisionCache('/home', '/progress', '/chapters', '/plan')
@@ -938,6 +947,7 @@ export const revisionAPI = {
   saveTutorNote: (note: { subject: string; title: string; question: string; answer: string }) => revisionMutation<{ id: string }>('/notes', 'POST', note),
   generateChapter: (input: { subject: string; title: string }) => revisionMutation<{ id: string }>('/chapters', 'POST', input),
   importQuota: () => revisionRequest<RevisionImportQuota>('/import/quota'),
+  retryImport: (id: string) => revisionMutation<RevisionImportedChapter>(`/import/${encodeURIComponent(id)}/retry`, 'POST'),
   importChapter: (input: { subject: string; title: string; text?: string; file?: File }) => {
     if (!input.file) return revisionMutation<RevisionImportedChapter>('/import', 'POST', input);
     const form = new FormData();
