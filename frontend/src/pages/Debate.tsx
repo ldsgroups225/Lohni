@@ -8,6 +8,7 @@ import { BackButton } from "../components/ui/BackButton";
 import MarkdownContent from "../components/Chat/MarkdownContent";
 import { ToolPage } from "../components/ui/ToolPage";
 import * as api from "../lib/api";
+import { runTask } from "../lib/taskRun";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 type DebateMessage = {
@@ -37,6 +38,9 @@ type DebateAnalysis = {
     overallAssessment: string;
 };
 
+const ARGUE_STREAM_ERROR = "Erreur de connexion";
+const ANALYSIS_STREAM_ERROR = "Erreur de connexion à l’analyse";
+
 export default function Debate() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -56,9 +60,8 @@ export default function Debate() {
     const isDebateEnded = analysisState !== null;
     const analysis = typeof analysisState === "object" ? analysisState : null;
     const [analysisOpen, setAnalysisOpen] = useOverlayNavigation("debate-analysis", () => {
-        const socket = analysisWsRef.current;
-        analysisWsRef.current = null;
-        socket?.close();
+        analysisRunRef.current?.cancel();
+        analysisRunRef.current = null;
         setAnalysisState(null);
     });
     // Escape closes the analysis dialog, same as its « Fermer » button (the debate itself stays ended).
@@ -69,8 +72,8 @@ export default function Debate() {
         return () => document.removeEventListener("keydown", onKey);
     }, [isDebateEnded, analysis, setAnalysisOpen]);
 
-    const wsRef = useRef<WebSocket | null>(null);
-    const analysisWsRef = useRef<WebSocket | null>(null);
+    const argueRunRef = useRef<{ cancel: () => void } | null>(null);
+    const analysisRunRef = useRef<{ cancel: () => void } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [analysisPhase, setAnalysisPhase] = useState<string>("");
@@ -88,15 +91,12 @@ export default function Debate() {
     useEffect(() => {
         if (debateId) {
             fetchDebateSession(debateId);
-            connectWebSocket(debateId);
         }
         return () => {
-            if (wsRef.current) {
-                wsRef.current.close();
-            }
-            if (analysisWsRef.current) {
-                analysisWsRef.current.close();
-            }
+            argueRunRef.current?.cancel();
+            argueRunRef.current = null;
+            analysisRunRef.current?.cancel();
+            analysisRunRef.current = null;
         };
     }, [debateId]);
 
@@ -114,76 +114,55 @@ export default function Debate() {
         }
     };
 
-    const connectWebSocket = (id: string) => {
-        const ws = new WebSocket(api.wsURL(`/ws/debate?debateId=${encodeURIComponent(id)}`));
+    const onArgueEvent = (data: api.DebateEvent) => {
+        switch (data.type) {
+            case "user_argument":
+                setMessages((prev) => [
+                    ...prev,
+                    { role: "user", content: data.content, timestamp: Date.now() },
+                ]);
+                break;
 
-        ws.onopen = () => {
-            console.log("WebSocket connected");
-        };
+            case "ai_thinking":
+                setIsStreaming(true);
+                setStreamingContent("");
+                break;
 
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
+            case "ai_token":
+                setStreamingContent((prev) => prev + data.token);
+                break;
 
-            switch (data.type) {
-                case "ready":
-                    console.log("Debate WebSocket ready");
-                    break;
+            case "ai_complete":
+                setMessages((prev) => [
+                    ...prev,
+                    { role: "assistant", content: data.content, timestamp: Date.now() },
+                ]);
+                setIsStreaming(false);
+                setStreamingContent("");
+                break;
 
-                case "user_argument":
-                    setMessages((prev) => [
-                        ...prev,
-                        { role: "user", content: data.content, timestamp: Date.now() },
-                    ]);
-                    break;
+            case "ai_concede":
+                setMessages((prev) => [
+                    ...prev,
+                    { role: "assistant", content: `Je m’avoue vaincue : ${data.reason}`, timestamp: Date.now() },
+                ]);
+                setIsStreaming(false);
+                setStreamingContent("");
+                setAnalysisState("loading");
+                // Automatically fetch analysis
+                setTimeout(() => fetchAnalysis(), 1000);
+                break;
 
-                case "ai_thinking":
-                    setIsStreaming(true);
-                    setStreamingContent("");
-                    break;
+            case "error":
+                setError(data.error === ARGUE_STREAM_ERROR ? ARGUE_STREAM_ERROR : "L’IA n’a pas pu répondre. Réessaie.");
+                setIsStreaming(false);
+                setStreamingContent("");
+                break;
 
-                case "ai_token":
-                    setStreamingContent((prev) => prev + data.token);
-                    break;
-
-                case "ai_complete":
-                    setMessages((prev) => [
-                        ...prev,
-                        { role: "assistant", content: data.content, timestamp: Date.now() },
-                    ]);
-                    setIsStreaming(false);
-                    setStreamingContent("");
-                    break;
-
-                case "ai_concede":
-                    setMessages((prev) => [
-                        ...prev,
-                        { role: "assistant", content: `Je m’avoue vaincue : ${data.reason}`, timestamp: Date.now() },
-                    ]);
-                    setIsStreaming(false);
-                    setStreamingContent("");
-                    setAnalysisState("loading");
-                    // Automatically fetch analysis
-                    setTimeout(() => fetchAnalysis(), 1000);
-                    break;
-
-                case "error":
-                    setError("L’IA n’a pas pu répondre. Réessaie.");
-                    setIsStreaming(false);
-                    setStreamingContent("");
-                    break;
-            }
-        };
-
-        ws.onerror = (error) => {
-            console.error("WebSocket error:", error);
-            setError("Erreur de connexion");
-        };
-
-        ws.onclose = () => {
-            console.log("WebSocket closed");
-        };
-
-        wsRef.current = ws;
+            case "done":
+                argueRunRef.current = null;
+                break;
+        }
     };
 
     const startDebate = async () => {
@@ -205,7 +184,7 @@ export default function Debate() {
     };
 
     const submitArgument = async () => {
-        if (!argument.trim() || !debateId || isStreaming) return;
+        if (!argument.trim() || !debateId || isStreaming || argueRunRef.current) return;
 
         const userArgument = argument.trim();
         setArgument("");
@@ -214,14 +193,21 @@ export default function Debate() {
             textareaRef.current.style.height = "auto";
         }
 
-        try {
-            const data = await api.submitDebateArgument(debateId, userArgument);
-            if (!data.ok) {
+        argueRunRef.current = runTask<api.DebateEvent>({
+            start: async () => {
+                const data = await api.submitDebateArgument(debateId, userArgument);
+                if (!data.ok) throw new Error(data.error);
+                return data.taskId;
+            },
+            connect: api.connectDebateStream,
+            cancel: api.cancelDebateTask,
+            onEvent: onArgueEvent,
+            onStartError: () => {
+                argueRunRef.current = null;
                 setError("Impossible d’envoyer ton argument");
-            }
-        } catch {
-            setError("Impossible d’envoyer ton argument");
-        }
+            },
+            streamError: ARGUE_STREAM_ERROR,
+        });
     };
 
     const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -255,87 +241,52 @@ export default function Debate() {
         }
     };
 
-    const requestAnalysis = async (id: string, analysisWs: WebSocket) => {
-        try {
-            const data = await api.analyzeDebate(id);
-            if (analysisWsRef.current !== analysisWs) return;
-            if (!data.ok) {
-                setError("Impossible de lancer l’analyse");
-                setAnalysisOpen(false);
-                setAnalysisState(null);
-                setAnalysisPhase("");
-                analysisWs.close();
-            }
-        } catch {
-            if (analysisWsRef.current !== analysisWs) return;
-            setError("Impossible de lancer l’analyse");
-            setAnalysisOpen(false);
-            setAnalysisState(null);
-            setAnalysisPhase("");
-            analysisWs.close();
-        }
-    };
-
-    const fetchAnalysis = async () => {
+    const fetchAnalysis = () => {
         if (!debateId) return;
 
         setAnalysisOpen(true);
         setAnalysisState("loading");
         setAnalysisPhase("Début de l’analyse…");
 
-        // Connect to analysis WebSocket first
-        const analysisWs = new WebSocket(api.wsURL(`/ws/debate/analyze?debateId=${encodeURIComponent(debateId)}`));
-
-        analysisWs.onopen = () => {
-            console.log("Analysis WebSocket connected");
-        };
-
-        analysisWs.onmessage = (event) => {
-            if (analysisWsRef.current !== analysisWs) return;
-            const data = JSON.parse(event.data);
-
-            switch (data.type) {
-                case "ready":
-                    // The server streams only to sockets registered before the request.
-                    void requestAnalysis(debateId, analysisWs);
-                    break;
-
-                case "phase":
-                    setAnalysisPhase("Préparation du bilan…");
-                    break;
-
-                case "complete":
-                    setAnalysisState(data.analysis);
-                    setSession(data.session);
-                    setAnalysisPhase("");
-                    analysisWs.close();
-                    break;
-
-                case "error":
-                    setError("L’analyse du débat a échoué. Réessaie.");
-                    setAnalysisState(null);
-                    setAnalysisOpen(false);
-                    setAnalysisPhase("");
-                    analysisWs.close();
-                    break;
-            }
-        };
-
-        analysisWs.onerror = (error) => {
-            if (analysisWsRef.current !== analysisWs) return;
-            console.error("Analysis WebSocket error:", error);
-            setError("Erreur de connexion à l’analyse");
-            setAnalysisOpen(false);
+        const failed = (message: string) => {
+            analysisRunRef.current = null;
+            setError(message);
             setAnalysisState(null);
+            setAnalysisOpen(false);
             setAnalysisPhase("");
         };
+        analysisRunRef.current = runTask<api.DebateEvent>({
+            start: async () => {
+                const data = await api.analyzeDebate(debateId);
+                if (!data.ok) throw new Error(data.error);
+                return data.taskId;
+            },
+            connect: api.connectDebateStream,
+            cancel: api.cancelDebateTask,
+            onEvent: (data) => {
+                switch (data.type) {
+                    case "phase":
+                        setAnalysisPhase("Préparation du bilan…");
+                        break;
 
-        analysisWs.onclose = () => {
-            console.log("Analysis WebSocket closed");
-        };
+                    case "complete":
+                        setAnalysisState(data.analysis);
+                        setSession(data.session);
+                        setAnalysisPhase("");
+                        break;
 
-        analysisWsRef.current = analysisWs;
+                    case "done":
+                        analysisRunRef.current = null;
+                        break;
 
+                    case "error":
+                        failed(data.error === ANALYSIS_STREAM_ERROR ? ANALYSIS_STREAM_ERROR : "L’analyse du débat a échoué. Réessaie.");
+                        break;
+                }
+            },
+            onStartError: () => failed("Impossible de lancer l’analyse"),
+            streamError: ANALYSIS_STREAM_ERROR,
+        });
     };
 
     if (!debateId) {

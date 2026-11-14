@@ -545,7 +545,6 @@ export type DebateStartResponse = {
     position: "for" | "against";
     createdAt: number;
   };
-  stream: string;
   error?: string;
 }
 
@@ -571,9 +570,9 @@ export async function startDebate(topic: string, position: "for" | "against") {
 }
 
 export async function submitDebateArgument(debateId: string, argument: string) {
-  return req<{ ok: boolean; message: string; error?: string }>(`${env.backend}/debate/${encodeURIComponent(debateId)}/argue`, {
+  return req<{ ok: boolean; taskId: string; error?: string }>(`${env.backend}/debate/${encodeURIComponent(debateId)}/argue`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: deviceHeaders(true),
     body: JSON.stringify({ argument }),
     timeout: 120000,
   })
@@ -616,11 +615,21 @@ export type DebateAnalysis = {
 }
 
 export async function analyzeDebate(debateId: string) {
-  return req<{ ok: boolean; analysis: DebateAnalysis; session: DebateSession; error?: string }>(`${env.backend}/debate/${encodeURIComponent(debateId)}/analyze`, {
+  return req<{ ok: boolean; taskId: string; error?: string }>(`${env.backend}/debate/${encodeURIComponent(debateId)}/analyze`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: deviceHeaders(true),
     timeout: 60000,
   })
+}
+
+export type DebateEvent = { type: string; [k: string]: any }
+
+export function connectDebateStream(taskId: string, onEvent: (ev: DebateEvent) => void) {
+  return connectTaskSocket<DebateEvent>(`/ws/debate?taskId=${encodeURIComponent(taskId)}`, onEvent, { type: "error", error: "invalid_message" })
+}
+
+export async function cancelDebateTask(taskId: string) {
+  await req(`${env.backend}/debate/tasks/${encodeURIComponent(taskId)}`, { method: "DELETE", headers: deviceHeaders() })
 }
 
 export { revisionPolicy };

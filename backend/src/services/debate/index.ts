@@ -1,6 +1,7 @@
 import llm from "../../utils/llm/llm";
 import db from "../../utils/database/keyv";
 import { toText } from "../../lib/ai/structured";
+import type { TaskContext } from "../../utils/tasks/registry";
 
 export type DebateMessage = {
     role: "user" | "assistant";
@@ -243,5 +244,44 @@ Garde "winner" tel quel ("user", "ai" ou "draw"). Rédige toutes les autres vale
         };
 
         yield { type: "analysis", data: fallbackAnalysis };
+    }
+}
+
+// Task bodies: one argue turn / one analysis, emitting the events the debate screen follows.
+export async function runArgueTurn(sessionId: string, argument: string, { signal, emit }: TaskContext): Promise<void> {
+    emit({ type: "user_argument", content: argument });
+    emit({ type: "ai_thinking" });
+    try {
+        let fullResponse = "";
+        for await (const token of streamDebateResponse(sessionId, argument)) {
+            if (signal.aborted) return;
+            if (typeof token === "object") {
+                emit({ type: "ai_concede", reason: token.reason });
+                return emit({ type: "done" });
+            }
+            fullResponse += token;
+            emit({ type: "ai_token", token });
+        }
+        emit({ type: "ai_complete", content: fullResponse });
+        emit({ type: "done" });
+    } catch (error) {
+        console.error("Error streaming debate response:", error);
+        emit({ type: "error", error: "Impossible de générer la réponse. Réessaie." });
+    }
+}
+
+export async function runAnalysis(sessionId: string, { signal, emit }: TaskContext): Promise<void> {
+    try {
+        const session = await getDebateSession(sessionId);
+        if (!session) throw new Error("Debate session not found");
+        for await (const event of streamDebateAnalysis(sessionId)) {
+            if (signal.aborted) return;
+            if (event.type === "phase") emit({ type: "phase", value: event.value });
+            else emit({ type: "complete", analysis: event.data, session: { ...session, winner: event.data.winner, status: session.status || "completed" } });
+        }
+        emit({ type: "done" });
+    } catch (error) {
+        console.error("Error streaming analysis:", error);
+        emit({ type: "error", error: "Impossible d’analyser le débat. Réessaie." });
     }
 }
