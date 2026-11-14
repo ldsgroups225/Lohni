@@ -105,7 +105,7 @@ test('une fiche demandée est générée avec le bon type et renvoyée dans la r
   const r = await call('post', '/tasks/:id/materials', a, { type: 'flashcards' }, { id })
   expect(r.status).toBe(200)
   expect(r.body.materials).toEqual([{ front: '2+2', back: '4' }])
-  expect(ask.mock.calls.at(-1)![0]).toMatch(/flashcards/)
+  expect(ask.mock.calls[ask.mock.calls.length - 1]![0]).toMatch(/flashcards/)
   expect(mine.sent.some(m => m.includes('materials'))).toBe(false)
 })
 
