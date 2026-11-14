@@ -9,22 +9,22 @@ import { connectPlannerStream, plannerDelete, plannerIngest, plannerList, planne
 
 function fmtTime(ts: number) {
     const d = new Date(ts)
-    return d.toLocaleString(undefined, { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+    return d.toLocaleString('fr-FR', { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })
 }
 
 function DaySlots({ date, slots, tasks }: { date: string; slots: PlannerSlot[]; tasks: Record<string, PlannerTask> }) {
     return (
         <div className="rounded-xl border border-border bg-surface p-3">
-            <div className="text-xs text-muted mb-2">{date}</div>
+            <div className="text-xs text-muted mb-2">{new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
             <div className="space-y-2">
                 {slots.length === 0 && <div className="text-muted text-sm">Aucun créneau</div>}
                 {slots.map(s => (
                     <div key={s.id} className="flex items-center justify-between text-sm text-foreground">
                         <div className="truncate">
-                            <span className="px-1.5 py-0.5 rounded bg-tint text-[10px] mr-2">{s.kind}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-tint text-[10px] mr-2">{{ focus: 'Concentration', review: 'Révision', buffer: 'Pause' }[s.kind]}</span>
                             <span className="font-medium">{tasks[s.taskId]?.title || s.taskId}</span>
                         </div>
-                        <div className="text-muted text-xs">{fmtTime(s.start)} → {new Date(s.end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                        <div className="text-muted text-xs">{fmtTime(s.start)} → {new Date(s.end).toLocaleTimeString('fr-FR', { hour: "2-digit", minute: "2-digit" })}</div>
                     </div>
                 ))}
             </div>
@@ -34,6 +34,9 @@ function DaySlots({ date, slots, tasks }: { date: string; slots: PlannerSlot[]; 
 
 export default function Planner() {
     const [loading, setLoading] = useState(false)
+    const [taskTab, setTaskTab] = useState<"todo" | "done">("todo")
+    const [undo, setUndo] = useState<{ id: string; status: PlannerTask["status"] } | null>(null)
+    const [statusError, setStatusError] = useState("")
     const [addError, setAddError] = useState("")
     const [tasks, setTasks] = useState<PlannerTask[]>([])
     const [plan, setPlan] = useState<WeeklyPlan | null>(null)
@@ -205,6 +208,14 @@ export default function Planner() {
         setTasks(t => t.map(x => x.id === id ? task : x))
     }
 
+    const toggleTask = async (task: PlannerTask) => {
+        try {
+            await mark(task.id, task.status === "done" ? "todo" : "done")
+            setStatusError("")
+            setUndo(task.status === "done" ? null : { id: task.id, status: task.status })
+        } catch { setStatusError("Impossible de modifier la tâche. Réessaie.") }
+    }
+
     const startNow = async (id: string) => {
         // Mark as doing and ensure it has a plan
         await mark(id, "doing")
@@ -228,11 +239,31 @@ export default function Planner() {
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-2">
+            <QuickAdd onAdd={add} loading={loading} error={addError} />
+            <div role="tablist" aria-label="Tâches" className="grid grid-cols-2 gap-1 rounded-2xl bg-tint p-1" onKeyDown={e => {
+                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+                e.preventDefault()
+                const next = taskTab === 'todo' ? 'done' : 'todo'
+                setTaskTab(next)
+                ;(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next === 'todo' ? 0 : 1])?.focus()
+            }}>
+                {([['todo', 'À faire'], ['done', 'Faites']] as const).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={taskTab === id} tabIndex={taskTab === id ? 0 : -1} onClick={() => setTaskTab(id)} className={`min-h-11 rounded-xl text-sm font-bold ${taskTab === id ? 'bg-surface text-foreground' : 'text-muted'}`}>{label} · {tasks.filter(t => (t.status === 'done') === (id === 'done')).length}</button>)}
+            </div>
+            <div role="tabpanel" className="overflow-hidden rounded-card border border-border bg-surface">
+                {tasks.filter(t => (t.status === 'done') === (taskTab === 'done')).map(task => <div key={task.id} className="flex items-center gap-1 border-b border-border px-1 last:border-b-0">
+                    <button type="button" aria-label={`${task.status === 'done' ? 'Remettre à faire' : 'Marquer'} ${task.title}${task.status === 'done' ? '' : ' comme faite'}`} onClick={() => void toggleTask(task)} className="grid size-12 shrink-0 place-items-center"><span className={`grid size-7 place-items-center rounded-lg border-2 ${task.status === 'done' ? 'border-success bg-success text-on-primary' : 'border-primary'}`}>{task.status === 'done' && '✓'}</span></button>
+                    <div className="min-w-0 py-3"><div className={`font-bold ${task.status === 'done' ? 'text-muted line-through' : 'text-foreground'}`}>{task.title}</div><div className="text-sm text-muted">{new Date(task.dueAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · {task.estMins} min</div></div>
+                </div>)}
+                {tasks.filter(t => (t.status === 'done') === (taskTab === 'done')).length === 0 && <p className="p-6 text-center text-sm text-muted">{taskTab === 'todo' ? 'Rien à préparer. Profites-en !' : 'Aucune tâche terminée pour l’instant.'}</p>}
+            </div>
+            {statusError && <p role="alert" className="text-sm text-danger">{statusError}</p>}
+            {undo && <div role="status" className="fixed inset-x-4 bottom-24 z-30 flex items-center gap-2 rounded-2xl bg-foreground p-2 pl-4 text-sm font-semibold text-surface"><span className="flex-1">Tâche terminée, bravo</span><button type="button" className="min-h-11 px-3 underline" onClick={() => { void mark(undo.id, undo.status).then(() => { setUndo(null); setStatusError('') }).catch(() => setStatusError('Impossible d’annuler. Réessaie.')) }}>Annuler</button></div>}
+            <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-muted">Options avancées</summary>
+            <div className="space-y-4"><div className="flex items-center gap-2">
                 <div role="tablist" aria-label="Vue du planning" onKeyDown={onTabKey} className="grid min-w-0 flex-1 grid-cols-3 gap-1 rounded-xl border border-border bg-surface p-1">
                     {views.map(([id, label, full]) => (
                         <button type="button" key={id} role="tab" aria-selected={view === id} aria-label={full} tabIndex={view === id ? 0 : -1} onClick={() => setView(id)}
-                            className={`min-h-10 rounded-lg px-2 text-sm font-medium ${view === id ? 'bg-primary text-on-primary' : 'text-foreground'}`}>{label}</button>
+                            className={`min-h-11 rounded-lg px-2 text-sm font-medium ${view === id ? 'bg-tint text-foreground font-bold' : 'text-foreground'}`}>{label}</button>
                     ))}
                 </div>
                 <button type="button" onClick={reload} aria-label="Actualiser" title="Actualiser" className="press-icon grid size-11 shrink-0 place-items-center rounded-xl border border-border bg-surface text-foreground">
@@ -266,9 +297,7 @@ export default function Planner() {
                                 onCompleteTask={(id) => mark(id, "done")}
                             />
                         </div>
-                        <div className="order-1 lg:order-2">
-                            <QuickAdd onAdd={add} loading={loading} error={addError} />
-                        </div>
+
                     </div>
                 ) : view === 'mindmap' ? (
                     <div className="rounded-xl border border-border overflow-hidden h-[75vh]">
@@ -291,21 +320,21 @@ export default function Planner() {
                                 <div className="min-w-0">
                                     <div className="text-foreground font-medium">{t.title}</div>
                                     <div className="text-muted text-xs">
-                                        Échéance : {fmtTime(t.dueAt)} · {t.estMins} mins · P{t.priority}
+                                        Échéance : {fmtTime(t.dueAt)} · {t.estMins} min · Priorité {t.priority}
                                         {t.files && t.files.length > 0 && ` · ${t.files.length} fichier(s)`}
                                     </div>
                                 </div>
                                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                                    <select value={t.status} onChange={e => mark(t.id, e.target.value as any)} aria-label={`Statut de ${t.title}`} className="min-h-10 rounded-lg border border-border bg-surface px-2 text-sm text-foreground">
+                                    <select value={t.status} onChange={e => mark(t.id, e.target.value as any)} aria-label={`Statut de ${t.title}`} className="min-h-11 rounded-lg border border-border bg-surface px-2 text-sm text-foreground">
                                         <option value="todo">À faire</option>
                                         <option value="doing">En cours</option>
                                         <option value="done">Terminé</option>
                                         <option value="blocked">Bloqué</option>
                                     </select>
-                                    <button type="button" onClick={() => planTask(t.id)} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Planifier</button>
-                                    <button type="button" onClick={() => gen(t.id, "summary")} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Résumé</button>
-                                    <button type="button" onClick={() => gen(t.id, "flashcards")} className="min-h-10 rounded-lg bg-tint px-3 text-sm text-foreground">Cartes</button>
-                                    <button type="button" onClick={() => { void confirmDialog(`Supprimer la tâche « ${t.title} » ?`).then(ok => { if (ok) void del(t.id) }) }} className="ml-auto min-h-10 rounded-lg border border-danger px-3 text-sm text-danger">Supprimer</button>
+                                    <button type="button" onClick={() => planTask(t.id)} className="min-h-11 rounded-lg bg-tint px-3 text-sm text-foreground">Planifier</button>
+                                    <button type="button" onClick={() => gen(t.id, "summary")} className="min-h-11 rounded-lg bg-tint px-3 text-sm text-foreground">Résumé</button>
+                                    <button type="button" onClick={() => gen(t.id, "flashcards")} className="min-h-11 rounded-lg bg-tint px-3 text-sm text-foreground">Cartes</button>
+                                    <button type="button" onClick={() => { void confirmDialog(`Supprimer la tâche « ${t.title} » ?`).then(ok => { if (ok) void del(t.id) }) }} className="ml-auto min-h-11 rounded-lg border border-danger px-3 text-sm text-danger">Supprimer</button>
                                 </div>
 
                                 {/* Task Files */}
@@ -319,7 +348,7 @@ export default function Planner() {
                                                     <span className="text-muted">({Math.round(file.size / 1024)}KB)</span>
                                                     <button type="button"
                                                         onClick={() => deleteFile(t.id, file.id)}
-                                                        className="text-muted hover:text-foreground ml-1"
+                                                        className="grid size-11 place-items-center text-muted hover:text-foreground" aria-label={`Supprimer ${file.originalName}`}
                                                         title="Supprimer le fichier"
                                                     >×</button>
                                                 </div>
@@ -359,7 +388,7 @@ export default function Planner() {
                         )}
                     </div>
                 )}
-            </div>
+            </div></div></details>
         </div>
     )
 }
