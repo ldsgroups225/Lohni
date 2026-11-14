@@ -10,7 +10,7 @@ const api = vi.hoisted(() => ({ chapters: vi.fn(), progress: vi.fn(), updateCard
 vi.mock('../lib/api', () => ({ revisionAPI: api, revisionPolicy: { minimumSeenRatio: 0.5 } }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
-test('le chapitre présente ses cartes et explique les actions indisponibles', async () => {
+test('le chapitre présente ses cartes, mène à sa révision et explique l’ajout indisponible', async () => {
   localStorage.setItem('lohni-device-id', 'chapitre-cartes')
   api.chapters.mockResolvedValue([{ id: '1', subject: 'SVT', title: 'Photosynthèse', status: 'Solide', mastery: 100, seenCards: 1, cards: [{ id: 'c', kind: 'basic', question: 'Où ?', answer: 'Dans les chloroplastes' }], summary: '' }])
   api.progress.mockResolvedValue({})
@@ -20,9 +20,9 @@ test('le chapitre présente ses cartes et explique les actions indisponibles', a
     await act(async () => root.render(<MemoryRouter><Courses /></MemoryRouter>))
     await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent === '1 carte')?.click() })
     expect(host.textContent).toContain('Dans les chloroplastes')
-    expect([...host.querySelectorAll('button')].find(button => button.textContent === 'Réviser ce chapitre')?.disabled).toBe(true)
+    expect([...host.querySelectorAll('a')].find(link => link.textContent === 'Réviser ce chapitre')?.getAttribute('href')).toBe('/revision?chapter=1')
     expect([...host.querySelectorAll('button')].find(button => button.textContent === '+ Ajouter une carte')?.disabled).toBe(true)
-    expect(host.textContent).toContain('Ces actions ne sont pas encore disponibles.')
+    expect(host.textContent).toContain('Ajouter une carte à la main n’est pas encore disponible.')
   } finally { act(() => root.unmount()); host.remove(); localStorage.removeItem('lohni-device-id') }
 })
 

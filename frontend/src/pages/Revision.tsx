@@ -24,11 +24,17 @@ let cachedRevision: { device: string | null; version: number; day: string; profi
 export default function Revision() {
   const [params] = useSearchParams()
   const examId = params.get('exam')
+  const missedId = params.get('missed')
+  const scopeChapter = params.get('chapter')
+  const scoped = !!(examId || missedId || scopeChapter)
+  const loadSession = useCallback((continuing = false) => examId ? revisionAPI.examSession(examId, continuing)
+    : missedId ? revisionAPI.missedSession(missedId) : scopeChapter ? revisionAPI.chapterSession(scopeChapter)
+    : continuing ? revisionAPI.continue() : revisionAPI.session(), [examId, missedId, scopeChapter])
   const day = new Date().toDateString()
   if (cachedRevision && (cachedRevision.device !== cachedDevice() || cachedRevision.day !== day)) cachedRevision = null
   const navigate = useNavigate()
-  const [profile, setProfile] = useState<RevisionProfile | null>(() => (!examId ? cachedRevision?.profile : null) ?? null)
-  const [session, setSession] = useState<RevisionSession | null>(() => (!examId ? cachedRevision?.session : null) ?? null)
+  const [profile, setProfile] = useState<RevisionProfile | null>(() => (!scoped ? cachedRevision?.profile : null) ?? null)
+  const [session, setSession] = useState<RevisionSession | null>(() => (!scoped ? cachedRevision?.session : null) ?? null)
   const [chapters, setChapters] = useState<RevisionChapter[]>([])
   const [progress, setProgress] = useState<RevisionProgress | null>(null)
   const [busy, setBusy] = useState(true)
@@ -55,8 +61,8 @@ export default function Revision() {
   const [verdict, setVerdict] = useState<{ choice: number; next: RevisionSession } | null>(null)
   const startedAt = useRef(Date.now())
   useEffect(() => {
-    if (!examId && profile && session && validated) cachedRevision = { device: cachedDevice(), version: currentRevisionCacheVersion(), day, profile, session }
-  }, [profile, session, day, validated, examId])
+    if (!scoped && profile && session && validated) cachedRevision = { device: cachedDevice(), version: currentRevisionCacheVersion(), day, profile, session }
+  }, [profile, session, day, validated, scoped])
   const card = session?.cards[session.position]
   const chapterId = card?.chapterId
   const chapter = chapters.find(value => value.id === chapterId)
@@ -120,12 +126,13 @@ export default function Revision() {
   }, [])
   useEffect(() => {
     let active = true
+    setBusy(true)
     async function load() {
       const requestDevice = cachedDevice()
       try {
         const version = currentRevisionCacheVersion()
         const saved = await revisionAPI.profile()
-        const current = saved ? await (examId ? revisionAPI.examSession(examId) : revisionAPI.session()) : null
+        const current = saved ? await loadSession() : null
         if (!active) return
         if (requestDevice !== cachedDevice() || version !== currentRevisionCacheVersion()) {
           cachedRevision = null
@@ -147,7 +154,7 @@ export default function Revision() {
     }
     void load()
     return () => { active = false }
-  }, [display, examId])
+  }, [display, loadSession])
   useEffect(() => {
     if (!validated || !chapterId) return
     let active = true
@@ -163,9 +170,10 @@ export default function Revision() {
     setChapters([])
     if (sync.pending || !sync.online) return
     let active = true
-    if (examId) setMoreCards(true)
+    if (missedId || scopeChapter) setMoreCards(false)
+    else if (examId) setMoreCards(true)
     else revisionAPI.home().then(value => { if (active) setMoreCards(value?.moreCards ?? false) }).catch(() => {})
-    ;(examId ? revisionAPI.examSession(examId) : revisionAPI.session()).then(fresh => { if (active) setSession(current => current && current.id === fresh.id ? { ...current, summary: fresh.summary } : current) }).catch(() => {})
+    if (!missedId && !scopeChapter) loadSession().then(fresh => { if (active) setSession(current => current && current.id === fresh.id ? { ...current, summary: fresh.summary } : current) }).catch(() => {})
     if (session.position > 0) revisionAPI.chapters().then(value => { if (active) setChapters(value) }).catch(() => {})
     revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(error => {
       if (active) setError(error instanceof Error ? error.message : 'Impossible de charger ta progression.')
@@ -181,7 +189,7 @@ export default function Revision() {
     void run(async () => {
       setSubject(subject.trim())
       await revisionAPI.generateChapter({ subject: subject.trim(), title: title.trim() })
-      display(await (examId ? revisionAPI.examSession(examId, true) : revisionAPI.continue()))
+      display(await loadSession(true))
     }).finally(() => { window.clearTimeout(timer); setGenerating(false); setSlow(false) })
   }
   function answer(knew: boolean, selected?: number) {
@@ -190,7 +198,7 @@ export default function Revision() {
     void run(async () => {
       let next: RevisionSession
       try {
-        next = await (examId ? revisionAPI.examAnswer : revisionAPI.answer)({
+        next = await (scoped ? revisionAPI.examAnswer : revisionAPI.answer)({
           sessionId: session.id, cardId: card.id, position: session.position, knew, choice: selected,
           durationMs: Math.max(0, Date.now() - startedAt.current),
         })
@@ -213,7 +221,7 @@ export default function Revision() {
     setMenu(false)
     void run(async () => {
       await revisionAPI.deleteCard(card.id)
-      display(await (examId ? revisionAPI.examSession(examId) : revisionAPI.session()))
+      display(await loadSession())
     })
   }
   function explain(missed: RevisionCard | null | undefined) {
@@ -240,7 +248,7 @@ export default function Revision() {
             </div>}
           </fieldset>
         </header> : !(session && session.position > 0) && <header><h1 className="text-2xl font-semibold text-foreground">Session de révision</h1></header>}
-        {!examId && (!sync.online || sync.pending > 0) && <aside role="status" className="space-y-2 rounded-xl border border-border p-4 text-foreground">
+        {!scoped && (!sync.online || sync.pending > 0) && <aside role="status" className="space-y-2 rounded-xl border border-border p-4 text-foreground">
           {!sync.online && <p>Hors ligne. Tu peux terminer ta session déjà chargée.</p>}
           {sync.pending > 0 && <p>{sync.pending} réponse{sync.pending > 1 ? 's' : ''} enregistrée{sync.pending > 1 ? 's' : ''} sur cet appareil, en attente d’envoi. Tes XP et ta série seront confirmés au retour du réseau.</p>}
           {sync.error && <p>{sync.error}</p>}
@@ -251,7 +259,7 @@ export default function Revision() {
             const saved = await revisionAPI.profile()
             setProfile(saved)
             setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
-            if (saved) display(await (examId ? revisionAPI.examSession(examId) : revisionAPI.session()))
+            if (saved) display(await loadSession())
             setProgress(await revisionAPI.progress())
           })}>Réessayer</button>
         </div>}
@@ -290,20 +298,20 @@ export default function Revision() {
             {verdict && <Button ref={continueButton} className="w-full scroll-mb-8" onClick={next}>Continuer</Button>}
           </section>
         ) : (!busy || !!session) && <>
-          {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} chapters={chapters} pending={sync.pending} moreCards={moreCards} busy={busy || !validated} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onContinue={() => void run(async () => display(await (examId ? revisionAPI.examSession(examId, true) : revisionAPI.continue())))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
+          {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} chapters={chapters} pending={sync.pending} moreCards={moreCards} busy={busy || !validated} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onReviewMissed={() => navigate(`/revision?missed=${encodeURIComponent(session.id)}`)} onContinue={() => void run(async () => display(await loadSession(true)))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
             {!error && <Mascotte humeur="au repos" taille={112} />}
             <h2 className="text-xl">{session.kind === 'express' ? 'Rien de fragile à revoir pour cet examen. Bravo !' : 'Aucune carte à réviser pour le moment'}</h2>
             {session.kind !== 'express' && <p>Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.</p>}
-            <button type="button" className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await (examId ? revisionAPI.examSession(examId, true) : revisionAPI.continue())))}>Continuer</button>
+            <button type="button" className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await loadSession(true)))}>Continuer</button>
           </section>)}
-          {!examId && profile && !(session && session.position > 0) && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-border p-6">
+          {!scoped && profile && !(session && session.position > 0) && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-border p-6">
             <h2 className="text-xl text-foreground">Préparer un chapitre</h2>
             <label className="block space-y-2"><span>Matière</span><select className={input} required value={subject} onChange={e => setSubject(e.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
             <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex. : Les fractions" /></label>
             {session && session.position > 0 ? <button type="submit" className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0}>Générer mes cartes</button> : <Button type="submit" disabled={busy || !validated || !sync.online || sync.pending > 0}>Générer mes cartes</Button>}
           </form>}
         </>}
-        {!examId && profile && !(session && !session.complete && card) && !(session && session.position > 0) && <Link to="/import" className="block rounded-xl border border-border p-4 text-center text-foreground">Importer mon cours</Link>}
+        {!scoped && profile && !(session && !session.complete && card) && !(session && session.position > 0) && <Link to="/import" className="block rounded-xl border border-border p-4 text-center text-foreground">Importer mon cours</Link>}
       </div>
     </main>
   )

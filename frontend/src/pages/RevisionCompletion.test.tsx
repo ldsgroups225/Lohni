@@ -31,3 +31,20 @@ test('la célébration reste visible si le chargement des cartes restantes écho
     expect(container.textContent).not.toContain('Continuer avec les cartes restantes')
   } finally { act(() => root.unmount()); scroll.mockRestore() }
 })
+
+test('?chapter= ouvre une séance limitée à ce chapitre, ?missed= celle des cartes ratées', async () => {
+  const chapterSession = vi.fn(async (id: string) => ({ id: `chapitre-${id}`, kind: 'chapter', complete: false, position: 0, cards: [{ id: 'c1', chapterId: id, kind: 'basic', question: 'Où ?', answer: 'Ici', reviews: 0 }], earnedXP: 0 }))
+  const missedSession = vi.fn(async (id: string) => ({ id: `ratees-${id}`, kind: 'missed', complete: false, position: 0, cards: [{ id: 'c2', chapterId: 'x', kind: 'basic', question: 'Quand ?', answer: 'Hier', reviews: 1 }], earnedXP: 0 }))
+  const api = (await import('../lib/api')).revisionAPI as unknown as Record<string, unknown>
+  Object.assign(api, { chapterSession, missedSession })
+  for (const [url, expected] of [['/?chapter=abc', 'Où ?'], ['/?missed=s1', 'Quand ?']]) {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    try {
+      await act(async () => { root.render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <Revision /> }], { initialEntries: [url] })} />) })
+      expect(container.textContent).toContain(expected)
+    } finally { act(() => root.unmount()) }
+  }
+  expect(chapterSession).toHaveBeenCalledWith('abc')
+  expect(missedSession).toHaveBeenCalledWith('s1')
+})

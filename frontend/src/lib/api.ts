@@ -654,7 +654,7 @@ export type RevisionCard = {
   options?: string[]; correct?: number; origin: 'ai' | 'import'; due: string; reviews: number;
 };
 export type RevisionSession = {
-  kind?: 'exam' | 'express';
+  kind?: 'exam' | 'express' | 'missed' | 'chapter';
   id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number;
   summary?: {
     quiz: { total: number; correct: number };
@@ -847,6 +847,16 @@ async function revisionSession(continueSession = false): Promise<RevisionSession
   }
 }
 const examAnswerIds = new Map<string, string>();
+// Séances ciblées (cartes ratées, chapitre) : créées côté serveur, répondues en ligne comme les séances d’examen.
+async function scopedSession(path: string): Promise<RevisionSession> {
+  if (!navigator.onLine) throw new Error('Connecte-toi pour lancer cette révision.');
+  await syncRevisionAnswers();
+  if (readOffline().pending.length) throw new Error('Reconnecte-toi pour envoyer tes réponses avant de continuer.');
+  const device = revisionDeviceId();
+  const session = await revisionRequest<RevisionSession>(path, 'POST', undefined, undefined, 8000);
+  if (cachedDevice() !== device) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
+  return session;
+}
 async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<RevisionSession> {
   let next: RevisionSession | undefined;
   await updateOffline(state => {
@@ -963,6 +973,8 @@ export const revisionAPI = {
     form.append('file', input.file);
     return revisionMutation<RevisionImportedChapter>('/import', 'POST', form, signal);
   },
+  missedSession: (sourceId: string) => scopedSession(`/session/${encodeURIComponent(sourceId)}/review-missed`),
+  chapterSession: (chapterId: string) => scopedSession(`/chapters/${encodeURIComponent(chapterId)}/session`),
   examSession: async (id: string, continuing = false) => {
     if (!navigator.onLine) throw new Error('Connecte-toi pour lancer une révision d’examen.')
     await syncRevisionAnswers()
@@ -973,7 +985,7 @@ export const revisionAPI = {
     return session
   },
   examAnswer: async (input: Omit<RevisionAnswer, 'answerId'>) => {
-    if (!navigator.onLine) throw new Error('Connecte-toi pour continuer cette révision d’examen.')
+    if (!navigator.onLine) throw new Error('Connecte-toi pour continuer cette révision.')
     const device = revisionDeviceId()
     const key = `${device}:${input.sessionId}:${input.position}`
     const answerId = examAnswerIds.get(key) ?? crypto.randomUUID()

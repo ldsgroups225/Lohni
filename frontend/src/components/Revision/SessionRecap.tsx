@@ -17,6 +17,7 @@ type Props = {
   error?: boolean
   onExplain: (cardId: string) => void
   onContinue: () => void
+  onReviewMissed: () => void
 }
 
 function motivation(s: NonNullable<RevisionSession['summary']>, streak?: number) {
@@ -26,7 +27,7 @@ function motivation(s: NonNullable<RevisionSession['summary']>, streak?: number)
   return 'À demain pour la suite.'
 }
 
-export function SessionRecap({ session, progress, chapters, pending, moreCards, busy, online, error, onExplain, onContinue }: Props) {
+export function SessionRecap({ session, progress, chapters, pending, moreCards, busy, online, error, onExplain, onContinue, onReviewMissed }: Props) {
   const { summary, position, earnedXP } = session
   const showStats = !pending && progress
   const missed = summary?.missed.slice(0, 3) ?? []
@@ -73,7 +74,7 @@ export function SessionRecap({ session, progress, chapters, pending, moreCards, 
       </div>}
       {showStats && <p><AnimatedNumber value={progress.xp} /> XP au total</p>}
       <ButtonLink className="w-full" to="/">Retour à l’accueil</ButtonLink>
-      {!!summary?.missed.length && <><button type="button" disabled aria-describedby="review-unavailable" className="min-h-14 w-full rounded-2xl border-2 border-primary bg-surface px-4 font-bold text-primary opacity-60">{summary.missed.length === 1 ? 'Revoir la carte maintenant' : `Revoir les ${summary.missed.length} cartes maintenant`}</button><p id="review-unavailable" className="text-sm text-muted">Cette option n’est pas encore disponible.</p></>}
+      {!!summary?.missed.length && <><button type="button" disabled={busy || !online || pending > 0} aria-describedby={busy || !online || pending > 0 ? 'review-unavailable' : undefined} onClick={onReviewMissed} className="min-h-14 w-full rounded-2xl border-2 border-primary bg-surface px-4 font-bold text-primary disabled:opacity-60">{summary.missed.length === 1 ? 'Revoir la carte maintenant' : `Revoir les ${summary.missed.length} cartes maintenant`}</button>{(busy || !online || pending > 0) && <p id="review-unavailable" className="text-sm text-muted">{!online ? 'Connecte-toi pour revoir ces cartes.' : pending > 0 ? 'Synchronise tes réponses pour revoir ces cartes.' : 'Patiente avant de revoir ces cartes.'}</p>}</>}
       {moreCards && (busy || !online || pending > 0) && <p className="text-sm text-muted">{!online ? 'Connecte-toi pour continuer.' : pending > 0 ? 'Synchronise tes réponses pour continuer.' : 'Patiente avant de continuer.'}</p>}
       {moreCards && <button type="button" className="min-h-11 text-primary underline disabled:opacity-50" disabled={busy || !online || pending > 0} onClick={onContinue}>Continuer avec les cartes restantes</button>}
     </section>
