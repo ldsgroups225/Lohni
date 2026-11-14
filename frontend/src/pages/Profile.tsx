@@ -157,7 +157,6 @@ export default function Profile() {
         </section>
       </>}
       {profile && (page === 'profil' || page === 'matieres') ? <form onSubmit={save} className="space-y-5 rounded-2xl border border-border p-6" aria-busy={busy}>
-        <h2 className="text-xl text-foreground">{page === 'profil' ? 'Mon parcours' : 'Mes matières'}</h2>
         {page === 'profil' && <><label className="block space-y-2"><span>Prénom (facultatif)</span><input className={input} autoComplete="given-name" disabled={busy} value={firstName} onChange={event => { setFirstName(event.target.value); setSaved(false) }} /><small className="block text-muted">Ton prénom reste sur cet appareil.</small></label><label className="block space-y-2"><span>Ma classe</span><select className={input} disabled={busy} value={profile.schoolClass} onChange={event => {
           const next = curriculum.find(item => item.schoolClass === event.target.value)
           if (!next) return
@@ -178,7 +177,6 @@ export default function Profile() {
         {saved && <p role="status" className="text-foreground">Ton profil est enregistré.</p>}
       </form> : !profile && !busy && !error && <div className="space-y-3"><p>Crée ton profil pour suivre ton parcours.</p><ButtonLink to="/" className="w-full">Commencer mon parcours</ButtonLink></div>}
       {profile && page === 'examens' && <section className="space-y-4 rounded-2xl border border-border p-6">
-        <h2 className="text-xl text-foreground">Examens</h2>
         {exams.map(item => <div key={item.id} className="space-y-2 border-b border-border pb-3"><p>{item.title} · {new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p><p>{item.subjects.join(', ')}</p><ExamButton id={item.id} date={item.date} /><div className="flex gap-3"><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={() => setExam(item)}>Modifier</Button><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={async () => { if (!window.confirm('Supprimer cet examen ?')) return; try { await revisionAPI.deleteExam(item.id); setExams(current => current.filter(value => value.id !== item.id)); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Suppression impossible.') } }}>Supprimer</Button></div></div>)}
         {!exam && <Button type="button" disabled={!examsLoaded || exams.length >= policy.maxExams} onClick={() => setExam({ title: '', date: '', subjects: [], chapterIds: [] })}>Ajouter un examen</Button>}
         {exam && <form className="space-y-4" onSubmit={async event => { event.preventDefault(); try { const value = await revisionAPI.saveExam(exam); setExams(current => [...current.filter(item => item.id !== value.id), value]); setExam(null); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Enregistrement impossible.') } }}>
@@ -191,7 +189,6 @@ export default function Profile() {
       </section>}
       {profile && page === 'emploi-du-temps' && <Timetable profile={profile} onProfile={setProfile} />}
       {page === 'rythme' && <section className="space-y-4 rounded-2xl border border-border p-6">
-        <h2 className="text-xl text-foreground">Réglages de révision</h2>
         {settingsError && <p role="alert">{settingsError}</p>}
         {settings && <form onSubmit={saveSettings} className="space-y-4" aria-busy={settingsBusy}>
           <fieldset disabled={settingsBusy} className="space-y-2"><legend>Minutes par jour</legend>

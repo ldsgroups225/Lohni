@@ -26,7 +26,7 @@ test('Moi enregistre les minutes et les jours de repos', async () => {
   api.saveSettings.mockImplementation(async value => value)
   const { host, close } = await setup('profil-reglages', '/me/rythme')
   try {
-    const section = required([...host.querySelectorAll('section')].find(item => item.textContent?.includes('Réglages de révision')))
+    const section = required([...host.querySelectorAll('section')].find(item => item.querySelector('input[type=radio]')))
     const radio = [...section.querySelectorAll<HTMLInputElement>('input[type=radio]')][1]
     const monday = required(section.querySelector<HTMLInputElement>('input[type=checkbox]'))
     await act(async () => { radio.click(); monday.click() })
@@ -51,7 +51,7 @@ test('Moi garde le formulaire au retour puis met les données à jour en place',
   api.progress.mockImplementationOnce(known('/progress', progress))
   const { router, host, close } = await setup('profil-retour')
   try {
-    expect(host.textContent).toContain('Mon parcours')
+    expect(host.textContent).toContain('Prénom (facultatif)')
     await act(async () => { await router.navigate('/tutor') })
     let resolve!: (value: typeof profile) => void
     api.profile.mockReturnValueOnce(new Promise(r => { resolve = r }))

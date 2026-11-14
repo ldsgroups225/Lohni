@@ -38,7 +38,6 @@ export default function Timetable({ profile, onProfile }: { profile: RevisionPro
     finally { setBusy(false) }
   }
   return <section className="space-y-4 rounded-2xl border border-border p-6">
-    <h2 className="text-xl text-foreground">Emploi du temps</h2>
     {error && <p role="alert">{error}</p>}
     {review && <p>Relis et corrige les cours avant de les enregistrer.</p>}
     {/* biome-ignore lint/suspicious/noArrayIndexKey: les champs sont contrôlés et ne portent pas d’état propre. */}

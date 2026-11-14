@@ -12,6 +12,16 @@ const tabs = [
   { to: '/me', label: 'Moi', icon: ProfileIcon },
 ]
 
+const secondaryScreen = 'lohni-secondary-screen'
+// Un écran secondaire sans adresse propre (détail ou résumé d’un chapitre) cache aussi la barre sur téléphone.
+export function useSecondaryScreen(active: boolean) {
+  useEffect(() => {
+    if (!active) return
+    window.dispatchEvent(new CustomEvent(secondaryScreen, { detail: true }))
+    return () => { window.dispatchEvent(new CustomEvent(secondaryScreen, { detail: false })) }
+  }, [active])
+}
+
 export default function Sidebar() {
   const location = useLocation()
   const { pathname } = location
@@ -22,6 +32,12 @@ export default function Sidebar() {
     if (pathname === '/' && typeof index === 'number' && homeIndex.current === null) homeIndex.current = index
   }, [pathname])
   const [cardVisible, setCardVisible] = useState(false)
+  const [overlay, setOverlay] = useState(false)
+  useEffect(() => {
+    const update = (event: Event) => setOverlay((event as CustomEvent<boolean>).detail)
+    window.addEventListener(secondaryScreen, update)
+    return () => window.removeEventListener(secondaryScreen, update)
+  }, [])
   const nav = useRef<HTMLDivElement>(null)
   const indicator = useRef<HTMLSpanElement>(null)
   useEffect(() => {
@@ -49,7 +65,7 @@ export default function Sidebar() {
     : ['/import', '/cards', '/exam', '/debate', '/tools', '/planner', '/quiz'].includes(pathname) ? '/courses'
     : ['/revision', '/plan'].includes(pathname) ? '/' : pathname
   // Sur téléphone, la barre ne s’affiche que sur les quatre onglets ; les écrans secondaires ont leur bouton retour.
-  const secondary = !tabs.some(tab => tab.to === pathname)
+  const secondary = overlay || !tabs.some(tab => tab.to === pathname)
   return <nav aria-label="Navigation principale" className={`${secondary ? 'max-md:hidden ' : ''}fixed inset-x-0 bottom-0 z-[var(--z-nav)] border-t border-border bg-surface px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:inset-x-auto md:left-3 md:top-4 md:bottom-4 md:w-20 md:rounded-card md:border md:px-1 md:py-6`}>
     <div ref={nav} className="relative flex justify-around md:h-full md:flex-col md:justify-center md:gap-5">
       <span ref={indicator} aria-hidden="true" className="navigation-indicator" />

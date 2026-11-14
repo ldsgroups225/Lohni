@@ -10,6 +10,7 @@ import MasteryBadge from '../components/ui/MasteryBadge'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useOverlayNavigation } from '../lib/useOverlayNavigation'
+import { useSecondaryScreen } from '../components/Sidebar'
 import MarkdownContent from '../components/Chat/MarkdownContent'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
 
@@ -91,6 +92,7 @@ export default function Courses() {
   }, [load])
 
   const summaryChapter = chapters.find(chapter => chapter.id === summaryId)
+  useSecondaryScreen(!!(summaryOpen && summaryChapter) || chapters.some(chapter => chapter.id === selectedChapter))
   if (summaryOpen && summaryChapter) return <Suspense fallback={<PendingRead title="Résumé" label="On prépare ton résumé…" />}><ChapterSummary {...summaryChapter} onBack={() => setSummaryOpen(false)} onCards={() => { setSelectedChapter(summaryChapter.id); setSummaryOpen(false) }} /></Suspense>
   const selected = chapters.find(chapter => chapter.id === selectedChapter)
   const selectedCard = selected?.cards.find(card => card.id === editing)
