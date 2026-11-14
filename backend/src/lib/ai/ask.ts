@@ -297,6 +297,7 @@ type AskWithContextOptions = {
   systemPrompt?: string
   history?: HistoryMessage[]
   cacheScope?: string
+  reasoning?: 'none'
   isCacheable?: (payload: AskPayload) => boolean
 }
 
@@ -327,7 +328,9 @@ export async function askWithContext(opts: AskWithContextOptions): Promise<AskPa
     content: `Context:\n${ctx}\n\nQuestion:\n${safeQ}\n\nTopic:\n${topic}\n\nReturn only the JSON object.`
   })
 
-  const res = await llm.call(messages as any)
+  const res = opts.reasoning
+    ? await llm.call(messages as any, { reasoning: opts.reasoning })
+    : await llm.call(messages as any)
   const draft = toText(res).trim()
   const jsonStr = extractFirstJsonObject(draft) || draft
   const parsed = tryParse<any>(jsonStr)

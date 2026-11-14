@@ -81,10 +81,14 @@ async function ask(topicIn: any, sys: string) {
     { role: "system", content: sys },
     { role: "user", content: `Topic:\n${topic}\nReturn only the JSON array.` }
   ] as const
-  const r = await llm.invoke([...msgs] as any)
+  const r = await llm.invoke([...msgs] as any, { reasoning: 'none' })
   const raw = typeof r === "string" ? r : String((r as any)?.content ?? "")
   const txt = extractArray(stripFences(raw))
-  return tryParse<any>(txt)
+  const parsed = tryParse<any>(txt)
+  return Array.isArray(parsed) ? parsed.map(item =>
+    item && typeof item === "object" && item.explanation === undefined && typeof item.explication === "string"
+      ? { ...item, explanation: item.explication } : item
+  ) : parsed
 }
 
 export async function handleQuiz(topic: string, language: "en" | "fr" = "en"): Promise<QuizItem[]> {

@@ -64,3 +64,11 @@ test('seuls les champs QCM autorisés sont transmis au navigateur', async () => 
   vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify(extra) } as any)
   expect(await handleQuiz('Fractions', 'fr')).toEqual(expected)
 })
+
+test('accepte la clé française explication et désactive le raisonnement', async () => {
+  const expected = quiz()
+  const french = expected.map(({ explanation, ...item }) => ({ ...item, explication: explanation }))
+  vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify(french) } as any)
+  expect(await handleQuiz('Fractions', 'fr')).toEqual(expected)
+  expect(llm.invoke).toHaveBeenCalledWith(expect.any(Array), { reasoning: 'none' })
+})

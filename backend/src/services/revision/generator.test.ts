@@ -154,3 +154,16 @@ test.each([
   expect((await service.getHome(ctx))?.totalCards).toBe(10)
   await db.close()
 })
+
+test('la génération du chapitre désactive le raisonnement pour le cours et le QCM', async () => {
+  const db = new SQLiteDatabase(join(directory, 'reasoning.sqlite'))
+  const service = new RevisionService({ db, now: () => new Date('2026-11-13T12:00:00Z'), generateCards })
+  const ctx = context()
+  await service.saveProfile(ctx, { schoolClass: 'terminale', series: 'D', subjects: ['Mathématiques'] })
+  model.call.mockResolvedValue({ content: lesson(5) })
+  model.invoke.mockResolvedValue({ content: quiz })
+  await service.generateChapter(ctx, { subject: 'Mathématiques', title: 'Raisonnement' })
+  expect(model.call).toHaveBeenCalledWith(expect.any(Array), { reasoning: 'none' })
+  expect(model.invoke).toHaveBeenCalledWith(expect.any(Array), { reasoning: 'none' })
+  await db.close()
+})

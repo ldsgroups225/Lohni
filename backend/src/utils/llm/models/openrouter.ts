@@ -5,17 +5,27 @@ import type { MkLLM, MkEmb, EmbeddingsLike, Msg } from './types'
 // Une erreur (ex. 402 crédit épuisé) passe au modèle suivant ; la dernière erreur est relancée.
 export const makeLLM: MkLLM = (cfg: any) => {
   const models = cfg.openrouter_model.split(',').map((m: string) => m.trim()).filter(Boolean)
-  const chats = models.map((model: string) => new ChatOpenAI({
+  const createChat = (model: string, reasoning = false) => new ChatOpenAI({
     model,
     apiKey: cfg.openrouter || '',
     configuration: { baseURL: 'https://openrouter.ai/api/v1' },
     temperature: cfg.temp ?? 0.7,
     maxTokens: cfg.max_tokens,
-  }))
-  const invoke = async (ms: Msg[]) => {
+    ...(reasoning ? { modelKwargs: { reasoning: { effort: 'none' } } } : {}),
+  })
+  const chats = models.map((model: string) => createChat(model))
+  const noReasoningChats = models.map((model: string) => createChat(model, true))
+  const invoke = async (ms: Msg[], options?: { reasoning?: 'none' }) => {
     let lastError: unknown
-    for (const chat of chats) {
-      try { return await chat.invoke(ms) } catch (error) { lastError = error }
+    for (let i = 0; i < chats.length; i++) {
+      try {
+        return await (options?.reasoning === 'none' ? noReasoningChats[i] : chats[i]).invoke(ms)
+      } catch (error) {
+        if (options?.reasoning === 'none' && error instanceof Error &&
+          (error as Error & { status?: number }).status === 400 && error.message.includes('Reasoning is mandatory')) {
+          try { return await chats[i].invoke(ms) } catch (retryError) { lastError = retryError }
+        } else lastError = error
+      }
     }
     throw lastError
   }
