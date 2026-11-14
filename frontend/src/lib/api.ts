@@ -40,7 +40,7 @@ export type PodcastEvent =
   | { type: "script"; data: any }
   | { type: "audio"; file: string; filename?: string; staticUrl?: string }
   | { type: "done" }
-  | { type: "error"; error: string }
+  | { type: "error"; error: string; code?: string }
 export type SmartNotesEvent =
   | { type: "ready"; noteId: string }
   | { type: "phase"; value: string }
