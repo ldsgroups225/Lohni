@@ -30,7 +30,7 @@ export function podcastRoutes(app: any) {
       const topic = String(req.body?.topic || req.body?.title || "").trim()
       
       if (!topic) {
-        return res.status(400).send({ error: "topic required" })
+        return res.status(400).send({ error: "Indique un sujet pour le podcast." })
       }
 
       const duration = req.body?.duration
@@ -110,14 +110,14 @@ export function podcastRoutes(app: any) {
           fileStream.pipe(res)
           fileStream.on('error', (_err) => {
             if (!res.headersSent) {
-              res.status(500).send({ error: 'Download failed' })
+              res.status(500).send({ error: 'Impossible de télécharger le podcast.' })
             }
           })
           return
         }
       }
       
-      return res.status(404).send({ error: "File not found" })
+      return res.status(404).send({ error: "Fichier introuvable." })
     } catch (e) {
       next(e)
     }

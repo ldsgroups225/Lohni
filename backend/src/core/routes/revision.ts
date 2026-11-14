@@ -1,9 +1,14 @@
-import { withUpload } from '../../lib/parser/withUpload'
+import { UploadError, withUpload } from '../../lib/parser/withUpload'
 import { RevisionError, RevisionService, type RevisionContext } from '../../services/revision/service'
 import { generateCards, transcribePhoto, readTimetable } from '../../services/revision/generator'
 import { REVISION_POLICY as policy } from '../../services/revision/policy'
 import { sqlite } from '../../utils/database/sqlite'
 import { config } from '../../config/env'
+
+// Upload refusals reach the client as French 400s, like any other revision error.
+const upload: typeof withUpload = (req, options, handle) => withUpload(req, options, handle).catch(error => {
+  throw error instanceof UploadError ? new RevisionError(error.message, error.code) : error
+})
 
 const revision = new RevisionService({ db: sqlite, now: () => new Date(), generateCards, transcribePhoto, readTimetable })
 
@@ -33,7 +38,7 @@ export function revisionRoutes(app: any) {
   route('get', '/revision/timetable', context => revision.getTimetable(context))
   route('put', '/revision/timetable', (context, req) => revision.saveTimetable(context, req.body))
   route('post', '/revision/timetable/photos', (context, req) =>
-    withUpload(req, { prefix: 'lohni-timetable-', maxFiles: policy.maxTimetablePhotos, fileSize: policy.maxUploadMB * 1024 * 1024, tooBigMessage: `Choisis au plus ${policy.maxTimetablePhotos} photos de ${policy.maxUploadMB} Mo maximum.` },
+    upload(req, { prefix: 'lohni-timetable-', maxFiles: policy.maxTimetablePhotos, fileSize: policy.maxUploadMB * 1024 * 1024, tooBigMessage: `Choisis au plus ${policy.maxTimetablePhotos} photos de ${policy.maxUploadMB} Mo maximum.` },
       ({ files }) => revision.readTimetablePhotos(context, files)))
   route('get', '/revision/plan', context => revision.getPlan(context))
   route('get', '/revision/exams/:id/session', (context, req) => revision.getExamSession(context, req.params.id))
@@ -59,8 +64,8 @@ export function revisionRoutes(app: any) {
       const { title, subject, text } = req.body ?? {}
       return revision.importChapter(context, { title, subject, text }, signal)
     }
-    return withUpload<{ title: string; subject: string }>(req, { prefix: 'lohni-import-', maxFiles: 1, fileSize: policy.maxUploadMB * 1024 * 1024, exactlyOne: true, metadata: true, code: 'IMPORT_FILE',
-      tooBigMessage: `Import illisible ou trop volumineux. Choisis un seul fichier de ${policy.maxUploadMB} Mo maximum.`, noFileMessage: 'Choisis un fichier à importer.' },
+    return upload<{ title: string; subject: string }>(req, { prefix: 'lohni-import-', maxFiles: 1, fileSize: policy.maxUploadMB * 1024 * 1024, exactlyOne: true, metadata: true, code: 'IMPORT_FILE',
+      tooBigMessage: `Import illisible ou trop volumineux. Choisis un seul fichier de ${policy.maxUploadMB} Mo maximum.`, noFileMessage: 'Choisis un fichier à importer.', badMetadataMessage: 'Matière et titre du chapitre requis.' },
       ({ files, metadata }) => revision.importChapter(context, { title: metadata?.title, subject: metadata?.subject, file: files[0] }, signal))
   })
   route('delete', '/revision/chapters/:id', (context, req) => revision.deleteChapter(context, req.params.id))

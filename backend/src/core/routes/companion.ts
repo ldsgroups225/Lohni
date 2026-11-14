@@ -78,7 +78,7 @@ export function companionRoutes(app: any) {
     try {
       const body = req.body || {}
       const question = typeof body.question === "string" ? body.question.trim() : ""
-      if (!question) return res.status(400).send({ error: "question required" })
+      if (!question) return res.status(400).send({ error: "Écris ta question." })
 
       const history = Array.isArray(body.history) ? (body.history as CompanionHistory[]) : undefined
       const documentTitle = typeof body.documentTitle === "string" ? body.documentTitle.trim() : ""
@@ -90,20 +90,20 @@ export function companionRoutes(app: any) {
         contextText = body.documentText
       } else if (typeof body.filePath === "string" && body.filePath.trim()) {
         const resolved = resolveDocumentPath(body.filePath)
-        if (!resolved) return res.status(404).send({ error: "document not found or not accessible" })
+        if (!resolved) return res.status(404).send({ error: "Document introuvable ou inaccessible." })
         filename = path.basename(resolved)
         try {
           contextText = await readDocumentText(resolved)
         } catch (err: any) {
-          const msg = err?.message || "unable to read document"
-          return res.status(400).send({ error: msg })
+          console.error("[companion] read failed", err?.message || err)
+          return res.status(400).send({ error: "Impossible de lire ce document." })
         }
       } else {
-        return res.status(400).send({ error: "documentText or filePath required" })
+        return res.status(400).send({ error: "Envoie le texte ou le fichier du document." })
       }
 
       if (!contextText.trim()) {
-        return res.status(400).send({ error: "document is empty" })
+        return res.status(400).send({ error: "Le document est vide." })
       }
 
       const prompt = buildCompanionPrompt(filename || documentTitle)
@@ -119,7 +119,7 @@ export function companionRoutes(app: any) {
       res.send({ ok: true, companion: answer })
     } catch (err: any) {
       console.error("[companion] ask failed", err?.message || err)
-      res.status(500).send({ error: "failed to run companion request" })
+      res.status(500).send({ error: "Le compagnon n’a pas pu répondre. Réessaie." })
     }
   })
 }

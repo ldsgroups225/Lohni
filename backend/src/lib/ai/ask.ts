@@ -280,6 +280,8 @@ type AskWithContextOptions = {
   history?: HistoryMessage[]
   cacheScope?: string
   reasoning?: 'none'
+  /** A reply failing this check is asked for once more, then raises StructuredOutputError. */
+  validate?: (payload: AskPayload) => boolean
   isCacheable?: (payload: AskPayload) => boolean
   signal?: AbortSignal
 }
@@ -314,22 +316,24 @@ export async function askWithContext(opts: AskWithContextOptions): Promise<AskPa
   opts.signal?.throwIfAborted()
   const fromObject = (parsed: unknown): AskPayload | null => {
     const o = parsed as any
-    return o && typeof o === "object" ? {
+    if (!o || typeof o !== "object") return null
+    const payload = {
       topic: typeof o.topic === "string" ? o.topic : topic,
       answer: typeof o.answer === "string" ? o.answer : "",
       flashcards: Array.isArray(o.flashcards) ? (o.flashcards as AskCard[]) : [],
-    } : null
+    }
+    return !opts.validate || opts.validate(payload) ? payload : null
   }
   let out: AskPayload
   try {
     out = await generateStructured({
-      model: llm, via: "call", messages: messages as any, shape: "object", attempts: 1, reasoning: opts.reasoning ?? false, signal: opts.signal,
+      model: llm, messages: messages as any, shape: "object", attempts: opts.validate ? 2 : 1, keepReasoning: opts.reasoning !== 'none', signal: opts.signal,
       validate: fromObject,
       salvage: draft => salvageTruncatedJson(draft, topic),
     })
   } catch (error) {
     // Not JSON at all: show the model's text as the answer rather than failing the chat.
-    if (!(error instanceof StructuredOutputError)) throw error
+    if (!(error instanceof StructuredOutputError) || opts.validate) throw error
     out = { topic, answer: error.raw, flashcards: [] }
   }
 

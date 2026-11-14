@@ -4,8 +4,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 
+// `call` scripts the lesson replies, `invoke` every other reply (quiz, timetable); one model entry point routes between them.
 const model = vi.hoisted(() => ({ call: vi.fn(), invoke: vi.fn() }))
-vi.mock('../../utils/llm/llm', () => ({ default: model }))
+vi.mock('../../utils/llm/llm', () => ({
+  default: { invoke: (messages: any[], options: unknown) => (String(messages[0]?.content).includes('Tu aides un élève francophone') ? model.call : model.invoke)(messages, options) },
+}))
 
 let directory: string
 let RevisionService: typeof import('./service').RevisionService
@@ -179,4 +182,16 @@ test('la génération du chapitre désactive le raisonnement pour le cours et le
   expect(model.call).toHaveBeenCalledWith(expect.any(Array), { reasoning: 'none' })
   expect(model.invoke).toHaveBeenCalledWith(expect.any(Array), { reasoning: 'none' })
   await db.close()
+})
+
+test('un emploi du temps illisible est repris une fois, puis lu', async () => {
+  const path = join(directory, 'emploi.jpg'); await writeFile(path, 'photo')
+  const { readTimetable } = await import('./generator.js')
+  const block = { day: 1, start: '08:00', end: '09:00', subject: 'Sport' }
+  model.invoke.mockResolvedValueOnce({ content: 'illisible' }).mockResolvedValueOnce({ content: `\`\`\`json\n${JSON.stringify([block])}\n\`\`\`` })
+  await expect(readTimetable({ path, filename: 'emploi.jpg', mimeType: 'image/jpeg' })).resolves.toEqual([block])
+  expect(model.invoke).toHaveBeenCalledTimes(2)
+  expect(model.invoke).toHaveBeenCalledWith(expect.any(Array), { reasoning: 'none' })
+  model.invoke.mockResolvedValue({ content: 'illisible' })
+  await expect(readTimetable({ path, filename: 'emploi.jpg', mimeType: 'image/jpeg' })).rejects.toThrow('Je n’ai pas pu lire cet emploi du temps')
 })

@@ -34,9 +34,7 @@ export function parseModelJson(raw: string, shape: 'array' | 'object'): unknown 
 }
 
 type StructuredOptions<T> = {
-  model: Pick<LLM, 'invoke' | 'call'>
-  /** Which model entry point to use; both are the same in production. */
-  via?: 'invoke' | 'call'
+  model: Pick<LLM, 'invoke'>
   messages: Msg[]
   /** Stricter prompt for the second attempt; defaults to `messages`. */
   retryMessages?: Msg[]
@@ -46,8 +44,8 @@ type StructuredOptions<T> = {
   /** Last chance on a reply that does not parse (e.g. cut by the token limit). */
   salvage?: (raw: string) => T | null
   attempts?: number
-  /** 'none' by default; false leaves the model's own reasoning on (tutor, chat). */
-  reasoning?: 'none' | false
+  /** Sends `reasoning: 'none'` unless true (tutor, chat keep the model's own reasoning). */
+  keepReasoning?: boolean
   signal?: AbortSignal
 }
 
@@ -57,7 +55,7 @@ export async function generateStructured<T>(opts: StructuredOptions<T>): Promise
   for (let attempt = 0; attempt < attempts; attempt++) {
     opts.signal?.throwIfAborted()
     const messages = attempt > 0 && opts.retryMessages ? opts.retryMessages : opts.messages
-    const reply = await opts.model[opts.via ?? 'invoke'](messages, { ...(opts.reasoning === false ? {} : { reasoning: 'none' as const }), signal: opts.signal })
+    const reply = await opts.model.invoke(messages, { ...(opts.keepReasoning ? {} : { reasoning: 'none' as const }), signal: opts.signal })
     opts.signal?.throwIfAborted()
     raw = toText(reply).trim()
     const parsed = parseModelJson(raw, opts.shape)

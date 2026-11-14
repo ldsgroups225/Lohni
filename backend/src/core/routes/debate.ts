@@ -57,14 +57,14 @@ export function debateRoutes(app: any) {
             if (typeof topic !== 'string' || !topic.trim()) {
                 return res.status(400).json({
                     ok: false,
-                    error: "Topic is required",
+                    error: "Indique le sujet du débat.",
                 });
             }
 
             if (!position || !["for", "against"].includes(position)) {
                 return res.status(400).json({
                     ok: false,
-                    error: "Position must be 'for' or 'against'",
+                    error: "La position doit être « pour » ou « contre ».",
                 });
             }
 
@@ -85,7 +85,7 @@ export function debateRoutes(app: any) {
             console.error("Error starting debate:", error);
             res.status(500).json({
                 ok: false,
-                error: error.message || "Failed to start debate",
+                error: "Impossible de lancer le débat. Réessaie.",
             });
         }
     });
@@ -98,7 +98,7 @@ export function debateRoutes(app: any) {
             if (typeof argument !== 'string' || !argument.trim()) {
                 return res.status(400).json({
                     ok: false,
-                    error: "Argument is required",
+                    error: "Écris ton argument.",
                 });
             }
 
@@ -106,13 +106,13 @@ export function debateRoutes(app: any) {
             if (!session) {
                 return res.status(404).json({
                     ok: false,
-                    error: "Debate session not found",
+                    error: "Débat introuvable.",
                 });
             }
 
             res.status(202).json({
                 ok: true,
-                message: "Argument received, streaming response",
+                message: "Argument reçu, réponse en cours.",
             });
 
             const sockets = debateSockets.get(debateId);
@@ -158,14 +158,14 @@ export function debateRoutes(app: any) {
                 console.error("Error streaming debate response:", error);
                 emitToDebate({
                     type: "error",
-                    error: error.message || "Failed to generate response",
+                    error: "Impossible de générer la réponse. Réessaie.",
                 });
             }
         } catch (error: any) {
             console.error("Error in debate argue:", error);
             res.status(500).json({
                 ok: false,
-                error: error.message || "Failed to process argument",
+                error: "Impossible de traiter ton argument. Réessaie.",
             });
         }
     });
@@ -178,7 +178,7 @@ export function debateRoutes(app: any) {
             if (!session) {
                 return res.status(404).json({
                     ok: false,
-                    error: "Debate session not found",
+                    error: "Débat introuvable.",
                 });
             }
 
@@ -190,7 +190,7 @@ export function debateRoutes(app: any) {
             console.error("Error getting debate:", error);
             res.status(500).json({
                 ok: false,
-                error: error.message || "Failed to get debate",
+                error: "Impossible de charger le débat. Réessaie.",
             });
         }
     });
@@ -212,7 +212,7 @@ export function debateRoutes(app: any) {
             console.error("Error listing debates:", error);
             res.status(500).json({
                 ok: false,
-                error: error.message || "Failed to list debates",
+                error: "Impossible de charger les débats. Réessaie.",
             });
         }
     });
@@ -225,19 +225,19 @@ export function debateRoutes(app: any) {
             if (!deleted) {
                 return res.status(404).json({
                     ok: false,
-                    error: "Debate session not found",
+                    error: "Débat introuvable.",
                 });
             }
 
             res.json({
                 ok: true,
-                message: "Debate session deleted",
+                message: "Débat supprimé.",
             });
         } catch (error: any) {
             console.error("Error deleting debate:", error);
             res.status(500).json({
                 ok: false,
-                error: error.message || "Failed to delete debate",
+                error: "Impossible de supprimer le débat. Réessaie.",
             });
         }
     });
@@ -250,7 +250,7 @@ export function debateRoutes(app: any) {
             if (!session) {
                 return res.status(404).json({
                     ok: false,
-                    error: "Debate session not found",
+                    error: "Débat introuvable.",
                 });
             }
 
@@ -258,13 +258,13 @@ export function debateRoutes(app: any) {
 
             res.json({
                 ok: true,
-                message: "Debate surrendered",
+                message: "Débat abandonné.",
             });
         } catch (error: any) {
             console.error("Error surrendering debate:", error);
             res.status(500).json({
                 ok: false,
-                error: error.message || "Failed to surrender debate",
+                error: "Impossible d’abandonner le débat. Réessaie.",
             });
         }
     });
@@ -277,7 +277,7 @@ export function debateRoutes(app: any) {
             if (!session) {
                 return res.status(404).json({
                     ok: false,
-                    error: "Debate session not found",
+                    error: "Débat introuvable.",
                 });
             }
 
@@ -286,7 +286,7 @@ export function debateRoutes(app: any) {
             // Send immediate response, actual analysis happens via WebSocket
             res.status(202).json({
                 ok: true,
-                message: "Analysis started",
+                message: "Analyse lancée.",
                 stream: `/ws/debate/analyze?debateId=${debateId}`,
             });
 
@@ -327,14 +327,14 @@ export function debateRoutes(app: any) {
                 console.error("Error streaming analysis:", error);
                 emitToAnalysis({
                     type: "error",
-                    error: error.message || "Failed to analyze debate",
+                    error: "Impossible d’analyser le débat. Réessaie.",
                 });
             }
         } catch (error: any) {
             console.error("Error analyzing debate:", error);
             res.status(500).json({
                 ok: false,
-                error: error.message || "Failed to analyze debate",
+                error: "Impossible d’analyser le débat. Réessaie.",
             });
         }
     });

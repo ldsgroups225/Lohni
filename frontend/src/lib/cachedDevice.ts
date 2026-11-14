@@ -1,3 +1,5 @@
+export const DEVICE_CHANGED = 'L’appareil a changé. Recharge la page avant de continuer.'
+
 export function cachedDevice() {
   try { return localStorage.getItem('lohni-device-id') } catch { return null }
 }

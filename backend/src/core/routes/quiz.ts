@@ -39,7 +39,7 @@ export function quizRoutes(app: any) {
     try {
       const topic = String(req.body?.topic || "").trim();
       if (!topic)
-        return res.status(400).send({ ok: false, error: "topic required" });
+        return res.status(400).send({ ok: false, error: "Indique un sujet pour le quiz." });
 
       const quizId = crypto.randomUUID();
       qlog("start", quizId, "topic:", topic);
@@ -60,13 +60,13 @@ export function quizRoutes(app: any) {
           qlog("error", quizId, e?.message || e);
           emitToAll(qs.get(quizId), {
             type: "error",
-            error: e?.message || "failed",
+            error: "Impossible de créer le quiz. Réessaie.",
           });
         }
       });
     } catch (e: any) {
       qlog("500 route err", e?.message || e);
-      res.status(500).send({ ok: false, error: e?.message || "internal" });
+      res.status(500).send({ ok: false, error: "Impossible de créer le quiz. Réessaie." });
     }
   });
 }

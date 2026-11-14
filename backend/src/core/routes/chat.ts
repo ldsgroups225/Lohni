@@ -48,11 +48,11 @@ export function chatRoutes(app: any) {
         chatId = mcid;
         files = mf || [];
         if (!q)
-          return res.status(400).send({ error: "q required for file uploads" });
+          return res.status(400).send({ error: "Écris ta question pour envoyer un fichier." });
       } else {
         q = req.body?.q || "";
         chatId = req.body?.chatId;
-        if (!q) return res.status(400).send({ error: "q required" });
+        if (!q) return res.status(400).send({ error: "Écris ta question." });
       }
 
       let chat = chatId ? await getChat(chatId) : undefined;
@@ -117,7 +117,7 @@ export function chatRoutes(app: any) {
           const msg = err?.message || "failed";
           const stack = err?.stack || String(err);
           console.error("[chat] err inner", { chatId: id, msg, stack });
-          emitToAll(chatSockets.get(id), { type: "error", error: msg });
+          emitToAll(chatSockets.get(id), { type: "error", error: "Impossible de répondre pour l’instant. Réessaie." });
         }
       })().catch((e: any) => {
         console.error("[chat] err runner", e?.message || e);
@@ -137,7 +137,7 @@ export function chatRoutes(app: any) {
     const id = req.params.id;
     const chat = await getChat(id);
     if (!chat) {
-      return res.status(404).send({ error: "not found" });
+      return res.status(404).send({ error: "Discussion introuvable." });
     }
     const messages = await getMsgs(id);
     res.send({ ok: true, chat, messages });

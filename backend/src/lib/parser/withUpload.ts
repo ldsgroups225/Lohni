@@ -2,7 +2,11 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { parseMultipart, type UpFile } from './upload'
-import { RevisionError } from '../../services/revision/service'
+
+/** Refused upload; callers map it to their own error type. */
+export class UploadError extends Error {
+  constructor(message: string, readonly code?: string) { super(message) }
+}
 
 type Options = {
   prefix: string
@@ -13,6 +17,8 @@ type Options = {
   /** Lit le champ `q` comme un JSON de métadonnées. */
   metadata?: boolean
   tooBigMessage: string
+  /** Required with `metadata`. */
+  badMetadataMessage?: string
   code?: string
   noFileMessage?: string
 }
@@ -23,12 +29,12 @@ export async function withUpload<M = undefined, T = unknown>(req: any, options: 
   try {
     let upload: Awaited<ReturnType<typeof parseMultipart>>
     try { upload = await parseMultipart(req, { directory, limits: { files: options.maxFiles, fileSize: options.fileSize, fields: 1, fieldSize: 4096 } }) }
-    catch { throw new RevisionError(options.tooBigMessage, options.code) }
+    catch { throw new UploadError(options.tooBigMessage, options.code) }
     let metadata: any
     if (options.metadata) {
-      try { metadata = JSON.parse(upload.q) } catch { throw new RevisionError('Matière et titre du chapitre requis.') }
+      try { metadata = JSON.parse(upload.q) } catch { throw new UploadError(options.badMetadataMessage ?? 'Envoi invalide.') }
     }
-    if (options.exactlyOne && upload.files.length !== 1) throw new RevisionError(options.noFileMessage ?? 'Choisis un fichier.', options.code)
+    if (options.exactlyOne && upload.files.length !== 1) throw new UploadError(options.noFileMessage ?? 'Choisis un fichier.', options.code)
     return await handle({ files: upload.files, metadata })
   } finally { await rm(directory, { recursive: true, force: true }) }
 }

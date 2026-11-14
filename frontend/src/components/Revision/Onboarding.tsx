@@ -3,7 +3,7 @@ import { Button } from '../ui/Button'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import curriculum from '../../data/curriculum-ci.json'
-import { cachedDevice } from '../../lib/cachedDevice'
+import { DEVICE_CHANGED, cachedDevice } from '../../lib/cachedDevice'
 import { readFirstName, writeFirstName } from '../../lib/localFirstName'
 import { revisionAPI, revisionPolicy } from '../../lib/api'
 
@@ -71,7 +71,7 @@ export default function Onboarding() {
       return
     }
     if (!selectedSubject || !title.trim()) return
-    if (nameDevice !== cachedDevice()) { setError('L’appareil a changé. Recharge la page avant de continuer.'); return }
+    if (nameDevice !== cachedDevice()) { setError(DEVICE_CHANGED); return }
     writeFirstName(firstName.trim())
     submitting.current = true
     setBusy(true)

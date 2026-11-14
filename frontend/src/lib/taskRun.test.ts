@@ -43,3 +43,18 @@ test("après la fin, annuler ne contacte plus le serveur", async () => {
   expect(t.cancel).not.toHaveBeenCalled()
   expect(t.close).toHaveBeenCalled()
 })
+
+test("l’annulation de nettoyage après un échec de flux est silencieuse", async () => {
+  const onCancelError = vi.fn()
+  let emit!: (ev: Ev) => void
+  runTask<Ev>({
+    start: async () => "run-4",
+    connect: (_id, on) => { emit = on; return { close: vi.fn() } },
+    cancel: async () => { throw new Error("réseau") },
+    onEvent: vi.fn(), onStartError: vi.fn(), onCancelError, streamError: "x",
+  })
+  await tick()
+  emit({ type: "error", error: "stream_error" })
+  await tick()
+  expect(onCancelError).not.toHaveBeenCalled()
+})

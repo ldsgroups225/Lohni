@@ -25,9 +25,9 @@ describe('generateStructured', () => {
     expect(calls[0].options.reasoning).toBe('none')
   })
 
-  test('reasoning: false ne transmet pas reasoning au modèle', async () => {
+  test('keepReasoning: true ne transmet pas reasoning au modèle', async () => {
     const { model, calls } = scripted('[1]')
-    await generateStructured({ model, messages, shape: 'array', validate: numbers, reasoning: false })
+    await generateStructured({ model, messages, shape: 'array', validate: numbers, keepReasoning: true })
     expect('reasoning' in calls[0].options).toBe(false)
   })
 

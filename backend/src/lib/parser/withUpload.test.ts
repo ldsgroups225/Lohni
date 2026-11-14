@@ -1,8 +1,7 @@
 import http from 'node:http'
 import { existsSync } from 'node:fs'
 import { afterEach, expect, test } from 'vitest'
-import { withUpload } from './withUpload'
-import { RevisionError } from '../../services/revision/service'
+import { UploadError, withUpload } from './withUpload'
 
 let server: http.Server
 afterEach(() => new Promise(r => server ? server.close(() => r(null)) : r(null)))
@@ -23,7 +22,7 @@ const form = (files: number, q?: string) => {
   for (let i = 0; i < files; i++) f.append('file', new Blob(['contenu']), `f${i}.txt`)
   return f
 }
-const options = { prefix: 'lohni-test-', maxFiles: 3, fileSize: 1024, exactlyOne: true, metadata: true, tooBigMessage: 'Trop gros.', noFileMessage: 'Choisis un fichier à importer.', code: 'IMPORT_FILE' }
+const options = { prefix: 'lohni-test-', maxFiles: 3, fileSize: 1024, exactlyOne: true, metadata: true, tooBigMessage: 'Trop gros.', noFileMessage: 'Choisis un fichier à importer.', badMetadataMessage: 'Métadonnées requises.', code: 'IMPORT_FILE' }
 
 test('donne les métadonnées et le fichier, puis supprime le dossier après un succès', async () => {
   let path = ''
@@ -41,13 +40,13 @@ test('supprime le fichier quand le traitement échoue', async () => {
 
 test('métadonnées invalides : erreur claire', async () => {
   const r = await post(req => withUpload(req, options, async () => 1), form(1, 'pas du json'))
-  expect(r.error).toBeInstanceOf(RevisionError)
-  expect((r.error as Error).message).toBe('Matière et titre du chapitre requis.')
+  expect(r.error).toBeInstanceOf(UploadError)
+  expect((r.error as Error).message).toBe('Métadonnées requises.')
 })
 
 test('zéro ou deux fichiers : erreur claire', async () => {
   const none = await post(req => withUpload(req, options, async () => 1), form(0, '{}'))
-  expect((none.error as RevisionError).message).toBe('Choisis un fichier à importer.')
+  expect((none.error as UploadError).message).toBe('Choisis un fichier à importer.')
   const two = await post(req => withUpload(req, { ...options, maxFiles: 1 }, async () => 1), form(2, '{}'))
-  expect((two.error as RevisionError).message).toBe('Trop gros.')
+  expect((two.error as UploadError).message).toBe('Trop gros.')
 })

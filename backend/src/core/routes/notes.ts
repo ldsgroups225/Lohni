@@ -43,7 +43,7 @@ export function smartnotesRoutes(app: any) {
       if (!topic && !notes && !filePath) {
         return res
           .status(400)
-          .send({ ok: false, error: "Provide topic, notes, or filePath" });
+          .send({ ok: false, error: "Indique un sujet, des notes ou un fichier." });
       }
 
       const noteId = crypto.randomUUID();
@@ -74,13 +74,13 @@ export function smartnotesRoutes(app: any) {
           nlog("error", noteId, e?.message || e);
           emitToAll(ns.get(noteId), {
             type: "error",
-            error: e?.message || "failed",
+            error: "Impossible de créer les notes. Réessaie.",
           });
         }
       });
     } catch (e: any) {
       nlog("500 route err", e?.message || e);
-      res.status(500).send({ ok: false, error: e?.message || "internal" });
+      res.status(500).send({ ok: false, error: "Impossible de créer les notes. Réessaie." });
     }
   });
 }

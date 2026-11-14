@@ -49,7 +49,7 @@ export function examRoutes(app: any) {
       res.send({ ok: true, exams: list })
     } catch (e: any) {
       log("list err", e?.message || e)
-      res.status(500).send({ ok: false, error: e?.message || "internal" })
+      res.status(500).send({ ok: false, error: "Impossible de charger les examens. Réessaie." })
     }
   })
 
@@ -61,7 +61,7 @@ export function examRoutes(app: any) {
   app.post("/exam", async (req: any, res: any) => {
     try {
       const examId = String(req.body?.examId || "").trim()
-      if (!examId) return res.status(400).send({ ok: false, error: "examId required" })
+      if (!examId) return res.status(400).send({ ok: false, error: "Choisis un examen." })
 
       const runId = runs.start({
         owner: req.headers?.["x-device-id"],
@@ -81,7 +81,7 @@ export function examRoutes(app: any) {
       res.status(202).send({ ok: true, runId, stream: `/ws/exams?runId=${runId}` })
     } catch (e: any) {
       log("500 single err", e?.message || e)
-      res.status(500).send({ ok: false, error: e?.message || "internal" })
+      res.status(500).send({ ok: false, error: "Impossible de lancer l’examen. Réessaie." })
     }
   })
 }

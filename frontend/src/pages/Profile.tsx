@@ -11,7 +11,7 @@ import curriculum from '../data/curriculum-ci.json'
 import { REVISION_POLICY as policy } from '../../../backend/src/services/revision/policy'
 import { revisionAPI, type RevisionProfile, type RevisionProgress, type RevisionExam, type RevisionChapter, type RevisionSettings } from '../lib/api'
 import { readFirstName, writeFirstName } from '../lib/localFirstName'
-import { cachedDevice, revisionSnapshot } from '../lib/cachedDevice'
+import { DEVICE_CHANGED, cachedDevice, revisionSnapshot } from '../lib/cachedDevice'
 
 let profileSave: Promise<RevisionProfile> | null = null
 
@@ -106,7 +106,7 @@ export default function Profile() {
     const device = cachedDevice()
     try {
       const value = await revisionAPI.saveSettings(settings)
-      if (device !== cachedDevice()) { setSettings(null); throw new Error('L’appareil a changé. Recharge la page avant de continuer.') }
+      if (device !== cachedDevice()) { setSettings(null); throw new Error(DEVICE_CHANGED) }
       setSettings(value)
       setSettingsSaved(true)
     } catch (cause) { setSettingsError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer tes réglages.') }
@@ -122,7 +122,7 @@ export default function Profile() {
   async function save(event: FormEvent) {
     event.preventDefault()
     if (!profile || profileSave) return
-    if (page === 'profil' && nameDevice.current !== cachedDevice()) { setError('L’appareil a changé. Recharge la page avant de continuer.'); return }
+    if (page === 'profil' && nameDevice.current !== cachedDevice()) { setError(DEVICE_CHANGED); return }
     saving.current = true
     setBusy(true)
     setSaved(false)
@@ -134,7 +134,7 @@ export default function Profile() {
       const value = await promise
       if (requestDevice !== cachedDevice()) {
         setProfile(null); setProgress(null)
-        throw new Error('L’appareil a changé. Recharge la page avant de continuer.')
+        throw new Error(DEVICE_CHANGED)
       }
       if (page === 'profil' && !writeFirstName(firstName.trim())) setError('Impossible d’enregistrer ton prénom sur cet appareil.')
       setProfile(value)

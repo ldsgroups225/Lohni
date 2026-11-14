@@ -16,7 +16,8 @@ export function runTask<E extends Ev>(o: {
   let finished = false
   let id: string | undefined
   let close = () => {}
-  const cancelRemote = (target: string) => { Promise.resolve().then(() => o.cancel(target)).catch(() => o.onCancelError?.()) }
+  // A cleanup cancel after a failure is silent: it must not replace the failure message.
+  const cancelRemote = (target: string, silent = false) => { Promise.resolve().then(() => o.cancel(target)).catch(() => { if (!silent) o.onCancelError?.() }) }
   void o.start().then(started => {
     if (cancelled) return cancelRemote(started)
     id = started
@@ -25,7 +26,7 @@ export function runTask<E extends Ev>(o: {
       if (cancelled || finished) return
       if (ev.type === "error" && ev.error === "stream_error") {
         finished = true
-        cancelRemote(started)
+        cancelRemote(started, true)
         return o.onEvent({ ...ev, error: o.streamError })
       }
       if (ev.type === "done" || ev.type === "error") { finished = true; close() }
