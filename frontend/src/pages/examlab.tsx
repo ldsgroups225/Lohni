@@ -1,7 +1,8 @@
 import { PartyIcon, TrophyIcon, BookIcon, DumbbellIcon } from '../components/ui/NavigationIcons'
 import { useEffect, useMemo, useRef, useState } from "react"
-import { getExams, startExam, connectExamStream, type ExamEvent } from "../lib/api"
+import { getExams, startExam, cancelExam, connectExamStream, revisionAPI, type ExamEvent } from "../lib/api"
 import LoadingIndicator from "../components/Chat/LoadingIndicator"
+import { LoadingState } from "../components/ui/LoadingState"
 import { ToolPage } from "../components/ui/ToolPage"
 import QuizHeader from "../components/Quiz/QuizHeader"
 import QuestionCard from "../components/Quiz/QuestionCard"
@@ -42,8 +43,19 @@ export default function ExamLabs() {
   const [connecting, setConnecting] = useState(false)
   const [activeExam, setActiveExam] = useState<string | null>(null)
   const [failure, setFailure] = useState("")
+  const [fragileCard, setFragileCard] = useState<string>()
+  const [ready, setReady] = useState(false)
 
   const closeRef = useRef<null | (() => void)>(null)
+  const runRef = useRef<{ cancelled: boolean; id?: string } | null>(null)
+  function cancel() {
+    const run = runRef.current
+    if (run) { run.cancelled = true; if (run.id) void cancelExam(run.id).catch(() => {}) }
+    closeRef.current?.()
+    closeRef.current = null
+    setConnecting(false)
+    setActiveExam(null)
+  }
 
   const total = qs.length
   const q = qs[idx]
@@ -61,7 +73,11 @@ export default function ExamLabs() {
   }, [percentage])
 
   useEffect(() => {
-    (async () => {
+    void revisionAPI.chapters().then(chapters => {
+      const fragile = chapters.filter(chapter => chapter.seenCards > 0).sort((a, b) => (a.mastery ?? 0) - (b.mastery ?? 0))[0]
+      setFragileCard(fragile?.cards.filter(card => card.reviews > 0).sort((a, b) => a.due.localeCompare(b.due))[0]?.question)
+    }).catch(() => {})
+    ;(async () => {
       try {
         const r = await getExams()
         setExams(r.exams || [])
@@ -69,11 +85,18 @@ export default function ExamLabs() {
         setLoadingExams(false)
       }
     })()
-    return () => { if (closeRef.current) closeRef.current() }
+    return () => {
+      const run = runRef.current
+      if (run) { run.cancelled = true; if (run.id) void cancelExam(run.id).catch(() => {}) }
+      closeRef.current?.()
+    }
   }, [])
 
   async function start(id: string) {
     if (closeRef.current) closeRef.current()
+    const run: { cancelled: boolean; id?: string } = { cancelled: false }
+    runRef.current = run
+    setReady(false)
     setQs([])
     setIdx(0)
     setScore(0)
@@ -88,20 +111,27 @@ export default function ExamLabs() {
 
     try {
       const { runId } = await startExam(id)
+      run.id = runId
+      if (run.cancelled) { void cancelExam(runId).catch(() => {}); return }
       const { close } = connectExamStream(runId, (ev: ExamEvent) => {
+        if (run.cancelled) return
         if (ev.type === "exam") {
           const arr = Array.isArray(ev.payload) ? ev.payload : []
           setQs(arr.map((q: any) => ({ ...q, correct: Math.max(0, q.correct - 1) })))
           setIdx(0)
           setConnecting(false)
+          setReady(true)
+          runRef.current = null
         }
         if (ev.type === "error") setFailure(ev.error === "stream_error" ? "Impossible de préparer l’examen. Réessaie." : ev.error)
         if (ev.type === "done" || ev.type === "error") {
+          runRef.current = null
           setConnecting(false)
         }
       })
       closeRef.current = close
     } catch {
+      if (run.cancelled) return
       setFailure("Impossible de lancer l’examen. Vérifie ta connexion et réessaie.")
       setConnecting(false)
     }
@@ -180,7 +210,7 @@ export default function ExamLabs() {
     <ToolPage title="Examen">
         {connecting && (
           <div className="mt-10">
-            <LoadingIndicator label="Préparation de ton examen…" />
+            <LoadingState label="Préparation de ton examen" expectedDuration={45} steps={[{ after: 0, message: "Choix des questions dans tes chapitres…" }, { after: 10, message: "Rédaction des questions…" }, { after: 25, message: "Encore un instant, c’est normal pour un examen complet." }]} onCancel={cancel} fragileCard={fragileCard} />
           </div>
         )}
 
@@ -191,7 +221,12 @@ export default function ExamLabs() {
           </div>
         )}
 
-        {qs.length > 0 && !done && q && (
+        {ready && <section className="mx-auto flex max-w-sm flex-col items-center gap-6 px-6 py-12 text-center" role="status">
+          <span aria-hidden="true" className="grid size-18 place-items-center rounded-full bg-success text-3xl text-on-success">✓</span>
+          <h2 className="text-2xl font-bold">Ton examen est prêt</h2>
+          <button type="button" className="ui-button min-h-11 w-full" onClick={() => setReady(false)}>Commencer</button>
+        </section>}
+        {qs.length > 0 && !ready && !done && q && (
           <>
             <QuizHeader topic={exams.find(e => e.id === activeExam)?.name ?? activeExam} idx={idx} total={total} score={score} />
             <QuestionCard

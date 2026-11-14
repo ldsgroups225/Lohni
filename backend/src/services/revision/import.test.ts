@@ -243,3 +243,44 @@ test.each(['txt', 'jpg'])('un fichier %s dépassant 10 Mo est refusé sans conso
   await expect(service.importChapter(context(), { title: input.title, subject: input.subject, file: { path, filename: `volumineux.${extension}`, mimeType: 'application/octet-stream' } })).rejects.toThrow('10 Mo')
   expect((await service.getImportQuota(context())).remaining).toBe(3)
 })
+
+test('un échec de génération conserve le cours pour le relire sans cartes', async () => {
+  service = new RevisionService({ db, now: () => now, generateCards: async () => { throw new Error('indisponible') } })
+  await expect(service.importChapter(context(), input)).rejects.toThrow('Impossible de préparer ce cours')
+  expect(await service.listChapters(context())).toEqual([expect.objectContaining({ title: input.title, summary: input.text, cards: [] })])
+})
+
+test('réessayer complète le même cours, sans doublon et sans accès depuis un autre appareil', async () => {
+  let broken = true
+  service = new RevisionService({ db, now: () => now, generateCards: async () => {
+    if (broken) throw new Error('indisponible')
+    return generated
+  } })
+  await expect(service.importChapter(context(), input)).rejects.toThrow()
+  const [draft] = await service.listChapters(context())
+  await expect(service.retryImport({ ...context(), deviceId: randomUUID() }, draft.id)).rejects.toThrow()
+  broken = false
+  await expect(service.retryImport(context(), draft.id)).resolves.toMatchObject({ id: draft.id })
+  expect(await service.listChapters(context())).toEqual([expect.objectContaining({ id: draft.id, cards: expect.arrayContaining([expect.objectContaining({ kind: 'basic' })]) })])
+  await expect(service.retryImport(context(), draft.id)).rejects.toThrow()
+})
+
+test('deux nouvelles tentatives ne créent pas de cartes en double', async () => {
+  let release!: () => void
+  let started!: () => void
+  const waiting = new Promise<void>(resolve => { release = resolve })
+  const running = new Promise<void>(resolve => { started = resolve })
+  let fail = true
+  service = new RevisionService({ db, now: () => now, generateCards: async () => {
+    if (fail) throw new Error('indisponible')
+    started(); await waiting; return generated
+  } })
+  await expect(service.importChapter(context(), input)).rejects.toThrow()
+  const [draft] = await service.listChapters(context())
+  fail = false
+  const pending = service.retryImport(context(), draft.id)
+  await running
+  try { await expect(service.retryImport(context(), draft.id)).rejects.toThrow('déjà en cours') }
+  finally { release(); await pending }
+  expect((await service.listChapters(context()))[0].cards).toHaveLength(2)
+})

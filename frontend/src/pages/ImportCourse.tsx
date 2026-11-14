@@ -1,13 +1,13 @@
 import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 import { Button } from '../components/ui/Button'
 import { BackButton } from '../components/ui/BackButton'
-import { LoadingState } from '../components/ui/LoadingState'
+import { ErrorState, LoadingState } from '../components/ui/LoadingState'
 import { PendingRead } from '../components/ui/PendingRead'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import MarkdownView from '../components/Chat/MarkdownView'
-import { revisionAPI, revisionPolicy, type RevisionProfile, type RevisionImportedChapter, type RevisionImportQuota } from '../lib/api'
+import { APIError, revisionAPI, revisionPolicy, type RevisionProfile, type RevisionImportedChapter, type RevisionImportQuota } from '../lib/api'
 
 let cachedImport: { device: string | null; version: number; day: string; profile: RevisionProfile | null; quota: RevisionImportQuota } | null = null
 
@@ -26,13 +26,17 @@ export default function ImportCourse() {
   const [busy, setBusy] = useState(!cachedImport && sharedProfile === undefined)
   const [checking, setChecking] = useState(true)
   const [error, setError] = useState('')
+  const [failedChapter, setFailedChapter] = useState<string>()
   const field = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
   async function run(operation: () => Promise<void>) {
     setBusy(true)
     setError('')
     try { await operation() }
-    catch (error) { setError(error instanceof Error ? error.message : 'Impossible d’importer le cours. Réessaie.') }
+    catch (error) {
+      if (error instanceof APIError && error.chapterId) { setFailedChapter(error.chapterId); setError('') }
+      else setError(error instanceof Error ? error.message : 'Impossible d’importer le cours. Réessaie.')
+    }
     finally { setBusy(false) }
   }
   const load = useCallback(async function load(isActive: () => boolean = () => true) {
@@ -71,6 +75,7 @@ export default function ImportCourse() {
       const chapter = await revisionAPI.importChapter({ title, subject, ...(mode !== 'text' ? { file } : { text }) })
       cachedImport = null
       setImported(chapter)
+      setFailedChapter(undefined)
       setQuota(await revisionAPI.importQuota())
     })
   }
@@ -81,17 +86,22 @@ export default function ImportCourse() {
         <BackButton fallback="/courses" /><h1 className="flex-1 text-2xl font-semibold text-foreground">Importer mon cours</h1>
         <Link to="/revision" className="underline">Révision</Link>
       </header>
+      {failedChapter && !busy && <ErrorState title="Je n’ai pas pu créer tes cartes" detail="La création des cartes n’a pas abouti. Ton cours est bien enregistré, rien n’est perdu." actions={[
+        { label: 'Réessayer', variant: 'primary', onClick: () => void run(async () => { const chapter = await revisionAPI.retryImport(failedChapter); setImported(chapter); setFailedChapter(undefined); setQuota(await revisionAPI.importQuota()) }) },
+        { label: 'Essayer avec un autre fichier', variant: 'outline', onClick: () => { setFailedChapter(undefined); setMode('file'); setFile(undefined) } },
+        { label: 'Garder le cours sans cartes', variant: 'link', onClick: () => navigate('/courses') },
+      ]}><div className="w-full rounded-2xl border border-border bg-surface p-4 text-left"><p className="font-semibold">{title} · {subject}</p><p className="text-sm text-muted">{file?.name ?? 'Texte du cours'} · enregistré</p></div></ErrorState>}
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
         <button type="button" className="ml-3 underline" disabled={busy} onClick={() => void run(() => load())}>Actualiser</button>
       </div>}
       {busy && !profile && !error && <PendingRead title="Cours à réviser" label="On prépare ton import…" />}
       {busy && profile && <LoadingState label="Préparation du chapitre… Cela peut prendre un moment." />}
-      {quota && <p className="text-sm text-muted" aria-live="polite">
+      {!failedChapter && quota && <p className="text-sm text-muted" aria-live="polite">
         {quota.remaining === 0 ? `Tu as atteint tes ${revisionPolicy.dailyImports} imports du jour.` : `${quota.remaining} import${quota.remaining > 1 ? 's' : ''} restant${quota.remaining > 1 ? 's' : ''} aujourd’hui.`}
         {' '}Recharge le {new Date(quota.resetsAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} (heure de ton appareil).
       </p>}
       {!busy && !profile && quota && <p>Crée d’abord ton profil pour ranger ton cours dans une matière. <Link to="/" className="underline">Commencer</Link></p>}
-      {imported ? <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
+      {!failedChapter && (imported ? <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
         <h2 className="text-xl text-foreground">{imported.title} : chapitre prêt !</h2>
         <p>Le résumé, les cartes et les QCM sont enregistrés. Les cartes rejoignent tes prochaines sessions.</p>
         <p className="text-xs text-muted">Préparé par IA à partir de ton cours · Peut contenir des erreurs</p>
@@ -111,7 +121,7 @@ export default function ImportCourse() {
           <p className="text-sm text-muted">Le résumé, les cartes et les QCM sont créés automatiquement.</p>
           <Button disabled={checking} type="submit">Importer et créer mon chapitre</Button>
         </fieldset>
-      </form>}
+      </form>)}
     </div>
   </main>
 }
