@@ -26,21 +26,34 @@ beforeAll(async () => {
 afterAll(async () => { await rm(directory, { recursive: true, force: true }) })
 beforeEach(() => { model.call.mockReset(); model.invoke.mockReset() })
 
-test('une réponse incomplète ne bloque pas la tentative suivante du même chapitre', async () => {
-  const db = new SQLiteDatabase(join(directory, 'fresh.sqlite'))
+test('un cours incomplet est repris et le chapitre complet est créé', async () => {
+  const db = new SQLiteDatabase(join(directory, 'lesson-retry.sqlite'))
   const service = new RevisionService({ db, now: () => new Date('2026-11-13T12:00:00Z'), generateCards })
   const ctx = context()
   await service.saveProfile(ctx, { schoolClass: 'terminale', series: 'D', subjects: ['Mathématiques'] })
   model.call.mockResolvedValueOnce({ content: lesson(4) }).mockResolvedValueOnce({ content: lesson(5) })
   model.invoke.mockResolvedValue({ content: quiz })
+  await expect(service.generateChapter(ctx, { subject: 'Mathématiques', title: 'Cours repris' })).resolves.toMatchObject({ title: 'Cours repris' })
+  expect(model.call).toHaveBeenCalledTimes(2)
+  expect((await service.getHome(ctx))?.totalCards).toBe(10)
+  await db.close()
+})
+
+test('un cours incomplet après reprise ne bloque pas la tentative suivante du même chapitre', async () => {
+  const db = new SQLiteDatabase(join(directory, 'fresh.sqlite'))
+  const service = new RevisionService({ db, now: () => new Date('2026-11-13T12:00:00Z'), generateCards })
+  const ctx = context()
+  await service.saveProfile(ctx, { schoolClass: 'terminale', series: 'D', subjects: ['Mathématiques'] })
+  model.call.mockResolvedValueOnce({ content: lesson(4) }).mockResolvedValueOnce({ content: lesson(4) }).mockResolvedValueOnce({ content: lesson(5) })
+  model.invoke.mockResolvedValue({ content: quiz })
   const input = { subject: 'Mathématiques', title: 'Fractions fraîches' }
   await expect(service.generateChapter(ctx, input)).rejects.toThrow('5 cartes attendues')
+  expect(model.call).toHaveBeenCalledTimes(2)
   expect(await service.listChapters(ctx)).toEqual([])
   await expect(service.generateChapter(ctx, input)).resolves.toMatchObject({ title: input.title })
   expect((await service.getHome(ctx))?.totalCards).toBe(10)
   await db.close()
 })
-
 
 test('un ancien cache incomplet est ignoré et un cache valide reste réutilisable', async () => {
   const db = new SQLiteDatabase(join(directory, 'legacy.sqlite'))
@@ -79,7 +92,7 @@ test.each([
   const ctx = context()
   await service.saveProfile(ctx, { schoolClass: 'terminale', series: 'D', subjects: ['Mathématiques'] })
   const input = { subject: 'Mathématiques', title: randomUUID() }
-  model.call.mockResolvedValueOnce({ content: JSON.stringify(invalid) }).mockResolvedValueOnce({ content: lesson(5) })
+  model.call.mockResolvedValueOnce({ content: JSON.stringify(invalid) }).mockResolvedValueOnce({ content: JSON.stringify(invalid) }).mockResolvedValueOnce({ content: lesson(5) })
   model.invoke.mockResolvedValue({ content: quiz })
   await expect(service.generateChapter(ctx, input)).rejects.toThrow('Génération invalide')
   expect(await service.listChapters(ctx)).toEqual([])
