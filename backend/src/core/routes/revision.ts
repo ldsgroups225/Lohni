@@ -11,11 +11,11 @@ import { config } from '../../config/env'
 const revision = new RevisionService({ db: sqlite, now: () => new Date(), generateCards, transcribePhoto, readTimetable })
 
 export function revisionRoutes(app: any) {
-  const route = (method: string, path: string, handle: (context: RevisionContext, req: any) => Promise<unknown>) => {
+  const route = (method: string, path: string, handle: (context: RevisionContext, req: any, res: any) => Promise<unknown>) => {
     app[method](path, async (req: any, res: any) => {
       req.setTimeout(config.timeout)
       try {
-        const data = await handle({ deviceId: req.headers['x-device-id'], localDate: req.headers['x-local-date'] }, req)
+        const data = await handle({ deviceId: req.headers['x-device-id'], localDate: req.headers['x-local-date'] }, req, res)
         if (!res.destroyed) res.send({ ok: true, data: data ?? null })
       } catch (error) {
         if (res.destroyed) return
@@ -27,11 +27,11 @@ export function revisionRoutes(app: any) {
   }
   // Imports are cancellable: abort the signal when the client disconnects before the response ends.
   const importRoute = (path: string, handle: (context: RevisionContext, req: any, signal: AbortSignal) => Promise<unknown>) =>
-    route('post', path, async (context, req) => {
+    route('post', path, async (context, req, res) => {
       const controller = new AbortController()
-      const onClose = () => { if (!req.res.writableEnded) controller.abort() }
-      req.res.on('close', onClose)
-      try { return await handle(context, req, controller.signal) } finally { req.res.off('close', onClose) }
+      const onClose = () => { if (!res.writableEnded) controller.abort() }
+      res.on('close', onClose)
+      try { return await handle(context, req, controller.signal) } finally { res.off('close', onClose) }
     })
   route('get', '/revision/timetable', context => revision.getTimetable(context))
   route('put', '/revision/timetable', (context, req) => revision.saveTimetable(context, req.body))
