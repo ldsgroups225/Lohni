@@ -19,7 +19,7 @@ estMins: [durée estimée en minutes, nombre]
 priority: [priorité de 1 à 5]
 notes: [détails supplémentaires]
 
-Date actuelle : ${new Date().toISOString()}
+Date actuelle : ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} (${new Date().toISOString()})
 
 Exemple de texte : "Calc HW 5 due Fri 5pm ~2h; ch 6-7"
 Exemple de réponse :

@@ -26,3 +26,12 @@ test('les étapes d’un devoir sont demandées en français et lues dans la lis
   expect(messages[1].content).toContain('liste numérotée')
   expect(messages[1].content).not.toContain('Generate a simple')
 })
+
+test('le modèle reçoit le jour de la semaine en toutes lettres pour situer « mardi prochain »', async () => {
+  vi.useFakeTimers({ now: new Date(2026, 10, 14, 15, 0), toFake: ['Date'] })
+  try {
+    invoke.mockResolvedValueOnce('title: Contrôle')
+    await parseTask('Contrôle de maths mardi prochain')
+    expect(invoke.mock.calls[0][0][1].content).toContain('samedi 14 novembre 2026')
+  } finally { vi.useRealTimers() }
+})
