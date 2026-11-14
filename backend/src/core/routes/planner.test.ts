@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { createKeyv } from '../../utils/database/keyv-store'
 import { PlannerService } from '../../services/planner/service'
 import { PlannerStore } from '../../services/planner/store'
-import { plannerRoutes } from './planner'
+import { dailyDigest, plannerRoutes } from './planner'
 
 vi.mock('../../services/planner/ai', async importOriginal => ({
   ...await importOriginal<object>(),
@@ -144,4 +144,17 @@ test('des cartes invalides deux fois donnent une erreur française, sans carte f
   expect(r.body.error).toMatch(/fiche/)
   expect(r.body.materials).toBeUndefined()
   log.mockRestore()
+})
+
+test('le bilan du matin suit le jour local du serveur, pas le jour UTC', async () => {
+  const zone = process.env.TZ
+  process.env.TZ = 'Asia/Tokyo'
+  try {
+    const service = new PlannerService(new PlannerStore(createKeyv(`sqlite://${join(directory, 'digest.sqlite')}`)))
+    await service.createTaskFromRequest(a, { text: 'Maths', dueAt: '2026-11-14T03:00:00.000Z' } as any)
+    await service.createTaskFromRequest(a, { text: 'Anglais', dueAt: '2026-11-15T03:00:00.000Z' } as any)
+    const digest = await dailyDigest(service, a, new Date('2026-11-14T08:01:00+09:00'))
+    expect(digest.date).toBe('2026-11-14')
+    expect(digest.due.map(t => t.dueAt)).toEqual(['2026-11-14T03:00:00.000Z'])
+  } finally { if (zone === undefined) delete process.env.TZ; else process.env.TZ = zone }
 })

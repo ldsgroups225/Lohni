@@ -184,6 +184,18 @@ test('la génération du chapitre désactive le raisonnement pour le cours et le
   await db.close()
 })
 
+test('une photo de cours est transcrite, et une photo vide devient une erreur française', async () => {
+  const path = join(directory, 'cours.jpg'); await writeFile(path, 'photo')
+  const { transcribePhoto } = await import('./generator.js')
+  const file = { path, filename: 'cours.jpg', mimeType: 'image/jpeg' }
+  const controller = new AbortController()
+  model.invoke.mockResolvedValueOnce({ content: ' Les fractions ' })
+  await expect(transcribePhoto(file, controller.signal)).resolves.toBe('Les fractions')
+  expect(model.invoke).toHaveBeenCalledWith(expect.any(Array), { reasoning: 'none', signal: controller.signal })
+  model.invoke.mockResolvedValueOnce({ content: '  ' })
+  await expect(transcribePhoto(file)).rejects.toMatchObject({ message: expect.stringContaining('Photo illisible'), code: 'IMPORT_FILE' })
+})
+
 test('un emploi du temps illisible est repris une fois, puis lu', async () => {
   const path = join(directory, 'emploi.jpg'); await writeFile(path, 'photo')
   const { readTimetable } = await import('./generator.js')

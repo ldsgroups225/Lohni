@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { generateStructured, StructuredOutputError, toText } from '../structured'
+import { generateStructured, generateText, StructuredOutputError, toText } from '../structured'
 
 // Faux modèle scripté : rend les réponses dans l'ordre et garde les appels reçus.
 function scripted(...replies: Array<unknown>) {
@@ -93,5 +93,35 @@ describe('generateStructured', () => {
     expect(toText({ content: [{ text: 'a' }, 'b'] })).toBe('ab')
     expect(toText({ generations: [{ text: 'g' }] })).toBe('g')
     expect(toText(null)).toBe('')
+  })
+})
+
+describe('message d’échec de l’appelant', () => {
+  const failure = () => new Error('Message français de l’appelant')
+
+  test('failure remplace StructuredOutputError quand le JSON est invalide', async () => {
+    const { model } = scripted('pas du json', 'toujours pas')
+    await expect(generateStructured({ model, messages, shape: 'array', validate: numbers, failure })).rejects.toThrow('Message français de l’appelant')
+  })
+
+  test('une réponse tronquée récupérée par salvage est rendue sans erreur', async () => {
+    const { model } = scripted('{"a":1,"b":')
+    expect(await generateStructured({ model, messages, shape: 'object', validate: v => v as any, salvage: () => ({ a: 1 }), failure })).toEqual({ a: 1 })
+  })
+
+  test('fallback rend une valeur par défaut au lieu de lever', async () => {
+    const { model } = scripted('rien', 'rien')
+    expect(await generateStructured({ model, messages, shape: 'array', validate: numbers, fallback: raw => [raw.length] })).toEqual([4])
+  })
+
+  test('generateText rend le texte, sans reasoning none si keepReasoning', async () => {
+    const { model, calls } = scripted({ content: ' Bonjour ' })
+    expect(await generateText({ model, messages, keepReasoning: true })).toBe('Bonjour')
+    expect('reasoning' in calls[0].options).toBe(false)
+  })
+
+  test('generateText lève failure sur une réponse vide', async () => {
+    const { model } = scripted('  ')
+    await expect(generateText({ model, messages, failure })).rejects.toThrow('Message français de l’appelant')
   })
 })

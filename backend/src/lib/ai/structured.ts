@@ -44,6 +44,10 @@ type StructuredOptions<T> = {
   /** Last chance on a reply that does not parse (e.g. cut by the token limit); `validate` then checks what it recovers. */
   salvage?: (raw: string) => T | null
   attempts?: number
+  /** Error thrown when every attempt failed (carries the caller's French message); defaults to StructuredOutputError. */
+  failure?: (raw: string) => Error
+  /** Value returned instead of throwing when every attempt failed. */
+  fallback?: (raw: string) => T
   /** Sends `reasoning: 'none'` unless true (tutor, chat keep the model's own reasoning). */
   keepReasoning?: boolean
   signal?: AbortSignal
@@ -64,5 +68,18 @@ export async function generateStructured<T>(opts: StructuredOptions<T>): Promise
     const value = parsed !== undefined ? opts.validate(parsed) : salvaged === null ? null : opts.validate(salvaged)
     if (value !== null && value !== undefined) return value
   }
-  throw new StructuredOutputError(raw)
+  if (opts.fallback) return opts.fallback(raw)
+  throw opts.failure?.(raw) ?? new StructuredOutputError(raw)
+}
+
+type TextOptions = Pick<StructuredOptions<string>, 'model' | 'messages' | 'keepReasoning' | 'signal' | 'failure'>
+
+/** Plain prose from the model; an empty reply throws `failure`. */
+export async function generateText(opts: TextOptions): Promise<string> {
+  opts.signal?.throwIfAborted()
+  const reply = await opts.model.invoke(opts.messages, { ...(opts.keepReasoning ? {} : { reasoning: 'none' as const }), signal: opts.signal })
+  opts.signal?.throwIfAborted()
+  const text = toText(reply).trim()
+  if (!text) throw opts.failure?.(text) ?? new StructuredOutputError(text)
+  return text
 }

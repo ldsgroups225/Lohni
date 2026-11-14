@@ -1,4 +1,4 @@
-import { cachedDevice } from './revisionReadCache'
+import { cachedDevice } from './revisionStore'
 
 export function readFirstName(draft = false): string {
   const device = cachedDevice()

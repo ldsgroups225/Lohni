@@ -1,6 +1,6 @@
 import fs from "node:fs"
 import llm from "../../utils/llm/llm"
-import { generateStructured, StructuredOutputError } from "../../lib/ai/structured"
+import { generateStructured } from "../../lib/ai/structured"
 import { tts, type TSeg } from "../../utils/tts"
 import { normalizeTopic } from "../../utils/text/normalize"
 
@@ -23,11 +23,11 @@ export async function makeScript(input: string, topic?: string, duration?: "shor
     { role: "user", content: `sujet : ${top}\n\ncontenu :\n${input}\n\nréponds uniquement en JSON` }
   ] as any
 
-  const failure = new Error("Le script du podcast n’a pas pu être généré. Réessaie.")
+  const failure = () => new Error("Le script du podcast n’a pas pu être généré. Réessaie.")
   try {
     // Models sometimes cut the JSON short: generateStructured asks once more before giving up.
     return await generateStructured<POut>({
-      model: llm, messages: m, shape: "object", signal,
+      model: llm, messages: m, shape: "object", signal, failure,
       validate: o => {
         const s = o as any
         return typeof s?.title === "string" && s.title.trim() && typeof s.summary === "string" && Array.isArray(s.segments) && s.segments.length && s.segments.every((segment: any) => segment && ["A", "B"].includes(segment.spk) && typeof segment.md === "string" && segment.md.trim()) ? s as POut : null
@@ -35,8 +35,8 @@ export async function makeScript(input: string, topic?: string, duration?: "shor
     })
   } catch (error) {
     if (signal?.aborted) throw signal.reason
-    if (!(error instanceof StructuredOutputError)) console.error("Échec de génération du script du podcast :", error)
-    throw failure
+    console.error("Échec de génération du script du podcast :", error)
+    throw failure()
   }
 }
 

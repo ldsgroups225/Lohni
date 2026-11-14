@@ -1,8 +1,7 @@
 import type { Task, Slot, PlanPolicy, CreateTaskRequest, UpdateTaskRequest, PlannerGenerateRequest, MaterialsRequest } from "./types"
 import type { PlannerStore } from "./store"
-import { parseTask, generateSteps, replan } from "./ai"
+import { parseTask, generateSteps, replan, plannerText } from "./ai"
 import { planTask, planTasks, weeklyPlan, defaultPolicy } from "./scheduler"
-import { handleAsk } from "../../lib/ai/ask"
 import llm from "../../utils/llm/llm"
 import { generateStructured } from "../../lib/ai/structured"
 import crypto from "node:crypto"
@@ -209,8 +208,7 @@ export class PlannerService {
 
     private async generateSummary(content: string): Promise<string> {
         const prompt = `Rédige en français un résumé clair et concis de ce contenu, niveau collège/lycée. Mets en avant les notions clés et les points importants. Réponds en Markdown, avec les formules en LaTeX entre $...$.`
-        const response = await handleAsk(`${prompt}\n\n${content}`)
-        return response.answer
+        return plannerText(`${prompt}\n\n${content}`)
     }
 
     private async generateStudyGuide(content: string, task: Task): Promise<string> {
@@ -222,8 +220,7 @@ export class PlannerService {
 
         Réponds en Markdown avec des sections claires, et les formules en LaTeX entre $...$ :`
 
-        const response = await handleAsk(`${prompt}\n\n${content}`)
-        return response.answer
+        return plannerText(`${prompt}\n\n${content}`)
     }
 
     private async generateFlashcards(content: string, task: Task): Promise<Array<{ front: string; back: string }>> {
@@ -251,8 +248,7 @@ export class PlannerService {
     private async generateQuiz(content: string, task: Task): Promise<any> {
         const prompt = `Crée en français un quiz de 5 questions pour ce travail (${task.type || 'devoir'}), niveau collège/lycée. Mélange des questions à choix multiples et des questions à réponse courte, pour tester la compréhension des notions clés. Réponds en Markdown, avec les formules en LaTeX entre $...$.`
 
-        const response = await handleAsk(`${prompt}\n\n${content}`)
-        return response.answer
+        return plannerText(`${prompt}\n\n${content}`)
     }
 
     async getUpcomingDeadlines(device: string): Promise<{ urgent: Task[]; atRisk: Task[]; upcoming: Task[] }> {

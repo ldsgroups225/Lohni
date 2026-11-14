@@ -1,6 +1,7 @@
 import { priorityLabel } from "../../lib/priorityLabel"
 import { TargetIcon, PartyIcon } from '../ui/NavigationIcons'
 import type { PlannerTask } from "../../lib/api"
+import { localDay } from "../../../../backend/src/services/revision/day"
 
 function fmtTime(ts: number) {
     const d = new Date(ts)
@@ -14,11 +15,11 @@ interface TodayFocusProps {
 }
 
 export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: TodayFocusProps) {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = localDay()
 
     // Get today's tasks and upcoming urgent tasks
     const todayTasks = tasks.filter(t => {
-        const taskDate = new Date(t.dueAt).toISOString().slice(0, 10)
+        const taskDate = localDay(new Date(t.dueAt))
         return taskDate === today && t.status !== 'done'
     })
 

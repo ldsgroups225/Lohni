@@ -1,6 +1,7 @@
 import llm from "../../utils/llm/llm";
 import db from "../../utils/database/keyv";
-import { toText } from "../../lib/ai/structured";
+import { generateStructured, generateText } from "../../lib/ai/structured";
+import type { TaskContext } from "../../utils/tasks/registry";
 
 export type DebateMessage = {
     role: "user" | "assistant";
@@ -76,7 +77,8 @@ export async function addDebateMessage(
 
 export async function* streamDebateResponse(
     sessionId: string,
-    userArgument: string
+    userArgument: string,
+    signal?: AbortSignal
 ): AsyncGenerator<string | { type: "concede"; reason: string }, void, unknown> {
     const session = await getDebateSession(sessionId);
     if (!session) {
@@ -105,8 +107,7 @@ Présente des arguments solides et logiques, étayés d’exemples et de preuves
         { role: "user" as const, content: `Échanges précédents :\n${conversationHistory}\n\nDernier argument de l’élève :\n${userArgument}\n\nTon contre-argument : réponds avec une réfutation solide${shouldCheckConcede ? ", ou commence par [CONCEDE] si tu n’as plus d’argument solide" : ""}.` }
     ];
 
-    const response = await llm.call(messages);
-    const fullResponse = toText(response).trim();
+    const fullResponse = await generateText({ model: llm, messages, keepReasoning: true, signal });
 
     const concession = fullResponse.match(/^[\s«»“”"']*\[\s*CONCEDE\s*\][\s«»“”"']*/i);
     if (concession) {
@@ -161,7 +162,7 @@ export async function surrenderDebate(sessionId: string): Promise<void> {
     }
 }
 
-export async function* streamDebateAnalysis(sessionId: string): AsyncGenerator<
+export async function* streamDebateAnalysis(sessionId: string, signal?: AbortSignal): AsyncGenerator<
     { type: "phase"; value: string } | { type: "analysis"; data: DebateAnalysis },
     void,
     unknown
@@ -206,18 +207,12 @@ Garde "winner" tel quel ("user", "ai" ou "draw"). Rédige toutes les autres vale
     try {
         yield { type: "phase", value: "Consulting AI judge..." };
 
-        const response = await llm.call(messages);
-        const analysisText = toText(response).trim();
+        const analysis = await generateStructured<DebateAnalysis>({
+            model: llm, messages, shape: "object", signal,
+            validate: (p: any) => ["user", "ai", "draw"].includes(p?.winner) ? p : null,
+        });
 
         yield { type: "phase", value: "Processing results..." };
-
-        let jsonText = analysisText;
-        const jsonMatch = analysisText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-        if (jsonMatch) {
-            jsonText = jsonMatch[1];
-        }
-
-        const analysis: DebateAnalysis = JSON.parse(jsonText);
 
         if (!session.winner) {
             session.winner = analysis.winner;
@@ -227,6 +222,7 @@ Garde "winner" tel quel ("user", "ai" ou "draw"). Rédige toutes les autres vale
 
         yield { type: "analysis", data: analysis };
     } catch (error) {
+        if (signal?.aborted) return;
         console.error("[Debate Analysis] Error:", error);
 
         yield { type: "phase", value: "Generating fallback analysis..." };
@@ -243,5 +239,44 @@ Garde "winner" tel quel ("user", "ai" ou "draw"). Rédige toutes les autres vale
         };
 
         yield { type: "analysis", data: fallbackAnalysis };
+    }
+}
+
+// Task bodies: one argue turn / one analysis, emitting the events the debate screen follows.
+export async function runArgueTurn(sessionId: string, argument: string, { signal, emit }: TaskContext): Promise<void> {
+    emit({ type: "user_argument", content: argument });
+    emit({ type: "ai_thinking" });
+    try {
+        let fullResponse = "";
+        for await (const token of streamDebateResponse(sessionId, argument, signal)) {
+            if (signal.aborted) return;
+            if (typeof token === "object") {
+                emit({ type: "ai_concede", reason: token.reason });
+                return emit({ type: "done" });
+            }
+            fullResponse += token;
+            emit({ type: "ai_token", token });
+        }
+        emit({ type: "ai_complete", content: fullResponse });
+        emit({ type: "done" });
+    } catch (error) {
+        console.error("Error streaming debate response:", error);
+        emit({ type: "error", error: "Impossible de générer la réponse. Réessaie." });
+    }
+}
+
+export async function runAnalysis(sessionId: string, { signal, emit }: TaskContext): Promise<void> {
+    try {
+        const session = await getDebateSession(sessionId);
+        if (!session) throw new Error("Debate session not found");
+        for await (const event of streamDebateAnalysis(sessionId, signal)) {
+            if (signal.aborted) return;
+            if (event.type === "phase") emit({ type: "phase", value: event.value });
+            else emit({ type: "complete", analysis: event.data, session: { ...session, winner: event.data.winner, status: session.status || "completed" } });
+        }
+        emit({ type: "done" });
+    } catch (error) {
+        console.error("Error streaming analysis:", error);
+        emit({ type: "error", error: "Impossible d’analyser le débat. Réessaie." });
     }
 }

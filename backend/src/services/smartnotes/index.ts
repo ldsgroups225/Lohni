@@ -3,7 +3,7 @@ import path from "node:path"
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
 import fontkit from "@pdf-lib/fontkit"
 import llm from "../../utils/llm/llm"
-import { generateStructured, StructuredOutputError } from "../../lib/ai/structured"
+import { generateStructured } from "../../lib/ai/structured"
 import { normalizeTopic } from "../../utils/text/normalize"
 
 export type SmartNotesOptions = { topic?: any; notes?: string; filePath?: string }
@@ -74,25 +74,19 @@ RULES
 `.trim()
 
   const retrySys = `Return only a JSON object matching the schema. No markdown. No extra text.`
-  try {
-    return await generateStructured<any>({
-      model: llm, shape: "object",
-      messages: [{ role: "user", content: `${prompt}\n\nINPUT:\n${text}` }],
-      retryMessages: [{ role: "system", content: retrySys }, { role: "user", content: `${prompt}\n\nINPUT:\n${text}` }],
-      validate: parsed => (parsed && typeof parsed === "object" ? parsed : null),
-    })
-  } catch (error) {
-    if (!(error instanceof StructuredOutputError)) throw error
-  }
-
-  const fallback = {
-    title: "Notes",
-    notes: sanitizeText(text).slice(0, 4000),
-    summary: "",
-    questions: [],
-    answers: []
-  }
-  return fallback
+  return generateStructured<any>({
+    model: llm, shape: "object",
+    messages: [{ role: "user", content: `${prompt}\n\nINPUT:\n${text}` }],
+    retryMessages: [{ role: "system", content: retrySys }, { role: "user", content: `${prompt}\n\nINPUT:\n${text}` }],
+    validate: parsed => (parsed && typeof parsed === "object" ? parsed : null),
+    fallback: () => ({
+      title: "Notes",
+      notes: sanitizeText(text).slice(0, 4000),
+      summary: "",
+      questions: [],
+      answers: []
+    }),
+  })
 }
 
 async function fillTemplateFormPDF(data: any) {

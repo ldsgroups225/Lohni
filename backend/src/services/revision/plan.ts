@@ -1,4 +1,5 @@
 import { REVISION_POLICY as policy } from './policy'
+import { addDays, weekday } from './day'
 export type RevisionExam = { id: string; title: string; date: string; subjects: string[]; chapterIds: string[] }
 
 export type PlanInput = {
@@ -12,7 +13,6 @@ export type PlanItem = { subject: string; chapterId: string; chapterTitle: strin
 export type PlanDay = { date: string; rest: boolean; heavy: boolean; overloaded: boolean; capacityCards: number; minutes: number; items: PlanItem[]; actions: { kind: 'addChapter'; subject: string }[] }
 export type RevisionPlan = { today: string; exams: { id: string; title: string; date: string; overloaded: boolean }[]; days: PlanDay[] }
 
-const nextDate = (date: string) => new Date(Date.parse(date) + 86400000).toISOString().slice(0, 10)
 const minutes = (cards: number) => Math.ceil(cards * policy.sessionMinutes / policy.sessionCards)
 
 export function buildPlan(input: PlanInput): RevisionPlan {
@@ -20,8 +20,8 @@ export function buildPlan(input: PlanInput): RevisionPlan {
   const result: RevisionPlan = { today: input.today, exams: exams.map(({ id, title, date }) => ({ id, title, date, overloaded: false })), days: [] }
   if (!exams.length) return result
   const last = exams[exams.length - 1].date
-  for (let date = input.today, count = 0; (date < last || date === input.today) && count < policy.maxExamHorizonDays; date = nextDate(date), count++) {
-    const rest = input.restDays.includes(new Date(`${date}T00:00:00Z`).getUTCDay())
+  for (let date = input.today, count = 0; (date < last || date === input.today) && count < policy.maxExamHorizonDays; date = addDays(date, 1), count++) {
+    const rest = input.restDays.includes(weekday(date))
     const base = Math.floor(input.dailyMinutes * policy.sessionCards / policy.sessionMinutes)
     result.days.push({ date, rest, heavy: input.heavy?.(date) ?? false, overloaded: false, capacityCards: rest ? 0 : Math.max(0, Math.floor(input.capacity?.(date, base) ?? base)), minutes: 0, items: [], actions: [] })
   }

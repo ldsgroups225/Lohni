@@ -17,11 +17,12 @@ import { SwipeCard } from '../components/Revision/SwipeCard'
 import { SessionRecap } from '../components/Revision/SessionRecap'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useRevisionRead } from '../lib/useRevisionRead'
 import { chatJSON, revisionAPI, revisionPolicy, revisionSyncStatus, syncRevisionAnswers, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress, type RevisionChapter } from '../lib/api'
 
 // Premier rendu instantané au retour : la dernière séance connue (hors séances ciblées) avec son profil.
 function lastKnown(scoped: boolean) {
-  const profile = revisionAPI.snapshot<RevisionProfile | null>('/profile'), session = revisionAPI.snapshot<RevisionSession>('/session')
+  const profile = revisionAPI.cached.profile(), session = revisionAPI.cached.session()
   return !scoped && profile && session ? { profile, session } : null
 }
 
@@ -125,30 +126,17 @@ export default function Revision() {
       window.removeEventListener('offline', update)
     }
   }, [])
-  useEffect(() => {
-    let active = true
-    setBusy(true)
-    async function load() {
-      try {
-        const [saved, current] = await revisionAPI.read(async () => { const saved = await revisionAPI.profile(); return [saved, saved ? await loadSession(continueOnArrival) : null] as const },
-          () => { setProfile(null); setSession(null); setValidated(false) }, () => active)
-        if (!active) return
-        setProfile(saved)
-        setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
-        if (current) display(current)
-      } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : 'Impossible de charger la révision.')
-      } finally { if (active) setBusy(false) }
-    }
-    void load()
-    return () => { active = false }
+  useRevisionRead(async () => { setBusy(true); const saved = await revisionAPI.profile(); return [saved, saved ? await loadSession(continueOnArrival) : null] as const }, {
+    accept: ([saved, current]) => {
+      setProfile(saved)
+      setSubject(subject => saved?.subjects.includes(subject) ? subject : saved?.subjects[0] ?? '')
+      if (current) display(current)
+    },
+    onChanged: () => { setProfile(null); setSession(null); setValidated(false) },
+    fail: e => setError(e instanceof Error ? e.message : 'Impossible de charger la révision.'),
+    settled: () => setBusy(false),
   }, [display, loadSession, continueOnArrival])
-  useEffect(() => {
-    if (!validated || !chapterId) return
-    let active = true
-    revisionAPI.read(revisionAPI.chapters, () => {}, () => active).then(values => { if (active) setChapters(values) }).catch(() => {})
-    return () => { active = false }
-  }, [validated, chapterId])
+  useRevisionRead(async () => validated && chapterId ? revisionAPI.chapters() : undefined, { accept: values => { if (values) setChapters(values) } }, [validated, chapterId])
   // biome-ignore lint/correctness/useExhaustiveDependencies: Recharger le bilan pour chaque nouvelle session terminée.
   useEffect(() => {
     setMoreCards(false)
