@@ -308,7 +308,7 @@ export default function Chat() {
                 return (
                   <div key={key} className="w-full flex justify-start">
                     <div className={userBubble}>
-                      <div className="text-foreground whitespace-pre-wrap leading-relaxed">{m.content}</div>
+                      <div className="text-foreground leading-relaxed [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"><MarkdownView md={m.content} /></div>
                     </div>
                   </div>
                 );
