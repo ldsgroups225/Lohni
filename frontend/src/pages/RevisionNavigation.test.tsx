@@ -5,10 +5,15 @@ import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 const delayedProfile = vi.hoisted(() => ({ wait: false }))
-vi.mock('../lib/api', () => ({
-  revisionAPI: { profile: () => delayedProfile.wait ? new Promise(() => {}) : Promise.resolve({ schoolClass: '3e', subjects: ['Mathématiques'] }), session: async () => ({ id: '1', complete: false, position: 0, cards: [{ id: '1', chapterId: 'c', kind: 'basic', question: 'Question ?', answer: 'Oui' }, { id: '2', chapterId: 'c', kind: 'basic', question: 'Autre ?', answer: 'Oui' }] }), answer: async () => ({ id: '1', complete: false, position: 1, cards: [{ id: '1', chapterId: 'c', kind: 'basic', question: 'Question ?', answer: 'Oui' }, { id: '2', chapterId: 'c', kind: 'basic', question: 'Autre ?', answer: 'Oui' }] }), chapters: async () => [{ id: 'c', subject: 'Mathématiques', title: 'Fractions' }] },
+vi.mock('../lib/api', async () => {
+  // Le double d’api reproduit la dernière valeur lue que garde le vrai cache.
+  const { rememberRevisionSnapshot } = await import('../lib/cachedDevice')
+  const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
+  const first = { id: '1', complete: false, position: 0, cards: [{ id: '1', chapterId: 'c', kind: 'basic', question: 'Question ?', answer: 'Oui' }, { id: '2', chapterId: 'c', kind: 'basic', question: 'Autre ?', answer: 'Oui' }] }
+  return {
+  revisionAPI: { profile: () => { if (delayedProfile.wait) return new Promise(() => {}); rememberRevisionSnapshot('/profile', profile); return Promise.resolve(profile) }, session: async () => { rememberRevisionSnapshot('/session', first); return first }, answer: async () => ({ id: '1', complete: false, position: 1, cards: [{ id: '1', chapterId: 'c', kind: 'basic', question: 'Question ?', answer: 'Oui' }, { id: '2', chapterId: 'c', kind: 'basic', question: 'Autre ?', answer: 'Oui' }] }), chapters: async () => [{ id: 'c', subject: 'Mathématiques', title: 'Fractions' }] },
   revisionPolicy: {}, revisionSyncStatus: () => ({ online: true, pending: 0 }), syncRevisionAnswers: () => {}, chatJSON: async () => ({ chatId: "1" }),
-}))
+}})
 import Revision from './Revision'
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 window.scrollTo = () => {}

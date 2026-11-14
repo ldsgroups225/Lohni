@@ -9,7 +9,7 @@ vi.mock('../lib/api', () => ({ revisionAPI: api, revisionDeviceId: () => 'device
 vi.mock('../components/Revision/Onboarding', () => ({ default: () => <p>Onboarding</p> }))
 import Home from './Home'
 import Profile from './Profile'
-import { invalidateRevisionCache, rememberRevisionSnapshot } from '../lib/cachedDevice'
+import { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } from '../lib/cachedDevice'
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 test('le retour apres onboarding attend le profil au lieu de montrer onboarding', async () => {
@@ -53,9 +53,9 @@ test('après modification du profil une erreur réseau ne réaffiche pas l’anc
   window.matchMedia = () => ({ matches: true, addEventListener() {}, removeEventListener() {} } as unknown as MediaQueryList)
   localStorage.setItem('lohni-device-id', 'appareil-profil')
   const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
-  api.home.mockResolvedValueOnce({ profile, state: 'empty', cardCount: 0, totalCards: 0, daysUntilExam: null }).mockRejectedValueOnce(new Error('Réseau indisponible'))
+  api.home.mockImplementationOnce(async () => { const home = { profile, state: 'empty', cardCount: 0, totalCards: 0, daysUntilExam: null }; rememberRevisionSnapshot('/home', home); return home }).mockRejectedValueOnce(new Error('Réseau indisponible'))
   api.profile.mockResolvedValue(profile)
-  api.saveProfile.mockImplementation(async value => { invalidateRevisionCache(); rememberRevisionSnapshot('/profile', value); return value })
+  api.saveProfile.mockImplementation(async value => { const home = revisionSnapshot<object>('/home'); invalidateRevisionCache(); rememberRevisionSnapshot('/profile', value); if (home) rememberRevisionSnapshot('/home', { ...home, profile: value }); return value })
   api.progress.mockResolvedValue({ xp: 10, streak: 1, learnedCards: 0, subjects: [] })
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)

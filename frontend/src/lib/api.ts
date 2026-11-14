@@ -1,5 +1,5 @@
 import type { RevisionPlan } from '../../../backend/src/services/revision/plan';
-import { cachedDevice, currentRevisionCacheVersion, invalidateRevisionCache, rememberRevisionSnapshot } from "./cachedDevice";
+import { cachedDevice, currentRevisionCacheVersion, invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } from "./cachedDevice";
 import { env } from "../config/env";
 import { REVISION_POLICY as revisionPolicy } from "../../../backend/src/services/revision/policy";
 import { advanceSession } from "../../../backend/src/services/revision/session";
@@ -840,6 +840,7 @@ async function revisionSession(continueSession = false): Promise<RevisionSession
     if (cachedDevice() !== device) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
     const session = readOffline().session;
     if (!session) throw new Error('Session introuvable. Recharge la page puis réessaie.');
+    rememberRevisionSnapshot('/session', session);
     return session;
   } catch (error) {
     if (!continueSession && error instanceof RevisionConnectionError && saved.session) return saved.session;
@@ -876,6 +877,7 @@ async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<
   invalidateRevisionCache('/home', '/progress');
   void syncRevisionAnswers();
   if (!next) throw new Error('Session introuvable. Recharge la page puis réessaie.');
+  rememberRevisionSnapshot('/session', next);
   return next;
 }
 async function revisionMutation<T>(path: string, method: string, body?: unknown, signal?: AbortSignal): Promise<T> {
@@ -886,12 +888,18 @@ async function revisionMutation<T>(path: string, method: string, body?: unknown,
   let result: T;
   try { result = await revisionRequest<T>(path, method, body, undefined, undefined, signal); } catch (error) {
     if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
-    if (signal?.aborted || (error instanceof APIError && error.chapterId)) invalidateRevisionCache('/home', '/progress', '/chapters', '/plan');
+    if (signal?.aborted || (error instanceof APIError && error.chapterId)) invalidateRevisionCache('/home', '/progress', '/chapters', '/plan', '/import/quota');
     throw error;
   }
   if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
-  if (path === '/profile') invalidateRevisionCache()
-  else invalidateRevisionCache('/home', '/progress', '/chapters', '/plan')
+  if (path === '/profile') {
+    // Le profil change tout le plan, mais l’accueil reste affichable pendant sa relecture avec le nouveau profil.
+    const home = revisionSnapshot<RevisionHome | null>('/home'), progress = revisionSnapshot<RevisionProgress>('/progress')
+    invalidateRevisionCache()
+    if (home) rememberRevisionSnapshot('/home', { ...home, profile: result as RevisionProfile })
+    if (progress) rememberRevisionSnapshot('/progress', progress)
+  }
+  else invalidateRevisionCache('/home', '/progress', '/chapters', '/plan', '/import/quota')
   await updateOffline(state => { if (device === cachedDevice()) {
     if (state.cacheDates) { delete state.cacheDates['/home']; delete state.cacheDates['/progress']; }
     if (path === '/profile') { state.cache['/profile'] = result; delete state.cache['/home']; }
@@ -918,36 +926,43 @@ export type RevisionImportQuota = { remaining: number; resetsAt: string };
 
 export type TimetableBlock = { day: number; start: string; end: string; subject: string };
 
+async function revisionHome() {
+  let home: RevisionHome | null;
+  try { home = await cachedRevisionRead<RevisionHome | null>('/home'); }
+  catch (error) {
+    const saved = readOffline();
+    const profile = saved.cache['/profile'] as RevisionProfile | undefined;
+    if (!(error instanceof RevisionConnectionError) || !profile || !saved.session) throw error;
+    home = { profile, nextExam: null, daysUntilExam: null,
+      totalCards: saved.session.cards.length, cardCount: 0, estimatedMinutes: 0, moreCards: false, started: false, state: 'empty' };
+  }
+  if (home) {
+    rememberRevisionSnapshot('/profile', home.profile);
+    try {
+      const exams = await cachedRevisionRead<RevisionExam[]>('/exams');
+      const next = exams.filter(exam => exam.date >= revisionLocalDate()).sort ( (a, b) => a.date.localeCompare(b.date))[0];
+      home = { ...home, nextExam: next ? { id: next.id, title: next.title, date: next.date } : null, daysUntilExam: next ? (Date.parse(next.date) - Date.parse(revisionLocalDate())) / 86400000 : null };
+    } catch (error) { if (!(error instanceof RevisionConnectionError)) throw error; home = { ...home, nextExam: null, daysUntilExam: null }; }
+  }
+  const session = readOffline().session;
+  if (home && session && (session.localDate === revisionLocalDate() || readOffline().pending.length) && (!navigator.onLine || readOffline().pending.length)) {
+    const cardCount = session.complete ? 0 : session.cards.length - session.position;
+    const newCards = session.complete ? 0 : session.cards.slice(session.position).filter((card, index) =>
+      card.reviews === 0 && !session.cards.slice(0, session.position + index).some(previous => previous.id === card.id)).length;
+    return { ...home, newCards, reviewCards: cardCount - newCards, moreCards: false, started: !session.complete && session.position > 0, state: session.complete ? 'done' as const : 'ready' as const, cardCount, estimatedMinutes: Math.ceil(cardCount * revisionPolicy.sessionMinutes / revisionPolicy.sessionCards) };
+  }
+  return home;
+}
+
 export const revisionAPI = {
   timetable: () => revisionRequest<TimetableBlock[]>('/timetable'),
   saveTimetable: (blocks: TimetableBlock[]) => revisionMutation<TimetableBlock[]>('/timetable', 'PUT', blocks),
   readTimetablePhotos: (files: File[]) => { const form = new FormData(); files.forEach(file => { form.append('file', file) }); return revisionMutation<{ blocks: TimetableBlock[]; unknownSubjects: string[] }>('/timetable/photos', 'POST', form); },
   home: async () => {
-    let home: RevisionHome | null;
-    try { home = await cachedRevisionRead<RevisionHome | null>('/home'); }
-    catch (error) {
-      const saved = readOffline();
-      const profile = saved.cache['/profile'] as RevisionProfile | undefined;
-      if (!(error instanceof RevisionConnectionError) || !profile || !saved.session) throw error;
-      home = { profile, nextExam: null, daysUntilExam: null,
-        totalCards: saved.session.cards.length, cardCount: 0, estimatedMinutes: 0, moreCards: false, started: false, state: 'empty' };
-    }
-    if (home) {
-      rememberRevisionSnapshot('/profile', home.profile);
-      try {
-        const exams = await cachedRevisionRead<RevisionExam[]>('/exams');
-        const next = exams.filter(exam => exam.date >= revisionLocalDate()).sort ( (a, b) => a.date.localeCompare(b.date))[0];
-        home = { ...home, nextExam: next ? { id: next.id, title: next.title, date: next.date } : null, daysUntilExam: next ? (Date.parse(next.date) - Date.parse(revisionLocalDate())) / 86400000 : null };
-      } catch (error) { if (!(error instanceof RevisionConnectionError)) throw error; home = { ...home, nextExam: null, daysUntilExam: null }; }
-    }
-    const session = readOffline().session;
-    if (home && session && (session.localDate === revisionLocalDate() || readOffline().pending.length) && (!navigator.onLine || readOffline().pending.length)) {
-      const cardCount = session.complete ? 0 : session.cards.length - session.position;
-      const newCards = session.complete ? 0 : session.cards.slice(session.position).filter((card, index) =>
-        card.reviews === 0 && !session.cards.slice(0, session.position + index).some(previous => previous.id === card.id)).length;
-      return { ...home, newCards, reviewCards: cardCount - newCards, moreCards: false, started: !session.complete && session.position > 0, state: session.complete ? 'done' as const : 'ready' as const, cardCount, estimatedMinutes: Math.ceil(cardCount * revisionPolicy.sessionMinutes / revisionPolicy.sessionCards) };
-    }
-    return home;
+    const startDevice = cachedDevice(), startVersion = currentRevisionCacheVersion();
+    const result = await revisionHome();
+    if (result && cachedDevice() === startDevice && currentRevisionCacheVersion() === startVersion) rememberRevisionSnapshot('/home', result);
+    return result;
   },
   plan: () => sharedRevisionRead('/plan:source', async () => { const { value, offline } = await cachedRevisionReadSource<RevisionPlan>('/plan'); return { plan: value, offline }; }),
   progress: () => cachedRevisionRead<RevisionProgress>('/progress'),
@@ -963,7 +978,7 @@ export const revisionAPI = {
   saveProfile: (profile: RevisionProfile) => revisionMutation<RevisionProfile>('/profile', 'PUT', profile),
   saveTutorNote: (note: { subject: string; title: string; question: string; answer: string }) => revisionMutation<{ id: string }>('/notes', 'POST', note),
   generateChapter: (input: { subject: string; title: string }) => revisionMutation<{ id: string }>('/chapters', 'POST', input),
-  importQuota: () => revisionRequest<RevisionImportQuota>('/import/quota'),
+  importQuota: () => sharedRevisionRead('/import/quota', () => revisionRequest<RevisionImportQuota>('/import/quota')),
   retryImport: (id: string, signal?: AbortSignal) => revisionMutation<RevisionImportedChapter>(`/import/${encodeURIComponent(id)}/retry`, 'POST', undefined, signal),
   discardImport: (id: string) => revisionMutation<null>(`/import/${encodeURIComponent(id)}`, 'DELETE'),
   importChapter: (input: { subject: string; title: string; text?: string; file?: File }, signal?: AbortSignal) => {
