@@ -338,7 +338,7 @@ export async function quizStart(topic: string) {
   )
 }
 
-export async function podcastStart(payload: { topic: string }) {
+export async function podcastStart(payload: { topic: string; duration?: "short" | "long" }) {
   const url = `${env.backend}/podcast`
   const res = await fetch(url, {
     method: "POST",
@@ -348,6 +348,11 @@ export async function podcastStart(payload: { topic: string }) {
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || "Failed to start podcast")
   return data
+}
+
+export async function podcastCancel(pid: string) {
+  const response = await fetch(`${env.backend}/podcast/${encodeURIComponent(pid)}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error('Impossible d’annuler le podcast.')
 }
 
 export function connectPodcastStream(pid: string, onEvent: (ev: any) => void) {

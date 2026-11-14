@@ -15,11 +15,12 @@ function pcmToWav(pcm: Uint8Array) {
 
 export async function requestOpenRouterSpeech(
   input: string,
-  opts: { apiKey: string; model: string; voice: string },
+  opts: { apiKey: string; model: string; voice: string; signal?: AbortSignal },
   fetchImpl: typeof fetch = fetch,
 ) {
   const r = await fetchImpl('https://openrouter.ai/api/v1/audio/speech', {
     method: 'POST',
+    signal: opts.signal,
     headers: { Authorization: `Bearer ${opts.apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: opts.model, input, voice: opts.voice, response_format: 'pcm' }),
   })

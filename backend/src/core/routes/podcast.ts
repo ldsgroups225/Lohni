@@ -5,6 +5,7 @@ import { emitToAll } from "../../utils/chat/ws"
 import { config } from "../../config/env"
 
 const sockets = new Map<string, Set<any>>()
+const controllers = new Map<string, AbortController>()
 const pendingJobs = new Map<string, () => Promise<void>>()
 
 function emit(id: string, msg: any) {
@@ -57,6 +58,13 @@ export function podcastRoutes(app: any) {
     }, 100)
   })
 
+  app.delete("/podcast/:pid", (req: any, res: any) => {
+    controllers.get(req.params.pid)?.abort()
+    controllers.delete(req.params.pid)
+    pendingJobs.delete(req.params.pid)
+    res.send({ ok: true })
+  })
+
   app.post("/podcast", async (req: any, res: any, next: any) => {
     try {
       const topic = String(req.body?.topic || req.body?.title || "").trim()
@@ -65,7 +73,15 @@ export function podcastRoutes(app: any) {
         return res.status(400).send({ error: "topic required" })
       }
 
+      const duration = req.body?.duration
+      if (duration !== undefined && duration !== "short" && duration !== "long") {
+        return res.status(400).send({ error: "Durée du podcast invalide." })
+      }
+
       const pid = cryptoRandom()
+      const controller = new AbortController()
+      controllers.set(pid, controller)
+      setTimeout(() => { controller.abort(); controllers.delete(pid); pendingJobs.delete(pid) }, 10 * 60 * 1000).unref?.()
       const dir = path.join(process.cwd(), "storage", "podcasts", pid)
       const base = topic.replace(/[^a-z0-9]/gi, "_").slice(0, 50) || "podcast"
 
@@ -73,12 +89,20 @@ export function podcastRoutes(app: any) {
 
       const job = async () => {
         try {
-          const script = await makeScript(topic, topic)
+          const script = await makeScript(topic, topic, duration, controller.signal)
+          controller.signal.throwIfAborted()
           emit(pid, { type: "script", data: script })
 
-          const outPath = await makeAudio(script, dir, base, (m) => {
-            emit(pid, m)
-          })
+          let outPath: string
+          try {
+            outPath = await makeAudio(script, dir, base, (m) => { if (!controller.signal.aborted) emit(pid, m) }, controller.signal)
+          } catch (error) {
+            if (controller.signal.aborted) return
+            console.error("[Podcast] Échec de synthèse vocale :", error)
+            emit(pid, { type: "error", error: "tts_error" })
+            return
+          }
+          controller.signal.throwIfAborted()
           if (!fs.existsSync(outPath)) {
             throw new Error(`Audio file not created at ${outPath}`)
           }
@@ -97,8 +121,12 @@ export function podcastRoutes(app: any) {
           
           emit(pid, { type: "done" })
         } catch (e: any) {
+          if (controller.signal.aborted) return
           console.error("[Podcast] Échec de création :", e)
           emit(pid, { type: "error", error: "Impossible de créer le podcast. Réessaie." })
+        } finally {
+          controllers.delete(pid)
+          if (controller.signal.aborted) await fs.promises.rm(dir, { recursive: true, force: true }).catch(error => console.error("[Podcast] Échec de nettoyage :", error))
         }
       }
       
