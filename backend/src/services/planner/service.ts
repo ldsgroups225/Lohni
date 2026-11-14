@@ -229,7 +229,8 @@ export class PlannerService {
     private async generateFlashcards(content: string, task: Task): Promise<Array<{ front: string; back: string }>> {
         const prompt = `Crée 10 à 15 cartes de révision en français pour ce travail (${task.type || 'devoir'}), niveau collège/lycée.
         Réponds uniquement avec un tableau JSON d’objets {"front": "...", "back": "..."} : « front » est la question, « back » la réponse courte.
-        Porte-toi sur les notions clés, les définitions, les formules et les faits importants. Écris les formules en LaTeX entre $...$.
+        Concentre-toi sur les notions clés, les définitions, les formules et les faits importants. Écris les formules en LaTeX entre $...$.
+        Échappe chaque antislash LaTeX dans le JSON : par exemple "back":"$\\\\frac{1}{2}$".
 
         Exemple :
         [
