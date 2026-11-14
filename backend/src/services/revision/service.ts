@@ -5,6 +5,7 @@ import { extractText } from '../../lib/parser/extract'
 import type { UpFile } from '../../lib/parser/upload'
 import type { SQLiteDatabase } from '../../utils/database/sqlite'
 import { REVISION_POLICY as policy } from './policy'
+import { addDays, daysBetween, isExpress, mondayOf } from './day'
 import { advanceSession, answerXP } from './session'
 import { createEmptyCard, fsrs, Rating } from 'ts-fsrs'
 import { validItem } from '../quiz/validation'
@@ -225,9 +226,8 @@ export class RevisionService {
         return { subjectId: subject.id, name: subject.name, mastery,
           status: this.masteryStatus(mastery, own.reduce((sum, chapter) => sum + chapter.seenCards, 0), own.reduce((sum, chapter) => sum + chapter.cards.length, 0)) }
       })
-      const day = new Date(`${context.localDate}T00:00:00Z`)
-      const monday = Date.parse(context.localDate) - ((day.getUTCDay() + 6) % 7) * 86400000
-      const completedDates = [...days].filter(date => Date.parse(date) >= monday && Date.parse(date) < monday + 7 * 86400000).sort()
+      const monday = mondayOf(context.localDate)
+      const completedDates = [...days].filter(date => date >= monday && date < addDays(monday, 7)).sort()
       return { xp, streak, streakStarted: days.size > 0, completedDates, learnedCards: new Set(rows.filter(row => row.knew).map(row => row.card_id)).size, subjects }
     })
   }
@@ -272,7 +272,7 @@ export class RevisionService {
         newCards, reviewCards: cardCount - newCards,
         profile, nextExam, totalCards: total.count, cardCount,
         moreCards: !session.complete || (await this.selectSessionCards(context, profile)).length > 0,
-        daysUntilExam: nextExam ? (Date.parse(nextExam.date) - Date.parse(context.localDate)) / 86400000 : null,
+        daysUntilExam: nextExam ? daysBetween(context.localDate, nextExam.date) : null,
         estimatedMinutes: Math.ceil(cardCount * policy.sessionMinutes / policy.sessionCards),
         started: !session.complete && session.position > 0,
         state: session.complete ? (completed ? 'done' : 'empty') : 'ready',
@@ -585,7 +585,7 @@ export class RevisionService {
       const db = this.dependencies.db
       const exam = (await this.readExams(context.deviceId)).find(item => item.id === examId)
       if (!exam || exam.date < context.localDate) throw new RevisionError('Examen introuvable ou déjà passé.')
-      const kind = Date.parse(exam.date) - Date.parse(context.localDate) === 86400000 ? 'express' : 'exam'
+      const kind = isExpress(exam.date, context.localDate) ? 'express' : 'exam'
       return { ...await this.openSession(context, {
         kind, examId, continueSession,
         saved: ["SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = ? AND exam_id = ? AND COALESCE(json_extract(state, '$.stale'), 0) = 0 AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate, kind, examId]],
