@@ -48,7 +48,7 @@ export function examRoutes(app: any) {
       }))
       res.send({ ok: true, exams: list })
     } catch (e: any) {
-      log("list err", e?.message || e)
+      console.error("[exam] list failed", e)
       res.status(500).send({ ok: false, error: "Impossible de charger les examens. Réessaie." })
     }
   })
@@ -73,14 +73,14 @@ export function examRoutes(app: any) {
             emit({ type: "exam", payload: exam.sections.flatMap(section => section.items).map((item, i) => ({ ...item, id: i + 1 })) })
             emit({ type: "done" })
           } catch (e: any) {
-            log("run err", e?.message || e)
+            console.error("[exam] run failed", e)
             emit({ type: "error", error: "Impossible de préparer l’examen. Réessaie." })
           }
         },
       })
       res.status(202).send({ ok: true, runId, stream: `/ws/exams?runId=${runId}` })
     } catch (e: any) {
-      log("500 single err", e?.message || e)
+      console.error("[exam] start failed", e)
       res.status(500).send({ ok: false, error: "Impossible de lancer l’examen. Réessaie." })
     }
   })

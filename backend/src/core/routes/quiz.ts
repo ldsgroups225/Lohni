@@ -57,7 +57,7 @@ export function quizRoutes(app: any) {
           emitToAll(qs.get(quizId), { type: "done" });
           qlog("done", quizId);
         } catch (e: any) {
-          qlog("error", quizId, e?.message || e);
+          console.error("[quiz] generation failed", quizId, e);
           emitToAll(qs.get(quizId), {
             type: "error",
             error: "Impossible de créer le quiz. Réessaie.",
@@ -65,7 +65,7 @@ export function quizRoutes(app: any) {
         }
       });
     } catch (e: any) {
-      qlog("500 route err", e?.message || e);
+      console.error("[quiz] route failed", e);
       res.status(500).send({ ok: false, error: "Impossible de créer le quiz. Réessaie." });
     }
   });

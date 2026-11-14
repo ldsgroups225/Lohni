@@ -43,9 +43,17 @@ describe('generateStructured', () => {
 
   test('une réponse tronquée est récupérée par le repli du service', async () => {
     const { model, calls } = scripted('{"answer":"début')
-    const out = await generateStructured({ model, messages, shape: 'object', validate: () => null, salvage: raw => ({ salvaged: raw }) })
+    const out = await generateStructured({ model, messages, shape: 'object', validate: v => (v && typeof v === 'object' ? v : null), salvage: raw => ({ salvaged: raw }) })
     expect(out).toEqual({ salvaged: '{"answer":"début' })
     expect(calls).toHaveLength(1)
+  })
+
+  test('une valeur récupérée mais invalide est redemandée', async () => {
+    const { model, calls } = scripted('{"n":[1', '{"n":[1,2]}')
+    const enough = (v: unknown) => ((v as { n?: number[] })?.n?.length ?? 0) >= 2 ? (v as { n: number[] }) : null
+    const out = await generateStructured({ model, messages, shape: 'object', validate: enough, salvage: () => ({ n: [1] }) })
+    expect(out).toEqual({ n: [1, 2] })
+    expect(calls).toHaveLength(2)
   })
 
   test('invalide puis valide : le second essai utilise la consigne stricte', async () => {

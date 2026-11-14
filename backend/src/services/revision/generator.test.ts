@@ -195,3 +195,16 @@ test('un emploi du temps illisible est repris une fois, puis lu', async () => {
   model.invoke.mockResolvedValue({ content: 'illisible' })
   await expect(readTimetable({ path, filename: 'emploi.jpg', mimeType: 'image/jpeg' })).rejects.toThrow('Je n’ai pas pu lire cet emploi du temps')
 })
+
+test('une leçon tronquée récupérée avec trop peu de cartes est redemandée', async () => {
+  const db = new SQLiteDatabase(join(directory, 'truncated.sqlite'))
+  const service = new RevisionService({ db, now: () => new Date('2026-11-13T12:00:00Z'), generateCards })
+  const ctx = context()
+  await service.saveProfile(ctx, { schoolClass: 'terminale', series: 'D', subjects: ['Mathématiques'] })
+  const truncated = lesson(5).slice(0, lesson(5).indexOf('"Question 2"') - 6)
+  model.call.mockResolvedValueOnce({ content: truncated }).mockResolvedValueOnce({ content: lesson(5) })
+  model.invoke.mockResolvedValue({ content: quiz })
+  await expect(service.generateChapter(ctx, { subject: 'Mathématiques', title: 'Leçon tronquée' })).resolves.toMatchObject({ title: 'Leçon tronquée' })
+  expect(model.call).toHaveBeenCalledTimes(2)
+  await db.close()
+})

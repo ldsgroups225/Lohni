@@ -41,7 +41,7 @@ type StructuredOptions<T> = {
   shape: 'array' | 'object'
   /** Normalises and validates the parsed JSON; return null when it is unusable. */
   validate: (parsed: unknown) => T | null
-  /** Last chance on a reply that does not parse (e.g. cut by the token limit). */
+  /** Last chance on a reply that does not parse (e.g. cut by the token limit); `validate` then checks what it recovers. */
   salvage?: (raw: string) => T | null
   attempts?: number
   /** Sends `reasoning: 'none'` unless true (tutor, chat keep the model's own reasoning). */
@@ -59,7 +59,9 @@ export async function generateStructured<T>(opts: StructuredOptions<T>): Promise
     opts.signal?.throwIfAborted()
     raw = toText(reply).trim()
     const parsed = parseModelJson(raw, opts.shape)
-    const value = parsed === undefined ? opts.salvage?.(raw) ?? null : opts.validate(parsed)
+    // A salvaged value is validated like a parsed one.
+    const salvaged = parsed === undefined ? opts.salvage?.(raw) ?? null : undefined
+    const value = parsed !== undefined ? opts.validate(parsed) : salvaged === null ? null : opts.validate(salvaged)
     if (value !== null && value !== undefined) return value
   }
   throw new StructuredOutputError(raw)

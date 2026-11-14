@@ -71,7 +71,7 @@ export function smartnotesRoutes(app: any) {
           emitToAll(ns.get(noteId), { type: "done" });
           nlog("done", noteId);
         } catch (e: any) {
-          nlog("error", noteId, e?.message || e);
+          console.error("[smartnotes] generation failed", noteId, e);
           emitToAll(ns.get(noteId), {
             type: "error",
             error: "Impossible de créer les notes. Réessaie.",
@@ -79,7 +79,7 @@ export function smartnotesRoutes(app: any) {
         }
       });
     } catch (e: any) {
-      nlog("500 route err", e?.message || e);
+      console.error("[smartnotes] route failed", e);
       res.status(500).send({ ok: false, error: "Impossible de créer les notes. Réessaie." });
     }
   });
