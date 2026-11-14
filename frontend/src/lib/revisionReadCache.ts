@@ -1,3 +1,4 @@
+import { localDay } from '../../../backend/src/services/revision/day'
 export const DEVICE_CHANGED = 'L’appareil a changé. Recharge la page avant de continuer.'
 
 export function cachedDevice() {
@@ -16,11 +17,11 @@ export const invalidateRevisionCache = (...paths: string[]) => {
 const snapshots = new Map<string, { device: string | null; day: string; value: unknown; stale?: boolean }>()
 export function revisionSnapshot<T>(path: string): T | undefined {
   const item = snapshots.get(path)
-  return item && item.device === cachedDevice() && item.day === new Date().toDateString() ? item.value as T : undefined
+  return item && item.device === cachedDevice() && item.day === localDay() ? item.value as T : undefined
 }
 export const revisionSnapshotStale = (...paths: string[]) => paths.some(path => snapshots.get(path)?.stale)
 export function rememberRevisionSnapshot(path: string, value: unknown) {
-  snapshots.set(path, { device: cachedDevice(), day: new Date().toDateString(), value })
+  snapshots.set(path, { device: cachedDevice(), day: localDay(), value })
 }
 
 // Lit sur l’appareil courant : si l’appareil change pendant la lecture (réponse ou erreur), la valeur est écartée, `onChanged` remet l’écran à zéro et la lecture repart.

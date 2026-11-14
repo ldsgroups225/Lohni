@@ -15,6 +15,7 @@ import Onboarding from '../components/Revision/Onboarding'
 import MobileHeader from '../components/MobileHeader'
 import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter, type RevisionProfile } from '../lib/api'
 import { readFirstName } from '../lib/localFirstName'
+import { addDays, localDay, mondayOf } from '../../../backend/src/services/revision/day'
 
 export default function Home() {
   const sharedProfile = revisionAPI.snapshot<RevisionProfile | null>('/profile')
@@ -75,12 +76,11 @@ export default function Home() {
 
   if (!loading && !error && !home) return <main className="loop-screen min-h-dvh md:pl-28"><Onboarding /></main>
 
-  const today = new Date()
-  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (today.getDay() + 6) % 7)
+  const today = localDay()
+  const monday = mondayOf(today)
   const week = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + index)
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-    return { key, today: date.toDateString() === today.toDateString() }
+    const key = addDays(monday, index)
+    return { key, today: key === today }
   })
 
   return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28">

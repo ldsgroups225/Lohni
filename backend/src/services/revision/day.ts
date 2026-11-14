@@ -1,0 +1,13 @@
+// A student's day is a local calendar date `YYYY-MM-DD` (the X-Local-Date header); all arithmetic is done in UTC on that string, so it never depends on the machine's timezone.
+const DAY_MS = 86400000
+
+export const localDay = (date = new Date()) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
+
+export const addDays = (day: string, days: number) => new Date(Date.parse(day) + days * DAY_MS).toISOString().slice(0, 10)
+
+export const daysBetween = (from: string, to: string) => (Date.parse(to) - Date.parse(from)) / DAY_MS
+
+export const mondayOf = (day: string) => addDays(day, -((new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7))
+
+// Révision express: the exam is tomorrow.
+export const isExpress = (examDate: string, today: string) => daysBetween(today, examDate) === 1

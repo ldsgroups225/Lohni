@@ -1,4 +1,5 @@
 import type { RevisionPlan } from '../../../backend/src/services/revision/plan';
+import { daysBetween, localDay } from '../../../backend/src/services/revision/day';
 import { DEVICE_CHANGED, cachedDevice, currentRevisionCacheVersion, invalidateRevisionCache, readOnDevice, rememberRevisionSnapshot, revisionSnapshot, revisionSnapshotStale } from "./revisionReadCache";
 export { DEVICE_CHANGED };
 import { env } from "../config/env";
@@ -670,8 +671,7 @@ export function revisionDeviceId(): string {
 }
 
 function revisionLocalDate(): string {
-  const today = new Date();
-  return [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+  return localDay();
 }
 
 class RevisionConnectionError extends Error {}
@@ -919,7 +919,7 @@ async function revisionHome() {
     try {
       const exams = await cachedRevisionRead<RevisionExam[]>('/exams');
       const next = exams.filter(exam => exam.date >= revisionLocalDate()).sort ( (a, b) => a.date.localeCompare(b.date))[0];
-      home = { ...home, nextExam: next ? { id: next.id, title: next.title, date: next.date } : null, daysUntilExam: next ? (Date.parse(next.date) - Date.parse(revisionLocalDate())) / 86400000 : null };
+      home = { ...home, nextExam: next ? { id: next.id, title: next.title, date: next.date } : null, daysUntilExam: next ? daysBetween(revisionLocalDate(), next.date) : null };
     } catch (error) { if (!(error instanceof RevisionConnectionError)) throw error; home = { ...home, nextExam: null, daysUntilExam: null }; }
   }
   const session = readOffline().session;

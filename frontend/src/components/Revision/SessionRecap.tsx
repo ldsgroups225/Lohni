@@ -5,6 +5,7 @@ import { AnimatedNumber } from '../ui/AnimatedNumber'
 import MarkdownView from '../Chat/MarkdownView'
 import MasteryBadge from '../ui/MasteryBadge'
 import type { RevisionChapter, RevisionProgress, RevisionSession } from '../../lib/api'
+import { addDays, mondayOf } from '../../../../backend/src/services/revision/day'
 
 type Props = {
   session: RevisionSession
@@ -33,8 +34,7 @@ export function SessionRecap({ session, progress, chapters, pending, moreCards, 
   const missed = summary?.missed.slice(0, 3) ?? []
   const cardsSeen = new Set(session.cards.slice(0, position).map(card => card.id)).size
   const reviewedChapters = chapters.filter(chapter => session.cards.some(card => card.chapterId === chapter.id))
-  const date = new Date(`${session.localDate}T00:00:00Z`)
-  const monday = date.getTime() - ((date.getUTCDay() + 6) % 7) * 86400000
+  const monday = Number.isFinite(Date.parse(session.localDate)) ? mondayOf(session.localDate) : ''
   const block = 'rounded-2xl border border-border bg-surface p-4 text-left'
   return (
     <section className="flex flex-col items-center gap-4 text-center" aria-live="polite">
@@ -43,7 +43,7 @@ export function SessionRecap({ session, progress, chapters, pending, moreCards, 
       <p className="text-muted">Tu as revu {cardsSeen} carte{cardsSeen > 1 ? 's' : ''} en {session.elapsedMs < 60000 ? 'moins d’une minute' : `${Math.ceil(session.elapsedMs / 60000)} minutes`}.</p>
       {summary && <div className={`${block} grid w-full grid-cols-3 gap-2 text-center`}><div><strong className="block text-3xl text-success">{summary.quiz.correct + summary.flashcards.knew}</strong><span className="text-sm text-muted">je savais</span></div><div><strong className="block text-3xl text-primary">{summary.missed.length}</strong><span className="text-sm text-muted">à revoir</span></div><div><strong className="block text-3xl">+{earnedXP}</strong><span className="text-sm text-muted">XP</span></div></div>}
       {showStats && <div className="flex w-full items-center gap-3 rounded-3xl bg-tint p-4 font-extrabold text-primary"><FlameIcon />{progress.streak} jour{progress.streak > 1 ? 's' : ''} de suite</div>}
-      {showStats && progress.completedDates && Number.isFinite(monday) && <fieldset className="flex w-full justify-between px-1" aria-label="Séances de la semaine">{['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((label, index) => { const key = new Date(monday + index * 86400000).toISOString().slice(0, 10); const done = progress.completedDates?.includes(key); return <div key={key} className="flex flex-col items-center gap-1 text-sm text-muted"><span role="img" aria-label={`${key} : ${done ? 'séance terminée' : 'aucune séance terminée'}`} className={`grid size-8 place-items-center rounded-full border ${done ? 'border-primary bg-primary text-white' : 'border-border bg-surface'}`}>{done && key === session.localDate ? '✓' : ''}</span>{label}</div> })}</fieldset>}
+      {showStats && progress.completedDates && monday && <fieldset className="flex w-full justify-between px-1" aria-label="Séances de la semaine">{['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((label, index) => { const key = addDays(monday, index); const done = progress.completedDates?.includes(key); return <div key={key} className="flex flex-col items-center gap-1 text-sm text-muted"><span role="img" aria-label={`${key} : ${done ? 'séance terminée' : 'aucune séance terminée'}`} className={`grid size-8 place-items-center rounded-full border ${done ? 'border-primary bg-primary text-white' : 'border-border bg-surface'}`}>{done && key === session.localDate ? '✓' : ''}</span>{label}</div> })}</fieldset>}
       {showStats && reviewedChapters.length > 0 && <div className={`${block} w-full divide-y divide-border`}>{reviewedChapters.map(chapter => { const count = summary?.missed.filter(item => session.cards.some(card => card.id === item.cardId && card.chapterId === chapter.id)).length ?? 0; return <div key={chapter.id} className="flex min-h-14 items-center justify-between gap-3 py-2"><div><h2 className="font-bold">{chapter.title}</h2>{summary && <p className="text-sm text-muted">{count} carte{count > 1 ? 's' : ''} à revoir</p>}</div><MasteryBadge status={chapter.status} /></div> })}</div>}
       {summary ? <p>{motivation(summary, showStats ? progress.streak : undefined)}</p>
         : <p>{position} réponses enregistrées{pending ? ' sur cet appareil' : ''}. À demain pour la suite.</p>}
