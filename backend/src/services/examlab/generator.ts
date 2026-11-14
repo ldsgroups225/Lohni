@@ -92,12 +92,12 @@ function validQuiz(a: any, count: number): a is QuizItem[] {
   return Array.isArray(a) && a.length === count && a.every(validItem)
 }
 
-async function ask(sys: string, user: string, _tag: string) {
+async function ask(sys: string, user: string, _tag: string, signal?: AbortSignal) {
   const msgs = [
     { role: "system", content: sys },
     { role: "user", content: user }
   ] as const
-  const r = await llm.invoke([...msgs] as any)
+  const r = await llm.invoke([...msgs] as any, { signal })
   const raw = typeof r === "string" ? r : String((r as any)?.content ?? "")
   const txt = extractArray(stripFences(raw))
   return tryParse<any>(txt)
@@ -119,14 +119,14 @@ const S = Annotation.Root({
   norm: Annotation<QuizItem[]>(),
 })
 
-const nGen = async (s: Ctx) => {
-  const parsed = await ask(s.sys, s.user, "gen")
+const nGen = async (s: Ctx, config: { signal?: AbortSignal }) => {
+  const parsed = await ask(s.sys, s.user, "gen", config.signal)
   if (parsed) return { ...s, arr: parsed }
   return s
 }
-const nRetry = async (s: Ctx) => {
+const nRetry = async (s: Ctx, config: { signal?: AbortSignal }) => {
   if (Array.isArray(s.arr)) return s
-  const parsed = await ask(SYS_STRICT(s.count), s.user, "retry")
+  const parsed = await ask(SYS_STRICT(s.count), s.user, "retry", config.signal)
   if (parsed) return { ...s, arr: parsed }
   return s
 }
@@ -152,13 +152,13 @@ g.addNode("validate", nValidate)
 
 const compiled = g.compile()
 
-export async function generateSectionItems(gen: GenSpec, seed: string): Promise<QuizLikeItem[]> {
+export async function generateSectionItems(gen: GenSpec, seed: string, signal?: AbortSignal): Promise<QuizLikeItem[]> {
   if (gen.type === "mcq") {
     const count = Math.max(1, Number(gen.count || 5))
     const sys = SYS(count, gen.style, gen.difficulty, normalizeTopic(gen.topic))
     const promptNorm = normalizeTopic(gen.prompt)
     const user = `${promptNorm}\nGraine : ${seed}\nRéponds uniquement avec le tableau JSON de ${count} objets.`
-    const s = await compiled.invoke({ sys, user, count, arr: null, norm: [] })
+    const s = await compiled.invoke({ sys, user, count, arr: null, norm: [] }, { signal })
     return s.norm
   }
   if (gen.type === "short") {
@@ -166,7 +166,7 @@ export async function generateSectionItems(gen: GenSpec, seed: string): Promise<
     const sys = SYS(count, gen.style, gen.difficulty, normalizeTopic(gen.topic))
     const promptNorm = normalizeTopic(gen.prompt)
     const user = `Imagine d’abord ${count} bonnes questions à réponse courte sur le sujet, puis transforme chacune en QCM à quatre options avec une seule bonne réponse. Les réponses doivent être factuelles et concises.\n\n${promptNorm}\nGraine : ${seed}\nRéponds uniquement avec le tableau JSON de ${count} objets.`
-    const s = await compiled.invoke({ sys, user, count, arr: null, norm: [] })
+    const s = await compiled.invoke({ sys, user, count, arr: null, norm: [] }, { signal })
     return s.norm
   }
   return []
