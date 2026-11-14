@@ -40,7 +40,8 @@ export default function Revision() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState<RevisionProfile | null>(() => lastKnown(scoped)?.profile ?? null)
   const [session, setSession] = useState<RevisionSession | null>(() => lastKnown(scoped)?.session ?? null)
-  const [chapters, setChapters] = useState<RevisionChapter[]>([])
+  // Depuis le cache : la ligne matière · chapitre est là dès la première carte au lieu de la pousser vers le bas.
+  const [chapters, setChapters] = useState<RevisionChapter[]>(() => revisionAPI.cached.chapters() ?? [])
   const [progress, setProgress] = useState<RevisionProgress | null>(null)
   const [busy, setBusy] = useState(true)
   const [validated, setValidated] = useState(false)
@@ -80,6 +81,19 @@ export default function Revision() {
     const timer = window.setTimeout(go, 350)
     return () => window.clearTimeout(timer)
   }, [verdict])
+  // Pendant que l'élève lit cette carte, la suivante est rendue (Markdown, KaTeX) au repos : la transition n'a plus ce travail à faire.
+  const nextCard = session && !session.complete ? session.cards[session.position + 1] : undefined
+  useEffect(() => {
+    if (!nextCard) return
+    const texts = [{ md: nextCard.question, inline: true }, { md: nextCard.answer }, ...(nextCard.options ?? []).map(md => ({ md, inline: true }))]
+    const idle = window.requestIdleCallback ?? ((run: () => void) => window.setTimeout(run, 200))
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout
+    // Un texte par moment de repos : un geste qui commence n'attend jamais tout le rendu de la carte suivante.
+    let handle = 0, stopped = false
+    const step = () => { handle = idle(() => { void import('../components/Chat/MarkdownContent').then(module => { const text = texts.shift(); if (stopped || !text) return; module.prerenderMarkdown([text]); if (texts.length) step() }) }) }
+    step()
+    return () => { stopped = true; cancel(handle) }
+  }, [nextCard])
   const secondaryButton = 'rounded-xl border border-border bg-surface px-4 py-3 text-foreground disabled:opacity-50 disabled:cursor-wait'
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
@@ -140,6 +154,7 @@ export default function Revision() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: Recharger le bilan pour chaque nouvelle session terminée.
   useEffect(() => {
     setMoreCards(false)
+    setRecapLoading(false)
     if (!session?.complete) return
     setProgress(null)
     setChapters([])
@@ -147,15 +162,21 @@ export default function Revision() {
     let active = true
     if (missedId || scopeChapter) setMoreCards(false)
     else if (examId) setMoreCards(true)
-    else revisionAPI.home().then(value => { if (active) setMoreCards(value?.moreCards ?? false) }).catch(() => {})
-    if (!missedId && !scopeChapter) loadSession().then(fresh => { if (active) setSession(current => current && current.id === fresh.id ? { ...current, summary: fresh.summary } : current) }).catch(() => {})
-    if (session.position > 0) revisionAPI.chapters().then(value => { if (active) setChapters(value) }).catch(() => {})
-    revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(error => {
-      if (active) setError(error instanceof Error ? error.message : 'Impossible de charger ta progression.')
-    })
+    // Bilan complet ou rien : il s'affiche une fois toutes ses lectures revenues (réussies ou non), pas morceau par morceau.
+    setRecapLoading(session.position > 0)
+    void Promise.allSettled([
+      examId || missedId || scopeChapter ? undefined : revisionAPI.home().then(value => { if (active) setMoreCards(value?.moreCards ?? false) }),
+      missedId || scopeChapter ? undefined : loadSession().then(fresh => { if (active) setSession(current => current && current.id === fresh.id ? { ...current, summary: fresh.summary } : current) }),
+      session.position > 0 ? revisionAPI.chapters().then(value => { if (active) setChapters(value) }) : undefined,
+      revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(error => {
+        if (active) setError(error instanceof Error ? error.message : 'Impossible de charger ta progression.')
+      }),
+    ]).then(() => { if (active) setRecapLoading(false) })
     return () => { active = false }
   }, [session?.id, session?.complete, sync.pending, sync.online])
 
+  // Déclaré en dernier : les tests de page fournissent les états précédents dans l'ordre.
+  const [recapLoading, setRecapLoading] = useState(false)
   function generate(event: FormEvent) {
     event.preventDefault()
     setGenerating(true)
@@ -213,7 +234,7 @@ export default function Revision() {
   if (!busy && !error && !profile) return <Navigate to="/" replace />
 
   return (
-    <main className={`loop-screen flex min-h-dvh flex-col px-4 md:pl-28 ${session && !session.complete && card ? `pt-1 ${verdict ? 'pb-[max(2rem,env(safe-area-inset-bottom))]' : 'pb-[max(.5rem,env(safe-area-inset-bottom))]'}` : 'pt-8 pb-36'}`}>
+    <main className={`loop-screen flex min-h-dvh flex-col overflow-clip px-4 md:pl-28 ${session && !session.complete && card ? `pt-1 ${verdict ? 'pb-[max(2rem,env(safe-area-inset-bottom))]' : 'pb-[max(.5rem,env(safe-area-inset-bottom))]'}` : 'pt-8 pb-36'}`}>
       <div className={`mx-auto flex w-full max-w-xl flex-1 flex-col ${session && !session.complete && card ? 'space-y-2' : 'space-y-6'}`}>
         {session && !session.complete && card ? <header className="flex items-center gap-3"><h1 className="sr-only">Session de révision</h1><BackButton fallback="/" label="Quitter la session" className="press-icon -ml-3 inline-grid size-11 place-items-center rounded-xl text-muted"><CloseIcon /></BackButton>{session && <div className="flex-1"><div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div><Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" /></div>}{session && <span className="text-sm tabular-nums text-muted">{session.position + 1}/{session.cards.length}</span>}
           <fieldset aria-label="Options de révision" className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
@@ -223,7 +244,7 @@ export default function Revision() {
             </div>}
           </fieldset>
         </header> : !(session && session.position > 0) && <ScreenHeader back="/" title="Session de révision" />}
-        {!scoped && (!sync.online || sync.pending > 0) && <aside role="status" className="space-y-2 rounded-xl border border-border p-4 text-foreground">
+        {!scoped && (!sync.online || (sync.pending > 0 && !!sync.error)) && <aside role="status" className="space-y-2 rounded-xl border border-border p-4 text-foreground">
           {!sync.online && <p>Hors ligne. Tu peux terminer ta session déjà chargée.</p>}
           {sync.pending > 0 && <p>{sync.pending} réponse{sync.pending > 1 ? 's' : ''} enregistrée{sync.pending > 1 ? 's' : ''} sur cet appareil, en attente d’envoi. Tes XP et ta série seront confirmés au retour du réseau.</p>}
           {sync.error && <p>{sync.error}</p>}
@@ -240,11 +261,7 @@ export default function Revision() {
         </div>}
         {generating ? <div className="space-y-2"><LoadingState label="Lohni prépare tes cartes…" />{slow && <p role="status" className="text-center text-sm text-muted">Ça prend plus de temps que d’habitude. Ta demande est toujours en cours, tu peux rester sur cette page.</p>}</div> : busy && !session && <PendingRead title="Ta session" label="On prépare ta session…" />}
         {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}
-        {missed && !session?.complete && <aside className="space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
-          <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
-          <Button disabled={busy || !sync.online} onClick={() => explain(missed)}>Explique-moi</Button>
-        </aside>}
-        {session && !session.complete && card ? (
+        {session && !session.complete && card ? (<>
           <section className="flex flex-1 flex-col space-y-4" aria-label="Session de révision" aria-busy={busy}>
             {card.kind === 'basic' ? <SwipeCard key={`${card.id}-${session.position}`} question={card.question} answer={card.answer} context={chapter ? `${chapter.subject} · ${chapter.title}` : undefined} origin={card.origin} onExplain={() => explain(card)} explainDisabled={busy || !sync.online} revealed={revealed} enabled={!busy && validated} onToggle={() => setRevealed(value => !value)} onSwipe={answer} />
             : <article key={`${card.id}-${session.position}-${revealed}`} className={`shrink-0 space-y-4 rounded-2xl border border-border bg-surface p-5 ${revealed && card.kind !== 'mcq' ? 'motion-flip' : 'motion-enter'}`}>
@@ -258,8 +275,11 @@ export default function Revision() {
                   const tone = !verdict ? 'border-border' : n === card.correct ? 'border-success bg-success/10' : n === verdict.choice ? 'border-danger bg-danger/10' : 'border-border opacity-60'
                   return <button key={key} type="button" aria-pressed={choice === n} disabled={busy || !validated || !!verdict} onClick={event => { keyboardAnswer.current = event.detail === 0; answer(n === card.correct, n) }} className={`flex min-h-14 w-full items-start gap-3 rounded-xl border p-3 text-left text-foreground focus-visible:outline-2 focus-visible:outline-primary ${tone}`}>
                     <span className="flex-1">{n}. <MarkdownView md={option} inline /></span>
-                    {verdict && n === card.correct && <span className="flex items-center gap-1 text-sm"><CheckIcon />Bonne réponse</span>}
-                    {verdict && n === verdict.choice && n !== card.correct && <span className="flex items-center gap-1 text-sm"><CloseIcon />Ta réponse</span>}
+                    {/* Emplacement fixe : afficher la marque ne change ni la largeur du texte ni la hauteur du choix. */}
+                    <span data-mark-slot="" className="grid size-6 shrink-0 place-items-center">
+                      {verdict && n === card.correct && <span className="motion-pop text-success"><CheckIcon /><span className="sr-only">Bonne réponse</span></span>}
+                      {verdict && n === verdict.choice && n !== card.correct && <span className="motion-pop text-danger"><CloseIcon /><span className="sr-only">Ta réponse</span></span>}
+                    </span>
                   </button>
                 })}
               </fieldset>}
@@ -272,8 +292,13 @@ export default function Revision() {
             </article>}
             {verdict && <Button ref={continueButton} className="w-full scroll-mb-8" onClick={next}>Continuer</Button>}
           </section>
-        ) : (!busy || !!session) && <>
-          {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} chapters={chapters} pending={sync.pending} moreCards={moreCards} busy={busy || !validated} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onReviewMissed={() => navigate(`/revision?missed=${encodeURIComponent(session.id)}`)} onContinue={() => void run(async () => display(await loadSession(true)))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
+          {/* Sous la carte : un encart au-dessus pousserait la carte suivante vers le bas à chaque réponse. */}
+          {missed && <aside className="motion-enter space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
+            <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
+            <Button disabled={busy || !sync.online} onClick={() => explain(missed)}>Explique-moi</Button>
+          </aside>}
+        </>) : (!busy || !!session) && <>
+          {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} chapters={chapters} pending={sync.pending} loading={recapLoading && !error} moreCards={moreCards} busy={busy || !validated} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onReviewMissed={() => navigate(`/revision?missed=${encodeURIComponent(session.id)}`)} onContinue={() => void run(async () => display(await loadSession(true)))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
             {!error && <Mascotte humeur="au repos" taille={112} />}
             <h2 className="text-xl">{session.kind === 'express' ? 'Rien de fragile à revoir pour cet examen. Bravo !' : 'Aucune carte à réviser pour le moment'}</h2>
             {session.kind !== 'express' && <p>Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.</p>}

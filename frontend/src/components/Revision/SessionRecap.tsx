@@ -1,6 +1,7 @@
 import { Button, ButtonLink } from '../ui/Button'
 import Mascotte from '../Mascotte/Mascotte'
 import { FlameIcon } from '../ui/NavigationIcons'
+import { LoadingState } from '../ui/LoadingState'
 import { AnimatedNumber } from '../ui/AnimatedNumber'
 import MarkdownView from '../Chat/MarkdownView'
 import MasteryBadge from '../ui/MasteryBadge'
@@ -16,6 +17,8 @@ type Props = {
   busy: boolean
   online: boolean
   error?: boolean
+  /** Le bilan attend encore ses lectures : il s'affiche d'un bloc ensuite, sans rien déplacer. */
+  loading?: boolean
   onExplain: (cardId: string) => void
   onContinue: () => void
   onReviewMissed: () => void
@@ -28,7 +31,7 @@ function motivation(s: NonNullable<RevisionSession['summary']>, streak?: number)
   return 'À demain pour la suite.'
 }
 
-export function SessionRecap({ session, progress, chapters, pending, moreCards, busy, online, error, onExplain, onContinue, onReviewMissed }: Props) {
+export function SessionRecap({ session, progress, chapters, pending, moreCards, busy, online, error, loading, onExplain, onContinue, onReviewMissed }: Props) {
   const { summary, position, earnedXP } = session
   const showStats = !pending && progress
   const missed = summary?.missed.slice(0, 3) ?? []
@@ -41,6 +44,7 @@ export function SessionRecap({ session, progress, chapters, pending, moreCards, 
       {!error && <span className="motion-celebrate"><Mascotte humeur="en fête" taille={160} /></span>}
       <h1 className="text-3xl font-extrabold">Session terminée</h1>
       <p className="text-muted">Tu as revu {cardsSeen} carte{cardsSeen > 1 ? 's' : ''} en {session.elapsedMs < 60000 ? 'moins d’une minute' : `${Math.ceil(session.elapsedMs / 60000)} minutes`}.</p>
+      {loading ? <LoadingState label="On prépare ton bilan…" /> : <>
       {summary && <div className={`${block} grid w-full grid-cols-3 gap-2 text-center`}><div><strong className="block text-3xl text-success">{summary.quiz.correct + summary.flashcards.knew}</strong><span className="text-sm text-muted">je savais</span></div><div><strong className="block text-3xl text-primary">{summary.missed.length}</strong><span className="text-sm text-muted">à revoir</span></div><div><strong className="block text-3xl">+{earnedXP}</strong><span className="text-sm text-muted">XP</span></div></div>}
       {showStats && <div className="flex w-full items-center gap-3 rounded-3xl bg-tint p-4 font-extrabold text-primary"><FlameIcon />{progress.streak} jour{progress.streak > 1 ? 's' : ''} de suite</div>}
       {showStats && progress.completedDates && monday && <fieldset className="flex w-full justify-between px-1" aria-label="Séances de la semaine">{['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((label, index) => { const key = addDays(monday, index); const done = progress.completedDates?.includes(key); return <div key={key} className="flex flex-col items-center gap-1 text-sm text-muted"><span role="img" aria-label={`${key} : ${done ? 'séance terminée' : 'aucune séance terminée'}`} className={`grid size-8 place-items-center rounded-full border ${done ? 'border-primary bg-primary text-white' : 'border-border bg-surface'}`}>{done && key === session.localDate ? '✓' : ''}</span>{label}</div> })}</fieldset>}
@@ -77,6 +81,7 @@ export function SessionRecap({ session, progress, chapters, pending, moreCards, 
       {!!summary?.missed.length && <><button type="button" disabled={busy || !online || pending > 0} aria-describedby={busy || !online || pending > 0 ? 'review-unavailable' : undefined} onClick={onReviewMissed} className="min-h-14 w-full rounded-2xl border-2 border-primary bg-surface px-4 font-bold text-primary disabled:opacity-60">{summary.missed.length === 1 ? 'Revoir la carte maintenant' : `Revoir les ${summary.missed.length} cartes maintenant`}</button>{(busy || !online || pending > 0) && <p id="review-unavailable" className="text-sm text-muted">{!online ? 'Connecte-toi pour revoir ces cartes.' : pending > 0 ? 'Synchronise tes réponses pour revoir ces cartes.' : 'Patiente avant de revoir ces cartes.'}</p>}</>}
       {moreCards && (busy || !online || pending > 0) && <p className="text-sm text-muted">{!online ? 'Connecte-toi pour continuer.' : pending > 0 ? 'Synchronise tes réponses pour continuer.' : 'Patiente avant de continuer.'}</p>}
       {moreCards && <Button variant="secondary" className="w-full" disabled={busy || !online || pending > 0} onClick={onContinue}>Continuer avec les cartes restantes</Button>}
+      </>}
     </section>
   )
 }

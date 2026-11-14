@@ -179,3 +179,16 @@ test('chaque zone défilante de la carte laisse le glissement horizontal à la c
   expect(scrollers.length).toBeGreaterThan(0)
   for (const el of scrollers) expect(el.className).toContain('touch-pan-y')
 })
+
+// Lire window.innerWidth après avoir écrit le transform force Chrome à recalculer style et mise en page : une fois par image, la sortie saccade.
+test('pendant la sortie, la largeur d’écran est lue une seule fois et pas à chaque image', async () => {
+  await render()
+  let reads = 0
+  Object.defineProperty(window, 'innerWidth', { get: () => { reads++; return 400 }, configurable: true })
+  drag(200, [[40, 30], [90, 60], [120, 90]], 100)
+  const s = required(springs.at(-1))
+  const atStart = reads
+  for (const x of [150, 220, 300, 380, 401, 450]) act(() => s.opts.onUpdate(x))
+  expect(reads - atStart).toBe(0)
+  expect(onSwipe).toHaveBeenCalledTimes(1)
+})

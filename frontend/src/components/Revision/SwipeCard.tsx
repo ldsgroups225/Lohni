@@ -55,7 +55,9 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
     // La réponse part dès que la carte quitte l'écran ; le ressort n'a pas à finir.
     let called = false
     const send = () => { if (!called) { called = true; onSwipe(knew) } }
-    animate((knew ? 1 : -1) * window.innerWidth * 1.2, velocity, value => { if (Math.abs(value) >= window.innerWidth) send() }, send)
+    // Largeur lue une fois : la relire à chaque image, juste après l'écriture du transform, forcerait un recalcul de mise en page.
+    const width = window.innerWidth
+    animate((knew ? 1 : -1) * width * 1.2, velocity, value => { if (Math.abs(value) >= width) send() }, send)
   }
 
   useEffect(() => () => stop.current?.(), [])

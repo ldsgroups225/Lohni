@@ -226,6 +226,8 @@ body {
 .motion-enter, .motion-list, .loop-screen [role="alert"], .loop-screen [role="status"] { animation: lohni-enter var(--duration-normal) var(--ease-lohni) backwards; }
 .motion-flip { animation: lohni-flip var(--duration-normal) var(--ease-lohni); transform-origin: center; }
 .motion-pop, .motion-celebrate { display: inline-flex; animation: lohni-pop var(--duration-pop) var(--ease-pop) both; }
+/* Couleur du bord écrite à chaque image du glissement : non héritée, elle ne recalcule que la carte, pas tout son contenu. */
+@property --swipe-border { syntax: "*"; inherits: false; }
 /* Nouvelle carte : fondu et échelle .97 → 1 (Dots Hermes) */
 .motion-card { animation: lohni-card-in 300ms var(--ease-lohni) backwards; }
 .motion-menu { transform-origin: top right; animation: lohni-menu-in var(--duration-menu) var(--ease-lohni) both; }
