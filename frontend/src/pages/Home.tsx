@@ -14,60 +14,46 @@ import curriculum from '../data/curriculum-ci.json'
 import Onboarding from '../components/Revision/Onboarding'
 import MobileHeader from '../components/MobileHeader'
 import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter, type RevisionProfile } from '../lib/api'
+import { cachedDevice, revisionSnapshot } from '../lib/cachedDevice'
 import { readFirstName } from '../lib/localFirstName'
-import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
-
-let cachedHome: { device: string | null; version: number; day: string; home: RevisionHome | null; progress: RevisionProgress | null; chapters: RevisionChapter[] | null } | null = null
 
 export default function Home() {
-  const device = cachedDevice()
-  if (cachedHome && (cachedHome.device !== device || cachedHome.day !== new Date().toDateString())) cachedHome = null
-  const animateEntry = useRef(!cachedHome).current
   const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
   const sharedHome = revisionSnapshot<RevisionHome | null>('/home')
-  const sharedProgress = revisionSnapshot<RevisionProgress>('/progress')
-  if (!cachedHome && sharedHome) cachedHome = { device, version: currentRevisionCacheVersion(), day: new Date().toDateString(), home: sharedHome, progress: sharedProgress ?? null, chapters: null }
-  const [home, setHome] = useState<RevisionHome | null>(() => {
-    const initial = cachedHome?.home ?? sharedHome
-    return initial ? { ...initial, profile: sharedProfile ?? initial.profile } : null
-  })
-  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedHome?.progress ?? sharedProgress ?? null)
-  const [loading, setLoading] = useState(!cachedHome && sharedHome === undefined)
+  const animateEntry = useRef(!sharedHome).current
+  const shown = useRef(!!sharedHome)
+  const [home, setHome] = useState<RevisionHome | null>(() => sharedHome ? { ...sharedHome, profile: sharedProfile ?? sharedHome.profile } : null)
+  const [progress, setProgress] = useState<RevisionProgress | null>(() => revisionSnapshot<RevisionProgress>('/progress') ?? null)
+  const [loading, setLoading] = useState(sharedHome === undefined)
   const [error, setError] = useState('')
   const [progressError, setProgressError] = useState('')
   const [attempt, setAttempt] = useState(0)
-  const [chapters, setChapters] = useState<RevisionChapter[] | null>(() => cachedHome?.chapters ?? null)
+  const [chapters, setChapters] = useState<RevisionChapter[] | null>(() => revisionSnapshot<RevisionChapter[]>('/chapters') ?? null)
   // biome-ignore lint/correctness/useExhaustiveDependencies: Une tentative explicite relance la lecture ; la valeur du cache ne doit pas déclencher de nouvelle requête.
   useEffect(() => {
     let active = true
     async function load() {
       const requestDevice = cachedDevice()
-      const version = currentRevisionCacheVersion()
       setError('')
       setProgressError('')
-      if (!cachedHome && sharedHome === undefined) setLoading(true)
+      if (!shown.current) setLoading(true)
       try {
         const data = await revisionAPI.home()
         if (!active) return
-        if ((requestDevice && requestDevice !== cachedDevice()) || version !== currentRevisionCacheVersion()) {
-          if (requestDevice && requestDevice !== cachedDevice()) { cachedHome = null; setHome(null); setProgress(null); setChapters(null) }
-          setAttempt(value => value + 1)
-          return
-        }
-        cachedHome = data ? { device: cachedDevice(), version: currentRevisionCacheVersion(), day: new Date().toDateString(), home: data, progress: cachedHome?.progress ?? null, chapters: cachedHome?.chapters ?? null } : null
+        if (requestDevice && requestDevice !== cachedDevice()) { shown.current = false; setHome(null); setProgress(null); setChapters(null); setAttempt(value => value + 1); return }
+        shown.current = !!data
         setHome(data)
-        const responseDevice = cachedDevice()
-        if (data) void revisionAPI.chapters().then(value => { if (active && responseDevice === cachedDevice() && version === currentRevisionCacheVersion()) { if (cachedHome) cachedHome.chapters = value; setChapters(value) } }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
-        if (data) void revisionAPI.progress().then(value => { if (active && responseDevice === cachedDevice() && version === currentRevisionCacheVersion()) { if (cachedHome) cachedHome.progress = value; setProgress(value) } }).catch(cause => {
+        if (data) void revisionAPI.chapters().then(value => { if (active) setChapters(value) }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
+        if (data) void revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(cause => {
           if (active && !(cause instanceof Error && cause.message.startsWith('http 404'))) setProgressError('Ta progression est temporairement indisponible.')
         })
       } catch (cause) {
         if (active) {
           if (requestDevice && requestDevice !== cachedDevice()) {
-            cachedHome = null; setHome(null); setProgress(null); setChapters(null); setLoading(true); setAttempt(value => value + 1)
+            shown.current = false; setHome(null); setProgress(null); setChapters(null); setLoading(true); setAttempt(value => value + 1)
             return
           }
-          if (cachedHome) setProgressError('La mise à jour de ton accueil est temporairement indisponible.')
+          if (shown.current) setProgressError('La mise à jour de ton accueil est temporairement indisponible.')
           else setError(cause instanceof Error ? cause.message : 'Impossible de charger l’accueil.')
         }
       } finally { if (active && (!requestDevice || requestDevice === cachedDevice())) setLoading(false) }

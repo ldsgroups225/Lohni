@@ -6,6 +6,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 import ImportCourse from './ImportCourse'
 import { APIError } from '../lib/api'
+import { rememberRevisionSnapshot } from '../lib/cachedDevice'
 
 const api = vi.hoisted(() => ({ profile: vi.fn(), importQuota: vi.fn(), importChapter: vi.fn(), retryImport: vi.fn(), discardImport: vi.fn(), chapters: vi.fn() }))
 vi.mock('../lib/api', () => ({ revisionAPI: api, revisionPolicy: { maxUploadMB: 10, maxTextChars: 100000, maxTitleChars: 200, dailyImports: 3 }, APIError: class extends Error { chapterId?: string; code?: string; constructor(message: string, _status: number, code?: string, id?: string) { super(message); this.code = code; this.chapterId = id } } }))
@@ -13,8 +14,8 @@ vi.mock('../lib/api', () => ({ revisionAPI: api, revisionPolicy: { maxUploadMB: 
 
 test('le formulaire d’import reste visible au retour pendant la vérification du quota', async () => {
   localStorage.setItem('lohni-device-id', 'import-retour')
-  api.profile.mockResolvedValueOnce({ schoolClass: '3e', subjects: ['Mathématiques'] }).mockReturnValue(new Promise(() => {}))
-  api.importQuota.mockResolvedValueOnce({ remaining: 2, resetsAt: '2026-11-12T00:00:00Z' }).mockReturnValue(new Promise(() => {}))
+  api.profile.mockImplementationOnce(async () => { const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }; rememberRevisionSnapshot('/profile', profile); return profile }).mockReturnValue(new Promise(() => {}))
+  api.importQuota.mockImplementationOnce(async () => { const quota = { remaining: 2, resetsAt: '2026-11-12T00:00:00Z' }; rememberRevisionSnapshot('/import/quota', quota); return quota }).mockReturnValue(new Promise(() => {}))
   const router = createMemoryRouter([{ path: '/import', element: <ImportCourse /> }, { path: '/courses', element: <p>Cours</p> }], { initialEntries: ['/import'] })
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)

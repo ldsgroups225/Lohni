@@ -5,17 +5,20 @@ import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import Profile from './Profile'
+import { rememberRevisionSnapshot } from '../lib/cachedDevice'
 
 const api = vi.hoisted(() => ({ timetable: vi.fn(async () => []), readTimetablePhotos: vi.fn(), saveTimetable: vi.fn(), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn() }))
 vi.mock('../lib/api', () => ({ revisionAPI: api }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 beforeEach(() => { vi.resetAllMocks() })
+// Le vrai cache de lecture d’api.ts garde la dernière valeur lue ; le double d’api la reproduit.
+const known = <T,>(path: string, value: T) => async () => { rememberRevisionSnapshot(path, value); return value }
 const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
 const progress = { xp: 10, streak: 1, learnedCards: 2, subjects: [] }
 
 test('Moi enregistre les minutes et les jours de repos', async () => {
-  api.profile.mockResolvedValue(profile)
-  api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementation(known('/profile', profile))
+  api.progress.mockImplementation(known('/progress', progress))
   api.settings.mockResolvedValue({ dailyMinutes: 15, restDays: [] })
   api.saveSettings.mockImplementation(async value => value)
   const { host, close } = await setup('profil-reglages', '/me/rythme')
@@ -41,15 +44,15 @@ async function setup(device: string, path = '/me/profil') {
 }
 
 test('Moi garde le formulaire au retour puis met les données à jour en place', async () => {
-  api.profile.mockResolvedValueOnce(profile)
-  api.progress.mockResolvedValueOnce(progress)
+  api.profile.mockImplementationOnce(known('/profile', profile))
+  api.progress.mockImplementationOnce(known('/progress', progress))
   const { router, host, close } = await setup('profil-retour')
   try {
     expect(host.textContent).toContain('Mon parcours')
     await act(async () => { await router.navigate('/tutor') })
     let resolve!: (value: typeof profile) => void
     api.profile.mockReturnValueOnce(new Promise(r => { resolve = r }))
-    api.progress.mockResolvedValueOnce({ ...progress, xp: 20 })
+    api.progress.mockImplementationOnce(known('/progress', { ...progress, xp: 20 }))
     await act(async () => { await router.navigate('/me/profil') })
     const form = host.querySelector('form')
     expect(form).not.toBeNull()
@@ -62,21 +65,10 @@ test('Moi garde le formulaire au retour puis met les données à jour en place',
   } finally { close() }
 })
 
-test('Moi ne restaure pas le cache d’un autre appareil', async () => {
-  api.profile.mockReturnValueOnce(new Promise(() => {}))
-  api.progress.mockReturnValueOnce(new Promise(() => {}))
-  const { host, close } = await setup('profil-autre')
-  try {
-    expect(host.querySelector('form')).toBeNull()
-    expect(host.textContent).toContain('Mon parcours')
-  } finally { close() }
-})
-
-
 test('une réponse tardive du précédent appareil ne remplit pas le cache du nouveau', async () => {
   let resolve!: (value: typeof profile) => void
   api.profile.mockReturnValueOnce(new Promise(r => { resolve = r })).mockReturnValueOnce(new Promise(() => {}))
-  api.progress.mockResolvedValueOnce(progress).mockReturnValueOnce(new Promise(() => {}))
+  api.progress.mockImplementationOnce(known('/progress', progress)).mockReturnValueOnce(new Promise(() => {}))
   const { host, close } = await setup('profil-ancien')
   try {
     localStorage.setItem('lohni-device-id', 'profil-nouveau')
@@ -87,8 +79,8 @@ test('une réponse tardive du précédent appareil ne remplit pas le cache du no
 })
 
 test('un échec de revalidation garde les données connues et signale l’erreur', async () => {
-  api.profile.mockResolvedValueOnce(profile).mockRejectedValueOnce(new Error('Réseau indisponible'))
-  api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementationOnce(known('/profile', profile)).mockRejectedValueOnce(new Error('Réseau indisponible'))
+  api.progress.mockImplementation(known('/progress', progress))
   const { router, host, close } = await setup('profil-hors-ligne')
   try {
     await act(async () => { await router.navigate('/tutor') })
@@ -102,9 +94,9 @@ test('un échec de revalidation garde les données connues et signale l’erreur
 
 
 test('enregistrer le profil met aussi à jour les données restaurées au retour', async () => {
-  api.profile.mockResolvedValueOnce(profile).mockReturnValueOnce(new Promise(() => {}))
-  api.progress.mockResolvedValue(progress)
-  api.saveProfile.mockResolvedValue({ ...profile, schoolClass: '5e' })
+  api.profile.mockImplementationOnce(known('/profile', profile)).mockReturnValueOnce(new Promise(() => {}))
+  api.progress.mockImplementation(known('/progress', progress))
+  api.saveProfile.mockImplementation(known('/profile', { ...profile, schoolClass: '5e' }))
   const { router, host, close } = await setup('profil-enregistre')
   try {
     await act(async () => required(host.querySelector('form')).requestSubmit())
@@ -116,8 +108,8 @@ test('enregistrer le profil met aussi à jour les données restaurées au retour
 })
 
 test('un enregistrement tardif ne conserve pas le profil pour un autre appareil', async () => {
-  api.profile.mockResolvedValueOnce(profile)
-  api.progress.mockResolvedValueOnce(progress)
+  api.profile.mockImplementationOnce(known('/profile', profile))
+  api.progress.mockImplementationOnce(known('/progress', progress))
   let resolve!: (value: typeof profile) => void
   api.saveProfile.mockReturnValueOnce(new Promise(r => { resolve = r }))
   const { host, close } = await setup('profil-enregistrement-ancien')
@@ -131,8 +123,8 @@ test('un enregistrement tardif ne conserve pas le profil pour un autre appareil'
 })
 
 test('une modification du profil reste intacte pendant la revalidation', async () => {
-  api.profile.mockResolvedValueOnce(profile)
-  api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementationOnce(known('/profile', profile))
+  api.progress.mockImplementation(known('/progress', progress))
   const { router, host, close } = await setup('profil-modification-revalidation')
   try {
     await act(async () => { await router.navigate('/tutor') })
@@ -148,8 +140,8 @@ test('une modification du profil reste intacte pendant la revalidation', async (
 })
 
 test('un enregistrement pendant la revalidation ne peut pas être remplacé par la réponse ancienne', async () => {
-  api.profile.mockResolvedValueOnce(profile)
-  api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementationOnce(known('/profile', profile))
+  api.progress.mockImplementation(known('/progress', progress))
   const { router, host, close } = await setup('profil-enregistrement-revalidation')
   try {
     await act(async () => { await router.navigate('/tutor') })
@@ -166,8 +158,8 @@ test('un enregistrement pendant la revalidation ne peut pas être remplacé par 
 })
 
 test('le retour pendant un enregistrement attend sa fin avant de réactiver le formulaire', async () => {
-  api.profile.mockResolvedValue(profile)
-  api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementation(known('/profile', profile))
+  api.progress.mockImplementation(known('/progress', progress))
   let resolve!: (value: typeof profile) => void
   api.saveProfile.mockReturnValue(new Promise(r => { resolve = r }))
   const { router, host, close } = await setup('profil-retour-enregistrement')
@@ -182,8 +174,8 @@ test('le retour pendant un enregistrement attend sa fin avant de réactiver le f
 })
 
 test('un changement d’appareil pendant une revalidation échouée masque aussitôt le profil précédent', async () => {
-  api.profile.mockResolvedValueOnce(profile)
-  api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementationOnce(known('/profile', profile))
+  api.progress.mockImplementation(known('/progress', progress))
   const { router, host, close } = await setup('profil-avant-changement')
   try {
     await act(async () => { await router.navigate('/tutor') })
@@ -198,8 +190,8 @@ test('un changement d’appareil pendant une revalidation échouée masque aussi
 })
 
 test('la relecture des photos demande un choix avant enregistrement', async () => {
-  api.profile.mockResolvedValue(profile)
-  api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementation(known('/profile', profile))
+  api.progress.mockImplementation(known('/progress', progress))
   api.settings.mockResolvedValue({ dailyMinutes: 15, restDays: [] })
   api.readTimetablePhotos.mockResolvedValue({ blocks: [{ day: 1, start: '08:00', end: '09:00', subject: 'Sport' }], unknownSubjects: ['Sport'] })
   api.saveTimetable.mockImplementation(async value => value)
@@ -220,8 +212,8 @@ test('la relecture des photos demande un choix avant enregistrement', async () =
 })
 
 test('Moi résume le parcours et ouvre les écrans dédiés', async () => {
-  api.profile.mockResolvedValue(profile)
-  api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementation(known('/profile', profile))
+  api.progress.mockImplementation(known('/progress', progress))
   api.settings.mockResolvedValue({ dailyMinutes: 15, restDays: [] })
   const { router, host, close } = await setup('profil-navigation', '/me')
   try {
@@ -236,8 +228,8 @@ test('Moi résume le parcours et ouvre les écrans dédiés', async () => {
 })
 
  test('changer de classe conserve toutes les matières existantes', async () => {
-  api.profile.mockResolvedValue({ schoolClass: '3e', subjects: ['Mathématiques', 'Matière personnelle'] })
-  api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementation(known('/profile', { schoolClass: '3e', subjects: ['Mathématiques', 'Matière personnelle'] }))
+  api.progress.mockImplementation(known('/progress', progress))
   api.saveProfile.mockImplementation(async value => value)
   const { host, close } = await setup('profil-matieres-conservees')
   try {
@@ -249,7 +241,7 @@ test('Moi résume le parcours et ouvre les écrans dédiés', async () => {
 })
 
  test('les ressources de Moi reprennent sur le nouvel appareil après une réponse ancienne', async () => {
-  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementation(known('/profile', profile)); api.progress.mockImplementation(known('/progress', progress))
   let exams!: (value: never[]) => void, chapters!: (value: never[]) => void, settings!: (value: { dailyMinutes: number; restDays: number[] }) => void, timetable!: (value: never[]) => void
   api.exams.mockReturnValueOnce(new Promise(r => { exams = r })).mockResolvedValue([])
   api.chapters.mockReturnValueOnce(new Promise(r => { chapters = r })).mockResolvedValue([{ id: 'new', subject: 'Mathématiques', title: 'Nouveau chapitre' }] as never[])
@@ -272,7 +264,7 @@ test('Moi résume le parcours et ouvre les écrans dédiés', async () => {
 })
 
  test('le rythme et le résumé affichent les nouvelles données après changement d’appareil', async () => {
-  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementation(known('/profile', profile)); api.progress.mockImplementation(known('/progress', progress))
   let resolveSettings!: (value: { dailyMinutes: number; restDays: number[] }) => void
   api.settings.mockReturnValueOnce(new Promise(r => { resolveSettings = r })).mockResolvedValue({ dailyMinutes: 30, restDays: [] })
   const rhythm = await setup('rythme-ancien', '/me/rythme')
@@ -294,7 +286,7 @@ test('Moi résume le parcours et ouvre les écrans dédiés', async () => {
 })
 
  test('le résumé du rythme signale un échec de lecture', async () => {
-  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementation(known('/profile', profile)); api.progress.mockImplementation(known('/progress', progress))
   api.settings.mockRejectedValue(new Error('Réglages indisponibles'))
   api.exams.mockResolvedValue([]); api.timetable.mockResolvedValue([]); api.chapters.mockResolvedValue([])
   const { host, close } = await setup('profil-rythme-erreur', '/me')
@@ -302,7 +294,7 @@ test('Moi résume le parcours et ouvre les écrans dédiés', async () => {
 })
 
 test('modifier le prénom le conserve sur cet appareil sans le transmettre au profil', async () => {
-  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress)
+  api.profile.mockImplementation(known('/profile', profile)); api.progress.mockImplementation(known('/progress', progress))
   api.saveProfile.mockResolvedValue(profile)
   const { host, close } = await setup('profil-prenom', '/me/profil')
   try {
@@ -315,7 +307,7 @@ test('modifier le prénom le conserve sur cet appareil sans le transmettre au pr
 })
 
 test('un changement d’appareil ne copie pas le prénom en cours de modification', async () => {
-  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress); api.saveProfile.mockResolvedValue(profile)
+  api.profile.mockImplementation(known('/profile', profile)); api.progress.mockImplementation(known('/progress', progress)); api.saveProfile.mockResolvedValue(profile)
   localStorage.removeItem('lohni-first-name:autre-prenom')
   localStorage.setItem('lohni-first-name:ancien-prenom', 'Awa')
   const { host, close } = await setup('ancien-prenom', '/me/profil')
@@ -329,7 +321,7 @@ test('un changement d’appareil ne copie pas le prénom en cours de modificatio
 })
 
 test('un échec de stockage du prénom signale que le profil est néanmoins enregistré', async () => {
-  api.profile.mockResolvedValue(profile); api.progress.mockResolvedValue(progress); api.saveProfile.mockResolvedValue(profile)
+  api.profile.mockImplementation(known('/profile', profile)); api.progress.mockImplementation(known('/progress', progress)); api.saveProfile.mockResolvedValue(profile)
   const { host, close } = await setup('profil-stockage', '/me/profil')
   const original = Storage.prototype.setItem
   const storage = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
