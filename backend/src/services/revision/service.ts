@@ -569,15 +569,15 @@ export class RevisionService {
   }
   async getSession(context: RevisionContext, continueSession = false): Promise<RevisionSession> {
     return this.execute(context, async () => {
-      const db = this.dependencies.db
-      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = 'daily' AND COALESCE(json_extract(state, '$.stale'), 0) = 0 AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY (json_extract(state, '$.position') > 0 AND NOT json_extract(state, '$.complete')) DESC, rowid DESC LIMIT 1", [context.deviceId, context.localDate])
-      if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return this.sessionResult(JSON.parse(saved.state))
-      const profile = await this.requireProfile(context.deviceId)
-      profile.examDate = (await this.nextExam(context))?.date
-      const cards = await this.selectSessionCards(context, profile)
-      const session: RevisionSession = { id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: cards.length === 0, repeated: [], elapsedMs: 0, earnedXP: 0 }
-      await db.run('INSERT INTO revision_sessions (id, device_id, local_date, state) VALUES (?, ?, ?, ?)', [session.id, context.deviceId, context.localDate, JSON.stringify(session)])
-      return this.sessionResult(session)
+      return this.openSession(context, {
+        kind: 'daily', continueSession,
+        saved: ["SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = 'daily' AND COALESCE(json_extract(state, '$.stale'), 0) = 0 AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY (json_extract(state, '$.position') > 0 AND NOT json_extract(state, '$.complete')) DESC, rowid DESC LIMIT 1", [context.deviceId, context.localDate]],
+        select: async () => {
+          const profile = await this.requireProfile(context.deviceId)
+          profile.examDate = (await this.nextExam(context))?.date
+          return this.selectSessionCards(context, profile)
+        },
+      })
     })
   }
   async getExamSession(context: RevisionContext, examId: string, continueSession = false): Promise<RevisionSession> {
@@ -586,8 +586,10 @@ export class RevisionService {
       const exam = (await this.readExams(context.deviceId)).find(item => item.id === examId)
       if (!exam || exam.date < context.localDate) throw new RevisionError('Examen introuvable ou déjà passé.')
       const kind = Date.parse(exam.date) - Date.parse(context.localDate) === 86400000 ? 'express' : 'exam'
-      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = ? AND exam_id = ? AND COALESCE(json_extract(state, '$.stale'), 0) = 0 AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate, kind, examId])
-      if (saved && (!continueSession || !JSON.parse(saved.state).complete)) return { ...await this.sessionResult(JSON.parse(saved.state)), kind }
+      return { ...await this.openSession(context, {
+        kind, examId, continueSession,
+        saved: ["SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = ? AND exam_id = ? AND COALESCE(json_extract(state, '$.stale'), 0) = 0 AND json_array_length(json_extract(state, '$.cards')) > 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate, kind, examId]],
+        select: async () => {
       const profile = await this.requireProfile(context.deviceId)
       const chapters = (await this.readChapters(context.deviceId)).filter(chapter => profile.subjects.includes(chapter.subject) && exam.subjects.includes(chapter.subject))
       const chapterIds = exam.chapterIds.filter(id => chapters.some(chapter => chapter.id === id))
@@ -608,10 +610,9 @@ export class RevisionService {
         selectDays(continueSession ? plan.days : plan.days.slice(0, 1))
         if (!selected.length) selectDays(plan.days.slice(1))
       }
-      const cards = selected.slice(0, policy.sessionCards).map(revisionCard)
-      const session: RevisionSession = { id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: cards.length === 0, repeated: [], elapsedMs: 0, earnedXP: 0 }
-      await db.run('INSERT INTO revision_sessions (id, device_id, local_date, state, kind, exam_id) VALUES (?, ?, ?, ?, ?, ?)', [session.id, context.deviceId, context.localDate, JSON.stringify(session), kind, examId])
-      return { ...await this.sessionResult(session), kind }
+      return selected.slice(0, policy.sessionCards).map(revisionCard)
+        },
+      }), kind }
     })
   }
   // Nouvelle séance limitée aux cartes ratées d’une séance terminée : hors quota de nouvelles cartes, sans XP ni série.
@@ -621,15 +622,16 @@ export class RevisionService {
       const row = typeof sourceId === 'string' ? await db.get('SELECT state FROM revision_sessions WHERE id = ? AND device_id = ? AND local_date = ?', [sourceId, context.deviceId, context.localDate]) : undefined
       if (!row) throw new RevisionError('Session introuvable.')
       if (!JSON.parse(row.state).complete) throw new RevisionError('Termine d’abord ta séance.')
-      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND kind = 'missed' AND json_extract(state, '$.sourceId') = ? AND json_extract(state, '$.complete') = 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, sourceId])
-      if (saved) return this.sessionResult(JSON.parse(saved.state))
+      return this.openSession(context, {
+        kind: 'missed', extra: { kind: 'missed', sourceId },
+        saved: ["SELECT state FROM revision_sessions WHERE device_id = ? AND kind = 'missed' AND json_extract(state, '$.sourceId') = ? AND json_extract(state, '$.complete') = 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, sourceId]],
+        emptyError: 'Aucune carte ratée à revoir.',
+        select: async () => {
       const ids = (await this.sessionResult(JSON.parse(row.state))).summary!.missed.map(item => item.cardId)
       const current = new Map((await db.all('SELECT c.*, ch.origin FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id WHERE c.device_id = ?', [context.deviceId])).map(card => [card.id, card]))
-      const cards = ids.flatMap(id => current.has(id) ? [revisionCard(current.get(id))] : []).slice(0, policy.sessionCards)
-      if (!cards.length) throw new RevisionError('Aucune carte ratée à revoir.')
-      const session: RevisionSession = { kind: 'missed', sourceId, id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: false, repeated: [], elapsedMs: 0, earnedXP: 0 }
-      await db.run("INSERT INTO revision_sessions (id, device_id, local_date, state, kind) VALUES (?, ?, ?, ?, 'missed')", [session.id, context.deviceId, context.localDate, JSON.stringify(session)])
-      return this.sessionResult(session)
+      return ids.flatMap(id => current.has(id) ? [revisionCard(current.get(id))] : []).slice(0, policy.sessionCards)
+        },
+      })
     })
   }
   // Séance limitée aux cartes d’un chapitre, sans quota quotidien : les premières à échéance, puis les nouvelles, puis le reste.
@@ -638,17 +640,29 @@ export class RevisionService {
       const db = this.dependencies.db
       const chapter = typeof chapterId === 'string' ? await db.get('SELECT origin FROM revision_chapters WHERE id = ? AND device_id = ?', [chapterId, context.deviceId]) : undefined
       if (!chapter) throw new RevisionError('Chapitre introuvable.')
-      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = 'chapter' AND json_extract(state, '$.chapterId') = ? AND json_extract(state, '$.complete') = 0 AND COALESCE(json_extract(state, '$.stale'), 0) = 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate, chapterId])
-      if (saved) return this.sessionResult(JSON.parse(saved.state))
+      return this.openSession(context, {
+        kind: 'chapter', extra: { kind: 'chapter', chapterId },
+        saved: ["SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = 'chapter' AND json_extract(state, '$.chapterId') = ? AND json_extract(state, '$.complete') = 0 AND COALESCE(json_extract(state, '$.stale'), 0) = 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate, chapterId]],
+        emptyError: 'Ce chapitre n’a pas encore de cartes à réviser.',
+        select: async () => {
       const rows = await db.all('SELECT * FROM revision_cards WHERE chapter_id = ? AND device_id = ? ORDER BY rowid', [chapterId, context.deviceId])
       const rank = (row: any) => row.reviews > 0 && row.due.slice(0, 10) <= context.localDate ? 0 : row.reviews === 0 ? 1 : 2
-      const cards = rows.map((row, index) => ({ row, index })).sort((a, b) => rank(a.row) - rank(b.row) || a.index - b.index)
+      return rows.map((row, index) => ({ row, index })).sort((a, b) => rank(a.row) - rank(b.row) || a.index - b.index)
         .slice(0, policy.sessionCards).map(({ row }) => revisionCard({ ...row, origin: chapter.origin }))
-      if (!cards.length) throw new RevisionError('Ce chapitre n’a pas encore de cartes à réviser.')
-      const session: RevisionSession = { kind: 'chapter', chapterId, id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: false, repeated: [], elapsedMs: 0, earnedXP: 0 }
-      await db.run("INSERT INTO revision_sessions (id, device_id, local_date, state, kind) VALUES (?, ?, ?, ?, 'chapter')", [session.id, context.deviceId, context.localDate, JSON.stringify(session)])
-      return this.sessionResult(session)
+        },
+      })
     })
+  }
+  // Reprend la séance enregistrée (selon `saved`), sinon la crée avec les cartes choisies et la persiste. Sans cartes : séance terminée, ou `emptyError` si fourni.
+  private async openSession(context: RevisionContext, spec: { kind: string; examId?: string; extra?: object; continueSession?: boolean; saved: [string, any[]]; emptyError?: string; select: () => Promise<RevisionCard[]> }): Promise<RevisionSession> {
+    const db = this.dependencies.db
+    const saved = await db.get(...spec.saved)
+    if (saved && (!spec.continueSession || !JSON.parse(saved.state).complete)) return this.sessionResult(JSON.parse(saved.state))
+    const cards = await spec.select()
+    if (!cards.length && spec.emptyError) throw new RevisionError(spec.emptyError)
+    const session: RevisionSession = { ...spec.extra, id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: cards.length === 0, repeated: [], elapsedMs: 0, earnedXP: 0 }
+    await db.run('INSERT INTO revision_sessions (id, device_id, local_date, state, kind, exam_id) VALUES (?, ?, ?, ?, ?, ?)', [session.id, context.deviceId, context.localDate, JSON.stringify(session), spec.kind, spec.examId ?? null])
+    return this.sessionResult(session)
   }
   private async selectSessionCards(context: RevisionContext, profile: ProfileInput): Promise<RevisionCard[]> {
     const db = this.dependencies.db
