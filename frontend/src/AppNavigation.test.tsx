@@ -1,15 +1,18 @@
 import { required } from './test/required'
 // @vitest-environment jsdom
-import { act } from 'react'
+import { act, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 import App from './App'
+import { useSecondaryScreen } from './components/Sidebar'
 
 vi.mock('./components/Companion/CompanionProvider', () => ({ CompanionProvider: ({ children }: { children: React.ReactNode }) => children }))
 vi.mock('./components/Companion/CompanionDock', () => ({ default: () => null }))
 vi.mock('@cognicatch/react', () => ({ AdaptiveToastProvider: () => null }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+
+function Detail() { const [open, setOpen] = useState(false); useSecondaryScreen(open); return <button type="button" onClick={() => setOpen(!open)}>Chapitre</button> }
 
 test('les changements d’onglet et le retour conservent le conteneur sans fondu global', async () => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
@@ -53,9 +56,6 @@ test('la barre du bas se cache sur téléphone hors des quatre onglets', async (
 })
 
 test('un écran secondaire sans adresse propre cache aussi la barre, qui revient à sa fermeture', async () => {
-  const { useSecondaryScreen } = await import('./components/Sidebar')
-  const { useState } = await import('react')
-  function Detail() { const [open, setOpen] = useState(false); useSecondaryScreen(open); return <button type="button" onClick={() => setOpen(!open)}>Chapitre</button> }
   const router = createMemoryRouter([{ element: <App />, children: [{ path: '/courses', element: <Detail /> }] }], { initialEntries: ['/courses'] })
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
