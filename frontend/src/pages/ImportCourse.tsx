@@ -1,4 +1,3 @@
-import { cachedDevice, revisionSnapshot, revisionSnapshotStale } from '../lib/cachedDevice'
 import { Button } from '../components/ui/Button'
 import { BackButton } from '../components/ui/BackButton'
 import { ErrorState, LoadingState } from '../components/ui/LoadingState'
@@ -9,10 +8,10 @@ import { APIError, revisionAPI, revisionPolicy, type RevisionProfile, type Revis
 import MarkdownContent from '../components/Chat/MarkdownContent'
 
 export default function ImportCourse() {
-  const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
+  const sharedProfile = revisionAPI.snapshot<RevisionProfile | null>('/profile')
   const navigate = useNavigate()
   const [profile, setProfile] = useState<RevisionProfile | null>(() => sharedProfile ?? null)
-  const [quota, setQuota] = useState<RevisionImportQuota | undefined>(() => revisionSnapshotStale('/import/quota') ? undefined : revisionSnapshot<RevisionImportQuota>('/import/quota'))
+  const [quota, setQuota] = useState<RevisionImportQuota | undefined>(() => revisionAPI.snapshotStale('/import/quota') ? undefined : revisionAPI.snapshot<RevisionImportQuota>('/import/quota'))
   const [imported, setImported] = useState<RevisionImportedChapter>()
   const [subject, setSubject] = useState(() => sharedProfile?.subjects[0] ?? '')
   const [title, setTitle] = useState('')
@@ -44,18 +43,9 @@ export default function ImportCourse() {
     finally { importController.current = null; setBusy(false) }
   }
   const load = useCallback(async function load(isActive: () => boolean = () => true) {
-    const device = cachedDevice()
-    let saved: RevisionProfile | null, currentQuota: RevisionImportQuota
-    try { [saved, currentQuota] = await Promise.all([revisionAPI.profile(), revisionAPI.importQuota()]) }
-    catch (cause) {
-      if (isActive() && device !== cachedDevice()) {
-        setProfile(null); setQuota(undefined); setSubject(''); setBusy(true)
-        return load(isActive)
-      }
-      throw cause
-    }
+    const [saved, currentQuota] = await revisionAPI.read(() => Promise.all([revisionAPI.profile(), revisionAPI.importQuota()]),
+      () => { setProfile(null); setQuota(undefined); setSubject(''); setBusy(true) }, isActive)
     if (!isActive()) return
-    if (device !== cachedDevice()) { setProfile(null); setQuota(undefined); setSubject(''); setBusy(true); return load(isActive) }
     setProfile(saved)
     setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
     setQuota(currentQuota)

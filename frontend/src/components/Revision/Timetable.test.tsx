@@ -3,6 +3,9 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { expect, test, vi } from 'vitest'
 import Timetable from './Timetable'
+import { revisionAPI as revisionDouble } from '../../lib/api'
+import { revisionCacheDouble } from '../../lib/revisionApiDouble'
+Object.assign(revisionDouble, revisionCacheDouble)
 
 const api = vi.hoisted(() => ({ timetable: vi.fn(), readTimetablePhotos: vi.fn(), saveTimetable: vi.fn(), saveProfile: vi.fn() }))
 vi.mock('../../lib/api', () => ({ revisionAPI: api }))

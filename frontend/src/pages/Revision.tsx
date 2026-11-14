@@ -8,7 +8,6 @@ import { CheckIcon, CloseIcon } from '../components/ui/NavigationIcons'
 import { Progress } from '../components/ui/Progress'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { useOverlayNavigation } from '../lib/useOverlayNavigation'
-import { cachedDevice, revisionSnapshot } from '../lib/cachedDevice'
 import { useLeaveConfirmation } from '../lib/useLeaveConfirmation'
 import { withOccurrenceKeys } from '../lib/occurrenceKeys'
 import { confirmDialog } from '../lib/confirm'
@@ -21,7 +20,7 @@ import { chatJSON, revisionAPI, revisionPolicy, revisionSyncStatus, syncRevision
 
 // Premier rendu instantané au retour : la dernière séance connue (hors séances ciblées) avec son profil.
 function lastKnown(scoped: boolean) {
-  const profile = revisionSnapshot<RevisionProfile | null>('/profile'), session = revisionSnapshot<RevisionSession>('/session')
+  const profile = revisionAPI.snapshot<RevisionProfile | null>('/profile'), session = revisionAPI.snapshot<RevisionSession>('/session')
   return !scoped && profile && session ? { profile, session } : null
 }
 
@@ -129,25 +128,14 @@ export default function Revision() {
     let active = true
     setBusy(true)
     async function load() {
-      const requestDevice = cachedDevice()
       try {
-        const saved = await revisionAPI.profile()
-        const current = saved ? await loadSession(continueOnArrival) : null
+        const [saved, current] = await revisionAPI.read(async () => { const saved = await revisionAPI.profile(); return [saved, saved ? await loadSession(continueOnArrival) : null] as const },
+          () => { setProfile(null); setSession(null); setValidated(false) }, () => active)
         if (!active) return
-        if (requestDevice !== cachedDevice()) {
-          setProfile(null); setSession(null)
-          await load()
-          return
-        }
         setProfile(saved)
         setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
         if (current) display(current)
       } catch (e) {
-        if (active && requestDevice !== cachedDevice()) {
-          setProfile(null); setSession(null); setValidated(false)
-          await load()
-          return
-        }
         if (active) setError(e instanceof Error ? e.message : 'Impossible de charger la révision.')
       } finally { if (active) setBusy(false) }
     }
@@ -157,8 +145,7 @@ export default function Revision() {
   useEffect(() => {
     if (!validated || !chapterId) return
     let active = true
-    const device = cachedDevice()
-    revisionAPI.chapters().then(values => { if (active && device === cachedDevice()) setChapters(values) }).catch(() => {})
+    revisionAPI.read(revisionAPI.chapters, () => {}, () => active).then(values => { if (active) setChapters(values) }).catch(() => {})
     return () => { active = false }
   }, [validated, chapterId])
   // biome-ignore lint/correctness/useExhaustiveDependencies: Recharger le bilan pour chaque nouvelle session terminée.

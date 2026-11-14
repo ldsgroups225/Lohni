@@ -3,9 +3,8 @@ import { Button } from '../ui/Button'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import curriculum from '../../data/curriculum-ci.json'
-import { DEVICE_CHANGED, cachedDevice } from '../../lib/cachedDevice'
 import { readFirstName, writeFirstName } from '../../lib/localFirstName'
-import { revisionAPI, revisionPolicy } from '../../lib/api'
+import { DEVICE_CHANGED, revisionAPI, revisionPolicy } from '../../lib/api'
 
 export default function Onboarding() {
   const navigate = useNavigate()
@@ -15,7 +14,7 @@ export default function Onboarding() {
   const requestedStep = Number(search.get('etape'))
   const requested = Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= 6 ? requestedStep : 1
   const setStep = (next: number) => { setReaction(value => value + 1); const params = new URLSearchParams(search); params.set('etape', String(next)); setSearch(params, { state: { ...location.state, onboardingDepth: depth + 1 } }) }
-  const [nameDevice] = useState(cachedDevice)
+  const [nameDevice] = useState(revisionAPI.device)
   const [firstName, setFirstName] = useState(() => readFirstName(true))
   const [saved] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('lohni-onboarding') ?? '{}') ?? {} } catch { return {} }
@@ -71,7 +70,7 @@ export default function Onboarding() {
       return
     }
     if (!selectedSubject || !title.trim()) return
-    if (nameDevice !== cachedDevice()) { setError(DEVICE_CHANGED); return }
+    if (nameDevice !== revisionAPI.device()) { setError(DEVICE_CHANGED); return }
     writeFirstName(firstName.trim())
     submitting.current = true
     setBusy(true)
@@ -107,9 +106,9 @@ export default function Onboarding() {
       </div>
     </>}
     {step === 2 && <>
-      <label className="block space-y-2"><span>Prénom (facultatif)</span><input className={input} autoComplete="given-name" value={firstName} onChange={event => { const value = event.target.value; setFirstName(value); if (nameDevice === cachedDevice()) writeFirstName(value, true) }} /></label>
+      <label className="block space-y-2"><span>Prénom (facultatif)</span><input className={input} autoComplete="given-name" value={firstName} onChange={event => { const value = event.target.value; setFirstName(value); if (nameDevice === revisionAPI.device()) writeFirstName(value, true) }} /></label>
       <p className="text-sm text-muted">Ton prénom reste sur cet appareil.</p>
-      <button type="button" className="min-h-11 underline" onClick={() => { setFirstName(''); if (nameDevice === cachedDevice()) writeFirstName('', true); setStep(3) }}>Passer cette étape</button>
+      <button type="button" className="min-h-11 underline" onClick={() => { setFirstName(''); if (nameDevice === revisionAPI.device()) writeFirstName('', true); setStep(3) }}>Passer cette étape</button>
     </>}
     {step === 3 && <>
       {[[curriculum.slice(0, 4), 'Collège'], [curriculum.slice(4), 'Lycée']].map(([items, label]) => <fieldset key={label as string}><legend className="mb-2 font-semibold">{label as string}</legend><div className={`grid gap-2 ${label === 'Collège' ? 'grid-cols-4' : 'grid-cols-3'}`}>{(items as typeof curriculum).map(item => <button key={item.schoolClass} type="button" aria-pressed={schoolClass === item.schoolClass} className={`min-h-13 rounded-2xl border px-1 font-semibold ${schoolClass === item.schoolClass ? 'border-primary bg-tint text-primary' : 'border-border bg-surface'}`} onClick={() => {

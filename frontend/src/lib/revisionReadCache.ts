@@ -22,3 +22,13 @@ export const revisionSnapshotStale = (...paths: string[]) => paths.some(path => 
 export function rememberRevisionSnapshot(path: string, value: unknown) {
   snapshots.set(path, { device: cachedDevice(), day: new Date().toDateString(), value })
 }
+
+// Lit sur l’appareil courant : si l’appareil change pendant la lecture (réponse ou erreur), la valeur est écartée, `onChanged` remet l’écran à zéro et la lecture repart.
+export async function readOnDevice<T>(read: () => Promise<T>, onChanged: () => void = () => {}, isActive: () => boolean = () => true): Promise<T> {
+  const device = cachedDevice()
+  const same = () => !device || device === cachedDevice()
+  try { const value = await read(); if (same() || !isActive()) return value }
+  catch (error) { if (same() || !isActive()) throw error }
+  onChanged()
+  return readOnDevice(read, onChanged, isActive)
+}

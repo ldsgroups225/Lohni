@@ -13,6 +13,9 @@ vi.mock('../../lib/api', () => ({
   revisionPolicy: {}, revisionSyncStatus: () => ({ online: true, pending: 0 }), syncRevisionAnswers: () => {}, chatJSON: async () => ({ chatId: '1' }),
 }))
 import Revision from '../../pages/Revision'
+import { revisionAPI as revisionDouble } from '../../lib/api'
+import { revisionCacheDouble } from '../../lib/revisionApiDouble'
+Object.assign(revisionDouble, revisionCacheDouble)
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 

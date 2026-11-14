@@ -1,5 +1,6 @@
 import type { RevisionPlan } from '../../../backend/src/services/revision/plan';
-import { DEVICE_CHANGED, cachedDevice, currentRevisionCacheVersion, invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } from "./cachedDevice";
+import { DEVICE_CHANGED, cachedDevice, currentRevisionCacheVersion, invalidateRevisionCache, readOnDevice, rememberRevisionSnapshot, revisionSnapshot, revisionSnapshotStale } from "./revisionReadCache";
+export { DEVICE_CHANGED };
 import { env } from "../config/env";
 import { REVISION_POLICY as revisionPolicy } from "../../../backend/src/services/revision/policy";
 import { advanceSession } from "../../../backend/src/services/revision/session";
@@ -934,6 +935,11 @@ async function revisionHome() {
 }
 
 export const revisionAPI = {
+  // Lecture du cache pour les pages : instantané synchrone, périmé, appareil courant, et lecture qui rejette la réponse d’un autre appareil.
+  device: cachedDevice,
+  snapshot: revisionSnapshot,
+  snapshotStale: revisionSnapshotStale,
+  read: readOnDevice,
   timetable: () => revisionRequest<TimetableBlock[]>('/timetable'),
   saveTimetable: (blocks: TimetableBlock[]) => revisionMutation<TimetableBlock[]>('/timetable', 'PUT', blocks),
   readTimetablePhotos: (files: File[]) => { const form = new FormData(); files.forEach(file => { form.append('file', file) }); return revisionMutation<{ blocks: TimetableBlock[]; unknownSubjects: string[] }>('/timetable/photos', 'POST', form); },

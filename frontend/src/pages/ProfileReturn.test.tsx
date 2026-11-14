@@ -5,10 +5,13 @@ import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import Profile from './Profile'
-import { rememberRevisionSnapshot } from '../lib/cachedDevice'
+import { rememberRevisionSnapshot } from '../lib/revisionApiDouble'
+import { revisionAPI as revisionDouble } from '../lib/api'
+import { revisionCacheDouble } from '../lib/revisionApiDouble'
+Object.assign(revisionDouble, revisionCacheDouble)
 
 const api = vi.hoisted(() => ({ timetable: vi.fn(async () => []), readTimetablePhotos: vi.fn(), saveTimetable: vi.fn(), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn() }))
-vi.mock('../lib/api', () => ({ revisionAPI: api }))
+vi.mock('../lib/api', () => ({ revisionAPI: api, DEVICE_CHANGED: 'L’appareil a changé. Recharge la page avant de continuer.' }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 beforeEach(() => { vi.resetAllMocks() })
 // Le vrai cache de lecture d’api.ts garde la dernière valeur lue ; le double d’api la reproduit.

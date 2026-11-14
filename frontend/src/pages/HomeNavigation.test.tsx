@@ -9,7 +9,10 @@ vi.mock('../lib/api', () => ({ revisionAPI: api, revisionDeviceId: () => 'device
 vi.mock('../components/Revision/Onboarding', () => ({ default: () => <p>Onboarding</p> }))
 import Home from './Home'
 import Profile from './Profile'
-import { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } from '../lib/cachedDevice'
+import { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } from '../lib/revisionApiDouble'
+import { revisionAPI as revisionDouble } from '../lib/api'
+import { revisionCacheDouble } from '../lib/revisionApiDouble'
+Object.assign(revisionDouble, revisionCacheDouble)
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 test('le retour apres onboarding attend le profil au lieu de montrer onboarding', async () => {

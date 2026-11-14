@@ -10,6 +10,9 @@ vi.mock('react', async importOriginal => ({
 vi.mock('../lib/api', () => ({ revisionAPI: {}, revisionPolicy: { minimumSeenRatio: 0.5 } }))
 import Home from './Home'
 import Courses from './Courses'
+import { revisionAPI as revisionDouble } from '../lib/api'
+import { revisionCacheDouble } from '../lib/revisionApiDouble'
+Object.assign(revisionDouble, revisionCacheDouble)
 
 const profile = { schoolClass: 'terminale', series: 'C', subjects: ['Mathématiques'] }
 const progress = { xp: 0, streak: 0, learnedCards: 0, subjects: [{ subjectId: 'math', name: 'Mathématiques', mastery: null, status: 'À découvrir' }] }

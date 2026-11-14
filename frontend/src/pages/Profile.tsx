@@ -9,17 +9,16 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import { REVISION_POLICY as policy } from '../../../backend/src/services/revision/policy'
-import { revisionAPI, type RevisionProfile, type RevisionProgress, type RevisionExam, type RevisionChapter, type RevisionSettings } from '../lib/api'
+import { DEVICE_CHANGED, revisionAPI, type RevisionProfile, type RevisionProgress, type RevisionExam, type RevisionChapter, type RevisionSettings } from '../lib/api'
 import { readFirstName, writeFirstName } from '../lib/localFirstName'
-import { DEVICE_CHANGED, cachedDevice, revisionSnapshot } from '../lib/cachedDevice'
 
 let profileSave: Promise<RevisionProfile> | null = null
 
 export default function Profile() {
   const page = useLocation().pathname.split('/')[2] ?? ''
-  const device = cachedDevice()
-  const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
-  const sharedProgress = revisionSnapshot<RevisionProgress>('/progress')
+  const device = revisionAPI.device()
+  const sharedProfile = revisionAPI.snapshot<RevisionProfile | null>('/profile')
+  const sharedProgress = revisionAPI.snapshot<RevisionProgress>('/progress')
   const [profile, setProfile] = useState<RevisionProfile | null>(() => sharedProfile ?? null)
   const [progress, setProgress] = useState<RevisionProgress | null>(() => sharedProgress ?? null)
   const [busy, setBusy] = useState(sharedProfile === undefined || !!profileSave)
@@ -51,23 +50,13 @@ export default function Profile() {
       const pending = profileSave
       if (pending) await pending.catch(() => {})
       if (!active) return
-      const requestDevice = cachedDevice()
-      if (nameDevice.current !== requestDevice) { nameDevice.current = requestDevice; setFirstName(readFirstName()) }
       const requestEdits = edits.current
-      let value: RevisionProfile | null, stats: RevisionProgress
-      try { [value, stats] = await Promise.all([revisionAPI.profile(), revisionAPI.progress()]) }
-      catch (cause) {
-        if (active && requestDevice !== cachedDevice()) {
-          setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true); setResourceVersion(value => value + 1)
-          return load()
-        }
-        throw cause
-      }
+      const [value, stats] = await revisionAPI.read(() => {
+        const requestDevice = revisionAPI.device()
+        if (nameDevice.current !== requestDevice) { nameDevice.current = requestDevice; setFirstName(readFirstName()) }
+        return Promise.all([revisionAPI.profile(), revisionAPI.progress()])
+      }, () => { setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true); setResourceVersion(value => value + 1) }, () => active)
       if (!active) return
-      if (requestDevice !== cachedDevice()) {
-        setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true); setResourceVersion(value => value + 1)
-        return load()
-      }
       if (requestEdits === edits.current && !saving.current && !dirty.current) setProfile(value)
       setProgress(stats)
     }
@@ -80,17 +69,10 @@ export default function Profile() {
   useEffect(() => {
     let active = true
     async function load<T>(read: () => Promise<T>, accept: (value: T) => void, fail: (cause: unknown) => void): Promise<void> {
-      const device = cachedDevice()
       try {
-        const value = await read()
-        if (!active) return
-        if (device !== cachedDevice()) return load(read, accept, fail)
-        accept(value)
-      } catch (cause) {
-        if (!active) return
-        if (device !== cachedDevice()) return load(read, accept, fail)
-        fail(cause)
-      }
+        const value = await revisionAPI.read(read, () => {}, () => active)
+        if (active) accept(value)
+      } catch (cause) { if (active) fail(cause) }
     }
     void load(revisionAPI.timetable, value => { setTimetableCount(value.length); setTimetableError(false) }, () => setTimetableError(true))
     void load(revisionAPI.exams, value => { setExams(value); setExamsLoaded(true) }, cause => setError(cause instanceof Error ? cause.message : 'Impossible de charger tes examens.'))
@@ -103,10 +85,10 @@ export default function Profile() {
     event.preventDefault()
     if (!settings || settingsBusy) return
     setSettingsBusy(true); setSettingsError(''); setSettingsSaved(false)
-    const device = cachedDevice()
+    const device = revisionAPI.device()
     try {
       const value = await revisionAPI.saveSettings(settings)
-      if (device !== cachedDevice()) { setSettings(null); throw new Error(DEVICE_CHANGED) }
+      if (device !== revisionAPI.device()) { setSettings(null); throw new Error(DEVICE_CHANGED) }
       setSettings(value)
       setSettingsSaved(true)
     } catch (cause) { setSettingsError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer tes réglages.') }
@@ -122,17 +104,17 @@ export default function Profile() {
   async function save(event: FormEvent) {
     event.preventDefault()
     if (!profile || profileSave) return
-    if (page === 'profil' && nameDevice.current !== cachedDevice()) { setError(DEVICE_CHANGED); return }
+    if (page === 'profil' && nameDevice.current !== revisionAPI.device()) { setError(DEVICE_CHANGED); return }
     saving.current = true
     setBusy(true)
     setSaved(false)
     setError('')
-    const requestDevice = cachedDevice()
+    const requestDevice = revisionAPI.device()
     try {
       const promise = revisionAPI.saveProfile({ ...profile, examDate: undefined })
       profileSave = promise
       const value = await promise
-      if (requestDevice !== cachedDevice()) {
+      if (requestDevice !== revisionAPI.device()) {
         setProfile(null); setProgress(null)
         throw new Error(DEVICE_CHANGED)
       }

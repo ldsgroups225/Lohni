@@ -7,6 +7,9 @@ import { expect, test, vi } from 'vitest'
 const api = vi.hoisted(() => ({ saved: false, saveProfile: vi.fn(), generateChapter: vi.fn() }))
 vi.mock('../../lib/api', () => ({ revisionAPI: { saveProfile: async (value: unknown) => { api.saveProfile(value); api.saved = true }, generateChapter: api.generateChapter }, revisionPolicy: { maxTitleChars: 100 } }))
 import Onboarding from './Onboarding'
+import { revisionAPI as revisionDouble } from '../../lib/api'
+import { revisionCacheDouble } from '../../lib/revisionApiDouble'
+Object.assign(revisionDouble, revisionCacheDouble)
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 function Home() { return api.saved ? <p>Accueil</p> : <Onboarding /> }
 

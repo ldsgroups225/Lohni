@@ -3,7 +3,6 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { AdaptiveErrorBoundary, adaptiveToast } from '@cognicatch/react'
 import { Link, useNavigate } from "react-router-dom";
-import { cachedDevice, currentRevisionCacheVersion } from '../lib/cachedDevice'
 import PromptBox from "../components/Landing/PromptBox";
 import { chatMultipart, chatJSON, getChats, revisionAPI, type RevisionChapter, type RevisionProfile, type ChatInfo } from "../lib/api";
 
@@ -44,30 +43,16 @@ export default function Landing() {
   useEffect(() => {
     let active = true;
     async function loadCourses() {
-      const device = cachedDevice(), version = currentRevisionCacheVersion();
       try {
-        const value = await revisionAPI.chapters();
-        if (!active) return;
-        if (device !== cachedDevice() || version !== currentRevisionCacheVersion()) { setChapters(null); void loadCourses(); return; }
-        setChapters(value);
-      } catch {
-        if (!active) return;
-        if (device !== cachedDevice() || version !== currentRevisionCacheVersion()) { setChapters(null); void loadCourses(); return; }
-        setChaptersError(true);
-      }
+        const value = await revisionAPI.read(revisionAPI.chapters, () => setChapters(null), () => active);
+        if (active) setChapters(value);
+      } catch { if (active) setChaptersError(true); }
     }
     async function loadProfile() {
-      const device = cachedDevice(), version = currentRevisionCacheVersion();
       try {
-        const value = await revisionAPI.profile();
-        if (!active) return;
-        if (device !== cachedDevice() || version !== currentRevisionCacheVersion()) { setProfile(null); void loadProfile(); return; }
-        setProfile(value); setProfileLoaded(true);
-      } catch {
-        if (!active) return;
-        if (device !== cachedDevice() || version !== currentRevisionCacheVersion()) { setProfile(null); void loadProfile(); return; }
-        setProfileError(true);
-      }
+        const value = await revisionAPI.read(revisionAPI.profile, () => setProfile(null), () => active);
+        if (active) { setProfile(value); setProfileLoaded(true); }
+      } catch { if (active) setProfileError(true); }
     }
     void loadCourses(); void loadProfile();
     return () => { active = false; };

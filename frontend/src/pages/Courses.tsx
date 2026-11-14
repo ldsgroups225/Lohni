@@ -1,5 +1,4 @@
 import { HelpIcon, ClipboardIcon, DebateIcon, HeadphonesIcon } from '../components/ui/NavigationIcons'
-import { cachedDevice, revisionSnapshot, revisionSnapshotStale } from '../lib/cachedDevice'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { PendingRead } from '../components/ui/PendingRead'
 import { confirmDialog } from '../lib/confirm'
@@ -52,12 +51,12 @@ function CardEditor({ card, busy, onSave, onCancel, onDelete }: {
 }
 
 export default function Courses() {
-  const sharedChapters = revisionSnapshot<RevisionChapter[]>('/chapters')
-  const sharedProgress = revisionSnapshot<RevisionProgress>('/progress')
+  const sharedChapters = revisionAPI.snapshot<RevisionChapter[]>('/chapters')
+  const sharedProgress = revisionAPI.snapshot<RevisionProgress>('/progress')
   const animateEntry = useRef(!sharedChapters).current
   const [chapters, setChapters] = useState<RevisionChapter[]>(() => sharedChapters ?? [])
   const [, setProgress] = useState<RevisionProgress | null>(() => sharedProgress ?? null)
-  const [stale, setStale] = useState(() => revisionSnapshotStale('/chapters', '/progress'))
+  const [stale, setStale] = useState(() => revisionAPI.snapshotStale('/chapters', '/progress'))
   const [editing, setEditing] = useState<string | null>(null)
   const [summaryId, setSummaryId] = useState<string | null>(null)
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null)
@@ -67,18 +66,9 @@ export default function Courses() {
   const operating = useRef(false)
 
   const load = useCallback(async function load(isActive: () => boolean = () => true) {
-    const requestDevice = cachedDevice()
-    let nextChapters: RevisionChapter[], nextProgress: RevisionProgress
-    try { [nextChapters, nextProgress] = await Promise.all([revisionAPI.chapters(), revisionAPI.progress()]) }
-    catch (cause) {
-      if (isActive() && requestDevice && requestDevice !== cachedDevice()) {
-        setChapters([]); setProgress(null); setBusy(true); setStale(true)
-        return load(isActive)
-      }
-      throw cause
-    }
+    const [nextChapters, nextProgress] = await revisionAPI.read(() => Promise.all([revisionAPI.chapters(), revisionAPI.progress()]),
+      () => { setChapters([]); setProgress(null); setBusy(true); setStale(true) }, isActive)
     if (!isActive()) return
-    if (requestDevice && requestDevice !== cachedDevice()) { setChapters([]); setProgress(null); setBusy(true); setStale(true); return load(isActive) }
     setChapters(nextChapters)
     setProgress(nextProgress)
     setStale(false)

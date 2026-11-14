@@ -4,6 +4,9 @@ import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 import Revision from './Revision'
+import { revisionAPI as revisionDouble } from '../lib/api'
+import { revisionCacheDouble } from '../lib/revisionApiDouble'
+Object.assign(revisionDouble, revisionCacheDouble)
 
 vi.mock('../lib/api', () => ({
   revisionAPI: { profile: async () => ({ subjects: ['Mathématiques'] }), examSession: async () => ({ id: 'e', kind: 'express', complete: true, position: 0, cards: [], earnedXP: 0 }), progress: async () => ({ xp: 0, streak: 0 }) },

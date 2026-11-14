@@ -6,7 +6,10 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 import ImportCourse from './ImportCourse'
 import { APIError } from '../lib/api'
-import { rememberRevisionSnapshot } from '../lib/cachedDevice'
+import { rememberRevisionSnapshot } from '../lib/revisionApiDouble'
+import { revisionAPI as revisionDouble } from '../lib/api'
+import { revisionCacheDouble } from '../lib/revisionApiDouble'
+Object.assign(revisionDouble, revisionCacheDouble)
 
 const api = vi.hoisted(() => ({ profile: vi.fn(), importQuota: vi.fn(), importChapter: vi.fn(), retryImport: vi.fn(), discardImport: vi.fn(), chapters: vi.fn() }))
 vi.mock('../lib/api', () => ({ revisionAPI: api, revisionPolicy: { maxUploadMB: 10, maxTextChars: 100000, maxTitleChars: 200, dailyImports: 3 }, APIError: class extends Error { chapterId?: string; code?: string; constructor(message: string, _status: number, code?: string, id?: string) { super(message); this.code = code; this.chapterId = id } } }))

@@ -7,6 +7,9 @@ vi.mock('react', async original => ({ ...await original<typeof import('react')>(
 vi.mock('../lib/api', () => ({ revisionAPI: {}, revisionPolicy: {}, revisionSyncStatus: () => ({ online: true, pending: 0 }) }))
 import Home from './Home'
 import Revision from './Revision'
+import { revisionAPI as revisionDouble } from '../lib/api'
+import { revisionCacheDouble } from '../lib/revisionApiDouble'
+Object.assign(revisionDouble, revisionCacheDouble)
 const render = (node: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>)
 beforeEach(() => { state.values = [] })
 test('accueil présente la session et les cartes vues par matière', () => {

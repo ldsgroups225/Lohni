@@ -12,6 +12,9 @@ vi.mock('../lib/api', () => ({ revisionAPI: {}, revisionPolicy: {}, revisionSync
 import Home from './Home'
 import Courses from './Courses'
 import Revision from './Revision'
+import { revisionAPI as revisionDouble } from '../lib/api'
+import { revisionCacheDouble } from '../lib/revisionApiDouble'
+Object.assign(revisionDouble, revisionCacheDouble)
 const render = (element: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{element}</MemoryRouter>)
 beforeEach(() => { state.values = [] })
 

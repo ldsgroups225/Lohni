@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { REVISION_POLICY as policy } from '../../../../backend/src/services/revision/policy'
 import { revisionAPI, type RevisionProfile, type TimetableBlock } from '../../lib/api'
 import { Button } from '../ui/Button'
-import { cachedDevice } from '../../lib/cachedDevice'
 
 const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
@@ -16,18 +15,11 @@ export default function Timetable({ profile, onProfile }: { profile: RevisionPro
   const [saved, setSaved] = useState(false)
   useEffect(() => {
     let active = true
-    async function load(): Promise<void> {
-      const device = cachedDevice()
+    async function load() {
       try {
-        const value = await revisionAPI.timetable()
-        if (!active) return
-        if (device !== cachedDevice()) return load()
-        setBlocks(value)
-      } catch {
-        if (!active) return
-        if (device !== cachedDevice()) return load()
-        setError('Impossible de charger ton emploi du temps.')
-      }
+        const value = await revisionAPI.read(revisionAPI.timetable, () => {}, () => active)
+        if (active) setBlocks(value)
+      } catch { if (active) setError('Impossible de charger ton emploi du temps.') }
     }
     void load()
     return () => { active = false }
