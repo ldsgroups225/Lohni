@@ -350,6 +350,11 @@ export async function podcastStart(payload: { topic: string; duration?: "short" 
   return data
 }
 
+export async function podcastCancel(pid: string) {
+  const response = await fetch(`${env.backend}/podcast/${encodeURIComponent(pid)}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error('Impossible d’annuler le podcast.')
+}
+
 export function connectPodcastStream(pid: string, onEvent: (ev: any) => void) {
   const wsUrl = `${env.backend.replace(/^http/, "ws")}/ws/podcast?pid=${pid}`
   const ws = new WebSocket(wsUrl)

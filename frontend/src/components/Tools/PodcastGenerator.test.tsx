@@ -5,13 +5,18 @@ import { createRoot } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 
-const stream = vi.hoisted(() => ({ emit: (_event: unknown) => {}, fail: false }))
+const stream = vi.hoisted(() => ({ emit: (_event: unknown) => {}, fail: false, cancelled: [] as string[], start: null as null | (() => Promise<{ pid: string }>) }))
 vi.mock('../../lib/api', () => ({
   revisionAPI: { chapters: async () => [] },
-  podcastStart: async () => { if (stream.fail) throw new Error('Failed to fetch'); return { pid: '1' } },
+  podcastCancel: async (pid: string) => { stream.cancelled.push(pid) },
+  podcastStart: async () => { if (stream.fail) throw new Error('Failed to fetch'); return stream.start ? stream.start() : { pid: '1' } },
   connectPodcastStream: (_id: string, emit: (event: unknown) => void) => { stream.emit = emit; return { close: () => {} } },
 }))
 import PodcastGenerator from './PodcastGenerator'
+import { podcastJob } from './podcastJob'
+import { afterEach } from 'vitest'
+
+afterEach(() => { podcastJob.reset(); stream.cancelled = []; stream.start = null })
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -77,5 +82,49 @@ test('une erreur de synthèse vocale est expliquée', async () => {
     await act(async () => root.render(<MemoryRouter initialEntries={[{ pathname: '/tools', state: { podcastPid: '1', podcastTopic: 'Fractions' } }]}><PodcastGenerator /></MemoryRouter>))
     await act(async () => { stream.emit({ type: 'error', error: 'tts_error' }) })
     expect(host.textContent).toContain('La synthèse vocale est indisponible')
+  } finally { act(() => root.unmount()); host.remove() }
+})
+
+test('le résultat reste disponible après avoir quitté puis rouvert le podcast', async () => {
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<MemoryRouter initialEntries={[{ pathname: '/tools', state: { podcastPid: 'reprise', podcastTopic: 'Fractions' } }]}><PodcastGenerator /></MemoryRouter>))
+    await act(async () => root.render(<MemoryRouter><div>Autre écran</div></MemoryRouter>))
+    await act(async () => { stream.emit({ type: 'script', data: { segments: [{ spk: 'A', md: 'Bonjour' }] } }); stream.emit({ type: 'audio', file: '/reprise.mp3' }); stream.emit({ type: 'done' }) })
+    await act(async () => root.render(<MemoryRouter><PodcastGenerator /></MemoryRouter>))
+    expect(host.textContent).toContain('Podcast prêt')
+    expect(host.textContent).toContain('Bonjour')
+  } finally { act(() => root.unmount()); host.remove() }
+})
+
+
+test('annuler interrompt la création sur le serveur', async () => {
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<MemoryRouter initialEntries={[{ pathname: '/tools', state: { podcastPid: 'annulation', podcastTopic: 'Fractions' } }]}><PodcastGenerator /></MemoryRouter>))
+    await act(async () => { required([...host.querySelectorAll('button')].find(button => button.textContent === 'Annuler')).click() })
+    expect(stream.cancelled).toEqual(['annulation'])
+    await act(async () => { stream.emit({ type: 'audio', file: '/ignored.mp3' }); stream.emit({ type: 'done' }) })
+    expect(host.textContent).not.toContain('Podcast prêt')
+  } finally { act(() => root.unmount()); host.remove() }
+})
+
+
+test('annuler pendant le démarrage annule aussi le travail créé tardivement', async () => {
+  let complete: (value: { pid: string }) => void = () => {}
+  stream.start = () => new Promise(resolve => { complete = resolve })
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<MemoryRouter><PodcastGenerator /></MemoryRouter>))
+    const input = required(host.querySelector('textarea'))
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(input, 'Fractions'); input.dispatchEvent(new Event('input', { bubbles: true })) })
+    await act(async () => { required([...host.querySelectorAll('button')].find(button => button.textContent === 'Créer le podcast')).click() })
+    await act(async () => { required([...host.querySelectorAll('button')].find(button => button.textContent === 'Annuler')).click() })
+    await act(async () => complete({ pid: 'retard' }))
+    expect(stream.cancelled).toEqual(['retard'])
+    expect(host.textContent).not.toContain('Podcast prêt')
   } finally { act(() => root.unmount()); host.remove() }
 })

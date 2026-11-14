@@ -52,3 +52,13 @@ test('la durée détaillée demande davantage de dialogue que la durée courte',
   expect(short).toContain('8 et 12 segments')
   expect(long).toContain('13 et 16 segments')
 })
+
+test('annuler la génération interrompt la requête au modèle', async () => {
+  vi.mocked(llm.invoke).mockImplementation((_messages, options) => new Promise((_resolve, reject) => {
+    options?.signal?.addEventListener('abort', () => reject(new DOMException('Annulé', 'AbortError')))
+  }))
+  const controller = new AbortController()
+  const result = makeScript('Sujet', 'Sujet', 'short', controller.signal)
+  controller.abort()
+  await expect(result).rejects.toMatchObject({ name: 'AbortError' })
+})

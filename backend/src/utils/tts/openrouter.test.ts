@@ -29,3 +29,13 @@ describe('OpenRouter TTS', () => {
     await expect(requestOpenRouterSpeech('a', { apiKey: 'k', model: 'm', voice: 'v' }, fetchMock as typeof fetch)).rejects.toThrow('openrouter_tts_http_402')
   })
 })
+
+it('annuler la synthèse interrompt la requête HTTP', async () => {
+  const controller = new AbortController()
+  const fetchMock = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+    init.signal?.addEventListener('abort', () => reject(new DOMException('Annulé', 'AbortError')))
+  }))
+  const result = requestOpenRouterSpeech('Bonjour', { apiKey: 'k', model: 'm', voice: 'v', signal: controller.signal }, fetchMock as typeof fetch)
+  controller.abort()
+  await expect(result).rejects.toMatchObject({ name: 'AbortError' })
+})

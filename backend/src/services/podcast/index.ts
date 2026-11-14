@@ -25,7 +25,7 @@ function j1(s: string) {
   return ""
 }
 
-export async function makeScript(input: string, topic?: string, duration?: "short" | "long"): Promise<POut> {
+export async function makeScript(input: string, topic?: string, duration?: "short" | "long", signal?: AbortSignal): Promise<POut> {
   const top = normalizeTopic(topic || "general")
   const m = [
     { role: "system", content: duration ? P.replace("8 et 16 segments", duration === "short" ? "8 et 12 segments" : "13 et 16 segments") : P },
@@ -36,8 +36,10 @@ export async function makeScript(input: string, topic?: string, duration?: "shor
   for (let attempt = 0; attempt < 2; attempt++) {
     let r: Awaited<ReturnType<typeof llm.invoke>>
     try {
-      r = await llm.invoke(m)
+      signal?.throwIfAborted()
+      r = await llm.invoke(m, { signal })
     } catch (error) {
+      if (signal?.aborted) throw signal.reason
       console.error("Échec de génération du script du podcast :", error)
       throw new Error("Le script du podcast n’a pas pu être généré. Réessaie.")
     }
@@ -50,9 +52,9 @@ export async function makeScript(input: string, topic?: string, duration?: "shor
   throw new Error("Le script du podcast n’a pas pu être généré. Réessaie.")
 }
 
-export async function makeAudio(o: POut, dir: string, base: string, emit?: (m: any) => void) {
+export async function makeAudio(o: POut, dir: string, base: string, emit?: (m: any) => void, signal?: AbortSignal) {
   await fs.promises.mkdir(dir, { recursive: true })
   const segs: TSeg[] = o.segments.map((x) => ({ text: x.md, voice: x.voice }))
-  const out = await tts(segs, dir, base, emit)
+  const out = await tts(segs, dir, base, emit, signal)
   return out
 }
