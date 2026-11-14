@@ -5,7 +5,7 @@ import { loadAllExams } from "../../services/examlab/loader"
 import type { QuizLikeItem } from "../../services/examlab/types"
 
 // Generation starts on POST; the socket may open before or after it finishes.
-const runs = new Map<string, { promise: Promise<QuizLikeItem[]>; controller: AbortController }>()
+const runs = new Map<string, { promise: Promise<QuizLikeItem[]>; controller: AbortController; owner?: string }>()
 const RUN_TTL_MS = 10 * 60 * 1000
 const log = (...a: any) => console.log("[exam]", ...a)
 
@@ -61,7 +61,9 @@ export function examRoutes(app: any) {
   })
 
   app.delete("/exam/:id", (req: any, res: any) => {
-    runs.get(req.params.id)?.controller.abort()
+    const run = runs.get(req.params.id)
+    if (run && run.owner !== req.headers?.["x-device-id"]) return res.status(403).send({ ok: false, error: "Cet examen appartient à un autre appareil." })
+    run?.controller.abort()
     runs.delete(req.params.id)
     res.send({ ok: true })
   })
@@ -79,7 +81,7 @@ export function examRoutes(app: any) {
         // Sections number their items from 1; the screen needs one continuous list.
         .then(exam => exam.sections.flatMap(section => section.items).map((item, i) => ({ ...item, id: i + 1 })))
       run.catch(() => { })
-      runs.set(runId, { promise: run, controller })
+      runs.set(runId, { promise: run, controller, owner: req.headers?.["x-device-id"] })
       setTimeout(() => runs.delete(runId), RUN_TTL_MS).unref?.()
     } catch (e: any) {
       log("500 single err", e?.message || e)

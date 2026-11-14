@@ -6,6 +6,7 @@ import { config } from "../../config/env"
 
 const sockets = new Map<string, Set<any>>()
 const controllers = new Map<string, AbortController>()
+const owners = new Map<string, string | undefined>() // pid -> X-Device-Id de l'appareil qui l'a lancé
 const pendingJobs = new Map<string, () => Promise<void>>()
 
 function emit(id: string, msg: any) {
@@ -59,7 +60,10 @@ export function podcastRoutes(app: any) {
   })
 
   app.delete("/podcast/:pid", (req: any, res: any) => {
-    controllers.get(req.params.pid)?.abort()
+    const { pid } = req.params
+    if (owners.has(pid) && owners.get(pid) !== req.headers?.["x-device-id"]) return res.status(403).send({ ok: false, error: "Ce podcast appartient à un autre appareil." })
+    owners.delete(pid)
+    controllers.get(pid)?.abort()
     controllers.delete(req.params.pid)
     pendingJobs.delete(req.params.pid)
     res.send({ ok: true })
@@ -81,7 +85,8 @@ export function podcastRoutes(app: any) {
       const pid = cryptoRandom()
       const controller = new AbortController()
       controllers.set(pid, controller)
-      setTimeout(() => { controller.abort(); controllers.delete(pid); pendingJobs.delete(pid) }, 10 * 60 * 1000).unref?.()
+      owners.set(pid, req.headers?.["x-device-id"])
+      setTimeout(() => { controller.abort(); controllers.delete(pid); owners.delete(pid); pendingJobs.delete(pid) }, 10 * 60 * 1000).unref?.()
       const dir = path.join(process.cwd(), "storage", "podcasts", pid)
       const base = topic.replace(/[^a-z0-9]/gi, "_").slice(0, 50) || "podcast"
 

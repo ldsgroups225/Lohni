@@ -53,3 +53,20 @@ test('annuler un examen interrompt la génération en cours', async () => {
   routes['DELETE /exam/:id']({ params: { id: started.runId } }, { send: () => {} })
   expect(vi.mocked(handleExam).mock.lastCall?.[1]?.aborted).toBe(true)
 })
+
+test('annuler un examen est réservé à l’appareil qui l’a lancé', async () => {
+  let signal: AbortSignal | undefined
+  vi.mocked(handleExam).mockImplementation((async (_id: string, provided?: AbortSignal) => { signal = provided; return new Promise(() => {}) }) as never)
+  const routes = harness()
+  let started: any
+  await routes['POST /exam']({ headers: { 'x-device-id': 'appareil-a' }, body: { examId: 'bepc' } }, { status: () => ({ send: (b: any) => { started = b } }) })
+  const refused = { status: vi.fn().mockReturnThis(), send: vi.fn() }
+  routes['DELETE /exam/:id']({ headers: { 'x-device-id': 'appareil-b' }, params: { id: started.runId } }, refused)
+  expect(refused.status).toHaveBeenCalledWith(403)
+  expect(refused.send).toHaveBeenCalledWith({ ok: false, error: 'Cet examen appartient à un autre appareil.' })
+  expect(signal?.aborted).toBe(false)
+  const accepted = { status: vi.fn().mockReturnThis(), send: vi.fn() }
+  routes['DELETE /exam/:id']({ headers: { 'x-device-id': 'appareil-a' }, params: { id: started.runId } }, accepted)
+  expect(accepted.send).toHaveBeenCalledWith({ ok: true })
+  expect(signal?.aborted).toBe(true)
+})

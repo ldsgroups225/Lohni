@@ -69,3 +69,25 @@ test('annuler pendant la synthèse interrompt l’audio', async () => {
     expect(signal?.aborted).toBe(true)
   } finally { vi.useRealTimers(); vi.mocked(makeScript).mockReset(); vi.mocked(makeAudio).mockReset() }
 })
+
+test('annuler un podcast est réservé à l’appareil qui l’a lancé', async () => {
+  vi.useFakeTimers()
+  const handlers: Record<string, (...args: any[]) => any> = {}
+  const app = { ws: (path: string, handler: (...args: any[]) => any) => { handlers[path] = handler }, post: (path: string, handler: (...args: any[]) => any) => { handlers[path] = handler }, delete: (path: string, handler: (...args: any[]) => any) => { handlers[path] = handler }, get: () => {} }
+  let signal: AbortSignal | undefined
+  vi.mocked(makeScript).mockImplementation((_topic, _content, _duration, providedSignal) => { signal = providedSignal; return new Promise(() => {}) })
+  try {
+    podcastRoutes(app)
+    let pid = ''
+    await handlers['/podcast']({ headers: { 'x-device-id': 'appareil-a' }, body: { topic: 'Fractions' } }, { status: () => ({ send: (data: { pid: string }) => { pid = data.pid } }) }, vi.fn())
+    handlers['/ws/podcast']({ send: vi.fn(), on: vi.fn(), readyState: 1 }, { url: `/ws/podcast?pid=${pid}` })
+    await vi.advanceTimersByTimeAsync(100)
+    const refused = { status: vi.fn().mockReturnThis(), send: vi.fn() }
+    handlers['/podcast/:pid']({ headers: { 'x-device-id': 'appareil-b' }, params: { pid } }, refused)
+    expect(refused.status).toHaveBeenCalledWith(403)
+    expect(refused.send).toHaveBeenCalledWith({ ok: false, error: 'Ce podcast appartient à un autre appareil.' })
+    expect(signal?.aborted).toBe(false)
+    handlers['/podcast/:pid']({ headers: { 'x-device-id': 'appareil-a' }, params: { pid } }, { status: vi.fn().mockReturnThis(), send: vi.fn() })
+    expect(signal?.aborted).toBe(true)
+  } finally { vi.useRealTimers(); vi.mocked(makeScript).mockReset() }
+})

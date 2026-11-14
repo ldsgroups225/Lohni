@@ -269,14 +269,14 @@ export async function startExam(examId: string) {
     `${env.backend}/exam`,
     {
       method: "POST",
-      headers: jsonHeaders({}),
+      headers: plannerHeaders(true),
       body: JSON.stringify({ examId }),
     }
   )
 }
 
 export async function cancelExam(runId: string) {
-  return req(`${env.backend}/exam/${encodeURIComponent(runId)}`, { method: "DELETE" })
+  return req(`${env.backend}/exam/${encodeURIComponent(runId)}`, { method: "DELETE", headers: plannerHeaders() })
 }
 
 export function connectExamStream(runId: string, onEvent: (ev: ExamEvent) => void) {
@@ -342,7 +342,7 @@ export async function podcastStart(payload: { topic: string; duration?: "short" 
   const url = `${env.backend}/podcast`
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: plannerHeaders(true),
     body: JSON.stringify(payload),
   })
   const data = await res.json()
@@ -351,7 +351,7 @@ export async function podcastStart(payload: { topic: string; duration?: "short" 
 }
 
 export async function podcastCancel(pid: string) {
-  const response = await fetch(`${env.backend}/podcast/${encodeURIComponent(pid)}`, { method: 'DELETE' })
+  const response = await fetch(`${env.backend}/podcast/${encodeURIComponent(pid)}`, { method: 'DELETE', headers: plannerHeaders() })
   if (!response.ok) throw new Error('Impossible d’annuler le podcast.')
 }
 
