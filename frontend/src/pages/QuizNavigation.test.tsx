@@ -141,3 +141,24 @@ test('retrouver un quiz termine conserve ses resultats sans confirmation', async
     expect(document.querySelector('dialog')).toBeNull()
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
 })
+
+test('recommencer une question remplace la réponse et son score', async () => {
+  sessionStorage.clear()
+  Element.prototype.scrollIntoView = vi.fn()
+  window.scrollTo = vi.fn()
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/quiz', element: <Quiz /> }], { initialEntries: ['/quiz?topic=maths'] })
+  const click = async (text: string) => act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes(text))).click())
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Choisis une réponse'))).disabled).toBe(true)
+    await click('Deux')
+    expect(host.textContent).toContain('Ton choix')
+    await click('Recommencer cette question')
+    await click('Un')
+    await click('Voir mon résultat')
+    expect(host.textContent).toContain('1/1')
+    expect(host.textContent).toContain('Revoir mes réponses (1)')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove() }
+})

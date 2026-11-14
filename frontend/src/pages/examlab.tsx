@@ -173,6 +173,11 @@ export default function ExamLabs() {
 
       {loadingExams && <LoadingIndicator label="Chargement des examens…" />}
 
+      <div className="rounded-2xl border border-border bg-surface p-4">
+        <button type="button" disabled className="min-h-11 text-left font-semibold text-muted">Examen à réponse rédigée</button>
+        <p className="text-sm text-muted">Indisponible pour le moment : les examens proposés sont des QCM.</p>
+      </div>
+
       <div className="grid gap-6">
         {exams.map((ex) => (
           <button
@@ -228,7 +233,7 @@ export default function ExamLabs() {
         </section>}
         {qs.length > 0 && !ready && !done && q && (
           <>
-            <QuizHeader topic={exams.find(e => e.id === activeExam)?.name ?? activeExam} idx={idx} total={total} score={score} />
+            <QuizHeader topic={exams.find(e => e.id === activeExam)?.name ?? activeExam} idx={idx} total={total} score={score} segmented />
             <QuestionCard
               q={q}
               selected={selected}
