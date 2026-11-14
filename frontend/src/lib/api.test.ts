@@ -274,6 +274,7 @@ test('examen et podcast portent l’en-tête d’appareil', async () => {
   }))
   await api.startExam('e1'); await api.cancelExam('r1'); await api.podcastStart({ topic: 'x' }); await api.podcastCancel('p1')
   expect(seen).toEqual([deviceId, deviceId, deviceId, deviceId])
+})
 
 const json = (data: unknown) => new Response(JSON.stringify({ ok: true, data }), { headers: { 'Content-Type': 'application/json' } })
 
