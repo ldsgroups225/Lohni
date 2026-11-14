@@ -1,7 +1,7 @@
 import { PartyIcon, TrophyIcon, BookIcon, DumbbellIcon } from '../components/ui/NavigationIcons'
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { quizStart, connectQuizStream, type QuizEvent } from "../lib/api";
+import { quizStart, connectQuizStream, chatJSON, type QuizEvent } from "../lib/api";
 import { useLeaveConfirmation } from "../lib/useLeaveConfirmation";
 import { LoadingState } from "../components/ui/LoadingState";
 import { ToolPage } from "../components/ui/ToolPage";
@@ -39,6 +39,8 @@ export default function Quiz() {
   const [answers, setAnswers] = useState<UA[]>([]);
 
   const [connecting, setConnecting] = useState(false);
+  const [explaining, setExplaining] = useState(false);
+  const [explainError, setExplainError] = useState("");
 
   const closeRef = useRef<null | (() => void)>(null);
   const startedTopicRef = useRef<string | null>(null);
@@ -140,6 +142,23 @@ export default function Quiz() {
     setShowExp(true);
   };
 
+  const onRetry = () => {
+    if (selected === q.correct) setScore(s => s - 1);
+    setAnswers(a => a.slice(0, -1));
+    setSelected(null); setShowExp(false); setShowHint(false);
+  };
+
+  const onExplain = async () => {
+    if (explaining) return;
+    const prompt = `Explique-moi cette question et sa réponse en français : ${q.question}\nRéponse : ${q.options[q.correct]}\n${q.explanation}`;
+    setExplaining(true); setExplainError("");
+    try {
+      const result = await chatJSON({ q: prompt });
+      navigate(`/chat?chatId=${encodeURIComponent(result.chatId)}`, { state: { q: prompt, allowLeave: true } });
+    } catch { setExplainError("Impossible de joindre le Tuteur. Réessaie."); }
+    finally { setExplaining(false); }
+  };
+
   const onNext = () => {
     if (!showExp) return;
     window.scrollTo({ top: 0, left: 0, behavior: "instant" }); // Start the next question at the top.
@@ -178,8 +197,12 @@ export default function Quiz() {
             onSelect={onSelect}
             onHint={() => setShowHint(true)}
             onNext={onNext}
+            onRetry={onRetry}
+            onExplain={onExplain}
+            explaining={explaining}
             isLast={idx === total - 1}
           />
+          {explainError && <p role="alert" className="text-danger">{explainError}</p>}
         </>
       )}
 

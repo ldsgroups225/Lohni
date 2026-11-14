@@ -9,10 +9,10 @@ const Check = () => <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="n
 const Cross = () => <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6 6 18" /></svg>;
 
 export default function QuestionCard({
-  q, selected, showExp, showHint, onSelect, onHint, onNext, isLast
+  q, selected, showExp, showHint, onSelect, onHint, onNext, onRetry, onExplain, explaining, isLast
 }:{
   q:Question; selected:number|null; showExp:boolean; showHint:boolean;
-  onSelect:(i:number)=>void; onHint:()=>void; onNext:()=>void; isLast:boolean;
+  onSelect:(i:number)=>void; onHint:()=>void; onNext:()=>void; onRetry?:()=>void; onExplain?:()=>void; explaining?:boolean; isLast:boolean;
 }) {
   const next = useRef<HTMLButtonElement>(null);
   const keyboardAnswer = useRef(false);
@@ -53,7 +53,7 @@ export default function QuestionCard({
                 <span className="grid size-7 shrink-0 place-items-center rounded-full border border-border text-xs font-bold">{String.fromCharCode(65 + i)}</span>
                 <span className="flex-1 pt-0.5"><MarkdownView md={opt} inline /></span>
                 {isCorrect && <span className="flex items-center gap-1 pt-0.5 text-sm"><Check />Bonne réponse</span>}
-                {isWrongSel && <span className="flex items-center gap-1 pt-0.5 text-sm"><Cross />Ta réponse</span>}
+                {isWrongSel && <span className="flex items-center gap-1 pt-0.5 text-sm"><Cross />Ton choix</span>}
               </button>
             );
           })}
@@ -78,15 +78,15 @@ export default function QuestionCard({
               {ok ? <><span className="motion-pop text-success"><Check /></span>Bonne réponse !</> : <><span className="motion-pop text-danger"><Cross /></span>Réponse incorrecte</>}
             </p>
             {q.explanation && <MarkdownView md={q.explanation} />}
+            {onExplain && <button type="button" onClick={onExplain} disabled={explaining} className="min-h-11 font-semibold text-primary underline disabled:opacity-50">{explaining ? "Ouverture…" : "Explique-moi"}</button>}
           </div>
         )}
       </div>
 
-      {showExp && (
-        <button ref={next} type="button" onClick={onNext} className="ui-button w-full scroll-mb-8">
-          {isLast ? "Voir mon résultat" : "Continuer"}
-        </button>
-      )}
+      <button ref={next} type="button" onClick={onNext} disabled={!showExp} className="ui-button min-h-11 w-full scroll-mb-8 disabled:bg-tint disabled:text-muted disabled:opacity-100">
+        {!showExp ? "Choisis une réponse" : isLast ? "Voir mon résultat" : "Continuer"}
+      </button>
+      {showExp && onRetry && <button type="button" onClick={onRetry} className="min-h-11 w-full font-semibold text-primary underline">Recommencer cette question</button>}
     </div>
   );
 }
