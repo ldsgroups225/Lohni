@@ -36,7 +36,7 @@ test('retour ferme le bilan et permet de relire le debat', async () => {
     Object.defineProperty(textarea, 'scrollHeight', { value: 1000, configurable: true })
     await act(async () => { const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set; setter?.call(textarea, 'Un argument'); textarea.dispatchEvent(new Event('input', { bubbles: true })) })
     expect(Number.parseInt(textarea.style.height, 10)).toBeLessThanOrEqual(128)
-    expect(required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Argumenter'))).className).toContain('self-start')
+    expect(required([...host.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === 'Envoyer')).className).toContain('self-start')
     await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent?.includes('Terminer le débat'))).click())
     await act(async () => required([...document.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Terminer')).click())
     expect(host.textContent).toContain('Analyse du débat')
@@ -78,5 +78,28 @@ test('les erreurs de transport du débat restent compréhensibles', async () => 
     await act(async () => socket.onmessage?.({ data: JSON.stringify({ type: 'error', error: 'provider failure' }) }))
     expect(host.textContent).toContain('L’IA n’a pas pu répondre. Réessaie.')
     expect(host.textContent).not.toContain('provider failure')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); vi.unstubAllGlobals() }
+})
+
+test('les suggestions préremplissent un argument et expliquent les actions indisponibles', async () => {
+  class FakeSocket { close() {} }
+  vi.stubGlobal('WebSocket', FakeSocket)
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: true, session: { topic: 'Sujet', position: 'for', messages: [] } }), { headers: { 'content-type': 'application/json' } })))
+  Element.prototype.scrollIntoView = vi.fn()
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/debate', element: <Debate /> }], { initialEntries: ['/debate?debateId=1'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    const textarea = required(host.querySelector('textarea'))
+    const send = required([...host.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === 'Envoyer'))
+    expect(send.disabled).toBe(true)
+    expect(host.textContent).toContain('Écris un argument pour l’envoyer')
+    expect(host.textContent).toContain('2 échanges minimum')
+    for (const [suggestion, draft] of [['Donne-moi un indice', 'Peux-tu me donner un indice ?'], ['Un exemple concret', 'Prenons un exemple concret : '], ['Je ne suis pas d’accord car…', 'Je ne suis pas d’accord car ']]) {
+      await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent === suggestion)).click())
+      expect(textarea.value).toBe(draft)
+      expect(send.disabled).toBe(false)
+    }
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); vi.unstubAllGlobals() }
 })
