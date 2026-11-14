@@ -317,7 +317,7 @@ export default function Planner() {
                     <div className="grid gap-3">
                         {tasks.length === 0 && <p className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">Aucune tâche pour le moment. Ajoute-en une depuis « Aujourd’hui ».</p>}
                         {tasks.map(t => (
-                            <div key={t.id} className="rounded-xl border border-border bg-surface p-3">
+                            <div key={t.id} className="min-w-0 rounded-xl border border-border bg-surface p-3">
                                 <div className="min-w-0">
                                     <div className="text-foreground font-medium">{t.title}</div>
                                     <div className="text-muted text-xs">
