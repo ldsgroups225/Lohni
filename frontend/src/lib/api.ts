@@ -334,7 +334,7 @@ export async function quizStart(topic: string) {
   )
 }
 
-export async function podcastStart(payload: { topic: string }) {
+export async function podcastStart(payload: { topic: string; duration?: "short" | "long" }) {
   const url = `${env.backend}/podcast`
   const res = await fetch(url, {
     method: "POST",

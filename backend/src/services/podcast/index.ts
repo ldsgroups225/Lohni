@@ -25,10 +25,10 @@ function j1(s: string) {
   return ""
 }
 
-export async function makeScript(input: string, topic?: string): Promise<POut> {
+export async function makeScript(input: string, topic?: string, duration?: "short" | "long"): Promise<POut> {
   const top = normalizeTopic(topic || "general")
   const m = [
-    { role: "system", content: P },
+    { role: "system", content: duration ? P.replace("8 et 16 segments", duration === "short" ? "8 et 12 segments" : "13 et 16 segments") : P },
     { role: "user", content: `sujet : ${top}\n\ncontenu :\n${input}\n\nréponds uniquement en JSON` }
   ] as any
 

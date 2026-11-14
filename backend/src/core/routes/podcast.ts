@@ -65,6 +65,11 @@ export function podcastRoutes(app: any) {
         return res.status(400).send({ error: "topic required" })
       }
 
+      const duration = req.body?.duration
+      if (duration !== undefined && duration !== "short" && duration !== "long") {
+        return res.status(400).send({ error: "Durée du podcast invalide." })
+      }
+
       const pid = cryptoRandom()
       const dir = path.join(process.cwd(), "storage", "podcasts", pid)
       const base = topic.replace(/[^a-z0-9]/gi, "_").slice(0, 50) || "podcast"
@@ -73,12 +78,17 @@ export function podcastRoutes(app: any) {
 
       const job = async () => {
         try {
-          const script = await makeScript(topic, topic)
+          const script = await makeScript(topic, topic, duration)
           emit(pid, { type: "script", data: script })
 
-          const outPath = await makeAudio(script, dir, base, (m) => {
-            emit(pid, m)
-          })
+          let outPath: string
+          try {
+            outPath = await makeAudio(script, dir, base, (m) => { emit(pid, m) })
+          } catch (error) {
+            console.error("[Podcast] Échec de synthèse vocale :", error)
+            emit(pid, { type: "error", error: "tts_error" })
+            return
+          }
           if (!fs.existsSync(outPath)) {
             throw new Error(`Audio file not created at ${outPath}`)
           }

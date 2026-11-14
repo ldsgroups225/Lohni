@@ -42,3 +42,13 @@ test('un script sans texte parlé valide est refusé', async () => {
   vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify({ title: 'Sujet', summary: 'Résumé', segments: [{ spk: 'A' }] }) } as any)
   await expect(makeScript('Sujet')).rejects.toThrow('Le script du podcast n’a pas pu être généré. Réessaie.')
 })
+
+test('la durée détaillée demande davantage de dialogue que la durée courte', async () => {
+  vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify(script) } as any)
+  await makeScript('Sujet', 'Sujet', 'short')
+  await makeScript('Sujet', 'Sujet', 'long')
+  const short = JSON.stringify(vi.mocked(llm.invoke).mock.calls[0][0])
+  const long = JSON.stringify(vi.mocked(llm.invoke).mock.calls[1][0])
+  expect(short).toContain('8 et 12 segments')
+  expect(long).toContain('13 et 16 segments')
+})
