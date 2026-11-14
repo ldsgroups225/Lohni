@@ -99,7 +99,7 @@ export function podcastRoutes(app: any) {
           } catch (error) {
             if (controller.signal.aborted) return
             console.error("[Podcast] Échec de synthèse vocale :", error)
-            emit(pid, { type: "error", error: "tts_error" })
+            emit(pid, { type: "error", error: "La synthèse vocale est indisponible. Réessaie dans un moment.", code: "tts_error" })
             return
           }
           controller.signal.throwIfAborted()

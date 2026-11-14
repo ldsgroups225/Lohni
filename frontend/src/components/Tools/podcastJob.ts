@@ -69,7 +69,7 @@ function connect(id: string, current: AbortController) {
     if (ev.type === 'done' || ev.type === 'error') {
       clearTimeout(timer); close(); controller = null
       if (ev.type === 'error' && ev.error === 'stream_error') void podcastCancel(id).catch(() => {})
-      update(ev.type === 'done' ? { status: 'Terminé', busy: false } : { status: ev.error === 'tts_error' ? 'La synthèse vocale est indisponible. Réessaie dans un moment.' : 'Impossible de créer le podcast. Réessaie.', busy: false, audioFile: null })
+      update(ev.type === 'done' ? { status: 'Terminé', busy: false } : { status: ev.code === 'tts_error' || ev.error === 'tts_error' ? 'La synthèse vocale est indisponible. Réessaie dans un moment.' : 'Impossible de créer le podcast. Réessaie.', busy: false, audioFile: null })
     }
   }).close
 }

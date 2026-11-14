@@ -85,6 +85,16 @@ test('une erreur de synthèse vocale est expliquée', async () => {
   } finally { act(() => root.unmount()); host.remove() }
 })
 
+test('le code tts_error accompagné d’un message français est expliqué', async () => {
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<MemoryRouter initialEntries={[{ pathname: '/tools', state: { podcastPid: '1', podcastTopic: 'Fractions' } }]}><PodcastGenerator /></MemoryRouter>))
+    await act(async () => { stream.emit({ type: 'error', error: 'La synthèse vocale est indisponible. Réessaie dans un moment.', code: 'tts_error' }) })
+    expect(host.textContent).toContain('La synthèse vocale est indisponible')
+  } finally { act(() => root.unmount()); host.remove() }
+})
+
 test('le résultat reste disponible après avoir quitté puis rouvert le podcast', async () => {
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
