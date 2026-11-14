@@ -11,6 +11,7 @@ vi.mock('../lib/api', () => ({
     session: async () => ({ id: '1', complete: true, position: 1, cards: [], earnedXP: 10 }),
     home: async () => { throw new Error('Impossible de charger les cartes restantes.') },
     progress: async () => ({ xp: 10, streak: 1 }),
+    chapters: async () => [],
   },
   revisionSyncStatus: () => ({ online: true, pending: 0 }),
   revisionPolicy: {}, syncRevisionAnswers: () => {}, chatJSON: () => {},
@@ -24,7 +25,7 @@ test('la célébration reste visible si le chargement des cartes restantes écho
   const root = createRoot(container)
   try {
     await act(async () => { root.render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <Revision /> }])} />) })
-    expect(container.textContent).toContain('Session terminée !')
+    expect(container.textContent).toContain('Session terminée')
     expect(container.querySelector('.motion-celebrate')).toBeTruthy()
     expect(container.textContent).not.toContain('Impossible de charger les cartes restantes.')
     expect(container.textContent).not.toContain('Continuer avec les cartes restantes')
