@@ -69,7 +69,7 @@ export default function Planner() {
         wsRef.current = connectPlannerStream((ev: PlannerEvent) => {
             if (ev.type === "plan.update") {
                 setTasks(t => t.map(x => x.id === ev.taskId ? { ...x, plan: { ...(x as any).plan, slots: ev.slots } } as any : x))
-                plannerWeekly(false).then(wp => setPlan(wp.plan)).catch(() => { })
+                plannerWeekly().then(wp => setPlan(wp.plan)).catch(() => { })
             }
             if (ev.type === "task.created") {
                 setTasks(t => [ev.task, ...t.filter(x => x.id !== ev.task.id)])
@@ -110,10 +110,6 @@ export default function Planner() {
             if (ev.type === "session.ended") {
                 addNotification("success", `Session terminée : ${ev.session.minutesWorked} minutes`)
             }
-            if (ev.type === "materials.chunk") {
-                setMaterials(m => ({ ...m, _chunks: [...(m._chunks || []), ev] }))
-            }
-            if (ev.type === "materials.done") { }
         })
         return () => { try { wsRef.current?.close() } catch { } }
     }, [addNotification])
@@ -128,7 +124,7 @@ export default function Planner() {
     const reload = useCallback(async () => {
         const res = await plannerList()
         setTasks(res.tasks)
-        const wp = await plannerWeekly(false)
+        const wp = await plannerWeekly()
         setPlan(wp.plan)
     }, [])
 
@@ -164,10 +160,10 @@ export default function Planner() {
 
     const planTask = async (id: string) => {
         try {
-            const result = await plannerPlan(id, false)
+            const result = await plannerPlan(id)
             const { task } = result
             setTasks(t => t.map(x => x.id === id ? task as any : x))
-            const wp = await plannerWeekly(false)
+            const wp = await plannerWeekly()
             setPlan(wp.plan)
             addNotification("success", "Tâche planifiée")
         } catch (error) {
@@ -177,8 +173,12 @@ export default function Planner() {
     }
 
     const gen = async (id: string, kind: "summary" | "studyGuide" | "flashcards" | "quiz") => {
-        const { data } = await plannerMaterials(id, kind)
-        setMaterials(m => ({ ...m, [id]: { ...(m[id] || {}), [kind]: data } }))
+        try {
+            const { materials: fiche } = await plannerMaterials(id, kind)
+            setMaterials(m => ({ ...m, [id]: { ...(m[id] || {}), [kind]: fiche } }))
+        } catch {
+            addNotification("error", "La fiche n’a pas pu être générée. Réessaie dans un instant.")
+        }
     }
 
     const onUpload = async (id: string, file: File) => {
@@ -306,7 +306,7 @@ export default function Planner() {
                             tasks={tasks}
                             plan={plan}
                             onPlan={planTask}
-                            onAssist={(id, kind) => gen(id, kind)}
+                            onAssist={(id, kind) => { setView("list"); void gen(id, kind) }}
                             onUpdateStatus={mark}
                             onUpload={onUpload}
                             onDelete={del}
@@ -359,14 +359,17 @@ export default function Planner() {
                                 )}
 
                                 {materials[t.id]?.summary && (
-                                    <div className="mt-3 text-sm text-foreground"><MarkdownView md={materials[t.id].summary.answer || materials[t.id].summary} /></div>
+                                    <div className="mt-3 text-sm text-foreground"><MarkdownView md={materials[t.id].summary} /></div>
                                 )}
-                                {Array.isArray(materials[t.id]?.flashcards?.flashcards) && (
+                                {materials[t.id]?.studyGuide && (
+                                    <div className="mt-3 text-sm text-foreground"><MarkdownView md={materials[t.id].studyGuide} /></div>
+                                )}
+                                {Array.isArray(materials[t.id]?.flashcards) && (
                                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {withOccurrenceKeys(materials[t.id].flashcards.flashcards as Array<{ q: string; a: string }>, c => JSON.stringify([c.q, c.a])).map(({ value: c, key }) => (
+                                        {withOccurrenceKeys(materials[t.id].flashcards as Array<{ front: string; back: string }>, c => JSON.stringify([c.front, c.back])).map(({ value: c, key }) => (
                                             <div key={key} className="border border-border rounded-lg p-2">
-                                                <div className="text-foreground text-sm font-medium">Q: <MarkdownView md={c.q} inline /></div>
-                                                <div className="text-muted text-sm">A: <MarkdownView md={c.a} /></div>
+                                                <div className="text-foreground text-sm font-medium">Q: <MarkdownView md={c.front} inline /></div>
+                                                <div className="text-muted text-sm">A: <MarkdownView md={c.back} /></div>
                                             </div>
                                         ))}
                                     </div>

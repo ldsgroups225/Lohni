@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { forceSimulation, forceManyBody, forceCollide, forceRadial, type Simulation } from "d3-force"
 import { anchorLine } from "./mindmap/geometry"
-import { plannerMaterials } from "../../lib/api"
 import type { PlannerTask, PlannerSlot, WeeklyPlan } from "../../lib/api"
 
 type Props = {
@@ -130,7 +129,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
         try { localStorage.setItem("planner.customNodes", JSON.stringify(customNodes)) } catch { }
     }, [customNodes])
 
-    // Load cached AI steps and fetch if missing
+    // Load cached AI steps (no automatic generation)
     useEffect(() => {
         try {
             const m: Record<string, string[]> = {}
@@ -141,29 +140,6 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
             if (Object.keys(m).length) setAiSteps(s => ({ ...s, ...m }))
         } catch { }
     }, [tasks])
-    useEffect(() => {
-        let cancelled = false
-            ; (async () => {
-                for (const t of tasks) {
-                    if (aiSteps[t.id]) continue
-                    try {
-                        const res = await plannerMaterials(t.id, "studyGuide")
-                        if (cancelled) return
-                        const data: any = res?.data || {}
-                        const labels: string[] = []
-                        if (Array.isArray(data.mainConcepts)) labels.push(...data.mainConcepts)
-                        if (Array.isArray(data.importantTerms)) labels.push(...data.importantTerms.map((x: any) => x?.term).filter(Boolean))
-                        if (labels.length === 0 && Array.isArray(data.questions)) labels.push(...data.questions)
-                        const uniq = Array.from(new Set(labels.map(x => String(x).trim()).filter(Boolean))).slice(0, 6)
-                        if (uniq.length) {
-                            setAiSteps(s => { const next = { ...s, [t.id]: uniq }; try { localStorage.setItem(`planner.aiSteps.${t.id}`, JSON.stringify(uniq)) } catch { }; return next })
-                        }
-                    } catch { }
-                }
-            })()
-        return () => { cancelled = true }
-    }, [tasks, aiSteps])
-
     useEffect(() => {
         setStepPos(prev => {
             const out = { ...prev }

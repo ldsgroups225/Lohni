@@ -14,6 +14,9 @@ vi.mock('../../services/planner/ai', async importOriginal => ({
   generateSteps: async () => ['étape'],
 }))
 
+const ask = vi.hoisted(() => vi.fn())
+vi.mock('../../lib/ai/ask', () => ({ handleAsk: ask }))
+
 type Handler = (req: any, res: any) => Promise<void>
 let directory: string
 let handlers: Record<string, Handler>
@@ -92,5 +95,38 @@ test('un échec d’ajout renvoie un message français', async () => {
   const r = await call('post', '/tasks/ingest', a, { text: '' })
   expect(r.status).toBe(400)
   expect(r.body.error).toMatch(/Écris/)
+  log.mockRestore()
+})
+
+test('une fiche demandée est générée avec le bon type et renvoyée dans la réponse', async () => {
+  const id = (await call('post', '/tasks/ingest', a, { text: 'Maths' })).body.task.id
+  const mine = connect(a)
+  ask.mockResolvedValueOnce({ answer: '[{"front":"2+2","back":"4"}]' })
+  const r = await call('post', '/tasks/:id/materials', a, { type: 'flashcards' }, { id })
+  expect(r.status).toBe(200)
+  expect(r.body.materials).toEqual([{ front: '2+2', back: '4' }])
+  expect(ask.mock.calls.at(-1)![0]).toMatch(/flashcards/)
+  expect(mine.sent.some(m => m.includes('materials'))).toBe(false)
+})
+
+test('un type de fiche inconnu est refusé en français sans appeler l’IA', async () => {
+  const id = (await call('post', '/tasks/ingest', a, { text: 'Maths' })).body.task.id
+  ask.mockClear()
+  for (const type of ['nimporte', undefined]) {
+    const r = await call('post', '/tasks/:id/materials', a, { type }, { id })
+    expect(r.status).toBe(400)
+    expect(r.body.error).toMatch(/fiche/)
+  }
+  expect(ask).not.toHaveBeenCalled()
+})
+
+test('un échec du générateur renvoie un message français sans détail interne', async () => {
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const id = (await call('post', '/tasks/ingest', a, { text: 'Maths' })).body.task.id
+  ask.mockRejectedValueOnce(new Error('402 secret-key sk-123'))
+  const r = await call('post', '/tasks/:id/materials', a, { type: 'summary' }, { id })
+  expect(r.status).toBe(500)
+  expect(r.body.error).toMatch(/fiche/)
+  expect(JSON.stringify(r.body)).not.toMatch(/sk-123|402/)
   log.mockRestore()
 })

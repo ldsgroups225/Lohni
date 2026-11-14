@@ -406,8 +406,6 @@ export type PlannerEvent =
   | { type: "ready"; sid: string }
   | { type: "phase"; value: string }
   | { type: "plan.update"; taskId: string; slots: PlannerSlot[] }
-  | { type: "materials.chunk"; id: string; idx: number; total: number; more: boolean; encoding: string; data: string }
-  | { type: "materials.done"; id: string; total: number }
   | { type: "reminder"; text: string; at: number; taskId?: string; scheduledFor?: string }
   | { type: "daily.digest"; date: string; due: { id: string; title: string; dueAt: number }[]; sessions: number; message: string }
   | { type: "evening.review"; date: string; stats: any; tomorrowTasks: { id: string; title: string }[]; message: string }
@@ -447,27 +445,27 @@ export async function plannerList(params?: { status?: string; dueBefore?: number
   return req<{ ok: boolean; tasks: PlannerTask[] }>(url, { method: "GET", headers: deviceHeaders() })
 }
 
-export async function plannerPlan(id: string, cram?: boolean) {
+export async function plannerPlan(id: string) {
   return req<{ ok: boolean; task: PlannerTask & { plan?: { slots: PlannerSlot[] } } }>(`${env.backend}/tasks/${encodeURIComponent(id)}/plan`, {
     method: "POST",
     headers: deviceHeaders(true),
-    body: JSON.stringify({ cram: !!cram })
+    body: JSON.stringify({})
   })
 }
 
-export async function plannerWeekly(cram?: boolean) {
+export async function plannerWeekly() {
   return req<{ ok: boolean; plan: WeeklyPlan }>(`${env.backend}/planner/weekly`, {
     method: "POST",
     headers: deviceHeaders(true),
-    body: JSON.stringify({ cram: !!cram })
+    body: JSON.stringify({})
   })
 }
 
-export async function plannerMaterials(id: string, kind: "summary" | "studyGuide" | "flashcards" | "quiz") {
-  return req<{ ok: boolean; data: any }>(`${env.backend}/tasks/${encodeURIComponent(id)}/materials`, {
+export async function plannerMaterials(id: string, type: "summary" | "studyGuide" | "flashcards" | "quiz") {
+  return req<{ ok: boolean; materials: any }>(`${env.backend}/tasks/${encodeURIComponent(id)}/materials`, {
     method: "POST",
     headers: deviceHeaders(true),
-    body: JSON.stringify({ kind })
+    body: JSON.stringify({ type })
   })
 }
 

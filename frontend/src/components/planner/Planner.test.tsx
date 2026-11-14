@@ -11,6 +11,7 @@ vi.mock('../../lib/api', () => ({
   plannerWeekly: vi.fn(async () => ({ ok: true, plan: { days: [] } })),
   plannerIngest: vi.fn(),
   plannerUpdate: vi.fn(),
+  plannerMaterials: vi.fn(),
 }))
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 const container = document.createElement('div')
@@ -59,4 +60,32 @@ test('les tâches sont réparties entre À faire et Faites et peuvent être rest
   expect(container.textContent).toContain('Tâche terminée, bravo')
   await act(async () => [...container.querySelectorAll('button')].find(b => b.textContent === 'Annuler')!.click())
   expect(container.textContent).toContain('À faire · 1')
+})
+
+async function openList(task: api.PlannerTask) {
+  vi.mocked(api.plannerList).mockResolvedValueOnce({ ok: true, tasks: [task] })
+  await act(async () => root.render(<Planner />))
+  await act(async () => [...container.querySelectorAll('[role="tab"]')].find(b => b.textContent === 'Liste')!.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+}
+const task = { id: '1', title: 'Exposé', dueAt: new Date(2026, 10, 18, 12).getTime(), estMins: 30, priority: 3, status: 'todo' } as api.PlannerTask
+const press = (label: string) => act(async () => [...container.querySelectorAll('button')].find(b => b.textContent === label)!.click())
+
+test('« Cartes » affiche les cartes rendues par le serveur', async () => {
+  vi.mocked(api.plannerMaterials).mockResolvedValueOnce({ ok: true, materials: [{ front: 'Capitale ?', back: 'Yamoussoukro' }] })
+  await openList(task)
+  await press('Cartes')
+  expect(api.plannerMaterials).toHaveBeenCalledWith('1', 'flashcards')
+  expect(container.textContent).toContain('Capitale ?')
+  expect(container.textContent).toContain('Yamoussoukro')
+})
+
+test('« Résumé » affiche le résumé, et un échec reste en français', async () => {
+  vi.mocked(api.plannerMaterials).mockResolvedValueOnce({ ok: true, materials: 'Le **résumé** voulu' })
+  await openList(task)
+  await press('Résumé')
+  expect(container.textContent).toContain('résumé')
+  vi.mocked(api.plannerMaterials).mockRejectedValueOnce(new Error('boom interne'))
+  await press('Cartes')
+  expect(container.textContent).toContain('La fiche n’a pas pu être générée')
+  expect(container.textContent).not.toContain('boom interne')
 })

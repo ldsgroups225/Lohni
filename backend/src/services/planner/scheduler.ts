@@ -3,8 +3,8 @@ import { makeSlots } from "./ai"
 
 const DAY_MS = 24 * 3600 * 1000
 
-export function defaultPolicy(cram = false): PlanPolicy {
-    return { pomodoroMins: 25, breakMins: 5, maxDailyMins: cram ? 360 : 240, cram }
+export function defaultPolicy(): PlanPolicy {
+    return { pomodoroMins: 25, breakMins: 5, maxDailyMins: 240 }
 }
 
 export function planTask(task: Task, policy: PlanPolicy): Task {

@@ -5,7 +5,8 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import PlannerMindmap from './PlannerMindmap'
 
-vi.mock('../../lib/api', () => ({ plannerMaterials: () => {} }))
+const plannerMaterials = vi.hoisted(() => vi.fn())
+vi.mock('../../lib/api', () => ({ plannerMaterials }))
 const props = { tasks: [], plan: null, onPlan: () => {}, onAssist: () => {}, onUpdateStatus: () => {}, onUpload: () => {}, onDelete: () => {} }
 const container = document.createElement('div')
 const root = createRoot(container)
@@ -26,4 +27,10 @@ test('la carte vide remplit la largeur disponible sur téléphone', async () => 
   const svg = container.querySelector('svg[viewBox="90 50 550 230"]')
   expect(svg?.getAttribute('class')).toContain('w-full max-w-[520px]')
   expect(svg?.querySelector('[font-size="20"]')).toBeTruthy()
+})
+
+test('ouvrir la carte mentale ne lance aucune génération', async () => {
+  const task = { id: '1', title: 'Exposé', dueAt: Date.now() + 86400000, estMins: 30, priority: 3, status: 'todo' }
+  await act(async () => root.render(<PlannerMindmap {...props} tasks={[task] as any} />))
+  expect(plannerMaterials).not.toHaveBeenCalled()
 })

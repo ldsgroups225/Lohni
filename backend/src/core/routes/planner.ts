@@ -1,11 +1,13 @@
 import type { PlannerService } from "../../services/planner/service"
-import type { CreateTaskRequest, UpdateTaskRequest, PlannerGenerateRequest, MaterialsRequest } from "../../services/planner/types"
+import type { CreateTaskRequest, UpdateTaskRequest, PlannerGenerateRequest } from "../../services/planner/types"
 import { DEVICE_ID_ERROR, validUUID } from "../../services/revision/service"
-import { emitToAll, emitLarge } from "../../utils/chat/ws"
+import { emitToAll } from "../../utils/chat/ws"
 import { parseMultipart } from "../../lib/parser/upload"
 import crypto from "node:crypto"
 
 const FAILED = "Le planning est indisponible. Réessaie dans un instant."
+const MATERIALS_FAILED = "La fiche n’a pas pu être générée. Réessaie dans un instant."
+const MATERIAL_TYPES = ["summary", "studyGuide", "flashcards", "quiz"]
 const NOT_FOUND = "Tâche introuvable."
 
 // One room per device: events never leave the device that owns the data.
@@ -103,13 +105,16 @@ export function plannerRoutes(app: any, service: PlannerService) {
 
     route("post", "/tasks/:id/materials", async (device, req, res) => {
         const id = req.params.id
+        const type = req.body?.type
+        if (!MATERIAL_TYPES.includes(type)) return res.status(400).send({ ok: false, error: "Type de fiche inconnu." })
         if (!(await service.getTask(device, id))) return notFound(res)
-        const request: MaterialsRequest = { type: req.body?.type || "summary" }
-        emit(device, { type: "phase", value: "assist" })
-        const materials = await service.generateMaterials(device, id, request)
-        await emitLarge(rooms.get(device), "materials", { taskId: id, type: request.type, data: materials }, { gzip: true })
-        emit(device, { type: "done", taskId: id })
-        res.send({ ok: true, materials })
+        try {
+            const materials = await service.generateMaterials(device, id, { type })
+            res.send({ ok: true, materials })
+        } catch (e) {
+            console.error("[planner] materials failed", e)
+            res.status(500).send({ ok: false, error: MATERIALS_FAILED })
+        }
     })
 
     route("patch", "/slots/:taskId/:slotId", async (device, req, res) => {

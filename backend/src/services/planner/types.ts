@@ -6,7 +6,6 @@ export type PlanPolicy = {
     pomodoroMins: number // 25 default
     breakMins: number // 5 default
     maxDailyMins?: number // 240 default
-    cram?: boolean
 }
 
 export type SlotKind = "focus" | "review" | "buffer"
