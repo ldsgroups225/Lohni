@@ -847,7 +847,7 @@ async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<
     const knew = input.knew && (card.kind !== 'mcq' || input.choice === card.correct);
     const answer = { ...input, answerId: crypto.randomUUID() };
     state.pending.push({ answer, localDate: session.localDate });
-    if (state.cacheDates) { delete state.cacheDates['/home']; delete state.cacheDates['/progress']; }
+    if (state.cacheDates) { delete state.cacheDates['/home']; delete state.cacheDates['/progress']; delete state.cacheDates['/chapters']; }
     advanceSession(session, knew, input.durationMs);
     delete session.summary; // périmé : le récap le recharge une fois les réponses envoyées
     next = session;
@@ -879,7 +879,7 @@ async function revisionMutation<T>(path: string, method: string, body?: unknown,
   }
   else invalidateRevisionCache('/home', '/progress', '/chapters', '/plan', '/import/quota')
   await updateOffline(state => { if (device === cachedDevice()) {
-    if (state.cacheDates) { delete state.cacheDates['/home']; delete state.cacheDates['/progress']; }
+    if (state.cacheDates) { delete state.cacheDates['/home']; delete state.cacheDates['/progress']; delete state.cacheDates['/chapters']; }
     if (path === '/profile') { state.cache['/profile'] = result; delete state.cache['/home']; }
     if (path === '/exams' || path.startsWith('/exams/')) {
       const exams = (state.cache['/exams'] as RevisionExam[] | undefined) ?? [];
@@ -955,7 +955,7 @@ export const revisionAPI = {
   profile: () => cachedRevisionRead<RevisionProfile | null>('/profile'),
   settings: () => revisionRequest<RevisionSettings>('/settings'),
   saveSettings: (settings: RevisionSettings) => revisionMutation<RevisionSettings>('/settings', 'PUT', settings),
-  chapters: () => sharedRevisionRead('/chapters', () => revisionRequest<RevisionChapter[]>('/chapters')),
+  chapters: () => cachedRevisionRead<RevisionChapter[]>('/chapters'),
   deleteChapter: (id: string) => revisionMutation<null>(`/chapters/${encodeURIComponent(id)}`, 'DELETE'),
   updateCard: (id: string, card: RevisionCardInput) => revisionMutation<null>(`/cards/${encodeURIComponent(id)}`, 'PUT', card),
   saveProfile: (profile: RevisionProfile) => revisionMutation<RevisionProfile>('/profile', 'PUT', profile),
@@ -1006,9 +1006,9 @@ export function prepareRevisionStartup() {
     revisionDeviceId()
     const saved = readOffline()
     if (saved.cache['/profile'] !== undefined) rememberRevisionSnapshot('/profile', saved.cache['/profile'])
-    if (!saved.pending.length) for (const key of ['/home', '/progress']) {
-      if (saved.cacheDates?.[key] === revisionLocalDate() && saved.cache[key] !== undefined) rememberRevisionSnapshot(key, saved.cache[key])
-    }
+    // L’accueil s’affiche complet ou pas du tout : ses trois lectures reviennent ensemble, sinon il les attend derrière l’écran de démarrage.
+    const homeKeys = ['/home', '/progress', '/chapters']
+    if (!saved.pending.length && homeKeys.every(key => saved.cacheDates?.[key] === revisionLocalDate() && saved.cache[key] !== undefined)) for (const key of homeKeys) rememberRevisionSnapshot(key, saved.cache[key])
     void syncRevisionAnswers()
   } catch { /* The page reports unavailable storage or device support. */ }
 }

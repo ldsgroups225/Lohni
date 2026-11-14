@@ -163,3 +163,23 @@ test('l’accueil affiche les chapitres et la répartition réelle de la séance
     expect(host.textContent).toContain('1 carte vue sur 2')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
 })
+
+test('l’écran de démarrage reste affiché jusqu’à ce que l’accueil ait ses chapitres et sa progression', async () => {
+  localStorage.setItem('lohni-device-id', 'appareil-demarrage')
+  const splash = document.createElement('div'); splash.id = 'splash'; document.body.append(splash)
+  api.home.mockResolvedValueOnce({ profile: { schoolClass: '3e' }, state: 'empty', cardCount: 0, totalCards: 0, daysUntilExam: null })
+  let resolveChapters!: (value: unknown) => void
+  api.chapters.mockImplementationOnce(() => new Promise(r => { resolveChapters = r }) as never)
+  api.progress.mockResolvedValueOnce({ streak: 3, xp: 0, streakStarted: true, subjects: [] })
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/', element: <Home /> }])
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.textContent).not.toContain('Tes chapitres')
+    expect(document.getElementById('splash')).not.toBeNull()
+    await act(async () => resolveChapters([{ id: 'c', subjectId: 's', subject: 'SVT', title: 'Cellules', cards: [{}], seenCards: 0, mastery: 0, status: 'Fragile' }]))
+    expect(host.textContent).toContain('Cellules')
+    expect(document.getElementById('splash')).toBeNull()
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); splash.remove(); localStorage.removeItem('lohni-device-id') }
+})

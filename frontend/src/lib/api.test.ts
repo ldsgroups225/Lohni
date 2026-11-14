@@ -146,11 +146,17 @@ test('une synchronisation tardive ne déplace pas la file vers un autre appareil
 test('au démarrage les données locales du jour sont immédiatement disponibles et la lecture est partagée', async () => {
   const day = new Date(); const date = [day.getFullYear(), String(day.getMonth() + 1).padStart(2, '0'), String(day.getDate()).padStart(2, '0')].join('-')
   const home = { profile: { schoolClass: '3e', subjects: [] }, state: 'ready', cardCount: 2 }
-  entries.set(offlineKey, JSON.stringify({ pending: [], cache: { '/home': home }, cacheDates: { '/home': date } }))
+  const { invalidateRevisionCache, revisionSnapshot } = await import('./revisionReadCache')
+  invalidateRevisionCache()
+  // Sans ses chapitres du jour, l’accueil en cache resterait incomplet : rien n’est restauré.
+  entries.set(offlineKey, JSON.stringify({ pending: [], cache: { '/home': home, '/progress': null }, cacheDates: { '/home': date, '/progress': date } }))
+  api.prepareRevisionStartup()
+  expect(revisionSnapshot('/home')).toBeUndefined()
+  entries.set(offlineKey, JSON.stringify({ pending: [], cache: { '/home': home, '/progress': null, '/chapters': [] }, cacheDates: { '/home': date, '/progress': date, '/chapters': date } }))
   vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
   api.prepareRevisionStartup()
-  const { revisionSnapshot } = await import('./revisionReadCache')
   expect(revisionSnapshot('/home')).toEqual(home)
+  expect(revisionSnapshot('/chapters')).toEqual([])
   void api.revisionAPI.home()
   void api.revisionAPI.home()
   await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))

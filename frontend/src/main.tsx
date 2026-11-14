@@ -12,6 +12,10 @@ if (!root) throw new Error("Élément racine introuvable")
 ReactDOM.createRoot(root).render(
   <RouterProvider router={navigationTransitions(createBrowserRouter(routes))} />
 );
+// L’accueil retire l’écran de démarrage quand il est prêt ; ailleurs il part tout de suite, et jamais plus de 5 s.
+const hideSplash = () => document.getElementById('splash')?.remove()
+if (location.pathname === '/') setTimeout(hideSplash, 5000)
+else hideSplash()
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {

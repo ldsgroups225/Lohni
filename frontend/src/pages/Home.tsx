@@ -8,7 +8,7 @@ import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import { Card } from '../components/ui/Card'
 import { Progress } from '../components/ui/Progress'
 import MasteryBadge from '../components/ui/MasteryBadge'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import Onboarding from '../components/Revision/Onboarding'
@@ -35,15 +35,20 @@ export default function Home() {
       setError('')
       setProgressError('')
       if (!shown.current) setLoading(true)
+      // Les trois lectures partent ensemble et l’accueil change d’un seul coup, sans état intermédiaire.
+      const details = () => [revisionAPI.chapters().then(value => ({ value }), error => ({ error })), revisionAPI.progress().then(value => ({ value }), error => ({ error }))] as const
+      let [chaptersRead, progressRead] = details()
       try {
-        const data = await revisionAPI.read(revisionAPI.home, () => { shown.current = false; setHome(null); setProgress(null); setChapters(null); setLoading(true) }, () => active)
+        const data = await revisionAPI.read(revisionAPI.home, () => { shown.current = false; setHome(null); setProgress(null); setChapters(null); setLoading(true); [chaptersRead, progressRead] = details() }, () => active)
+        const [chaptersResult, progressResult] = data ? await Promise.all([chaptersRead, progressRead]) : []
         if (!active) return
         shown.current = !!data
         setHome(data)
-        if (data) void revisionAPI.chapters().then(value => { if (active) setChapters(value) }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
-        if (data) void revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(cause => {
-          if (active && (cause as { status?: number } | null)?.status !== 404) setProgressError('Ta progression est temporairement indisponible.')
-        })
+        if (chaptersResult) 'value' in chaptersResult ? setChapters(chaptersResult.value) : setProgressError('Le détail de tes cartes est temporairement indisponible.')
+        if (progressResult) {
+          if ('value' in progressResult) setProgress(progressResult.value)
+          else if ((progressResult.error as { status?: number } | null)?.status !== 404) setProgressError('Ta progression est temporairement indisponible.')
+        }
       } catch (cause) {
         if (active) {
           if (shown.current) setProgressError('La mise à jour de ton accueil est temporairement indisponible.')
@@ -54,6 +59,8 @@ export default function Home() {
     void load()
     return () => { active = false }
   }, [attempt])
+  // L’écran de démarrage d’index.html couvre l’accueil jusqu’à ce qu’il soit prêt (ou en erreur, ou à l’accueil d’inscription).
+  useLayoutEffect(() => { if (!loading) document.getElementById('splash')?.remove() }, [loading])
   const [streakFrom, setStreakFrom] = useState<number | null>(null)
   useEffect(() => {
     if (!progress) return

@@ -12,8 +12,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Lohni</title>
+    <style>
+      /* Copie de l’écran de démarrage natif de la PWA (manifest) : il reste affiché jusqu’à ce que l’accueil soit prêt. */
+      #splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #fff8f1; }
+      #splash div { display: grid; place-items: center; width: 240px; height: 240px; border-radius: 60px; border: 1px solid rgb(0 0 0 / 0.08); }
+      @media (prefers-color-scheme: dark) { #splash { background: #1b1512; } #splash div { border-color: rgb(255 255 255 / 0.08); } }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true"><div><img src="/icons/lohni-any-192.png" alt="" width="150" height="150" /></div></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
