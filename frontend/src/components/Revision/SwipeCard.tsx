@@ -55,7 +55,9 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
     // La réponse part dès que la carte quitte l'écran ; le ressort n'a pas à finir.
     let called = false
     const send = () => { if (!called) { called = true; onSwipe(knew) } }
-    animate((knew ? 1 : -1) * window.innerWidth * 1.2, velocity, value => { if (Math.abs(value) >= window.innerWidth) send() }, send)
+    // Largeur lue une fois : la relire à chaque image, juste après l'écriture du transform, forcerait un recalcul de mise en page.
+    const width = window.innerWidth
+    animate((knew ? 1 : -1) * width * 1.2, velocity, value => { if (Math.abs(value) >= width) send() }, send)
   }
 
   useEffect(() => () => stop.current?.(), [])
@@ -116,7 +118,7 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
         onKeyDown={key} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel}
         className="flex min-h-[55dvh] flex-1 touch-pan-y select-none flex-col rounded-3xl border border-[color:var(--swipe-border)] bg-surface p-5 will-change-transform"
       >
-        <div className="flex-1 overflow-y-auto break-words">
+        <div className="flex-1 touch-pan-y overflow-y-auto break-words">
           {context && <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted">{context}</p>}
           <div className="text-2xl font-bold leading-snug text-foreground"><CardMarkdown md={question} inline /></div>
           <div className="mt-6 border-t border-border pt-5" hidden={!revealed}>

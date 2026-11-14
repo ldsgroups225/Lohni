@@ -1,4 +1,5 @@
 import ReactMarkdown, { type Components } from "react-markdown";
+import type { ReactElement } from "react";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import remarkMath from "remark-math";
@@ -52,20 +53,43 @@ const components: Components = {
 // The model often wraps plain numbers in LaTeX ($1$); KaTeX would render them in a serif font mid-sentence.
 const plainNumbers = (md: string) => md.replace(/\$\s*(-?\d+(?:[.,]\d+)?)\s*\$/g, "$1");
 
+// rehype-highlight rebuilds all its grammars each render; only text with a code block needs it (tutor), not a revision card.
+const withCode = [rehypeKatex, rehypeHighlight];
+const withoutCode = [rehypeKatex];
+const hasCode = (md: string) => md.includes("```") || md.includes("~~~") || /^( {4}|\t)\S/m.test(md);
+
+// Markdown + KaTeX is synchronous and heavy on a low-end phone: render each text once, and prepare the next card ahead of time.
+const rendered = new Map<string, ReactElement>();
+const MAX_RENDERED = 200;
+function render(md: string, inline: boolean): ReactElement {
+  const key = `${inline ? "i" : "b"}:${md}`;
+  let element = rendered.get(key);
+  if (!element) {
+    element = ReactMarkdown({
+      skipHtml: true,
+      remarkPlugins: [remarkGfm, remarkBreaks, remarkMath],
+      rehypePlugins: hasCode(md) ? withCode : withoutCode,
+      components: inline ? undefined : components,
+      disallowedElements: inline ? blockElements : undefined,
+      unwrapDisallowed: inline,
+      children: plainNumbers(md),
+    });
+    if (rendered.size >= MAX_RENDERED) rendered.delete(rendered.keys().next().value as string);
+    rendered.set(key, element);
+  }
+  return element;
+}
+
+/** Renders texts now (e.g. the next revision card while the student reads this one) so showing them later costs no parsing. */
+export function prerenderMarkdown(texts: { md: string; inline?: boolean }[]) {
+  for (const { md, inline = false } of texts) if (md) render(md, inline);
+}
+
 export default function MarkdownView({ md, inline = false }: Props) {
   const Wrapper = inline ? "span" : "div";
   return (
     <Wrapper className={inline ? "break-words" : "max-w-none leading-relaxed w-full overflow-hidden"}>
-      <ReactMarkdown
-        skipHtml
-        remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-        rehypePlugins={[rehypeKatex, rehypeHighlight]}
-        components={inline ? undefined : components}
-        disallowedElements={inline ? blockElements : undefined}
-        unwrapDisallowed={inline}
-      >
-        {plainNumbers(md || "")}
-      </ReactMarkdown>
+      {render(md || "", inline)}
     </Wrapper>
   );
 }

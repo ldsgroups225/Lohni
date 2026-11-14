@@ -53,3 +53,12 @@ test('revoir les cartes ratées : désactivé avec sa raison hors ligne, masqué
   expect(offline).toContain('Connecte-toi pour revoir ces cartes.')
   expect(html({ quiz: { total: 1, correct: 1 }, flashcards: { total: 0, knew: 0 }, missed: [] })).not.toContain('maintenant')
 })
+
+// Complet ou rien : tant que le bilan se charge, rien ne s'affiche sous le titre qui bougerait ensuite.
+test('pendant le chargement du bilan, seul le titre est affiché', () => {
+  const out = renderToString(<MemoryRouter><SessionRecap loading session={{ ...base, summary: { quiz: { total: 1, correct: 1 }, flashcards: { total: 0, knew: 0 }, missed: [] } }} progress={null} chapters={[]} pending={0} moreCards={false} busy={false} online onExplain={() => {}} onContinue={() => {}} onReviewMissed={() => {}} /></MemoryRouter>).replace(/<!-- -->/g, '')
+  expect(out).toContain('Session terminée')
+  expect(out).toContain('On prépare ton bilan…')
+  expect(out).not.toContain('+20')
+  expect(out).not.toContain('Retour à l’accueil')
+})
