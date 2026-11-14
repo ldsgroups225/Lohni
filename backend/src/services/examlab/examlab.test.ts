@@ -84,3 +84,17 @@ test('un QCM aux options répétées ne décale pas la réponse correcte', async
   vi.mocked(llm.invoke).mockResolvedValue({ content: JSON.stringify([item]) } as any)
   await expect(generateSectionItems({ type: 'mcq', count: 1, prompt: 'Géographie' }, 'seed')).rejects.toThrow()
 })
+
+test('annuler la préparation interrompt l’appel du modèle', async () => {
+  const controller = new AbortController()
+  let started!: () => void
+  const running = new Promise<void>(resolve => { started = resolve })
+  vi.mocked(llm.invoke).mockImplementation((_messages, options) => new Promise((_resolve, reject) => {
+    options?.signal?.addEventListener('abort', () => reject(new Error('annulé')))
+    started()
+  }))
+  const exam = handleExam('bepc', controller.signal)
+  await running
+  controller.abort()
+  await expect(exam).rejects.toThrow()
+})

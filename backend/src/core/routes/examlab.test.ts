@@ -8,7 +8,7 @@ const item = (id: number, question: string) => ({ id, question, options: ['A) a'
 
 function harness() {
   const routes: Record<string, any> = {}
-  const app = { ws: (p: string, h: any) => { routes[`WS ${p}`] = h }, post: (p: string, h: any) => { routes[`POST ${p}`] = h }, get: (p: string, h: any) => { routes[`GET ${p}`] = h } }
+  const app = { ws: (p: string, h: any) => { routes[`WS ${p}`] = h }, post: (p: string, h: any) => { routes[`POST ${p}`] = h }, get: (p: string, h: any) => { routes[`GET ${p}`] = h }, delete: (p: string, h: any) => { routes[`DELETE ${p}`] = h } }
   examRoutes(app)
   return routes
 }
@@ -41,4 +41,15 @@ test('un échec de génération est annoncé en français', async () => {
   routes['WS /ws/exams']({ readyState: 1, send: (m: string) => sent.push(JSON.parse(m)), on: () => {}, close: vi.fn() }, { url: `/ws/exams?runId=${started.runId}` })
   await vi.waitFor(() => expect(sent.some(m => m.type === 'error')).toBe(true))
   expect(sent.find(m => m.type === 'error').error).toMatch(/examen/)
+})
+
+test('annuler un examen interrompt la génération en cours', async () => {
+  vi.mocked(handleExam).mockImplementation((_id, signal) => new Promise((_resolve, reject) => {
+    signal?.addEventListener('abort', () => reject(new Error('annulé')))
+  }))
+  const routes = harness()
+  let started: any
+  await routes['POST /exam']({ body: { examId: 'bepc' } }, { status: () => ({ send: (body: any) => { started = body } }) })
+  routes['DELETE /exam/:id']({ params: { id: started.runId } }, { send: () => {} })
+  expect(vi.mocked(handleExam).mock.lastCall?.[1]?.aborted).toBe(true)
 })

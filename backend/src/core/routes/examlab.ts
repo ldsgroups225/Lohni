@@ -5,7 +5,7 @@ import { loadAllExams } from "../../services/examlab/loader"
 import type { QuizLikeItem } from "../../services/examlab/types"
 
 // Generation starts on POST; the socket may open before or after it finishes.
-const runs = new Map<string, Promise<QuizLikeItem[]>>()
+const runs = new Map<string, { promise: Promise<QuizLikeItem[]>; controller: AbortController }>()
 const RUN_TTL_MS = 10 * 60 * 1000
 const log = (...a: any) => console.log("[exam]", ...a)
 
@@ -29,7 +29,7 @@ export function examRoutes(app: any) {
       send({ type: "error", error: "Cet examen n’est plus disponible. Relance-le." })
       return ws.close(1008, "unknown runId")
     }
-    run.then(
+    run.promise.then(
       payload => { send({ type: "exam", payload }); send({ type: "done" }) },
       e => { log("run err", runId, e?.message || e); send({ type: "error", error: "Impossible de préparer l’examen. Réessaie." }) },
     )
@@ -60,6 +60,12 @@ export function examRoutes(app: any) {
     }
   })
 
+  app.delete("/exam/:id", (req: any, res: any) => {
+    runs.get(req.params.id)?.controller.abort()
+    runs.delete(req.params.id)
+    res.send({ ok: true })
+  })
+
   app.post("/exam", async (req: any, res: any) => {
     try {
       const examId = String(req.body?.examId || "").trim()
@@ -68,11 +74,12 @@ export function examRoutes(app: any) {
       const runId = crypto.randomUUID()
       res.status(202).send({ ok: true, runId, stream: `/ws/exams?runId=${runId}` })
 
-      const run = withTimeout(handleExam(examId), 180000, "handleExam")
+      const controller = new AbortController()
+      const run = withTimeout(handleExam(examId, controller.signal), 180000, "handleExam")
         // Sections number their items from 1; the screen needs one continuous list.
         .then(exam => exam.sections.flatMap(section => section.items).map((item, i) => ({ ...item, id: i + 1 })))
       run.catch(() => { })
-      runs.set(runId, run)
+      runs.set(runId, { promise: run, controller })
       setTimeout(() => runs.delete(runId), RUN_TTL_MS).unref?.()
     } catch (e: any) {
       log("500 single err", e?.message || e)
