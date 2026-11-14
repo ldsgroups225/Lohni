@@ -245,17 +245,17 @@ function parseNumberedList(text: string): string[] {
 function getDefaultSteps(type?: TaskType): string[] {
     switch (type) {
         case 'homework':
-            return ['Review notes', 'Solve problems', 'Check work', 'Submit']
+            return ['Relire le cours', 'Faire les exercices', 'Vérifier ton travail', 'Rendre le devoir']
         case 'essay':
-            return ['Research', 'Outline', 'Draft', 'Revise', 'Submit']
+            return ['Chercher des idées', 'Faire le plan', 'Rédiger un brouillon', 'Relire et corriger', 'Rendre le devoir']
         case 'project':
-            return ['Plan', 'Build', 'Test', 'Document', 'Present']
+            return ['Organiser le travail', 'Réaliser', 'Tester', 'Rédiger le compte rendu', 'Présenter']
         case 'lab':
-            return ['Read manual', 'Set up', 'Collect data', 'Analyze', 'Report']
+            return ['Lire le protocole', 'Préparer le matériel', 'Relever les mesures', 'Analyser les résultats', 'Rédiger le compte rendu']
         case 'exam':
-            return ['Review syllabus', 'Study notes', 'Practice', 'Self-test']
+            return ['Lister les chapitres', 'Revoir le cours', 'Faire des exercices', 'Te tester']
         default:
-            return ['Start task', 'Work on it', 'Review', 'Complete']
+            return ['Commencer', 'Avancer', 'Relire', 'Terminer']
     }
 }
 
