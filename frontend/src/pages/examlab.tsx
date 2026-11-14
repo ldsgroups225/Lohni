@@ -1,5 +1,6 @@
 import { PartyIcon, TrophyIcon, BookIcon, DumbbellIcon } from '../components/ui/NavigationIcons'
 import { useEffect, useMemo, useRef, useState } from "react"
+import { runTask } from "../lib/taskRun"
 import { getExams, startExam, cancelExam, connectExamStream, revisionAPI, type ExamEvent } from "../lib/api"
 import LoadingIndicator from "../components/Chat/LoadingIndicator"
 import { LoadingState } from "../components/ui/LoadingState"
@@ -46,13 +47,10 @@ export default function ExamLabs() {
   const [fragileCard, setFragileCard] = useState<string>()
   const [ready, setReady] = useState(false)
 
-  const closeRef = useRef<null | (() => void)>(null)
-  const runRef = useRef<{ cancelled: boolean; id?: string } | null>(null)
+  const runRef = useRef<{ cancel: () => void } | null>(null)
   function cancel() {
-    const run = runRef.current
-    if (run) { run.cancelled = true; if (run.id) void cancelExam(run.id).catch(() => {}) }
-    closeRef.current?.()
-    closeRef.current = null
+    runRef.current?.cancel()
+    runRef.current = null
     setConnecting(false)
     setActiveExam(null)
   }
@@ -85,17 +83,11 @@ export default function ExamLabs() {
         setLoadingExams(false)
       }
     })()
-    return () => {
-      const run = runRef.current
-      if (run) { run.cancelled = true; if (run.id) void cancelExam(run.id).catch(() => {}) }
-      closeRef.current?.()
-    }
+    return () => { runRef.current?.cancel() }
   }, [])
 
   async function start(id: string) {
-    if (closeRef.current) closeRef.current()
-    const run: { cancelled: boolean; id?: string } = { cancelled: false }
-    runRef.current = run
+    runRef.current?.cancel()
     setReady(false)
     setQs([])
     setIdx(0)
@@ -109,12 +101,13 @@ export default function ExamLabs() {
     setFailure("")
     setConnecting(true)
 
-    try {
-      const { runId } = await startExam(id)
-      run.id = runId
-      if (run.cancelled) { void cancelExam(runId).catch(() => {}); return }
-      const { close } = connectExamStream(runId, (ev: ExamEvent) => {
-        if (run.cancelled) return
+    runRef.current = runTask<ExamEvent>({
+      start: async () => (await startExam(id)).runId,
+      connect: connectExamStream,
+      cancel: cancelExam,
+      streamError: "Impossible de préparer l’examen. Réessaie.",
+      onStartError: () => { setFailure("Impossible de lancer l’examen. Vérifie ta connexion et réessaie."); setConnecting(false) },
+      onEvent: (ev: ExamEvent) => {
         if (ev.type === "exam") {
           const arr = Array.isArray(ev.payload) ? ev.payload : []
           setQs(arr.map((q: any) => ({ ...q, correct: Math.max(0, q.correct - 1) })))
@@ -123,18 +116,13 @@ export default function ExamLabs() {
           setReady(true)
           runRef.current = null
         }
-        if (ev.type === "error") setFailure(ev.error === "stream_error" ? "Impossible de préparer l’examen. Réessaie." : ev.error)
+        if (ev.type === "error") setFailure(ev.error)
         if (ev.type === "done" || ev.type === "error") {
           runRef.current = null
           setConnecting(false)
         }
-      })
-      closeRef.current = close
-    } catch {
-      if (run.cancelled) return
-      setFailure("Impossible de lancer l’examen. Vérifie ta connexion et réessaie.")
-      setConnecting(false)
-    }
+      },
+    })
   }
 
   const onSelect = (i: number) => {

@@ -25,3 +25,16 @@ test('une fermeture inattendue du flux signale une erreur, mais pas une fermetur
     expect(emit).not.toHaveBeenCalled()
   } finally { vi.unstubAllGlobals() }
 })
+
+test('la fermeture du flux podcast en cours de génération signale tout de suite une erreur', async () => {
+  const { connectPodcastStream } = await import('../lib/api')
+  class Socket { onmessage = null; onerror = null; onclose: (() => void) | null = null; constructor(public url: string) {} close() {} }
+  vi.stubGlobal('WebSocket', Socket)
+  try {
+    const emit = vi.fn()
+    const stream = connectPodcastStream('p1', emit)
+    expect((stream.ws as unknown as Socket).url).toContain('/ws/podcast?pid=p1')
+    ;(stream.ws as unknown as Socket).onclose?.()
+    expect(emit).toHaveBeenCalledWith({ type: 'error', error: 'stream_error' })
+  } finally { vi.unstubAllGlobals() }
+})

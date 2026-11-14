@@ -285,26 +285,30 @@ export async function cancelExam(runId: string) {
   return req(`${env.backend}/exam/${encodeURIComponent(runId)}`, { method: "DELETE", headers: deviceHeaders() })
 }
 
-export function connectExamStream(runId: string, onEvent: (ev: ExamEvent) => void) {
-  const url = wsURL(`/ws/exams?runId=${encodeURIComponent(runId)}`)
-  const ws = new WebSocket(url)
+// Socket of a server task: a close before the end of the task is a failure ("stream_error").
+function connectTaskSocket<E extends { type: string }>(path: string, onEvent: (ev: E) => void, invalid?: E) {
+  const ws = new WebSocket(wsURL(path))
   let finished = false
   const fail = () => {
     if (!finished) {
       finished = true
-      onEvent({ type: "error", error: "stream_error" })
+      onEvent({ type: "error", error: "stream_error" } as unknown as E)
     }
   }
   ws.onmessage = (m) => {
     try {
-      const event = JSON.parse(m.data as string) as ExamEvent
+      const event = JSON.parse(m.data as string) as E
       if (event.type === "done" || event.type === "error") finished = true
       onEvent(event)
-    } catch { }
+    } catch { if (invalid) onEvent(invalid) }
   }
   ws.onerror = fail
   ws.onclose = fail
   return { ws, close: () => { finished = true; try { ws.close() } catch { } } }
+}
+
+export function connectExamStream(runId: string, onEvent: (ev: ExamEvent) => void) {
+  return connectTaskSocket(`/ws/exams?runId=${encodeURIComponent(runId)}`, onEvent)
 }
 
 export async function smartnotesStart(input: { topic?: string; notes?: string; filePath?: string }) {
@@ -354,26 +358,7 @@ export async function podcastCancel(pid: string) {
 }
 
 export function connectPodcastStream(pid: string, onEvent: (ev: any) => void) {
-  const wsUrl = `${env.backend.replace(/^http/, "ws")}/ws/podcast?pid=${pid}`
-  const ws = new WebSocket(wsUrl)
-
-  ws.onopen = () => {
-  }
-
-  ws.onmessage = (e) => {
-    try {
-      const msg = JSON.parse(e.data)
-      onEvent(msg)
-    } catch {
-      onEvent({ type: "error", error: "invalid_message" })
-    }
-  }
-
-  ws.onclose = () => {
-  }
-
-  ws.onerror = () => onEvent({ type: "error", error: "stream_error" } as any)
-  return { ws, close: () => { try { ws.close() } catch { } } }
+  return connectTaskSocket<{ type: string; [k: string]: any }>(`/ws/podcast?pid=${encodeURIComponent(pid)}`, onEvent, { type: "error", error: "invalid_message" })
 }
 
 export function connectQuizStream(quizId: string, onEvent: (ev: QuizEvent) => void) {
