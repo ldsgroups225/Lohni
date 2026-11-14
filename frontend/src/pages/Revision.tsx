@@ -158,11 +158,15 @@ export default function Revision() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: Recharger le bilan pour chaque nouvelle session terminée.
   useEffect(() => {
     setMoreCards(false)
-    if (!session?.complete || sync.pending || !sync.online) return
+    if (!session?.complete) return
+    setProgress(null)
+    setChapters([])
+    if (sync.pending || !sync.online) return
     let active = true
     if (examId) setMoreCards(true)
     else revisionAPI.home().then(value => { if (active) setMoreCards(value?.moreCards ?? false) }).catch(() => {})
     ;(examId ? revisionAPI.examSession(examId) : revisionAPI.session()).then(fresh => { if (active) setSession(current => current && current.id === fresh.id ? { ...current, summary: fresh.summary } : current) }).catch(() => {})
+    if (session.position > 0) revisionAPI.chapters().then(value => { if (active) setChapters(value) }).catch(() => {})
     revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(error => {
       if (active) setError(error instanceof Error ? error.message : 'Impossible de charger ta progression.')
     })
@@ -286,7 +290,7 @@ export default function Revision() {
             {verdict && <Button ref={continueButton} className="w-full scroll-mb-8" onClick={next}>Continuer</Button>}
           </section>
         ) : (!busy || !!session) && <>
-          {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} pending={sync.pending} moreCards={moreCards} busy={busy || !validated} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onContinue={() => void run(async () => display(await (examId ? revisionAPI.examSession(examId, true) : revisionAPI.continue())))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
+          {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} chapters={chapters} pending={sync.pending} moreCards={moreCards} busy={busy || !validated} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onContinue={() => void run(async () => display(await (examId ? revisionAPI.examSession(examId, true) : revisionAPI.continue())))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
             {!error && <Mascotte humeur="au repos" taille={112} />}
             <h2 className="text-xl">{session.kind === 'express' ? 'Rien de fragile à revoir pour cet examen. Bravo !' : 'Aucune carte à réviser pour le moment'}</h2>
             {session.kind !== 'express' && <p>Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.</p>}

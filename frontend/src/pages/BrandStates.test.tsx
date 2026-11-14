@@ -47,6 +47,6 @@ test('aucune mascotte ne distrait pendant une carte', () => {
 test('la fin de session affiche la mascotte en fête', () => {
   state.values = [profile, { cards: [], position: 1, complete: true, earnedXP: 10 }, [], null, false, true, sync, '', false, undefined, '', '', null]
   const html = render(<Revision />)
-  expect(html).toContain('Session terminée !')
+  expect(html).toContain('Session terminée')
   expect(html).toContain('aria-label="Lohni, en fête"')
 })
