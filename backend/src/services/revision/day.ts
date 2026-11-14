@@ -7,7 +7,10 @@ export const addDays = (day: string, days: number) => new Date(Date.parse(day) +
 
 export const daysBetween = (from: string, to: string) => (Date.parse(to) - Date.parse(from)) / DAY_MS
 
-export const mondayOf = (day: string) => addDays(day, -((new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7))
+// 0 = Sunday, like Date#getDay.
+export const weekday = (day: string) => new Date(`${day}T00:00:00Z`).getUTCDay()
+
+export const mondayOf = (day: string) => addDays(day, -((weekday(day) + 6) % 7))
 
 // Révision express: the exam is tomorrow.
 export const isExpress = (examDate: string, today: string) => daysBetween(today, examDate) === 1

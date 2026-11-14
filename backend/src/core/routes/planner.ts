@@ -1,6 +1,7 @@
 import type { PlannerService } from "../../services/planner/service"
 import type { CreateTaskRequest, UpdateTaskRequest, PlannerGenerateRequest } from "../../services/planner/types"
 import { DEVICE_ID_ERROR, validUUID } from "../../services/revision/service"
+import { addDays, localDay } from "../../services/revision/day"
 import { emitToAll } from "../../utils/chat/ws"
 import { parseMultipart } from "../../lib/parser/upload"
 import crypto from "node:crypto"
@@ -204,6 +205,15 @@ export function plannerRoutes(app: any, service: PlannerService) {
     startPeriodicNotices(service, emit)
 }
 
+// The server's own calendar day: notices fire on its wall clock (getHours), so "today" is its local date, not the UTC one.
+const endOfDay = (day: string) => new Date(`${day}T23:59:59.999`).toISOString()
+
+export async function dailyDigest(service: PlannerService, device: string, now: Date) {
+    const date = localDay(now)
+    const tasks = await service.listTasks(device, { dueBefore: endOfDay(date) })
+    return { date, due: tasks.filter(task => localDay(new Date(task.dueAt)) === date) }
+}
+
 let noticesStarted = false
 const lastDigest = new Map<string, string>()
 const lastBreakReminder = new Map<string, number>()
@@ -216,14 +226,12 @@ function startPeriodicNotices(service: PlannerService, emit: (device: string, pa
         const now = new Date()
         const hh = now.getHours()
         const mm = now.getMinutes()
-        const today = now.toISOString().slice(0, 10)
+        const today = localDay(now)
         for (const device of [...rooms.keys()]) {
             try {
                 if (hh === 8 && mm < 5 && lastDigest.get(device) !== today) {
                     lastDigest.set(device, today)
-                    const tomorrow = new Date(`${today}T23:59:59Z`).toISOString()
-                    const tasks = await service.listTasks(device, { dueBefore: tomorrow })
-                    const dueToday = tasks.filter(t => new Date(t.dueAt).toDateString() === new Date(today).toDateString())
+                    const { due: dueToday } = await dailyDigest(service, device, now)
                     const todaySessions = await service.getTodaySessions(device)
                     emit(device, {
                         type: "daily.digest",
@@ -241,8 +249,8 @@ function startPeriodicNotices(service: PlannerService, emit: (device: string, pa
 
                 if (hh === 20 && mm < 5) {
                     const stats = await service.getUserStats(device)
-                    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-                    const tomorrowTasks = await service.listTasks(device, { status: 'todo', dueBefore: new Date(`${tomorrow}T23:59:59Z`).toISOString() })
+                    const tomorrow = addDays(today, 1)
+                    const tomorrowTasks = await service.listTasks(device, { status: 'todo', dueBefore: endOfDay(tomorrow) })
                     emit(device, {
                         type: "evening.review",
                         date: today,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, daysBetween, isExpress, localDay, mondayOf } from './day'
+import { addDays, daysBetween, isExpress, localDay, mondayOf, weekday } from './day'
 
 describe('student day', () => {
   it('formats the local calendar date, not the UTC one', () => {
@@ -17,6 +17,11 @@ describe('student day', () => {
     expect(mondayOf('2026-11-15')).toBe('2026-11-09')
     expect(mondayOf('2026-11-16')).toBe('2026-11-16')
     expect(mondayOf('2027-01-01')).toBe('2026-12-28')
+  })
+  it('numbers weekdays from Sunday', () => {
+    expect(weekday('2026-11-15')).toBe(0)
+    expect(weekday('2026-11-16')).toBe(1)
+    expect(weekday('2026-11-14')).toBe(6)
   })
   it('is express only the day before the exam', () => {
     expect(isExpress('2026-11-15', '2026-11-14')).toBe(true)

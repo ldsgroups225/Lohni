@@ -5,7 +5,7 @@ import { extractText } from '../../lib/parser/extract'
 import type { UpFile } from '../../lib/parser/upload'
 import type { SQLiteDatabase } from '../../utils/database/sqlite'
 import { REVISION_POLICY as policy } from './policy'
-import { addDays, daysBetween, isExpress, mondayOf } from './day'
+import { addDays, daysBetween, isExpress, mondayOf, weekday } from './day'
 import { advanceSession, answerXP } from './session'
 import { createEmptyCard, fsrs, Rating } from 'ts-fsrs'
 import { validItem } from '../quiz/validation'
@@ -115,8 +115,9 @@ export class RevisionService {
   private async execute<T>(context: RevisionContext, operation: () => Promise<T>): Promise<T> {
     if (!context || !validUUID(context.deviceId)) throw new RevisionError(DEVICE_ID_ERROR)
     if (!validDate(context.localDate)) throw new RevisionError('Date locale invalide.')
+    // Server UTC day on purpose: it bounds the device clock and keys the daily import/generation quotas (reset at 00:00 UTC, as told to the student), never a student-facing day.
     const serverDate = this.dependencies.now().toISOString().slice(0, 10)
-    if (Math.abs(Date.parse(context.localDate) - Date.parse(serverDate)) > 86400000) throw new RevisionError('Date locale trop éloignée. Règle la date de ton appareil à un jour au plus de la date UTC du serveur.', 'REVISION_LOCAL_DATE_OUT_OF_RANGE')
+    if (Math.abs(daysBetween(serverDate, context.localDate)) > 1) throw new RevisionError('Date locale trop éloignée. Règle la date de ton appareil à un jour au plus de la date UTC du serveur.', 'REVISION_LOCAL_DATE_OUT_OF_RANGE')
     await this.ready
     return this.dependencies.db.transaction(operation)
   }
@@ -211,12 +212,11 @@ export class RevisionService {
       const sessions = await this.dependencies.db.all("SELECT local_date, state FROM revision_sessions WHERE device_id = ? AND kind = 'daily' AND NOT (COALESCE(json_extract(state, '$.stale'), 0) = 1 AND json_extract(state, '$.position') = 0)", [context.deviceId])
       const emptyDays = new Set(sessions.filter(row => JSON.parse(row.state).cards.length === 0).map(row => row.local_date))
       for (const row of sessions) if (JSON.parse(row.state).cards.length > 0 && !days.has(row.local_date)) emptyDays.delete(row.local_date)
-      let date = Date.parse(context.localDate)
-      if (!days.has(context.localDate)) date -= 86400000
+      let date = days.has(context.localDate) ? context.localDate : addDays(context.localDate, -1)
       let streak = 0
-      while (days.has(new Date(date).toISOString().slice(0, 10)) || emptyDays.has(new Date(date).toISOString().slice(0, 10))) {
-        if (days.has(new Date(date).toISOString().slice(0, 10))) streak++
-        date -= 86400000
+      while (days.has(date) || emptyDays.has(date)) {
+        if (days.has(date)) streak++
+        date = addDays(date, -1)
       }
       const chapters = await this.readChapters(context.deviceId)
       const subjects = (await this.dependencies.db.all('SELECT id, name FROM revision_subjects WHERE device_id = ? AND selected = 1 ORDER BY rowid', [context.deviceId])).map(subject => {
@@ -295,7 +295,7 @@ export class RevisionService {
     return this.execute(context, async () => {
       if (!input || typeof input.schoolClass !== 'string' || !input.schoolClass.trim() || !Array.isArray(input.subjects) || !input.subjects.length || input.subjects.some(s => typeof s !== 'string' || !s.trim())) throw new RevisionError('Classe et matières requises.')
       if (input.examDate !== undefined && !validDate(input.examDate)) throw new RevisionError('Date d’examen invalide.')
-      if (input.examDate && Date.parse(input.examDate) - Date.parse(context.localDate) > policy.maxExamHorizonDays * 86400000) throw new RevisionError('La date d’examen est trop éloignée.')
+      if (input.examDate && daysBetween(context.localDate, input.examDate) > policy.maxExamHorizonDays) throw new RevisionError('La date d’examen est trop éloignée.')
       if (input.series !== undefined && !nonempty(input.series)) throw new RevisionError('Série invalide.')
       const db = this.dependencies.db
       await db.run(`INSERT INTO revision_profiles(device_id, school_class, series) VALUES (?, ?, ?)
@@ -341,7 +341,6 @@ export class RevisionService {
     const introducedIds = new Set(introduced.map(row => row.card_id))
     const completedReviewsToday = (await db.all(`SELECT DISTINCT j.card_id FROM revision_journal j JOIN revision_sessions s ON s.id = j.session_id WHERE j.device_id = ? AND j.local_date = ? AND s.kind = 'daily' AND json_extract(j.scheduling, '$.log.state') != 0`, [context.deviceId, context.localDate])).filter(row => !introducedIds.has(row.card_id)).length
     const timetable = await this.readTimetable(context.deviceId)
-    const weekday = (date: string) => new Date(`${date}T00:00:00Z`).getUTCDay()
     const duration = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3))
     const heavy = (date: string) => timetable.filter(block => block.day === weekday(date)).reduce((sum, block) => sum + duration(block.end) - duration(block.start), 0) >= policy.heavyDayHours * 60
     const plan = buildPlan({ heavy, completedReviewsToday, capacity: (date, base) => heavy(date) ? base * policy.heavyDayFactor : base,
@@ -374,7 +373,7 @@ export class RevisionService {
     const db = this.dependencies.db
     const profile = await this.requireProfile(context.deviceId)
     if (!input || !nonempty(input.title) || input.title.length > policy.maxTitleChars || !validDate(input.date) || !Array.isArray(input.subjects) || !input.subjects.length || input.subjects.some(subject => !profile.subjects.includes(subject)) || (input.chapterIds !== undefined && (!Array.isArray(input.chapterIds) || input.chapterIds.some(id => typeof id !== 'string')))) throw new RevisionError('Examen invalide : vérifie le titre, la date et les matières.')
-    if (Date.parse(input.date) - Date.parse(context.localDate) > policy.maxExamHorizonDays * 86400000) throw new RevisionError('La date d’examen est trop éloignée.')
+    if (daysBetween(context.localDate, input.date) > policy.maxExamHorizonDays) throw new RevisionError('La date d’examen est trop éloignée.')
     const exams = await this.readExams(context.deviceId)
     if (input.id !== undefined && (typeof input.id !== 'string' || !exams.some(exam => exam.id === input.id))) throw new RevisionError('Examen introuvable.')
     if (!input.id && exams.length >= policy.maxExams) throw new RevisionError(`Tu peux ajouter ${policy.maxExams} examens au maximum.`)
@@ -400,7 +399,7 @@ export class RevisionService {
     await this.execute(context, async () => {
       const date = this.dependencies.now().toISOString().slice(0, 10)
       const row = await this.dependencies.db.get('SELECT COUNT(*) AS count FROM revision_generations WHERE device_id = ? AND server_date = ?', [context.deviceId, date])
-      if (row.count >= policy.dailyGenerations) throw new RevisionError(`Tu as atteint tes ${policy.dailyGenerations} générations du jour. Recharge le ${new Date(Date.parse(date) + 86400000).toISOString().slice(0, 10)} à 00:00 UTC.`)
+      if (row.count >= policy.dailyGenerations) throw new RevisionError(`Tu as atteint tes ${policy.dailyGenerations} générations du jour. Recharge le ${addDays(date, 1)} à 00:00 UTC.`)
       // shortcut: un arrêt serveur consomme cette place jusqu’à minuit ; réconcilier si les arrêts deviennent fréquents.
       await this.dependencies.db.run('INSERT INTO revision_generations VALUES (?, ?, ?)', [generationId, context.deviceId, date])
     })
@@ -540,7 +539,7 @@ export class RevisionService {
   private async readImportQuota(deviceId: string) {
     const date = this.dependencies.now().toISOString().slice(0, 10)
     const row = await this.dependencies.db.get('SELECT COUNT(*) AS count FROM revision_imports WHERE device_id = ? AND server_date = ?', [deviceId, date])
-    return { remaining: Math.max(0, policy.dailyImports - row.count), resetsAt: new Date(Date.parse(date) + 86400000).toISOString() }
+    return { remaining: Math.max(0, policy.dailyImports - row.count), resetsAt: `${addDays(date, 1)}T00:00:00.000Z` }
   }
   private async storeChapter(context: RevisionContext, input: { title: string; subject: string }, generated: GeneratedChapter, origin: 'ai' | 'import', existingId?: string, signal?: AbortSignal) {
     if (!generated || !nonempty(generated.summary) || !Array.isArray(generated.notes) || !generated.notes.length || generated.notes.some(note =>
@@ -667,7 +666,7 @@ export class RevisionService {
   private async selectSessionCards(context: RevisionContext, profile: ProfileInput): Promise<RevisionCard[]> {
     const db = this.dependencies.db
     const settings = await db.get('SELECT rest_days FROM revision_settings WHERE device_id = ?', [context.deviceId])
-    if (settings && JSON.parse(settings.rest_days).includes(new Date(`${context.localDate}T00:00:00Z`).getUTCDay())) return []
+    if (settings && JSON.parse(settings.rest_days).includes(weekday(context.localDate))) return []
     const rows = await db.all(`SELECT c.*, ch.origin, s.name AS subject FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id
       JOIN revision_subjects s ON s.id = ch.subject_id WHERE c.device_id = ? AND s.selected = 1 ORDER BY c.rowid`, [context.deviceId])
     const introduced = await db.get(`SELECT COUNT(DISTINCT j.card_id) AS count FROM revision_journal j
@@ -680,10 +679,10 @@ export class RevisionService {
       AND json_extract(c.content, '$.kind') = 'mcq'`, [context.deviceId, context.localDate])
     const reviewed = new Set((await db.all('SELECT card_id FROM revision_journal WHERE device_id = ? AND local_date = ?', [context.deviceId, context.localDate])).map(r => r.card_id))
     const unseen = rows.filter(r => r.reviews === 0 && JSON.parse(r.content).kind === 'basic').length
-    const days = profile.examDate ? (Date.parse(profile.examDate) - Date.parse(context.localDate)) / 86400000 : 0
+    const days = profile.examDate ? daysBetween(context.localDate, profile.examDate) : 0
     const quota = (days > 0 ? Math.max(policy.minNewCards, Math.min(policy.maxNewCards, Math.ceil((unseen + introduced.count) / days))) : policy.defaultNewCards) - introduced.count
     const eligible = rows.filter(r => !reviewed.has(r.id) && (r.reviews === 0 || r.due.slice(0, 10) <= context.localDate))
-    const tomorrow = (new Date(`${context.localDate}T00:00:00Z`).getUTCDay() + 1) % 7
+    const tomorrow = (weekday(context.localDate) + 1) % 7
     const preferred = new Set((await this.readTimetable(context.deviceId)).filter(block => block.day === tomorrow && profile.subjects.includes(block.subject)).map(block => block.subject))
     const rank = (row: any) => row.reviews > 0 ? 0 : JSON.parse(row.content).kind === 'mcq' ? 2 : 1
     eligible.sort((a, b) => rank(a) - rank(b) || Number(preferred.has(b.subject)) - Number(preferred.has(a.subject)) || (a.reviews > 0 && b.reviews > 0
@@ -694,7 +693,7 @@ export class RevisionService {
       if (!day) {
         const settings = await db.get('SELECT rest_days FROM revision_settings WHERE device_id = ?', [context.deviceId])
         const restDays: number[] = settings ? JSON.parse(settings.rest_days) : []
-        return restDays.includes(new Date(`${context.localDate}T00:00:00Z`).getUTCDay()) ? [] : eligible.filter(row => row.reviews > 0).slice(0, policy.sessionCards).map(revisionCard)
+        return restDays.includes(weekday(context.localDate)) ? [] : eligible.filter(row => row.reviews > 0).slice(0, policy.sessionCards).map(revisionCard)
       }
       if (day.rest) return []
       const quotas = new Map(day.items.map(item => [item.chapterId, item.newCards]))

@@ -1,7 +1,6 @@
 import type { PlanPolicy, Slot, Task, WeeklyPlan } from "./types"
 import { makeSlots } from "./ai"
-
-const DAY_MS = 24 * 3600 * 1000
+import { addDays, localDay } from "../revision/day"
 
 export function defaultPolicy(): PlanPolicy {
     return { pomodoroMins: 25, breakMins: 5, maxDailyMins: 240 }
@@ -35,23 +34,13 @@ export function planTasks(tasks: Task[], policy: PlanPolicy): Task[] {
 }
 
 export function weeklyPlan(tasks: Task[], _policy: PlanPolicy): WeeklyPlan {
-    const start = new Date()
-    start.setHours(0, 0, 0, 0)
-    const days = [] as { date: string; slots: Slot[] }[]
-
-    for (let i = 0; i < 7; i++) {
-        const d = new Date(start.getTime() + i * DAY_MS)
-        days.push({ date: d.toISOString().slice(0, 10), slots: [] })
-    }
+    // Server-local calendar days: no 24 h arithmetic, so a daylight-saving change cannot shift a slot.
+    const first = localDay()
+    const days = Array.from({ length: 7 }, (_, i) => ({ date: addDays(first, i), slots: [] as Slot[] }))
 
     for (const task of tasks) {
-        const taskSlots = task.plan?.slots || []
-        for (const slot of taskSlots) {
-            const slotDate = new Date(slot.start)
-            const dayIndex = Math.floor((slotDate.getTime() - start.getTime()) / DAY_MS)
-            if (dayIndex >= 0 && dayIndex < 7) {
-                days[dayIndex].slots.push(slot)
-            }
+        for (const slot of task.plan?.slots || []) {
+            days.find(day => day.date === localDay(new Date(slot.start)))?.slots.push(slot)
         }
     }
 
