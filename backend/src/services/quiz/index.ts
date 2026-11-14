@@ -1,7 +1,7 @@
 import { REVISION_POLICY as policy } from '../revision/policy'
 import { validQuiz } from "./validation"
 import llm from "../../utils/llm/llm"
-import { generateStructured, StructuredOutputError } from "../../lib/ai/structured"
+import { generateStructured } from "../../lib/ai/structured"
 import { normalizeTopic } from "../../utils/text/normalize"
 
 export type QuizItem = {
@@ -86,8 +86,7 @@ export async function handleQuiz(topic: string, language: "en" | "fr" = "en", si
     { role: "system" as const, content: french(sys) },
     { role: "user" as const, content: `Topic:\n${normalizeTopic(topic)}\nReturn only the JSON array.` },
   ]
-  try {
-    return await generateStructured({
+  return generateStructured({
       model: llm, messages: messages(SYS), retryMessages: messages(SYS_STRICT), shape: "array", signal,
       validate: parsed => {
         const items = withExplanation(parsed)
@@ -95,9 +94,6 @@ export async function handleQuiz(topic: string, language: "en" | "fr" = "en", si
         const normalized = normalizeQuiz(items)
         return validQuiz(normalized) ? normalized : null
       },
-    })
-  } catch (error) {
-    if (error instanceof StructuredOutputError) throw new InvalidQuizError("Invalid quiz JSON from model")
-    throw error
-  }
+    failure: () => new InvalidQuizError("Invalid quiz JSON from model"),
+  })
 }

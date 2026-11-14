@@ -1,6 +1,6 @@
 import llm from "../../utils/llm/llm"
 import type { GenSpec, QuizLikeItem } from "./types"
-import { generateStructured, StructuredOutputError } from "../../lib/ai/structured"
+import { generateStructured } from "../../lib/ai/structured"
 import { normalizeTopic } from "../../utils/text/normalize"
 
 export type QuizItem = {
@@ -84,15 +84,11 @@ function validQuiz(a: any, count: number): a is QuizItem[] {
 
 async function generateItems(sys: string, user: string, count: number, signal?: AbortSignal): Promise<QuizItem[]> {
   const messages = (system: string) => [{ role: "system" as const, content: system }, { role: "user" as const, content: user }]
-  try {
-    return await generateStructured({
+  return generateStructured({
       model: llm, messages: messages(sys), retryMessages: messages(SYS_STRICT(count)), shape: "array", signal,
       validate: parsed => { const items = coerce(parsed, count); return validQuiz(items, count) ? items : null },
-    })
-  } catch (error) {
-    if (error instanceof StructuredOutputError) throw new Error("Les questions de l’examen n’ont pas pu être générées. Réessaie.")
-    throw error
-  }
+    failure: () => new Error("Les questions de l’examen n’ont pas pu être générées. Réessaie."),
+  })
 }
 
 export async function generateSectionItems(gen: GenSpec, seed: string, signal?: AbortSignal): Promise<QuizLikeItem[]> {

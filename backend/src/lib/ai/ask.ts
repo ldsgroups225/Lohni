@@ -283,6 +283,8 @@ type AskWithContextOptions = {
   /** A reply failing this check is asked for once more, then raises StructuredOutputError. */
   validate?: (payload: AskPayload) => boolean
   isCacheable?: (payload: AskPayload) => boolean
+  /** With `validate`: the error thrown when no reply passes it. */
+  failure?: (raw: string) => Error
   signal?: AbortSignal
 }
 
@@ -327,7 +329,7 @@ export async function askWithContext(opts: AskWithContextOptions): Promise<AskPa
   let out: AskPayload
   try {
     out = await generateStructured({
-      model: llm, messages: messages as any, shape: "object", attempts: opts.validate ? 2 : 1, keepReasoning: opts.reasoning !== 'none', signal: opts.signal,
+      model: llm, messages: messages as any, shape: "object", attempts: opts.validate ? 2 : 1, keepReasoning: opts.reasoning !== 'none', signal: opts.signal, failure: opts.validate ? opts.failure : undefined,
       validate: fromObject,
       salvage: draft => salvageTruncatedJson(draft, topic),
     })

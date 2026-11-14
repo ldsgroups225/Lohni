@@ -1,5 +1,6 @@
 import type { Task, TaskType, Slot, PlanPolicy } from "./types"
-import { handleAsk } from "../../lib/ai/ask"
+import llm from "../../utils/llm/llm"
+import { generateText } from "../../lib/ai/structured"
 
 export async function parseTask(text: string): Promise<Partial<Task>> {
     const systemPrompt = `Parse this homework/assignment text into structured data. Extract key information like title, due date, estimated time, course, and type. Respond with simple key-value pairs, one per line.
@@ -26,8 +27,8 @@ priority: 3
 notes: chapters 6-7`
 
     try {
-        const response = await handleAsk(`${systemPrompt}\n\nText to parse: ${text}`)
-        const parsed = parseKeyValueResponse(response.answer)
+        const answer = await generateText({ model: llm, messages: [{ role: 'user', content: `${systemPrompt}\n\nText to parse: ${text}` }], keepReasoning: true })
+        const parsed = parseKeyValueResponse(answer)
         const fallback = heuristicParse(text)
 
         return {
@@ -211,8 +212,8 @@ etc.
 Keep steps concise and actionable.`
 
     try {
-        const response = await handleAsk(systemPrompt + (task.notes ? `\nNotes: ${task.notes}` : ''))
-        const steps = parseNumberedList(response.answer)
+        const answer = await generateText({ model: llm, messages: [{ role: 'user', content: systemPrompt + (task.notes ? `\nNotes: ${task.notes}` : '') }], keepReasoning: true })
+        const steps = parseNumberedList(answer)
         return steps.length > 0 ? steps : getDefaultSteps(task.type)
     } catch (error) {
         console.warn('Step generation failed, using defaults:', error)
