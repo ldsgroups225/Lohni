@@ -102,3 +102,16 @@ export function useExitTransition(open: boolean, durationMs: number): { mounted:
   }, [open, durationMs, reduced])
   return { mounted: open || (shown && !reduced), state: open ? 'enter' : 'exit' }
 }
+
+/** Fait défiler pour que le bas de `element`, plus `gap` px, arrive au bas de la zone réellement visible.
+ *  Sur Chrome Android, barre d'adresse affichée, la zone visible (visualViewport) est plus courte que la fenêtre
+ *  de mise en page : scrollIntoView({ block: 'end' }) laissait le bouton sous le bas de l'écran. */
+export function revealAtBottom(element: HTMLElement, gap = 32): void {
+  const visible = window.visualViewport ? window.visualViewport.height + window.visualViewport.offsetTop : window.innerHeight
+  // Hauteur cachée par la barre : l'écran l'ajoute sous son contenu (var(--hidden-bottom)), sinon le défilement maximal
+  // (calculé sur la fenêtre de mise en page) s'arrête avant d'avoir montré le bouton.
+  document.documentElement.style.setProperty('--hidden-bottom', `${Math.max(0, document.documentElement.clientHeight - visible)}px`)
+  const overflow = element.getBoundingClientRect().bottom + gap - visible
+  if (overflow <= 0) return
+  window.scrollTo({ top: window.scrollY + overflow, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+}
