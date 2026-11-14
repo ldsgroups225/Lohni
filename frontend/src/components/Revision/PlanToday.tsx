@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { ButtonLink } from '../ui/Button'
 import { revisionAPI, type RevisionPlan } from '../../lib/api'
 
 export const frenchDate = (date: string) => new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`))
@@ -19,6 +19,6 @@ export function PlanToday() {
     {result?.offline && <p>Plan du {frenchDate(plan.today)}</p>}
     {(plan.days[0]?.actions?.length ?? 0) > 0 && <p>Sans chapitre : {plan.days[0]?.actions.map(action => action.subject).join(', ')}</p>}
     {warnings.map(warning => <p key={warning}>{warning}</p>)}
-    {!plan.exams.length ? <Link className="underline" to="/me/examens">Ajoute une date d’examen</Link> : <Link className="underline" to="/plan">Voir le plan</Link>}
+    {!plan.exams.length ? <ButtonLink variant="secondary" className="w-full" to="/me/examens">Ajoute une date d’examen</ButtonLink> : <ButtonLink variant="secondary" className="w-full" to="/plan">Voir le plan</ButtonLink>}
   </div>
 }

@@ -1,4 +1,4 @@
-import { ButtonLink } from '../ui/Button'
+import { Button, ButtonLink } from '../ui/Button'
 import Mascotte from '../Mascotte/Mascotte'
 import { FlameIcon } from '../ui/NavigationIcons'
 import { AnimatedNumber } from '../ui/AnimatedNumber'
@@ -76,7 +76,7 @@ export function SessionRecap({ session, progress, chapters, pending, moreCards, 
       <ButtonLink className="w-full" to="/">Retour à l’accueil</ButtonLink>
       {!!summary?.missed.length && <><button type="button" disabled={busy || !online || pending > 0} aria-describedby={busy || !online || pending > 0 ? 'review-unavailable' : undefined} onClick={onReviewMissed} className="min-h-14 w-full rounded-2xl border-2 border-primary bg-surface px-4 font-bold text-primary disabled:opacity-60">{summary.missed.length === 1 ? 'Revoir la carte maintenant' : `Revoir les ${summary.missed.length} cartes maintenant`}</button>{(busy || !online || pending > 0) && <p id="review-unavailable" className="text-sm text-muted">{!online ? 'Connecte-toi pour revoir ces cartes.' : pending > 0 ? 'Synchronise tes réponses pour revoir ces cartes.' : 'Patiente avant de revoir ces cartes.'}</p>}</>}
       {moreCards && (busy || !online || pending > 0) && <p className="text-sm text-muted">{!online ? 'Connecte-toi pour continuer.' : pending > 0 ? 'Synchronise tes réponses pour continuer.' : 'Patiente avant de continuer.'}</p>}
-      {moreCards && <button type="button" className="min-h-11 text-primary underline disabled:opacity-50" disabled={busy || !online || pending > 0} onClick={onContinue}>Continuer avec les cartes restantes</button>}
+      {moreCards && <Button variant="secondary" className="w-full" disabled={busy || !online || pending > 0} onClick={onContinue}>Continuer avec les cartes restantes</Button>}
     </section>
   )
 }

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import MarkdownContent from '../Chat/MarkdownContent'
 import { Button } from '../ui/Button'
+import { ScreenHeader } from '../ui/ScreenHeader'
 
 export default function ChapterSummary({ title, subject, summary, cards, onBack, onCards }: {
   title: string; subject: string; summary: string; cards: { id: string; answer: string }[]; onBack: () => void; onCards: () => void
@@ -17,10 +18,7 @@ export default function ChapterSummary({ title, subject, summary, cards, onBack,
     }
   }
   return <main className="loop-screen mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 pb-28 pt-4 md:pl-28">
-    <header className="flex items-center gap-2">
-      <button type="button" aria-label="Retour au chapitre" onClick={onBack} className="grid size-11 shrink-0 place-items-center rounded-xl text-2xl text-foreground">‹</button>
-      <div className="min-w-0"><h1 className="break-words text-xl font-extrabold text-foreground">{title}</h1><p className="text-sm text-muted">{subject} · Résumé</p></div>
-    </header>
+    <ScreenHeader back={onBack} backLabel="Retour au chapitre" title={title} subtitle={`${subject} · Résumé`} />
     <div role="tablist" aria-label="Contenu du chapitre" className="mt-3 flex gap-1 rounded-2xl bg-border p-1">
       <button type="button" role="tab" aria-selected={tab === 'summary'} onClick={() => setTab('summary')} className={`min-h-11 flex-1 rounded-xl font-bold ${tab === 'summary' ? 'bg-surface text-foreground' : 'text-muted'}`}>Résumé</button>
       <button type="button" role="tab" aria-selected={tab === 'key'} onClick={() => setTab('key')} className={`min-h-11 flex-1 rounded-xl font-bold ${tab === 'key' ? 'bg-surface text-foreground' : 'text-muted'}`}>À retenir</button>

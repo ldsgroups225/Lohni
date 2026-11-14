@@ -78,7 +78,7 @@ export default function QuestionCard({
               {ok ? <><span className="motion-pop text-success"><Check /></span>Bonne réponse !</> : <><span className="motion-pop text-danger"><Cross /></span>Réponse incorrecte</>}
             </p>
             {q.explanation && <MarkdownView md={q.explanation} />}
-            {onExplain && <button type="button" onClick={onExplain} disabled={explaining} className="min-h-11 font-semibold text-primary underline disabled:opacity-50">{explaining ? "Ouverture…" : "Explique-moi"}</button>}
+            {onExplain && <button type="button" onClick={onExplain} disabled={explaining} className="ui-button-secondary">{explaining ? "Ouverture…" : "Explique-moi"}</button>}
           </div>
         )}
       </div>
@@ -86,7 +86,7 @@ export default function QuestionCard({
       <button ref={next} type="button" onClick={onNext} disabled={!showExp} className="ui-button min-h-11 w-full scroll-mb-8 disabled:bg-tint disabled:text-muted disabled:opacity-100">
         {!showExp ? "Choisis une réponse" : isLast ? "Voir mon résultat" : "Continuer"}
       </button>
-      {showExp && onRetry && <button type="button" onClick={onRetry} className="min-h-11 w-full font-semibold text-primary underline">Recommencer cette question</button>}
+      {showExp && onRetry && <button type="button" onClick={onRetry} className="ui-button-secondary w-full">Recommencer cette question</button>}
     </div>
   );
 }

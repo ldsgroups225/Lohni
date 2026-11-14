@@ -260,13 +260,13 @@ export default function Chat() {
       <div className="mx-auto mt-6 w-full max-w-4xl space-y-3">
         <div className="flex items-center justify-between gap-4 whitespace-nowrap text-sm">
           <BackButton fallback="/tutor" />
-          <Link to={state.returnTo?.startsWith("/revision") ? state.returnTo : "/revision"} className="underline">Reprendre ma session</Link>
+          <Link to={state.returnTo?.startsWith("/revision") ? state.returnTo : "/revision"} className="ui-button-secondary">Reprendre ma session</Link>
         </div>
         {profile ? <details className="rounded-xl border border-border p-3"><summary className="cursor-pointer text-sm">Enregistrer les cartes dans mes révisions</summary><fieldset className="mt-3 flex flex-wrap gap-3">
           <label className="min-w-40 flex-1">Matière<select className="mt-1 w-full rounded-lg bg-surface p-2" value={subject} onChange={event => setSubject(event.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
           <label className="min-w-40 flex-1">Chapitre<input className="mt-1 w-full rounded-lg bg-surface p-2" maxLength={revisionPolicy.maxTitleChars} value={noteTitle} placeholder={(topic || 'Notes du Tuteur').slice(0, revisionPolicy.maxTitleChars)} onChange={event => setNoteTitle(event.target.value)} /></label>
-        </fieldset></details> : <Link to="/" className="block underline">Créer mon profil pour enregistrer des cartes</Link>}
-        {saveMessage && <p role="status" className="text-foreground">{saveMessage} <Link to="/courses" className="underline">Voir mes cours</Link></p>}
+        </fieldset></details> : <Link to="/" className="ui-button-secondary w-full">Créer mon profil pour enregistrer des cartes</Link>}
+        {saveMessage && <p role="status" className="text-foreground">{saveMessage} <Link to="/courses" className="ui-button-ghost">Voir mes cours</Link></p>}
         {error && <p role="alert" className="text-foreground">{error}</p>}
       </div>
       {!showTopics && (

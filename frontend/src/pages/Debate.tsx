@@ -418,13 +418,13 @@ export default function Debate() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] md:h-dvh w-full md:pl-28 bg-background text-foreground">
+        <div className="flex flex-col h-dvh w-full md:pl-28 bg-background text-foreground">
             <header className="flex-shrink-0 px-4 pt-4">
                 <div className="flex items-center gap-2">
-                    <BackButton fallback="/courses" className="inline-grid size-11 shrink-0 place-items-center rounded-xl text-foreground" />
+                    <BackButton fallback="/courses" />
                     <div className="min-w-0 flex-1"><h1 className="text-xl font-bold">Débat</h1><p className="text-sm text-muted">{messages.filter(message => message.role === "user").length} échange(s)</p></div>
                     <span className="rounded-full border border-border bg-tint px-3 py-1 text-xs font-medium">BÊTA</span>
-                    <button type="button" onClick={() => { setDebateId(null); setSession(null); setMessages([]); navigate("/debate"); }} className="min-h-11 px-2 text-sm text-primary underline">Nouveau débat</button>
+                    <button type="button" onClick={() => { setDebateId(null); setSession(null); setMessages([]); navigate("/debate"); }} className="ui-button-ghost text-sm">Nouveau débat</button>
                 </div>
                 <div className="mt-1 rounded-2xl border border-border bg-surface px-4 py-3">
                     <h2 title={session?.topic} className="line-clamp-2 font-bold leading-tight">{session?.topic || "Débat"}</h2>
@@ -511,7 +511,7 @@ export default function Debate() {
                         <button type="button"
                             onClick={handleSurrender}
                             disabled={isStreaming || messages.length === 0 || isDebateEnded}
-                            className="min-h-11 px-2 text-primary underline underline-offset-4 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
+                            className="ui-button-secondary text-sm"
                         >
                             Terminer le débat
                         </button>
@@ -659,7 +659,7 @@ export default function Debate() {
             )}
 
             {error && (
-                <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-4 right-4 z-[var(--z-toast)] bg-tint border border-primary rounded-xl p-4 text-foreground shadow-lg md:left-auto md:right-6 md:max-w-md">
+                <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 right-4 z-[var(--z-toast)] bg-tint border border-primary rounded-xl p-4 text-foreground shadow-lg md:left-auto md:right-6 md:max-w-md">
                     <div className="flex items-start gap-3">
                         <AlertIcon className="size-6 shrink-0" />
                         <div className="flex-1">{error}</div>

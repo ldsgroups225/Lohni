@@ -46,7 +46,7 @@ export function LoadingState({ label = 'On prépare ta page…', fullPage = fals
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">Astuce</p>
         <p key={tip} className="motion-enter mt-1 min-h-12 text-sm text-foreground">{tips[tip]}</p>
       </div>}
-      {onCancel && <button type="button" className="min-h-11 underline text-primary" onClick={onCancel}>Annuler</button>}
+      {onCancel && <button type="button" className="ui-button-secondary" onClick={onCancel}>Annuler</button>}
     </div>
   )
 }
@@ -57,6 +57,6 @@ export function ErrorState({ title, detail, children, actions }: { title: string
     <h2 className="text-xl font-semibold text-foreground">{title}</h2>
     {detail && <p className="text-muted">{detail}</p>}
     {children}
-    {actions.map(action => <button key={action.label} type="button" onClick={action.onClick} className={action.variant === 'primary' ? 'ui-button min-h-11 w-full' : action.variant === 'outline' ? 'min-h-11 w-full rounded-control border border-primary text-primary' : 'min-h-11 text-primary underline'}>{action.label}</button>)}
+    {actions.map(action => <button key={action.label} type="button" onClick={action.onClick} className={action.variant === 'primary' ? 'ui-button min-h-11 w-full' : action.variant === 'outline' ? 'min-h-11 w-full rounded-control border border-primary text-primary' : 'ui-button-ghost'}>{action.label}</button>)}
   </section>
 }

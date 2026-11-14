@@ -30,3 +30,42 @@ test('les changements d’onglet et le retour conservent le conteneur sans fondu
     }
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); vi.restoreAllMocks() }
 })
+
+test('la barre du bas se cache sur téléphone hors des quatre onglets', async () => {
+  const router = createMemoryRouter([{ element: <App />, children: [
+    { path: '/', element: <h1>Accueil</h1> },
+    { path: '/me/examens', element: <h1>Examens</h1> },
+    { path: '/import', element: <h1>Ajouter un cours</h1> },
+  ] }])
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const nav = () => required(host.querySelector('nav[aria-label="Navigation principale"]'))
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(nav().classList.contains('max-md:hidden')).toBe(false)
+    for (const path of ['/me/examens', '/import']) {
+      await act(async () => { await router.navigate(path) })
+      expect(nav().classList.contains('max-md:hidden')).toBe(true)
+    }
+    await act(async () => { await router.navigate('/') })
+    expect(nav().classList.contains('max-md:hidden')).toBe(false)
+  } finally { act(() => root.unmount()); router.dispose(); host.remove() }
+})
+
+test('un écran secondaire sans adresse propre cache aussi la barre, qui revient à sa fermeture', async () => {
+  const { useSecondaryScreen } = await import('./components/Sidebar')
+  const { useState } = await import('react')
+  function Detail() { const [open, setOpen] = useState(false); useSecondaryScreen(open); return <button type="button" onClick={() => setOpen(!open)}>Chapitre</button> }
+  const router = createMemoryRouter([{ element: <App />, children: [{ path: '/courses', element: <Detail /> }] }], { initialEntries: ['/courses'] })
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const hidden = () => required(host.querySelector('nav[aria-label="Navigation principale"]')).classList.contains('max-md:hidden')
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(hidden()).toBe(false)
+    await act(async () => required(host.querySelector<HTMLButtonElement>('main button, button')).click())
+    expect(hidden()).toBe(true)
+    await act(async () => required(host.querySelector<HTMLButtonElement>('main button, button')).click())
+    expect(hidden()).toBe(false)
+  } finally { act(() => root.unmount()); router.dispose(); host.remove() }
+})

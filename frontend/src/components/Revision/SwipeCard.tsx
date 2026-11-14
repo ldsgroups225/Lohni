@@ -126,7 +126,7 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
         </div>
         <div className="mt-5 flex items-center justify-between gap-3 border-t border-border pt-4 text-xs text-muted">
           <span>{origin === 'ai' ? 'Générée par IA · peut contenir des erreurs' : 'Cours importé'}</span>
-          {onExplain && <button type="button" disabled={explainDisabled} onPointerDown={event => event.stopPropagation()} onPointerUp={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} onClick={onExplain} className="min-h-11 shrink-0 text-sm font-semibold text-primary underline disabled:opacity-50">Explique-moi</button>}
+          {onExplain && <button type="button" disabled={explainDisabled} onPointerDown={event => event.stopPropagation()} onPointerUp={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} onClick={onExplain} className="ui-button-ghost shrink-0 text-sm">Explique-moi</button>}
         </div>
       </div>
       <p id="swipe-hint" className="py-3 text-center text-sm text-muted">

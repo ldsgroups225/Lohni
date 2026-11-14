@@ -43,7 +43,7 @@ export default function PodcastGenerator() {
         <button type="button" onClick={() => void podcastJob.start(topic, duration)} disabled={!topic.trim()} className="ui-button min-h-14 w-full disabled:opacity-50">Créer le podcast</button>
         <p className="text-center text-sm text-muted">{topic.trim() ? 'Environ une minute de création' : 'Écris un sujet pour continuer'}</p>
       </>}
-      {busy && <div className="space-y-5 py-12 text-center"><div role="status"><p className="text-xl font-bold">{status}</p><p className="mt-2 text-muted">Ça peut prendre une minute. Tu peux quitter l’écran.</p></div><progress aria-label="Création du podcast" className="w-full" /><button type="button" onClick={() => void podcastJob.cancel()} className="min-h-11 px-4 font-semibold text-primary underline">Annuler</button></div>}
+      {busy && <div className="space-y-5 py-12 text-center"><div role="status"><p className="text-xl font-bold">{status}</p><p className="mt-2 text-muted">Ça peut prendre une minute. Tu peux quitter l’écran.</p></div><progress aria-label="Création du podcast" className="w-full" /><button type="button" onClick={() => void podcastJob.cancel()} className="ui-button-secondary">Annuler</button></div>}
       {!busy && audioFile && <>
         <div className="rounded-3xl border border-border bg-surface p-5">
           <p className="text-xs font-bold uppercase tracking-wider text-muted">Podcast prêt</p><h2 className="mt-1 text-xl font-bold text-foreground">{topic}</h2>
