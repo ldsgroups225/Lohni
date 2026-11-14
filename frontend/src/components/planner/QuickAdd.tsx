@@ -1,4 +1,4 @@
-import { ZapIcon, PaperclipIcon } from '../ui/NavigationIcons'
+import { PaperclipIcon } from '../ui/NavigationIcons'
 import { useState, useRef } from "react"
 import { withOccurrenceKeys } from "../../lib/occurrenceKeys"
 
@@ -36,19 +36,16 @@ export default function QuickAdd({ onAdd, loading, error }: QuickAddProps) {
     return (
         <div className="rounded-xl border border-border bg-surface p-4">
             <h2 className="text-foreground font-medium mb-3 flex items-center gap-2">
-                <ZapIcon />
-                Ajouter une tâche
+                Qu’as-tu à préparer ?
             </h2>
 
             <div className="space-y-3">
-                <input
+                <textarea
                     value={text}
                     onChange={e => setText(e.target.value)}
-                    placeholder="Ex. : maths demain"
+                    placeholder="Ex. : Contrôle de maths jeudi"
                     aria-label="Nouvelle tâche"
-                    enterKeyHint="send"
                     className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-foreground placeholder:text-muted outline-none focus:ring-2 focus:ring-primary"
-                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
                 />
                 <input
                     ref={fileInputRef}
@@ -58,6 +55,29 @@ export default function QuickAdd({ onAdd, loading, error }: QuickAddProps) {
                     onChange={e => handleFileSelect(e.target.files)}
                     className="hidden"
                 />
+                {/* Quick Templates */}
+                <div className="flex flex-wrap gap-2">
+                    <div className="w-full text-xs text-muted">Exemples</div>
+                    <button type="button"
+                        onClick={() => setText("Devoir de maths pour demain à 20 h, environ 1 h 30")}
+                        className="min-h-11 rounded-xl bg-tint px-3 text-sm text-foreground"
+                    >
+                        Contrôle de maths
+                    </button>
+                    <button type="button"
+                        onClick={() => setText("Exposé sur ")}
+                        className="min-h-11 rounded-xl bg-tint px-3 text-sm text-foreground"
+                    >
+                        Exposé
+                    </button>
+                    <button type="button"
+                        onClick={() => setText("Devoir à rendre : ")}
+                        className="min-h-11 rounded-xl bg-tint px-3 text-sm text-foreground"
+                    >
+                        Devoir à rendre
+                    </button>
+                </div>
+                {error && <p role="alert" className="rounded-lg border border-primary bg-tint px-3 py-2 text-sm text-foreground">{error}</p>}
                 <div className="flex gap-2">
                     <button type="button"
                         onClick={() => fileInputRef.current?.click()}
@@ -72,11 +92,11 @@ export default function QuickAdd({ onAdd, loading, error }: QuickAddProps) {
                         disabled={loading || (!text.trim() && selectedFiles.length === 0)}
                         className="min-h-11 flex-1 rounded-xl bg-primary px-4 font-semibold text-on-primary disabled:bg-tint disabled:text-muted"
                     >
-                        {loading ? "Ajout…" : "Ajouter la tâche"}
+                        {loading ? "Ajout…" : error ? "Réessayer" : "Ajouter la tâche"}
                     </button>
                 </div>
 
-                {error && <p role="alert" className="rounded-lg border border-primary bg-tint px-3 py-2 text-sm text-foreground">{error}</p>}
+                {!text.trim() && selectedFiles.length === 0 && <p className="text-xs text-muted">Ajoute une description ou un fichier pour continuer.</p>}
 
                 {/* Selected Files Display */}
                 {selectedFiles.length > 0 && (
@@ -94,28 +114,7 @@ export default function QuickAdd({ onAdd, loading, error }: QuickAddProps) {
                     </div>
                 )}
 
-                {/* Quick Templates */}
-                <div className="flex flex-wrap gap-2">
-                    <div className="w-full text-xs text-muted">Exemples</div>
-                    <button type="button"
-                        onClick={() => setText("Devoir de maths pour demain à 20 h, environ 1 h 30")}
-                        className="min-h-10 rounded-xl bg-tint px-3 text-sm text-foreground"
-                    >
-                        Devoir de maths
-                    </button>
-                    <button type="button"
-                        onClick={() => setText("Lire le chapitre d’anglais pour vendredi, environ 30 min")}
-                        className="min-h-10 rounded-xl bg-tint px-3 text-sm text-foreground"
-                    >
-                        Lecture
-                    </button>
-                    <button type="button"
-                        onClick={() => setText("Réviser le contrôle de la semaine prochaine, environ 2 h")}
-                        className="min-h-10 rounded-xl bg-tint px-3 text-sm text-foreground"
-                    >
-                        Révision
-                    </button>
-                </div>
+
             </div>
         </div>
     )
