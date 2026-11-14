@@ -73,11 +73,11 @@ export function revisionRoutes(app: any) {
       try {
         upload = await parseMultipart(req, { directory, limits: { files: 1, fileSize: policy.maxUploadMB * 1024 * 1024, fields: 1, fieldSize: 4096 } })
       } catch {
-        throw new RevisionError(`Import illisible ou trop volumineux. Choisis un seul fichier de ${policy.maxUploadMB} Mo maximum.`)
+        throw new RevisionError(`Import illisible ou trop volumineux. Choisis un seul fichier de ${policy.maxUploadMB} Mo maximum.`, 'IMPORT_FILE')
       }
       let metadata: { title: string; subject: string }
       try { metadata = JSON.parse(upload.q) } catch { throw new RevisionError('Matière et titre du chapitre requis.') }
-      if (upload.files.length !== 1) throw new RevisionError('Choisis un fichier à importer.')
+      if (upload.files.length !== 1) throw new RevisionError('Choisis un fichier à importer.', 'IMPORT_FILE')
       return await revision.importChapter(context, { title: metadata?.title, subject: metadata?.subject, file: upload.files[0] }, signal)
     } finally { await rm(directory, { recursive: true, force: true }) }
   })

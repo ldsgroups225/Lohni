@@ -160,7 +160,7 @@ export class RevisionService {
     const id = randomUUID()
     await this.execute(context, async () => {
       const quota = await this.readImportQuota(context.deviceId)
-      if (!quota.remaining) throw new RevisionError(`Tu as atteint tes ${policy.dailyImports} imports du jour. Recharge le ${quota.resetsAt.slice(0, 10)} à 00:00 UTC.`)
+      if (!quota.remaining) throw new RevisionError(`Tu as atteint tes ${policy.dailyImports} imports du jour. Recharge le ${quota.resetsAt.slice(0, 10)} à 00:00 UTC.`, 'IMPORT_QUOTA')
       await this.dependencies.db.run('INSERT INTO revision_imports VALUES (?, ?, ?)', [id, context.deviceId, this.dependencies.now().toISOString().slice(0, 10)])
     })
     try {
@@ -442,12 +442,12 @@ export class RevisionService {
     let mime: string | undefined
     if (input.file) {
       mime = { '.txt': 'text/plain', '.md': 'text/markdown', '.markdown': 'text/markdown', '.pdf': 'application/pdf', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' }[extname(input.file.filename ?? '').toLowerCase()]
-      if (!mime) throw new RevisionError('Format non pris en charge. Choisis un fichier texte, PDF, Word (.docx), Markdown ou une photo (JPEG, PNG, WebP).')
+      if (!mime) throw new RevisionError('Format non pris en charge. Choisis un fichier texte, PDF, Word (.docx), Markdown ou une photo (JPEG, PNG, WebP).', 'IMPORT_FILE')
     }
     const importId = randomUUID()
     await this.execute(context, async () => {
       const quota = await this.readImportQuota(context.deviceId)
-      if (!quota.remaining) throw new RevisionError(`Tu as atteint tes ${policy.dailyImports} imports du jour. Recharge le ${quota.resetsAt.slice(0, 10)} à 00:00 UTC.`)
+      if (!quota.remaining) throw new RevisionError(`Tu as atteint tes ${policy.dailyImports} imports du jour. Recharge le ${quota.resetsAt.slice(0, 10)} à 00:00 UTC.`, 'IMPORT_QUOTA')
       // shortcut: un arrêt serveur consomme cette place jusqu’à minuit ; réconcilier si les arrêts deviennent fréquents.
       await this.dependencies.db.run('INSERT INTO revision_imports VALUES (?, ?, ?)', [importId, context.deviceId, this.dependencies.now().toISOString().slice(0, 10)])
     })
@@ -456,24 +456,24 @@ export class RevisionService {
       let text = input.text
       if (input.file && mime) {
         try {
-          if ((await stat(input.file.path)).size > policy.maxUploadMB * 1024 * 1024) throw new RevisionError(`Le fichier dépasse la limite de ${policy.maxUploadMB} Mo.`)
+          if ((await stat(input.file.path)).size > policy.maxUploadMB * 1024 * 1024) throw new RevisionError(`Le fichier dépasse la limite de ${policy.maxUploadMB} Mo.`, 'IMPORT_FILE')
           if (mime.startsWith('image/')) {
-            if (!this.dependencies.transcribePhoto) throw new RevisionError('La lecture des photos est indisponible. Colle le texte du cours ou réessaie plus tard.')
+            if (!this.dependencies.transcribePhoto) throw new RevisionError('La lecture des photos est indisponible. Colle le texte du cours ou réessaie plus tard.', 'IMPORT_FILE')
             text = await this.dependencies.transcribePhoto({ ...input.file, mimeType: mime }, signal)
             checkImportCancelled(signal)
-            if (!nonempty(text)) throw new RevisionError('Photo illisible. Prends une photo nette et bien éclairée ou colle le texte du cours.')
+            if (!nonempty(text)) throw new RevisionError('Photo illisible. Prends une photo nette et bien éclairée ou colle le texte du cours.', 'IMPORT_FILE')
           } else text = await extractText(input.file.path, mime)
         } catch (error) {
           checkImportCancelled(signal)
           if (error instanceof RevisionError) throw error
           throw new RevisionError(mime.startsWith('image/')
             ? 'La lecture des photos est indisponible. Colle le texte du cours ou réessaie plus tard.'
-            : 'Fichier illisible. Essaie un autre fichier ou colle le texte du cours.')
+            : 'Fichier illisible. Essaie un autre fichier ou colle le texte du cours.', 'IMPORT_FILE')
         }
       }
       checkImportCancelled(signal)
-      if (!nonempty(text)) throw new RevisionError('Le cours est vide. Ajoute du texte ou un fichier lisible.')
-      if (text.length > policy.maxTextChars) throw new RevisionError(`Le cours est trop long. Importe un chapitre de moins de ${policy.maxTextChars.toLocaleString('fr-FR')} caractères.`)
+      if (!nonempty(text)) throw new RevisionError('Le cours est vide. Ajoute du texte ou un fichier lisible.', 'IMPORT_FILE')
+      if (text.length > policy.maxTextChars) throw new RevisionError(`Le cours est trop long. Importe un chapitre de moins de ${policy.maxTextChars.toLocaleString('fr-FR')} caractères.`, 'IMPORT_FILE')
       const saveFailedCourse = async (error: unknown): Promise<never> => {
         checkImportCancelled(signal)
         const chapterId = await this.execute(context, async () => {
@@ -514,7 +514,7 @@ export class RevisionService {
           JOIN revision_subjects s ON s.id = c.subject_id AND s.device_id = c.device_id
           WHERE d.chapter_id = ? AND d.device_id = ?`, [chapterId, context.deviceId])
         if (!chapter) throw new RevisionError('Cours introuvable ou déjà préparé.')
-        if (!(await this.readImportQuota(context.deviceId)).remaining) throw new RevisionError(`Tu as atteint tes ${policy.dailyImports} imports du jour.`)
+        if (!(await this.readImportQuota(context.deviceId)).remaining) throw new RevisionError(`Tu as atteint tes ${policy.dailyImports} imports du jour.`, 'IMPORT_QUOTA')
         await db.run('INSERT INTO revision_imports VALUES (?, ?, ?)', [reservation, context.deviceId, this.dependencies.now().toISOString().slice(0, 10)])
         return { chapter, profile }
       })

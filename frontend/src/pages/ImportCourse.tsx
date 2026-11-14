@@ -30,17 +30,18 @@ export default function ImportCourse() {
   const [busy, setBusy] = useState(!cachedImport && sharedProfile === undefined)
   const [checking, setChecking] = useState(true)
   const [error, setError] = useState('')
+  const [errorCode, setErrorCode] = useState<string>()
   const [failedChapter, setFailedChapter] = useState<string>()
   const field = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
   async function run(operation: () => Promise<void>) {
     setBusy(true)
-    setError('')
+    setError(''); setErrorCode(undefined)
     try { await operation() }
     catch (error) {
       if (importController.current?.signal.aborted) { setCancelled(true); cachedImport = null; setQuota(undefined); void revisionAPI.importQuota().then(setQuota).catch(() => {}) }
       else if (error instanceof APIError && error.chapterId) { setFailedChapter(error.chapterId); setError('') }
-      else setError(error instanceof Error ? error.message : 'Impossible d’importer le cours. Réessaie.')
+      else { setError(error instanceof Error ? error.message : 'Impossible d’importer le cours. Réessaie.'); setErrorCode(error instanceof APIError ? error.code : undefined) }
     }
     finally { importController.current = null; setBusy(false) }
   }
@@ -119,7 +120,7 @@ export default function ImportCourse() {
         { label: 'Garder le cours sans cartes', variant: 'link', onClick: () => navigate('/courses') },
       ]}><div className="w-full rounded-2xl border border-border bg-surface p-4 text-left"><p className="font-semibold">{title} · {subject}</p><p className="text-sm text-muted">{file?.name ?? 'Texte du cours'} · enregistré</p></div></ErrorState>}
       {cancelled && !busy && <ErrorState title="Annulation demandée" detail="Si le cours était déjà enregistré, il reste dans tes cours. Vérifie avant de réessayer pour éviter un doublon." actions={[{ label: 'Voir mes cours', variant: 'primary', onClick: () => navigate('/courses') }, { label: 'Retour', variant: 'link', onClick: () => { setCancelled(false); if (!failedChapter) setStep('confirm') } }]} />}
-      {error && !busy && <ErrorState title="Impossible de préparer ton cours" detail={error} actions={[{ label: 'Réessayer', variant: 'primary', onClick: () => { setError(''); if (!profile || !quota) void run(() => load()); else setStep('confirm') } }, { label: 'Retour', variant: 'link', onClick: () => { setError(''); setStep('pick') } }]} />}
+      {error && !busy && <ErrorState title={errorCode === 'IMPORT_QUOTA' ? 'Limite d’imports atteinte' : errorCode === 'IMPORT_FILE' ? 'Ce cours ne peut pas être lu' : 'Impossible de préparer ton cours'} detail={error} actions={[{ label: 'Réessayer', variant: 'primary', onClick: () => { setError(''); if (!profile || !quota) void run(() => load()); else setStep('confirm') } }, { label: 'Retour', variant: 'link', onClick: () => { setError(''); setStep('pick') } }]} />}
       {!busy && !profile && quota && <p>Crée d’abord ton profil pour ranger ton cours dans une matière. <Link to="/" className="underline">Commencer</Link></p>}
       {profile && (!failedChapter || busy) && !error && !cancelled && <>
         {step === 'pick' && <section className="space-y-3">
@@ -138,7 +139,7 @@ export default function ImportCourse() {
           <p className="text-center text-sm text-muted" aria-live="polite">{readyReason || 'Environ 10 secondes'}</p>
         </form>}
         {step === 'work' && <LoadingState label="Préparation de ton cours…" expectedDuration={10} steps={[{ after: 0, message: 'Lecture du cours…' }, { after: 3, message: 'Repérage des notions clés…' }, { after: 6, message: 'Création des cartes…' }]} onCancel={() => importController.current?.abort()} />}
-        {step === 'done' && imported && <section className="space-y-5 text-center" aria-live="polite"><div className="text-4xl text-success" aria-hidden="true">✓</div><h2 className="text-2xl font-bold">{cards ? `${cards.length} cartes prêtes` : 'Tes cartes sont prêtes'}</h2><p className="text-muted">{imported.title} · {subject}</p>{cards?.[0] && <div className="rounded-2xl border border-border bg-surface p-4 text-left"><p className="text-xs font-bold uppercase text-muted">Exemple</p><p className="mt-2 font-semibold">{cards[0].question}</p></div>}<p className="text-sm text-muted">Générées par IA : relis-les, elles peuvent contenir des erreurs.</p><Button className="w-full" disabled={busy} onClick={() => void run(async () => { await revisionAPI.continue(); navigate('/revision') })}>Commencer la révision</Button><button type="button" className="min-h-14 w-full rounded-xl border-2 border-primary font-semibold text-primary" disabled={busy} onClick={reset}>Ajouter un autre cours</button></section>}
+        {step === 'done' && imported && <section className="space-y-5 text-center" aria-live="polite"><div className="text-4xl text-success" aria-hidden="true">✓</div><h2 className="text-2xl font-bold">{cards ? `${cards.length} cartes prêtes` : 'Tes cartes sont prêtes'}</h2><p className="text-muted">{imported.title} · {subject}</p>{cards?.[0] && <div className="rounded-2xl border border-border bg-surface p-4 text-left"><p className="text-xs font-bold uppercase text-muted">Exemple</p><p className="mt-2 font-semibold">{cards[0].question}</p><p className="mt-2 text-sm text-muted">{cards[0].answer}</p></div>}<p className="text-sm text-muted">Générées par IA : relis-les, elles peuvent contenir des erreurs.</p><Button className="w-full" disabled={busy} onClick={() => void run(async () => { await revisionAPI.continue(); navigate('/revision') })}>Commencer la révision</Button><button type="button" className="min-h-14 w-full rounded-xl border-2 border-primary font-semibold text-primary" disabled={busy} onClick={reset}>Ajouter un autre cours</button></section>}
       </>}
     </div>
   </main>

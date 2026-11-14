@@ -8,7 +8,7 @@ import ImportCourse from './ImportCourse'
 import { APIError } from '../lib/api'
 
 const api = vi.hoisted(() => ({ profile: vi.fn(), importQuota: vi.fn(), importChapter: vi.fn(), retryImport: vi.fn(), chapters: vi.fn() }))
-vi.mock('../lib/api', () => ({ revisionAPI: api, revisionPolicy: { maxUploadMB: 10, maxTextChars: 100000, maxTitleChars: 200, dailyImports: 3 }, APIError: class extends Error { chapterId?: string; constructor(message: string, _status: number, _code?: string, id?: string) { super(message); this.chapterId = id } } }))
+vi.mock('../lib/api', () => ({ revisionAPI: api, revisionPolicy: { maxUploadMB: 10, maxTextChars: 100000, maxTitleChars: 200, dailyImports: 3 }, APIError: class extends Error { chapterId?: string; code?: string; constructor(message: string, _status: number, code?: string, id?: string) { super(message); this.code = code; this.chapterId = id } } }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 test('le formulaire d’import reste visible au retour pendant la vérification du quota', async () => {
@@ -103,7 +103,7 @@ test('affiche le nombre et un exemple des cartes créées', async () => {
   api.profile.mockReset().mockResolvedValue({ schoolClass: '3e', subjects: ['Mathématiques'] })
   api.importQuota.mockReset().mockResolvedValue({ remaining: 2, resetsAt: '2026-11-12T00:00:00Z' })
   api.importChapter.mockReset().mockResolvedValue({ id: 'cours-2', title: 'Fractions', summary: 'Résumé', origin: 'import' })
-  api.chapters.mockReset().mockResolvedValue([{ id: 'cours-2', cards: [{ question: 'Combien font un demi plus un demi ?' }, { question: 'Que signifie fraction ?' }] }])
+  api.chapters.mockReset().mockResolvedValue([{ id: 'cours-2', cards: [{ question: 'Combien font un demi plus un demi ?', answer: 'Un entier.' }, { question: 'Que signifie fraction ?' }] }])
   const router = createMemoryRouter([{ path: '/import', element: <ImportCourse /> }], { initialEntries: ['/import'] })
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
@@ -113,6 +113,7 @@ test('affiche le nombre et un exemple des cartes créées', async () => {
     await act(async () => required(host.querySelector('form')).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
     expect(host.textContent).toContain('2 cartes prêtes')
     expect(host.textContent).toContain('Combien font un demi plus un demi ?')
+    expect(host.textContent).toContain('Un entier.')
     expect(host.textContent).toContain('Ajouter un autre cours')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
 })
@@ -133,4 +134,23 @@ test('annuler interrompt la demande et indique que le cours peut déjà être en
     expect(host.textContent).toContain('Annulation demandée')
     expect(host.textContent).toContain('déjà enregistré')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
+})
+
+test('une erreur de fichier ou de quota a un titre précis dans l’écran d’erreur', async () => {
+  for (const [code, message, title] of [['IMPORT_FILE', 'Fichier illisible. Essaie un autre fichier ou colle le texte du cours.', 'Ce cours ne peut pas être lu'], ['IMPORT_QUOTA', 'Tu as atteint tes 3 imports du jour.', 'Limite d’imports atteinte']]) {
+    localStorage.setItem('lohni-device-id', `import-erreur-${code}`)
+    api.profile.mockReset().mockResolvedValue({ schoolClass: '3e', subjects: ['Mathématiques'] })
+    api.importQuota.mockReset().mockResolvedValue({ remaining: 2, resetsAt: '2026-11-12T00:00:00Z' })
+    api.importChapter.mockReset().mockRejectedValue(new APIError(message, 400, code))
+    const router = createMemoryRouter([{ path: '/import', element: <ImportCourse /> }], { initialEntries: ['/import'] })
+    const host = document.createElement('div'); document.body.append(host)
+    const root = createRoot(host)
+    try {
+      await act(async () => root.render(<RouterProvider router={router} />))
+      await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent?.includes('Coller du texte'))).click())
+      await act(async () => required(host.querySelector('form')).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+      expect(host.querySelector('[role="alert"] h2')?.textContent).toBe(title)
+      expect(host.textContent).toContain(message)
+    } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem(`lohni-device-id`) }
+  }
 })

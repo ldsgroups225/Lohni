@@ -101,7 +101,7 @@ test('une photo réserve la dernière place avant la transcription et partage la
   try {
     expect((await service.getImportQuota(context())).remaining).toBe(0)
     expect((await service.getSession(context())).cards).toHaveLength(4)
-    await expect(service.importChapter(context(), photo)).rejects.toThrow('3 imports')
+    await expect(service.importChapter(context(), photo)).rejects.toMatchObject({ code: 'IMPORT_QUOTA' })
     await expect(service.importChapter(context(), input)).rejects.toThrow('3 imports')
   } finally { release(); await pending }
 })
@@ -233,6 +233,11 @@ test('un cours vide, illisible, trop long ou d’un format inconnu ne consomme a
   await writeFile(path, '')
   await expect(service.importChapter(context(), { title: input.title, subject: input.subject, file: { path, filename: 'vide.txt', mimeType: 'text/plain' } })).rejects.toThrow('vide')
   expect((await service.getImportQuota(context())).remaining).toBe(3)
+})
+
+test('un fichier ou un texte inutilisable est signalé par le code IMPORT_FILE', async () => {
+  await expect(service.importChapter(context(), { ...input, text: '  ' })).rejects.toMatchObject({ code: 'IMPORT_FILE' })
+  await expect(service.importChapter(context(), { title: input.title, subject: input.subject, file: { path: join(directory, 'absent.pdf'), filename: 'cours.pdf', mimeType: 'application/pdf' } })).rejects.toMatchObject({ code: 'IMPORT_FILE' })
 })
 
 
