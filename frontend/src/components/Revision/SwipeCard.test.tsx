@@ -170,3 +170,12 @@ test('le contexte et le lien vers le tuteur restent dans la carte sans la retour
   expect(explain).toHaveBeenCalledOnce()
   expect(onToggle).not.toHaveBeenCalled()
 })
+
+// Chrome arrête la recherche de touch-action au premier conteneur défilant : sans pan-y sur lui, un doigt
+// qui glisse à l'horizontale sur le texte est pris par le navigateur (retour arrière) au lieu de déplacer la carte.
+test('chaque zone défilante de la carte laisse le glissement horizontal à la carte', async () => {
+  await render()
+  const scrollers = [...card().querySelectorAll<HTMLElement>('[class*="overflow-"]')]
+  expect(scrollers.length).toBeGreaterThan(0)
+  for (const el of scrollers) expect(el.className).toContain('touch-pan-y')
+})
