@@ -2,7 +2,7 @@ import { expect, test, vi } from 'vitest'
 import { debateRoutes } from './debate'
 import llm from '../../utils/llm/llm'
 
-vi.mock('../../utils/llm/llm', () => ({ default: { call: vi.fn() } }))
+vi.mock('../../utils/llm/llm', () => ({ default: { invoke: vi.fn() } }))
 vi.mock('../../utils/database/keyv', () => {
   const data = new Map()
   return { default: { get: async (key: string) => structuredClone(data.get(key)), set: async (key: string, value: unknown) => { data.set(key, structuredClone(value)) }, delete: async (key: string) => data.delete(key) } }
@@ -33,7 +33,7 @@ async function started(h: ReturnType<typeof harness>) {
 test('un tour de débat diffuse l’argument, la réponse mot à mot puis la fin', async () => {
   const h = harness()
   const debateId = await started(h)
-  vi.mocked(llm.call).mockResolvedValueOnce('Je ne suis pas d’accord.' as any)
+  vi.mocked(llm.invoke).mockResolvedValueOnce('Je ne suis pas d’accord.' as any)
   const res = await h.call('POST /debate/:debateId/argue', { params: { debateId }, headers: {}, body: { argument: ' Mon argument ' } })
   expect(res.code).toBe(202)
   const sent = h.follow(res.body.taskId)
@@ -49,7 +49,7 @@ test('un tour de débat diffuse l’argument, la réponse mot à mot puis la fin
 test('une panne du modèle est annoncée en français', async () => {
   const h = harness()
   const debateId = await started(h)
-  vi.mocked(llm.call).mockRejectedValueOnce(new Error('boom'))
+  vi.mocked(llm.invoke).mockRejectedValueOnce(new Error('boom'))
   const log = vi.spyOn(console, 'error').mockImplementation(() => {})
   try {
     const res = await h.call('POST /debate/:debateId/argue', { params: { debateId }, headers: {}, body: { argument: 'Mon argument' } })
@@ -62,7 +62,7 @@ test('une panne du modèle est annoncée en français', async () => {
 test('l’analyse diffuse ses phases puis le bilan avec le débat mis à jour', async () => {
   const h = harness()
   const debateId = await started(h)
-  vi.mocked(llm.call).mockResolvedValueOnce(JSON.stringify({ winner: 'user', reason: 'Bravo' }) as any)
+  vi.mocked(llm.invoke).mockResolvedValueOnce(JSON.stringify({ winner: 'user', reason: 'Bravo' }) as any)
   const res = await h.call('POST /debate/:debateId/analyze', { params: { debateId }, headers: {} })
   const sent = h.follow(res.body.taskId)
   await vi.waitFor(() => expect(sent.map(m => m.type)).toContain('done'))
@@ -75,7 +75,7 @@ test('l’analyse diffuse ses phases puis le bilan avec le débat mis à jour', 
 test('annuler une réponse est réservé à l’appareil qui l’a lancée', async () => {
   const h = harness()
   const debateId = await started(h)
-  vi.mocked(llm.call).mockResolvedValueOnce('Réponse assez longue pour durer un peu.' as any)
+  vi.mocked(llm.invoke).mockResolvedValueOnce('Réponse assez longue pour durer un peu.' as any)
   const res = await h.call('POST /debate/:debateId/argue', { params: { debateId }, headers: { 'x-device-id': 'a' }, body: { argument: 'Mon argument' } })
   const { taskId } = res.body
   const refused = await h.call('DELETE /debate/tasks/:taskId', { params: { taskId }, headers: { 'x-device-id': 'b' } })
@@ -85,4 +85,30 @@ test('annuler une réponse est réservé à l’appareil qui l’a lancée', asy
   expect(accepted.body).toEqual({ ok: true })
   // La tâche annulée n’existe plus : un flux tardif reçoit l’erreur française.
   expect(h.follow(taskId)[0]?.error).toBe('Cette réponse n’est plus disponible. Réessaie.')
+})
+
+// Un modèle qui ne répond jamais : seule l’annulation de la tâche peut interrompre la requête.
+function hangingModel() {
+  const seen: { signal?: AbortSignal } = {}
+  vi.mocked(llm.invoke).mockReset() // des réponses programmées plus haut peuvent n’avoir jamais été consommées
+  vi.mocked(llm.invoke).mockImplementationOnce((_m: any, options: any) => new Promise((_, reject) => {
+    seen.signal = options.signal
+    seen.signal?.addEventListener('abort', () => reject(seen.signal?.reason))
+  }))
+  return seen
+}
+
+test.each([
+  ['une réponse', 'POST /debate/:debateId/argue', { argument: 'Mon argument' }],
+  ['une analyse', 'POST /debate/:debateId/analyze', undefined],
+])('annuler %s interrompt aussi la requête au modèle', async (_name, route, body) => {
+  const h = harness()
+  const debateId = await started(h)
+  const seen = hangingModel()
+  const res = await h.call(route, { params: { debateId }, headers: { 'x-device-id': 'a' }, body })
+  h.follow(res.body.taskId)
+  await vi.waitFor(() => expect(seen.signal).toBeDefined())
+  expect(seen.signal!.aborted).toBe(false)
+  await h.call('DELETE /debate/tasks/:taskId', { params: { taskId: res.body.taskId }, headers: { 'x-device-id': 'a' } })
+  expect(seen.signal!.aborted).toBe(true)
 })
