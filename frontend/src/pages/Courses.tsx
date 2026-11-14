@@ -1,5 +1,4 @@
 import { HelpIcon, ClipboardIcon, DebateIcon, HeadphonesIcon } from '../components/ui/NavigationIcons'
-import { withOccurrenceKeys } from '../lib/occurrenceKeys'
 import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { PendingRead } from '../components/ui/PendingRead'
@@ -8,25 +7,20 @@ import { listDelay } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { Progress } from '../components/ui/Progress'
 import MasteryBadge from '../components/ui/MasteryBadge'
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import MarkdownView from '../components/Chat/MarkdownView'
+import { useOverlayNavigation } from '../lib/useOverlayNavigation'
+import MarkdownContent from '../components/Chat/MarkdownContent'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
+
+const ChapterSummary = lazy(() => import('../components/Revision/ChapterSummary'))
 
 let cachedCourses: { device: string | null; version: number; day: string; chapters: RevisionChapter[]; progress: RevisionProgress } | null = null
 
 const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
-function DeferredDetails({ summary, children }: { summary: ReactNode; children: ReactNode }) {
-  const [opened, setOpened] = useState(false)
-  return <details className="min-w-0 open:col-span-2" onToggle={event => { if (event.currentTarget.open) setOpened(true) }}>
-    <summary className="course-summary flex min-h-11 cursor-pointer list-none items-center justify-center rounded-xl border border-border bg-background px-3 py-2 text-center font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-primary">{summary}</summary>
-    {opened && children}
-  </details>
-}
-
-function CardEditor({ card, busy, onSave, onCancel }: {
-  card: RevisionCard; busy: boolean; onSave: (value: RevisionCardInput) => void; onCancel: () => void
+function CardEditor({ card, busy, onSave, onCancel, onDelete }: {
+  card: RevisionCard; busy: boolean; onSave: (value: RevisionCardInput) => void; onCancel: () => void; onDelete: () => void
 }) {
   const [question, setQuestion] = useState(card.question)
   const [answer, setAnswer] = useState(card.answer)
@@ -37,11 +31,12 @@ function CardEditor({ card, busy, onSave, onCancel }: {
   function submit(event: FormEvent) {
     event.preventDefault()
     const content = { question: question.trim(), answer: answer.trim() }
+    if (!content.question) return
     onSave(card.kind === 'mcq' ? { ...content, kind: 'mcq', options: options.map(option => option.value.trim()), correct } : { ...content, kind: 'basic' })
   }
-  return <form onSubmit={submit}>
-    <fieldset disabled={busy} className="space-y-4">
-      <legend className="mb-4 font-semibold text-foreground">Modifier la carte</legend>
+  return <form onSubmit={submit} className="flex min-h-[calc(100dvh-3rem)] flex-col">
+    <fieldset disabled={busy} className="flex flex-1 flex-col gap-4">
+      <legend className="sr-only">Modifier la carte</legend>
       <label className="block space-y-2"><span>Question</span><textarea ref={questionInput} className={input} required value={question} onChange={event => setQuestion(event.target.value)} /></label>
       {card.kind === 'mcq' && <>
         {options.map((option, index) => <label key={option.id} className="block space-y-2"><span>Choix {index + 1}</span>
@@ -52,7 +47,8 @@ function CardEditor({ card, busy, onSave, onCancel }: {
         </select></label>
       </>}
       <label className="block space-y-2"><span>{card.kind === 'mcq' ? 'Explication' : 'Réponse'}</span><textarea className={input} required value={answer} onChange={event => setAnswer(event.target.value)} /></label>
-      <div className="flex flex-wrap gap-3"><Button type="submit">Enregistrer</Button><button type="button" className="rounded-xl border border-border px-4 py-3 text-foreground" onClick={onCancel}>Annuler</button></div>
+      <div><span className="mb-2 block text-sm font-semibold text-muted">Aperçu comme en révision</span><div className="rounded-2xl border border-border bg-surface p-4"><MarkdownContent md={answer || 'Ta réponse apparaîtra ici.'} /></div></div>
+      <div className="mt-auto space-y-2 pt-4"><Button type="submit" className="w-full" disabled={!question.trim()}>Enregistrer</Button>{busy ? <p className="text-sm text-muted">Mise à jour en cours…</p> : !question.trim() && <p className="text-sm text-muted">Renseigne la question pour enregistrer.</p>}<button type="button" className="min-h-11 w-full text-primary underline" onClick={onDelete}>Supprimer cette carte</button><button type="button" className="min-h-11 w-full text-muted underline" onClick={onCancel}>Annuler</button></div>
     </fieldset>
   </form>
 }
@@ -66,9 +62,13 @@ export default function Courses() {
   const [chapters, setChapters] = useState<RevisionChapter[]>(() => cachedCourses?.chapters ?? sharedChapters ?? [])
   const [, setProgress] = useState<RevisionProgress | null>(() => cachedCourses?.progress ?? sharedProgress ?? null)
   const [editing, setEditing] = useState<string | null>(null)
+  const [summaryId, setSummaryId] = useState<string | null>(null)
+  const [selectedChapter, setSelectedChapter] = useState<string | null>(null)
+  const [summaryOpen, setSummaryOpen] = useOverlayNavigation('chapter-summary')
   const [stale, setStale] = useState(!!cachedCourses && cachedCourses.version !== currentRevisionCacheVersion())
   const [busy, setBusy] = useState((!cachedCourses && !sharedChapters) || stale)
   const [error, setError] = useState('')
+  const operating = useRef(false)
 
   const load = useCallback(async function load(isActive: () => boolean = () => true) {
     const requestDevice = cachedDevice()
@@ -93,19 +93,34 @@ export default function Courses() {
     setStale(false)
   }, [])
   async function run(operation: () => Promise<void>) {
+    operating.current = true
     setBusy(true)
     setError('')
     try { await operation() }
     catch (error) { setError(error instanceof Error ? error.message : 'Impossible de charger tes cours.') }
-    finally { setBusy(false) }
+    finally { operating.current = false; setBusy(false) }
   }
   useEffect(() => {
     let active = true
     load(() => active).catch(error => {
       if (active) setError(error instanceof Error ? error.message : 'Impossible de charger tes cours.')
-    }).finally(() => { if (active) setBusy(false) })
+    }).finally(() => { if (active && !operating.current) setBusy(false) })
     return () => { active = false }
   }, [load])
+
+  const summaryChapter = chapters.find(chapter => chapter.id === summaryId)
+  if (summaryOpen && summaryChapter) return <Suspense fallback={<PendingRead title="Résumé" label="On prépare ton résumé…" />}><ChapterSummary {...summaryChapter} onBack={() => setSummaryOpen(false)} onCards={() => { setSelectedChapter(summaryChapter.id); setSummaryOpen(false) }} /></Suspense>
+  const selected = chapters.find(chapter => chapter.id === selectedChapter)
+  const selectedCard = selected?.cards.find(card => card.id === editing)
+  if (selected) return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28"><div className="mx-auto max-w-2xl space-y-4">
+    <header className="flex items-center gap-3"><button type="button" className="grid size-11 place-items-center text-2xl" aria-label={selectedCard ? 'Annuler la modification' : 'Retour à Cours'} onClick={() => selectedCard ? setEditing(null) : setSelectedChapter(null)}>{selectedCard ? '×' : '‹'}</button>
+      <div className="min-w-0 flex-1"><h1 className="text-xl font-extrabold text-foreground">{selectedCard ? 'Modifier la carte' : selected.title}</h1>{!selectedCard && <p className="text-sm text-muted">{selected.subject} · {selected.cards.length} carte{selected.cards.length === 1 ? '' : 's'}</p>}</div>{!selectedCard && <MasteryBadge status={selected.status} />}</header>
+    {error && <p role="alert" className="text-danger">{error}</p>}
+    {selectedCard ? <CardEditor key={selectedCard.id} card={selectedCard} busy={busy || stale} onCancel={() => setEditing(null)} onSave={value => void run(async () => { await revisionAPI.updateCard(selectedCard.id, value); setEditing(null); await load() })} onDelete={() => { void confirmDialog('Supprimer cette carte ? Elle ne sera plus proposée en révision.').then(ok => { if (ok) void run(async () => { await revisionAPI.deleteCard(selectedCard.id); setEditing(null); await load() }) }) }} /> : <>
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface">{selected.cards.map(card => <button key={card.id} type="button" aria-label={`Modifier : ${card.question}`} disabled={busy || stale} onClick={() => setEditing(card.id)} className="flex min-h-[72px] w-full items-center gap-2 border-b border-border px-4 py-3 text-left last:border-b-0 disabled:opacity-50"><span className="min-w-0 flex-1"><span className="block font-bold"><MarkdownContent md={card.question} inline /></span><span className="block text-sm text-muted"><MarkdownContent md={card.answer} inline /></span></span><span aria-hidden="true" className="grid size-11 place-items-center text-xl text-muted">›</span></button>)}</div>
+      <div className="space-y-2"><Button className="w-full" disabled>Réviser ce chapitre</Button><button type="button" disabled className="min-h-12 w-full rounded-xl border border-primary font-semibold text-primary opacity-60">+ Ajouter une carte</button><p className="text-sm text-muted">Ces actions ne sont pas encore disponibles.</p></div>
+    </>}
+  </div></main>
 
   return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28">
     <div className="mx-auto max-w-2xl space-y-4">
@@ -162,26 +177,8 @@ export default function Courses() {
             <p className="text-sm text-muted">{chapter.seenCards} carte{chapter.seenCards === 1 ? '' : 's'} vue{chapter.seenCards === 1 ? '' : 's'} sur {chapter.cards.length}{chapter.mastery !== null && ` · rappel estimé ${Math.round(chapter.mastery)} %`}
               {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && ` · encore ${Math.ceil(chapter.cards.length * revisionPolicy.minimumSeenRatio) - chapter.seenCards} pour faire évoluer la maîtrise`}</p>
             <div className="grid grid-cols-2 gap-2">
-            <DeferredDetails summary="Résumé"><MarkdownView md={chapter.summary} /></DeferredDetails>
-            <DeferredDetails summary={`${chapter.cards.length} carte${chapter.cards.length === 1 ? '' : 's'}`}>
-              <div className="mt-3 space-y-4">{chapter.cards.map(card => <article key={card.id} className="space-y-3 rounded-xl border border-border p-4">
-                {editing === card.id ? <CardEditor key={card.id} card={card} busy={busy || stale} onCancel={() => setEditing(null)} onSave={value => void run(async () => {
-                  await revisionAPI.updateCard(card.id, value)
-                  setEditing(null)
-                  await load()
-                })} /> : <>
-                  <MarkdownView md={card.question} />
-                  {card.kind === 'mcq' && <ol className="list-decimal space-y-1 pl-5">{withOccurrenceKeys(card.options ?? [], option => option).map(({ value: option, key }, i) => <li key={key}><MarkdownView md={option} inline />{i + 1 === card.correct && <span className="text-foreground"> — Bonne réponse</span>}</li>)}</ol>}
-                  <MarkdownView md={card.answer} />
-                  <div className="flex flex-wrap gap-3">
-                    <Button disabled={busy || stale} onClick={() => setEditing(card.id)}>Modifier</Button>
-                    <button type="button" className="rounded-xl border border-danger px-4 py-3 text-danger disabled:opacity-50" disabled={busy || stale} onClick={() => {
-                      void confirmDialog('Supprimer cette carte ? Elle ne sera plus proposée en révision.').then(ok => { if (ok) void run(async () => { await revisionAPI.deleteCard(card.id); await load() }) })
-                    }}>Supprimer la carte</button>
-                  </div>
-                </>}
-              </article>)}</div>
-            </DeferredDetails>
+            <button type="button" className="min-h-11 rounded-xl border border-border bg-background px-3 py-2 font-semibold text-foreground" onClick={() => { setSummaryId(chapter.id); setSummaryOpen(true) }}>Résumé</button>
+            <button type="button" className="min-h-11 rounded-xl border border-border bg-background px-3 py-2 font-semibold text-foreground" onClick={() => setSelectedChapter(chapter.id)}>{chapter.cards.length} carte{chapter.cards.length === 1 ? '' : 's'}</button>
             </div>
           </article>)}
         </section>

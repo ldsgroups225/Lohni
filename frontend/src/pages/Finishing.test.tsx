@@ -34,7 +34,7 @@ test('la carte révélée propose les deux réponses et garde une sortie', () =>
 test('la fin de session propose un retour à l’accueil', () => {
  state.values=[{schoolClass:'3e',subjects:['Mathématiques']},{cards:[],position:2,complete:true,earnedXP:70},[],{xp:100,streak:3},false,true,{online:true,pending:0},'',false,undefined,'','',null]
  const html=render(<Revision />)
- expect(html).toContain('Revenir à l’accueil')
+ expect(html).toContain('Retour à l’accueil')
  expect(html).toContain('Lohni, en fête')
  expect(html).toContain('+70')
 })
@@ -48,7 +48,7 @@ test('une carte ratée reste à retravailler pendant la session mais disparaît 
  expect(ongoing).toContain('Explique-moi')
  state.values=[profile,{cards:[card],position:1,complete:true,earnedXP:0},[],null,false,true,sync,'',false,undefined,'','',card]
  const finished=render(<Revision />)
- expect(finished).toContain('Session terminée !')
+ expect(finished).toContain('Session terminée')
  expect(finished).not.toContain('À retravailler')
  expect(finished).not.toContain('Explique-moi')
 })

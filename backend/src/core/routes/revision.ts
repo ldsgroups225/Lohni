@@ -11,19 +11,28 @@ import { config } from '../../config/env'
 const revision = new RevisionService({ db: sqlite, now: () => new Date(), generateCards, transcribePhoto, readTimetable })
 
 export function revisionRoutes(app: any) {
-  const route = (method: string, path: string, handle: (context: RevisionContext, req: any) => Promise<unknown>) => {
+  const route = (method: string, path: string, handle: (context: RevisionContext, req: any, res: any) => Promise<unknown>) => {
     app[method](path, async (req: any, res: any) => {
       req.setTimeout(config.timeout)
       try {
-        const data = await handle({ deviceId: req.headers['x-device-id'], localDate: req.headers['x-local-date'] }, req)
-        res.send({ ok: true, data: data ?? null })
+        const data = await handle({ deviceId: req.headers['x-device-id'], localDate: req.headers['x-local-date'] }, req, res)
+        if (!res.destroyed) res.send({ ok: true, data: data ?? null })
       } catch (error) {
-        if (error instanceof RevisionError) return res.status(400).send({ ok: false, error: error.message, code: error.code })
+        if (res.destroyed) return
+        if (error instanceof RevisionError) return res.status(400).send({ ok: false, error: error.message, code: error.code, chapterId: error.chapterId })
         console.error('[revision]', error)
         res.status(500).send({ ok: false, error: 'La révision est indisponible. Réessaie dans un instant.' })
       }
     })
   }
+  // Imports are cancellable: abort the signal when the client disconnects before the response ends.
+  const importRoute = (path: string, handle: (context: RevisionContext, req: any, signal: AbortSignal) => Promise<unknown>) =>
+    route('post', path, async (context, req, res) => {
+      const controller = new AbortController()
+      const onClose = () => { if (!res.writableEnded) controller.abort() }
+      res.on('close', onClose)
+      try { return await handle(context, req, controller.signal) } finally { res.off('close', onClose) }
+    })
   route('get', '/revision/timetable', context => revision.getTimetable(context))
   route('put', '/revision/timetable', (context, req) => revision.saveTimetable(context, req.body))
   route('post', '/revision/timetable/photos', async (context, req) => {
@@ -52,10 +61,11 @@ export function revisionRoutes(app: any) {
   route('post', '/revision/chapters', (context, req) => revision.generateChapter(context, req.body))
   route('get', '/revision/chapters', context => revision.listChapters(context))
   route('get', '/revision/import/quota', context => revision.getImportQuota(context))
-  route('post', '/revision/import', async (context, req) => {
+  importRoute('/revision/import/:id/retry', (context, req, signal) => revision.retryImport(context, req.params.id, signal))
+  importRoute('/revision/import', async (context, req, signal) => {
     if (!req.headers['content-type']?.includes('multipart/form-data')) {
       const { title, subject, text } = req.body ?? {}
-      return revision.importChapter(context, { title, subject, text })
+      return revision.importChapter(context, { title, subject, text }, signal)
     }
     const directory = await mkdtemp(join(tmpdir(), 'lohni-import-'))
     try {
@@ -63,12 +73,12 @@ export function revisionRoutes(app: any) {
       try {
         upload = await parseMultipart(req, { directory, limits: { files: 1, fileSize: policy.maxUploadMB * 1024 * 1024, fields: 1, fieldSize: 4096 } })
       } catch {
-        throw new RevisionError(`Import illisible ou trop volumineux. Choisis un seul fichier de ${policy.maxUploadMB} Mo maximum.`)
+        throw new RevisionError(`Import illisible ou trop volumineux. Choisis un seul fichier de ${policy.maxUploadMB} Mo maximum.`, 'IMPORT_FILE')
       }
       let metadata: { title: string; subject: string }
       try { metadata = JSON.parse(upload.q) } catch { throw new RevisionError('Matière et titre du chapitre requis.') }
-      if (upload.files.length !== 1) throw new RevisionError('Choisis un fichier à importer.')
-      return await revision.importChapter(context, { title: metadata?.title, subject: metadata?.subject, file: upload.files[0] })
+      if (upload.files.length !== 1) throw new RevisionError('Choisis un fichier à importer.', 'IMPORT_FILE')
+      return await revision.importChapter(context, { title: metadata?.title, subject: metadata?.subject, file: upload.files[0] }, signal)
     } finally { await rm(directory, { recursive: true, force: true }) }
   })
   route('delete', '/revision/chapters/:id', (context, req) => revision.deleteChapter(context, req.params.id))

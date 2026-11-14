@@ -1,9 +1,10 @@
-import { ZapIcon, TrophyIcon, DumbbellIcon, ThumbsUpIcon, ThumbsDownIcon, ScaleIcon, FlagIcon, BotIcon, HandshakeIcon, ChartIcon, TrendingDownIcon, AlertIcon } from '../components/ui/NavigationIcons'
+import { ZapIcon, TrophyIcon, DumbbellIcon, ThumbsUpIcon, ThumbsDownIcon, ScaleIcon, BotIcon, HandshakeIcon, ChartIcon, TrendingDownIcon, AlertIcon } from '../components/ui/NavigationIcons'
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import { useOverlayNavigation } from "../lib/useOverlayNavigation";
 import { withOccurrenceKeys } from "../lib/occurrenceKeys";
 import { confirmDialog } from "../lib/confirm";
+import { BackButton } from "../components/ui/BackButton";
 import { ToolPage } from "../components/ui/ToolPage";
 import * as api from "../lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -372,7 +373,7 @@ export default function Debate() {
                                     onClick={() => setPosition("for")}
                                     aria-pressed={position === "for"}
                                     className={`min-w-0 flex-1 py-4 px-2 rounded-xl font-semibold transition-[transform,opacity] ${position === "for"
-                                        ? "bg-secondary text-on-secondary shadow-lg"
+                                        ? "bg-tint border-2 border-primary text-foreground"
                                         : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
                                 >
@@ -384,7 +385,7 @@ export default function Debate() {
                                     onClick={() => setPosition("against")}
                                     aria-pressed={position === "against"}
                                     className={`min-w-0 flex-1 py-4 px-2 rounded-xl font-semibold transition-[transform,opacity] ${position === "against"
-                                        ? "bg-primary text-on-primary shadow-lg"
+                                        ? "bg-tint border-2 border-primary text-foreground"
                                         : "bg-surface border border-border text-muted hover:bg-tint"
                                         }`}
                                 >
@@ -402,6 +403,7 @@ export default function Debate() {
                         >
                             Commencer le débat
                         </button>
+                        {!topic.trim() && <p className="text-sm text-muted">Saisis un sujet pour commencer.</p>}
                     </div>
 
                     {error && (
@@ -416,44 +418,23 @@ export default function Debate() {
 
     return (
         <div className="flex flex-col h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] md:h-dvh w-full md:pl-28 bg-background text-foreground">
-            <div className="flex-shrink-0 border-b border-border bg-surface backdrop-blur-sm">
-                <div className="px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                            <h1 title={session?.topic} className="line-clamp-2 text-xl font-bold text-foreground mb-1">
-                                {session?.topic || "Debate"}
-                            </h1>
-                            <div className="flex items-center gap-3 text-sm">
-                                <span
-                                    className={`px-3 py-1 rounded-full font-semibold ${session?.position === "for"
-                                        ? "bg-tint text-foreground border border-secondary"
-                                        : "bg-tint text-foreground border border-primary"
-                                        }`}
-                                >
-                                    Toi : {session?.position === "for" ? "Pour" : "Contre"}
-                                </span>
-                                <span className="text-muted">contre</span>
-                                <span className="px-3 py-1 rounded-full font-semibold bg-tint text-foreground border border-border">
-                                    IA : {session?.position === "for" ? "Contre" : "Pour"}
-                                </span>
-                            </div>
-                        </div>
-                        <button type="button"
-                            onClick={() => {
-                                setDebateId(null);
-                                setSession(null);
-                                setMessages([]);
-                                navigate("/debate");
-                            }}
-                            className="px-4 py-2 bg-surface border border-border hover:bg-tint text-foreground rounded-lg transition-opacity"
-                        >
-                            Nouveau débat
-                        </button>
+            <header className="flex-shrink-0 px-4 pt-4">
+                <div className="flex items-center gap-2">
+                    <BackButton fallback="/courses" className="inline-grid size-11 shrink-0 place-items-center rounded-xl text-foreground" />
+                    <div className="min-w-0 flex-1"><h1 className="text-xl font-bold">Débat</h1><p className="text-sm text-muted">{messages.filter(message => message.role === "user").length} échange(s)</p></div>
+                    <span className="rounded-full border border-border bg-tint px-3 py-1 text-xs font-medium">BÊTA</span>
+                    <button type="button" onClick={() => { setDebateId(null); setSession(null); setMessages([]); navigate("/debate"); }} className="min-h-11 px-2 text-sm text-primary underline">Nouveau débat</button>
+                </div>
+                <div className="mt-1 rounded-2xl border border-border bg-surface px-4 py-3">
+                    <h2 title={session?.topic} className="line-clamp-2 font-bold leading-tight">{session?.topic || "Débat"}</h2>
+                    <div className="mt-2 flex gap-2 text-xs font-bold">
+                        <span className="rounded-xl bg-tint px-3 py-1 text-primary">Toi : {session?.position === "for" ? "pour" : "contre"}</span>
+                        <span className="rounded-xl border border-border bg-background px-3 py-1 text-muted">Lohni : {session?.position === "for" ? "contre" : "pour"}</span>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scroll">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-3 custom-scroll">
                 {messages.length === 0 && !isStreaming && (
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center space-y-4 max-w-md">
@@ -470,75 +451,33 @@ export default function Debate() {
                 )}
 
                 {withOccurrenceKeys(messages, message => JSON.stringify([message.role, message.timestamp])).map(({ value: msg, key }) => (
-                    <div
-                        key={key}
-                        className={`flex ${msg.role === "user" ? "justify-end animate-[slideInRight_0.3s_ease-out]" : "justify-start animate-[slideInLeft_0.3s_ease-out]"}`}
-                    >
-                        <div
-                            className={`max-w-3xl ${msg.role === "user" ? "items-end" : "items-start"
-                                } flex flex-col gap-2`}
-                        >
-                            <div className="flex items-center gap-2">
-                                {msg.role === "assistant" && (
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary flex items-center justify-center text-on-primary font-bold shadow-lg">
-                                        IA
-                                    </div>
-                                )}
-                                <span className="text-sm font-semibold text-muted">
-                                    {msg.role === "user" ? "Toi" : "Adversaire IA"}
-                                </span>
-                                {msg.role === "user" && (
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-foreground font-bold shadow-lg ${session?.position === "for"
-                                        ? "bg-gradient-to-br from-secondary to-secondary"
-                                        : "bg-gradient-to-br from-primary to-primary"
-                                        }`}>
-                                        U
-                                    </div>
-                                )}
-                            </div>
-                            <div
-                                className={`px-6 py-4 rounded-2xl shadow-lg transition-[transform,opacity] hover:shadow-xl ${msg.role === "user"
-                                    ? session?.position === "for"
-                                        ? "bg-gradient-to-br from-secondary to-secondary text-on-secondary"
-                                        : "bg-gradient-to-br from-primary to-primary text-on-primary"
-                                    : "bg-surface border border-border ring-1 ring-border backdrop-blur text-foreground"
-                                    }`}
-                            >
-                                <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                            </div>
+                    <div key={key} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[84%] px-4 py-3 rounded-2xl ${msg.role === "user" ? "rounded-br-md bg-tint" : "rounded-bl-md border border-border bg-surface"}`}>
+                            <div className={`mb-1 text-sm font-bold text-muted ${msg.role === "user" ? "text-right" : ""}`}>{msg.role === "user" ? "Toi" : "Lohni"}</div>
+                            <p className="whitespace-pre-wrap leading-snug">{msg.content}</p>
                         </div>
                     </div>
                 ))}
-
-                {isStreaming && (
-                    <div className="flex justify-start animate-[slideInLeft_0.3s_ease-out]">
-                        <div className="max-w-3xl items-start flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary flex items-center justify-center text-on-primary font-bold shadow-lg">
-                                    IA
-                                </div>
-                                <span className="text-sm font-semibold text-muted">
-                                    Adversaire IA
-                                </span>
-                            </div>
-                            <div className="px-6 py-4 rounded-2xl shadow-lg bg-surface border border-border ring-1 ring-border backdrop-blur text-foreground">
-                                <p className="whitespace-pre-wrap leading-relaxed">
-                                    {streamingContent}
-                                    <span className="inline-block w-2 h-5 bg-gradient-to-r from-primary to-primary ml-1 animate-pulse rounded-sm" />
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {isStreaming && <div className="max-w-[84%] rounded-2xl rounded-bl-md border border-border bg-surface px-4 py-3 text-muted"><span className="mb-1 block text-sm font-bold">Lohni</span>{streamingContent || "Lohni réfléchit…"}</div>}
 
                 <div ref={messagesEndRef} />
             </div>
 
             <div className="flex-shrink-0 border-t border-border bg-surface backdrop-blur-sm p-4">
                 <div className="max-w-4xl mx-auto">
-                    <div className="flex gap-3 mb-3">
+                    <div className="flex gap-2 overflow-x-auto mb-3">
+                        {[["Donne-moi un indice", "Peux-tu me donner un indice ?"], ["Un exemple concret", "Prenons un exemple concret : "], ["Je ne suis pas d’accord car…", "Je ne suis pas d’accord car "]].map(([suggestion, draft]) => (
+                            <button type="button" key={suggestion} disabled={isStreaming || isDebateEnded}
+                                onClick={() => { setArgument(draft); textareaRef.current?.focus(); }}
+                                className="min-h-11 shrink-0 rounded-xl border border-border bg-surface px-4 text-sm font-bold text-primary disabled:opacity-50">
+                                {suggestion}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex gap-3 mb-2">
                         <textarea
                             ref={textareaRef}
+                            aria-label="Ton argument"
                             value={argument}
                             onChange={handleTextareaChange}
                             onKeyDown={handleKeyDown}
@@ -550,35 +489,30 @@ export default function Debate() {
                                         : "Écris ton argument…"
                             }
                             disabled={isStreaming || isDebateEnded}
-                            className="min-w-0 flex-1 px-4 py-3 bg-surface border border-border rounded-xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed custom-scroll"
+                            className="min-w-0 flex-1 px-4 py-3 bg-background border border-border rounded-2xl text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none disabled:opacity-50 disabled:cursor-not-allowed custom-scroll"
                             rows={1}
                             style={{ minHeight: "50px", maxHeight: "120px" }}
                         />
                         <button type="button"
                             onClick={submitArgument}
+                            aria-label="Envoyer"
                             disabled={!argument.trim() || isStreaming || isDebateEnded}
-                            className={`self-start px-6 py-3 rounded-xl font-semibold transition-[transform,opacity] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${session?.position === "for"
-                                ? "bg-gradient-to-r from-secondary to-secondary hover:from-secondary hover:to-secondary text-on-secondary"
-                                : "bg-gradient-to-r from-primary to-primary hover:from-primary hover:to-primary text-on-primary"
-                                }`}
+                            className="self-start grid size-14 shrink-0 place-items-center rounded-2xl bg-primary text-on-primary transition-[transform,opacity] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isStreaming ? (
-                                <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 border-2 border-border border-t-transparent rounded-full animate-spin" />
-                                    <span>Patiente…</span>
-                                </div>
-                            ) : (
-                                "Argumenter"
-                            )}
+                            <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" /></svg>
                         </button>
                     </div>
-                    <div className="flex items-center justify-center">
+                    {!argument.trim() && !isStreaming && !isDebateEnded && <p className="text-sm text-muted">Écris un argument pour l’envoyer.</p>}
+                    {isStreaming && <p className="text-sm text-muted">Attends la réponse de l’IA pour continuer ou terminer.</p>}
+                    {!isStreaming && messages.length === 0 && <p className="text-sm text-muted">Envoie un argument pour pouvoir terminer.</p>}
+                    <div className="flex flex-wrap items-center justify-between gap-x-3">
+                        <p className="text-sm text-muted">2 échanges minimum pour un bilan pertinent.</p>
                         <button type="button"
                             onClick={handleSurrender}
                             disabled={isStreaming || messages.length === 0 || isDebateEnded}
-                            className="px-4 py-2 bg-tint hover:bg-tint border border-border hover:border-border text-foreground hover:text-foreground rounded-lg transition-[transform,opacity] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
+                            className="min-h-11 px-2 text-primary underline underline-offset-4 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
                         >
-                            <FlagIcon /> Terminer le débat
+                            Terminer le débat
                         </button>
                     </div>
                 </div>
@@ -618,7 +552,7 @@ export default function Debate() {
                                         <ul className="space-y-2">
                                             {withOccurrenceKeys(analysis.userStrengths, value => value).map(({ value: strength, key }) => (
                                                 <li key={key} className="text-foreground text-sm flex items-start gap-2">
-                                                    <span className="text-secondary mt-0.5">✓</span>
+                                                    <span className="text-success mt-0.5">✓</span>
                                                     <span>{strength}</span>
                                                 </li>
                                             ))}

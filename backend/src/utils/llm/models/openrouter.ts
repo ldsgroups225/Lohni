@@ -15,15 +15,17 @@ export const makeLLM: MkLLM = (cfg: any) => {
   })
   const chats = models.map((model: string) => createChat(model))
   const noReasoningChats = models.map((model: string) => createChat(model, true))
-  const invoke = async (ms: Msg[], options?: { reasoning?: 'none' }) => {
+  const invoke = async (ms: Msg[], options?: { reasoning?: 'none'; signal?: AbortSignal }) => {
     let lastError: unknown
+    const call = (chat: ChatOpenAI) => chat.invoke(ms, options?.signal ? { signal: options.signal } : undefined)
     for (let i = 0; i < chats.length; i++) {
       try {
-        return await (options?.reasoning === 'none' ? noReasoningChats[i] : chats[i]).invoke(ms)
+        return await call(options?.reasoning === 'none' ? noReasoningChats[i] : chats[i])
       } catch (error) {
+        if (options?.signal?.aborted) throw error
         if (options?.reasoning === 'none' && error instanceof Error &&
           (error as Error & { status?: number }).status === 400 && error.message.includes('Reasoning is mandatory')) {
-          try { return await chats[i].invoke(ms) } catch (retryError) { lastError = retryError }
+          try { return await call(chats[i]) } catch (retryError) { if (options.signal?.aborted) throw retryError; lastError = retryError }
         } else lastError = error
       }
     }

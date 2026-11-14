@@ -3,8 +3,8 @@ import type { MessageContent } from '@langchain/core/messages'
 export type Msg = { role: 'user' | 'assistant' | 'system'; content: MessageContent }
 
 export interface LLM {
-  invoke(m: Msg[], options?: { reasoning?: 'none' }): Promise<any>
-  call(m: Msg[], options?: { reasoning?: 'none' }): Promise<any>
+  invoke(m: Msg[], options?: { reasoning?: 'none'; signal?: AbortSignal }): Promise<any>
+  call(m: Msg[], options?: { reasoning?: 'none'; signal?: AbortSignal }): Promise<any>
 }
 
 export type EmbeddingsLike = {

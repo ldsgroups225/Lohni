@@ -40,7 +40,7 @@ export type PodcastEvent =
   | { type: "script"; data: any }
   | { type: "audio"; file: string; filename?: string; staticUrl?: string }
   | { type: "done" }
-  | { type: "error"; error: string }
+  | { type: "error"; error: string; code?: string }
 export type SmartNotesEvent =
   | { type: "ready"; noteId: string }
   | { type: "phase"; value: string }
@@ -86,10 +86,10 @@ const timeoutCtl = (ms: number) => {
   return { signal: c.signal, done: () => clearTimeout(t) };
 };
 
-class APIError extends Error {
+export class APIError extends Error {
   readonly status: number;
   readonly code?: string;
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, readonly chapterId?: string) {
     super(message);
     this.status = status;
     this.code = code;
@@ -103,13 +103,13 @@ async function req<T = unknown>(
   const { timeout = env.timeout, ...rest } = init;
   const { signal, done } = timeoutCtl(timeout);
   try {
-    const r = await fetch(url, { signal, ...rest });
+    const r = await fetch(url, { ...rest, signal: rest.signal ? AbortSignal.any([signal, rest.signal]) : signal });
     if (!r.ok) {
       const txt = await r.text().catch(() => "");
-      let detail: { error?: unknown; code?: unknown } | undefined;
+      let detail: { error?: unknown; code?: unknown; chapterId?: unknown } | undefined;
       try { detail = JSON.parse(txt); } catch { /* Non-JSON responses keep their HTTP status. */ }
       throw new APIError(typeof detail?.error === "string" ? detail.error : `http ${r.status}: ${txt || r.statusText}`,
-        r.status, typeof detail?.code === 'string' ? detail.code : undefined);
+        r.status, typeof detail?.code === 'string' ? detail.code : undefined, typeof detail?.chapterId === 'string' ? detail.chapterId : undefined);
     }
     const ct = r.headers.get("content-type") || "";
     if (ct.includes("application/json")) return (await r.json()) as T;
@@ -275,6 +275,10 @@ export async function startExam(examId: string) {
   )
 }
 
+export async function cancelExam(runId: string) {
+  return req(`${env.backend}/exam/${encodeURIComponent(runId)}`, { method: "DELETE" })
+}
+
 export function connectExamStream(runId: string, onEvent: (ev: ExamEvent) => void) {
   const url = wsURL(`/ws/exams?runId=${encodeURIComponent(runId)}`)
   const ws = new WebSocket(url)
@@ -334,7 +338,7 @@ export async function quizStart(topic: string) {
   )
 }
 
-export async function podcastStart(payload: { topic: string }) {
+export async function podcastStart(payload: { topic: string; duration?: "short" | "long" }) {
   const url = `${env.backend}/podcast`
   const res = await fetch(url, {
     method: "POST",
@@ -344,6 +348,11 @@ export async function podcastStart(payload: { topic: string }) {
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || "Failed to start podcast")
   return data
+}
+
+export async function podcastCancel(pid: string) {
+  const response = await fetch(`${env.backend}/podcast/${encodeURIComponent(pid)}`, { method: 'DELETE' })
+  if (!response.ok) throw new Error('Impossible d’annuler le podcast.')
 }
 
 export function connectPodcastStream(pid: string, onEvent: (ev: any) => void) {
@@ -689,7 +698,7 @@ function revisionLocalDate(): string {
 
 class RevisionConnectionError extends Error {}
 
-async function revisionRequest<T>(path: string, method = 'GET', body?: unknown, localDate = revisionLocalDate(), timeout = Math.max(env.timeout, 120000)): Promise<T> {
+async function revisionRequest<T>(path: string, method = 'GET', body?: unknown, localDate = revisionLocalDate(), timeout = Math.max(env.timeout, 120000), signal?: AbortSignal): Promise<T> {
   const deviceId = revisionDeviceId();
   const multipart = body instanceof FormData;
   try {
@@ -697,11 +706,12 @@ async function revisionRequest<T>(path: string, method = 'GET', body?: unknown, 
       method,
       headers: { ...(!multipart && { 'Content-Type': 'application/json' }), 'X-Device-Id': deviceId, 'X-Local-Date': localDate },
       body: multipart ? body : body === undefined ? undefined : JSON.stringify(body),
-      timeout,
+      timeout, signal,
     });
     return result.data;
   } catch (error) {
     if (error instanceof TypeError) throw new RevisionConnectionError('Connexion impossible. Tes réponses restent enregistrées sur cet appareil.');
+    if (signal?.aborted) throw error;
     if (error instanceof Error && error.name === 'AbortError') throw new RevisionConnectionError('Le chargement prend trop de temps. Tes réponses restent enregistrées sur cet appareil.');
     throw error;
   }
@@ -858,11 +868,17 @@ async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<
   if (!next) throw new Error('Session introuvable. Recharge la page puis réessaie.');
   return next;
 }
-async function revisionMutation<T>(path: string, method: string, body?: unknown): Promise<T> {
+async function revisionMutation<T>(path: string, method: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   await syncRevisionAnswers();
   if (readOffline().pending.length) throw new Error('Reconnecte-toi pour envoyer tes réponses avant de modifier tes cours ou ton profil.');
+  signal?.throwIfAborted();
   const device = revisionDeviceId();
-  const result = await revisionRequest<T>(path, method, body);
+  let result: T;
+  try { result = await revisionRequest<T>(path, method, body, undefined, undefined, signal); } catch (error) {
+    if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
+    if (signal?.aborted || (error instanceof APIError && error.chapterId)) invalidateRevisionCache('/home', '/progress', '/chapters', '/plan');
+    throw error;
+  }
   if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
   if (path === '/profile') invalidateRevisionCache()
   else invalidateRevisionCache('/home', '/progress', '/chapters', '/plan')
@@ -938,12 +954,13 @@ export const revisionAPI = {
   saveTutorNote: (note: { subject: string; title: string; question: string; answer: string }) => revisionMutation<{ id: string }>('/notes', 'POST', note),
   generateChapter: (input: { subject: string; title: string }) => revisionMutation<{ id: string }>('/chapters', 'POST', input),
   importQuota: () => revisionRequest<RevisionImportQuota>('/import/quota'),
-  importChapter: (input: { subject: string; title: string; text?: string; file?: File }) => {
-    if (!input.file) return revisionMutation<RevisionImportedChapter>('/import', 'POST', input);
+  retryImport: (id: string, signal?: AbortSignal) => revisionMutation<RevisionImportedChapter>(`/import/${encodeURIComponent(id)}/retry`, 'POST', undefined, signal),
+  importChapter: (input: { subject: string; title: string; text?: string; file?: File }, signal?: AbortSignal) => {
+    if (!input.file) return revisionMutation<RevisionImportedChapter>('/import', 'POST', input, signal);
     const form = new FormData();
     form.append('q', JSON.stringify({ title: input.title, subject: input.subject }));
     form.append('file', input.file);
-    return revisionMutation<RevisionImportedChapter>('/import', 'POST', form);
+    return revisionMutation<RevisionImportedChapter>('/import', 'POST', form, signal);
   },
   examSession: async (id: string, continuing = false) => {
     if (!navigator.onLine) throw new Error('Connecte-toi pour lancer une révision d’examen.')

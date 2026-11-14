@@ -101,7 +101,7 @@ test('une photo réserve la dernière place avant la transcription et partage la
   try {
     expect((await service.getImportQuota(context())).remaining).toBe(0)
     expect((await service.getSession(context())).cards).toHaveLength(4)
-    await expect(service.importChapter(context(), photo)).rejects.toThrow('3 imports')
+    await expect(service.importChapter(context(), photo)).rejects.toMatchObject({ code: 'IMPORT_QUOTA' })
     await expect(service.importChapter(context(), input)).rejects.toThrow('3 imports')
   } finally { release(); await pending }
 })
@@ -235,11 +235,112 @@ test('un cours vide, illisible, trop long ou d’un format inconnu ne consomme a
   expect((await service.getImportQuota(context())).remaining).toBe(3)
 })
 
+test('un fichier ou un texte inutilisable est signalé par le code IMPORT_FILE', async () => {
+  await expect(service.importChapter(context(), { ...input, text: '  ' })).rejects.toMatchObject({ code: 'IMPORT_FILE' })
+  await expect(service.importChapter(context(), { title: input.title, subject: input.subject, file: { path: join(directory, 'absent.pdf'), filename: 'cours.pdf', mimeType: 'application/pdf' } })).rejects.toMatchObject({ code: 'IMPORT_FILE' })
+})
+
 
 test.each(['txt', 'jpg'])('un fichier %s dépassant 10 Mo est refusé sans consommer le quota', async extension => {
   const path = join(directory, `volumineux.${extension}`)
   await writeFile(path, '')
   await truncate(path, 10 * 1024 * 1024 + 1)
   await expect(service.importChapter(context(), { title: input.title, subject: input.subject, file: { path, filename: `volumineux.${extension}`, mimeType: 'application/octet-stream' } })).rejects.toThrow('10 Mo')
+  expect((await service.getImportQuota(context())).remaining).toBe(3)
+})
+
+test('un échec de génération conserve le cours pour le relire sans cartes', async () => {
+  service = new RevisionService({ db, now: () => now, generateCards: async () => { throw new Error('indisponible') } })
+  await expect(service.importChapter(context(), input)).rejects.toThrow('Impossible de préparer ce cours')
+  expect(await service.listChapters(context())).toEqual([expect.objectContaining({ title: input.title, summary: input.text, cards: [] })])
+})
+
+test('réessayer complète le même cours, sans doublon et sans accès depuis un autre appareil', async () => {
+  let broken = true
+  service = new RevisionService({ db, now: () => now, generateCards: async () => {
+    if (broken) throw new Error('indisponible')
+    return generated
+  } })
+  await expect(service.importChapter(context(), input)).rejects.toThrow()
+  const [draft] = await service.listChapters(context())
+  await expect(service.retryImport({ ...context(), deviceId: randomUUID() }, draft.id)).rejects.toThrow()
+  broken = false
+  await expect(service.retryImport(context(), draft.id)).resolves.toMatchObject({ id: draft.id })
+  expect(await service.listChapters(context())).toEqual([expect.objectContaining({ id: draft.id, cards: expect.arrayContaining([expect.objectContaining({ kind: 'basic' })]) })])
+  await expect(service.retryImport(context(), draft.id)).rejects.toThrow()
+})
+
+test('deux nouvelles tentatives ne créent pas de cartes en double', async () => {
+  let release!: () => void
+  let started!: () => void
+  const waiting = new Promise<void>(resolve => { release = resolve })
+  const running = new Promise<void>(resolve => { started = resolve })
+  let fail = true
+  service = new RevisionService({ db, now: () => now, generateCards: async () => {
+    if (fail) throw new Error('indisponible')
+    started(); await waiting; return generated
+  } })
+  await expect(service.importChapter(context(), input)).rejects.toThrow()
+  const [draft] = await service.listChapters(context())
+  fail = false
+  const pending = service.retryImport(context(), draft.id)
+  await running
+  try { await expect(service.retryImport(context(), draft.id)).rejects.toThrow('déjà en cours') }
+  finally { release(); await pending }
+  expect((await service.listChapters(context()))[0].cards).toHaveLength(2)
+})
+
+test('annuler pendant la génération interrompt le modèle sans enregistrer ni consommer le quota', async () => {
+  const controller = new AbortController()
+  let started!: () => void
+  const running = new Promise<void>(resolve => { started = resolve })
+  service = new RevisionService({ db, now: () => now, generateCards: async ({ signal }) => {
+    started()
+    await new Promise<void>((_resolve, reject) => signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true }))
+    return generated
+  } })
+  const pending = service.importChapter(context(), input, controller.signal)
+  await running
+  controller.abort()
+  await expect(pending).rejects.toThrow('Import annulé')
+  expect(await service.listChapters(context())).toEqual([])
+  expect((await service.getImportQuota(context())).remaining).toBe(3)
+})
+
+test('annuler une nouvelle tentative conserve le brouillon et libère le quota', async () => {
+  let fail = true
+  let started!: () => void
+  const running = new Promise<void>(resolve => { started = resolve })
+  service = new RevisionService({ db, now: () => now, generateCards: async ({ signal }) => {
+    if (fail) throw new Error('indisponible')
+    started()
+    await new Promise<void>((_resolve, reject) => signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true }))
+    return generated
+  } })
+  await expect(service.importChapter(context(), input)).rejects.toThrow()
+  const [draft] = await service.listChapters(context())
+  fail = false
+  const controller = new AbortController()
+  const pending = service.retryImport(context(), draft.id, controller.signal)
+  await running
+  controller.abort()
+  await expect(pending).rejects.toThrow('Import annulé')
+  expect(await service.listChapters(context())).toEqual([expect.objectContaining({ id: draft.id, cards: [] })])
+  expect((await service.getImportQuota(context())).remaining).toBe(3)
+})
+
+test('une génération qui se termine après annulation ne crée pas de chapitre', async () => {
+  let release!: () => void
+  let started!: () => void
+  const waiting = new Promise<void>(resolve => { release = resolve })
+  const running = new Promise<void>(resolve => { started = resolve })
+  service = new RevisionService({ db, now: () => now, generateCards: async () => { started(); await waiting; return generated } })
+  const controller = new AbortController()
+  const pending = service.importChapter(context(), input, controller.signal)
+  await running
+  controller.abort()
+  release()
+  await expect(pending).rejects.toThrow('Import annulé')
+  expect(await service.listChapters(context())).toEqual([])
   expect((await service.getImportQuota(context())).remaining).toBe(3)
 })

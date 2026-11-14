@@ -1,9 +1,10 @@
+import { priorityLabel } from "../../lib/priorityLabel"
 import { TargetIcon, PartyIcon } from '../ui/NavigationIcons'
 import type { PlannerTask } from "../../lib/api"
 
 function fmtTime(ts: number) {
     const d = new Date(ts)
-    return d.toLocaleString(undefined, { hour: "2-digit", minute: "2-digit" })
+    return d.toLocaleString('fr-FR', { hour: "2-digit", minute: "2-digit" })
 }
 
 interface TodayFocusProps {
@@ -47,12 +48,12 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                         <div className="min-w-0">
                                             <div className="text-primary font-medium">{task.title}</div>
                                             <div className="text-primary text-xs">
-                                                {task.course} • {task.estMins} mins • Échéance : {fmtTime(task.dueAt)}
+                                                {task.course} • {task.estMins} min • Échéance : {fmtTime(task.dueAt)}
                                             </div>
                                         </div>
                                         <button type="button"
                                             onClick={() => onCompleteTask(task.id)}
-                                            className="min-h-10 shrink-0 rounded-lg bg-secondary px-3 text-sm text-on-secondary"
+                                            className="min-h-11 shrink-0 rounded-lg border border-border px-3 text-sm text-foreground"
                                         >
                                             Terminer
                                         </button>
@@ -74,12 +75,12 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                         <div className="min-w-0">
                                             <div className="text-foreground font-medium">{task.title}</div>
                                             <div className="text-muted text-xs">
-                                                {task.course} • {task.estMins} mins • P{task.priority}
+                                                {task.course} • {task.estMins} min • {priorityLabel(task.priority)}
                                             </div>
                                         </div>
                                         <button type="button"
                                             onClick={() => onStartSession(task.id)}
-                                            className="min-h-10 shrink-0 rounded-lg bg-primary px-3 text-sm text-on-primary"
+                                            className="min-h-11 shrink-0 rounded-lg border border-border px-3 text-sm text-foreground"
                                         >
                                             Commencer
                                         </button>
@@ -108,12 +109,12 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                             <div className="min-w-0">
                                                 <div className="text-foreground font-medium">{task.title}</div>
                                                 <div className="text-foreground text-xs">
-                                                    {task.course} • Dans {Math.round(hoursLeft)}h • {task.estMins} min
+                                                    {task.course} • Dans {Math.round(hoursLeft)} h • {task.estMins} min
                                                 </div>
                                             </div>
                                             <button type="button"
                                                 onClick={() => onStartSession(task.id)}
-                                                className="min-h-10 shrink-0 rounded-lg bg-primary px-3 text-sm text-on-primary"
+                                                className="min-h-11 shrink-0 rounded-lg border border-border px-3 text-sm text-foreground"
                                             >
                                                 Commencer
                                             </button>
