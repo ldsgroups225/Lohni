@@ -1,7 +1,7 @@
 import { LightbulbIcon } from '../ui/NavigationIcons'
 import { useEffect, useRef } from "react";
 import MarkdownView from "../Chat/MarkdownView";
-import { prefersReducedMotion } from "../../lib/motion";
+import { revealAtBottom } from "../../lib/motion";
 import type { Question } from "../../pages/Quiz";
 import { withOccurrenceKeys } from "../../lib/occurrenceKeys";
 
@@ -22,7 +22,7 @@ export default function QuestionCard({
     if (!showExp) return;
     if (keyboardAnswer.current) next.current?.focus({ preventScroll: true });
     keyboardAnswer.current = false;
-    const go = () => next.current?.scrollIntoView({ block: "end", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    const go = () => { if (next.current) revealAtBottom(next.current); };
     go();
     const timer = window.setTimeout(go, 350);
     return () => window.clearTimeout(timer);
@@ -83,7 +83,7 @@ export default function QuestionCard({
         )}
       </div>
 
-      <button ref={next} type="button" onClick={onNext} disabled={!showExp} className="ui-button min-h-11 w-full scroll-mb-8 disabled:bg-tint disabled:text-muted disabled:opacity-100">
+      <button ref={next} type="button" onClick={onNext} disabled={!showExp} className="ui-button min-h-11 w-full disabled:bg-tint disabled:text-muted disabled:opacity-100">
         {!showExp ? "Choisis une réponse" : isLast ? "Voir mon résultat" : "Continuer"}
       </button>
       {showExp && onRetry && <button type="button" onClick={onRetry} className="ui-button-secondary w-full">Recommencer cette question</button>}

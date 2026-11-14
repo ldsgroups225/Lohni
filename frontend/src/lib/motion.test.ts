@@ -1,6 +1,6 @@
 import { required } from '../test/required'
 import { afterEach, expect, test, vi } from 'vitest'
-import { prefersReducedMotion, spring, springLinear, springStep } from './motion'
+import { prefersReducedMotion, revealAtBottom, spring, springLinear, springStep } from './motion'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -72,4 +72,33 @@ test('reduced motion : saute à to sans frame', async () => {
   expect(upd).toHaveBeenCalledWith(50)
   expect(done).toHaveBeenCalledTimes(1)
   expect(raf).not.toHaveBeenCalled()
+})
+
+// Chrome Android, barre d'adresse affichée : la zone visible (visualViewport) est plus courte que la fenêtre de mise en page.
+// scrollIntoView({ block: 'end' }) alignait le bouton sur le bas caché et le coupait.
+test('revealAtBottom amène le bas de l’élément, plus une marge, au bas de la zone réellement visible', () => {
+  const scrollTo = vi.fn()
+  vi.stubGlobal('window', globalThis)
+  vi.stubGlobal('scrollTo', scrollTo)
+  vi.stubGlobal('scrollY', 100)
+  vi.stubGlobal('innerHeight', 700)
+  vi.stubGlobal('visualViewport', { height: 640, offsetTop: 0 })
+  vi.stubGlobal('matchMedia', () => ({ matches: false }))
+  const setProperty = vi.fn()
+  vi.stubGlobal('document', { documentElement: { clientHeight: 700, style: { setProperty } } })
+  const element = { getBoundingClientRect: () => ({ bottom: 900 }) } as HTMLElement
+  revealAtBottom(element, 32)
+  expect(scrollTo).toHaveBeenCalledWith({ top: 100 + 900 + 32 - 640, behavior: 'smooth' })
+  // La page gagne en bas la hauteur cachée par la barre, sinon le défilement maximal s'arrête avant le bouton.
+  expect(setProperty).toHaveBeenCalledWith('--hidden-bottom', '60px')
+})
+
+test('revealAtBottom ne remonte pas la page quand l’élément est déjà visible avec sa marge', () => {
+  const scrollTo = vi.fn()
+  vi.stubGlobal('window', globalThis)
+  vi.stubGlobal('scrollTo', scrollTo)
+  vi.stubGlobal('visualViewport', { height: 640, offsetTop: 0 })
+  vi.stubGlobal('document', { documentElement: { clientHeight: 640, style: { setProperty: vi.fn() } } })
+  revealAtBottom({ getBoundingClientRect: () => ({ bottom: 500 }) } as HTMLElement, 32)
+  expect(scrollTo).not.toHaveBeenCalled()
 })

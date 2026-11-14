@@ -12,7 +12,7 @@ import { useOverlayNavigation } from '../lib/useOverlayNavigation'
 import { useLeaveConfirmation } from '../lib/useLeaveConfirmation'
 import { withOccurrenceKeys } from '../lib/occurrenceKeys'
 import { confirmDialog } from '../lib/confirm'
-import { MENU_EXIT_MS, prefersReducedMotion, useExitTransition } from '../lib/motion'
+import { MENU_EXIT_MS, revealAtBottom, useExitTransition } from '../lib/motion'
 import { SwipeCard } from '../components/Revision/SwipeCard'
 import { SessionRecap } from '../components/Revision/SessionRecap'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
@@ -76,7 +76,7 @@ export default function Revision() {
     if (!verdict) return
     if (keyboardAnswer.current) continueButton.current?.focus({ preventScroll: true })
     keyboardAnswer.current = false
-    const go = () => continueButton.current?.scrollIntoView({ block: 'end', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+    const go = () => { if (continueButton.current) revealAtBottom(continueButton.current) }
     go()
     const timer = window.setTimeout(go, 350)
     return () => window.clearTimeout(timer)
@@ -234,7 +234,7 @@ export default function Revision() {
   if (!busy && !error && !profile) return <Navigate to="/" replace />
 
   return (
-    <main className={`loop-screen flex min-h-dvh flex-col overflow-clip px-4 md:pl-28 ${session && !session.complete && card ? `pt-1 ${verdict ? 'pb-[max(2rem,env(safe-area-inset-bottom))]' : 'pb-[max(.5rem,env(safe-area-inset-bottom))]'}` : 'pt-8 pb-36'}`}>
+    <main className={`loop-screen flex min-h-dvh flex-col overflow-clip px-4 md:pl-28 ${session && !session.complete && card ? `pt-1 ${verdict ? 'pb-[calc(max(2rem,env(safe-area-inset-bottom))+var(--hidden-bottom,0px))]' : 'pb-[max(.5rem,env(safe-area-inset-bottom))]'}` : 'pt-8 pb-36'}`}>
       <div className={`mx-auto flex w-full max-w-xl flex-1 flex-col ${session && !session.complete && card ? 'space-y-2' : 'space-y-6'}`}>
         {session && !session.complete && card ? <header className="flex items-center gap-3"><h1 className="sr-only">Session de révision</h1><BackButton fallback="/" label="Quitter la session" className="press-icon -ml-3 inline-grid size-11 place-items-center rounded-xl text-muted"><CloseIcon /></BackButton>{session && <div className="flex-1"><div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div><Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" /></div>}{session && <span className="text-sm tabular-nums text-muted">{session.position + 1}/{session.cards.length}</span>}
           <fieldset aria-label="Options de révision" className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
@@ -290,7 +290,7 @@ export default function Revision() {
                                 <MarkdownView md={card.answer} />
               </div> : <Button disabled={busy || !validated} onClick={() => setRevealed(true)}>Révéler la réponse</Button>}
             </article>}
-            {verdict && <Button ref={continueButton} className="w-full scroll-mb-8" onClick={next}>Continuer</Button>}
+            {verdict && <Button ref={continueButton} className="w-full" onClick={next}>Continuer</Button>}
           </section>
           {/* Sous la carte : un encart au-dessus pousserait la carte suivante vers le bas à chaque réponse. */}
           {missed && <aside className="motion-enter space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
