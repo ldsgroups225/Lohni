@@ -632,6 +632,24 @@ export class RevisionService {
       return this.sessionResult(session)
     })
   }
+  // Séance limitée aux cartes d’un chapitre, sans quota quotidien : les premières à échéance, puis les nouvelles, puis le reste.
+  async getChapterSession(context: RevisionContext, chapterId: string): Promise<RevisionSession> {
+    return this.execute(context, async () => {
+      const db = this.dependencies.db
+      const chapter = typeof chapterId === 'string' ? await db.get('SELECT origin FROM revision_chapters WHERE id = ? AND device_id = ?', [chapterId, context.deviceId]) : undefined
+      if (!chapter) throw new RevisionError('Chapitre introuvable.')
+      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND local_date = ? AND kind = 'chapter' AND json_extract(state, '$.chapterId') = ? AND json_extract(state, '$.complete') = 0 AND COALESCE(json_extract(state, '$.stale'), 0) = 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, context.localDate, chapterId])
+      if (saved) return this.sessionResult(JSON.parse(saved.state))
+      const rows = await db.all('SELECT * FROM revision_cards WHERE chapter_id = ? AND device_id = ? ORDER BY rowid', [chapterId, context.deviceId])
+      const rank = (row: any) => row.reviews > 0 && row.due.slice(0, 10) <= context.localDate ? 0 : row.reviews === 0 ? 1 : 2
+      const cards = rows.map((row, index) => ({ row, index })).sort((a, b) => rank(a.row) - rank(b.row) || a.index - b.index)
+        .slice(0, policy.sessionCards).map(({ row }) => revisionCard({ ...row, origin: chapter.origin }))
+      if (!cards.length) throw new RevisionError('Ce chapitre n’a pas encore de cartes à réviser.')
+      const session: RevisionSession = { kind: 'chapter', chapterId, id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: false, repeated: [], elapsedMs: 0, earnedXP: 0 }
+      await db.run("INSERT INTO revision_sessions (id, device_id, local_date, state, kind) VALUES (?, ?, ?, ?, 'chapter')", [session.id, context.deviceId, context.localDate, JSON.stringify(session)])
+      return this.sessionResult(session)
+    })
+  }
   private async selectSessionCards(context: RevisionContext, profile: ProfileInput): Promise<RevisionCard[]> {
     const db = this.dependencies.db
     const settings = await db.get('SELECT rest_days FROM revision_settings WHERE device_id = ?', [context.deviceId])

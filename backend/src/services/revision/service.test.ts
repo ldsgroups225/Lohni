@@ -1004,3 +1004,23 @@ test('revoir les cartes ratées refuse une séance sans erreur, inconnue ou d’
   await expect(service.reviewMissed(context(), randomUUID())).rejects.toBeInstanceOf(RevisionError)
   await expect(service.reviewMissed({ ...context(), deviceId: randomUUID() }, clean.id)).rejects.toBeInstanceOf(RevisionError)
 })
+
+test('réviser un chapitre : séance limitée aux cartes de ce chapitre, reprise si déjà commencée', async () => {
+  const first = await setup(4)
+  generated = cards(3)
+  const other = await service.generateChapter(context(), { subject: 'Mathématiques', title: 'Géométrie' })
+  const session = await service.getChapterSession(context(), first.id)
+  expect(session.kind).toBe('chapter')
+  expect(session.cards).toHaveLength(4)
+  expect(session.cards.every(card => card.chapterId === first.id)).toBe(true)
+  const answered = await service.answer(context(), { sessionId: session.id, cardId: session.cards[0].id, position: 0, knew: true, durationMs: 500 })
+  expect((await service.getChapterSession(context(), first.id)).position).toBe(answered.position)
+  expect((await service.getChapterSession(context(), other.id)).cards).toHaveLength(3)
+  expect((await service.getSession(context())).kind).toBeUndefined()
+})
+
+test('réviser un chapitre refuse un chapitre inconnu, vide ou d’un autre appareil', async () => {
+  const chapter = await setup(2)
+  await expect(service.getChapterSession(context(), randomUUID())).rejects.toThrow('Chapitre introuvable')
+  await expect(service.getChapterSession({ ...context(), deviceId: randomUUID() }, chapter.id)).rejects.toBeInstanceOf(RevisionError)
+})
