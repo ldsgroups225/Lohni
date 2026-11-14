@@ -59,7 +59,7 @@ export default function QuickAdd({ onAdd, loading, error }: QuickAddProps) {
                 <div className="flex flex-wrap gap-2">
                     <div className="w-full text-xs text-muted">Exemples</div>
                     <button type="button"
-                        onClick={() => setText("Devoir de maths pour demain à 20 h, environ 1 h 30")}
+                        onClick={() => setText("Contrôle de maths ")}
                         className="min-h-11 rounded-xl bg-tint px-3 text-sm text-foreground"
                     >
                         Contrôle de maths

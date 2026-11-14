@@ -1,3 +1,4 @@
+import { priorityLabel } from "../../lib/priorityLabel"
 import { TargetIcon, PartyIcon } from '../ui/NavigationIcons'
 import type { PlannerTask } from "../../lib/api"
 
@@ -74,7 +75,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                                         <div className="min-w-0">
                                             <div className="text-foreground font-medium">{task.title}</div>
                                             <div className="text-muted text-xs">
-                                                {task.course} • {task.estMins} min • Priorité {task.priority}
+                                                {task.course} • {task.estMins} min • {priorityLabel(task.priority)}
                                             </div>
                                         </div>
                                         <button type="button"

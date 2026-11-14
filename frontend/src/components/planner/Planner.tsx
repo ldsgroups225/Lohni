@@ -1,3 +1,4 @@
+import { priorityLabel } from "../../lib/priorityLabel"
 import MarkdownView from "../Chat/MarkdownView"
 import { confirmDialog } from "../../lib/confirm"
 import { withOccurrenceKeys } from "../../lib/occurrenceKeys"
@@ -320,7 +321,7 @@ export default function Planner() {
                                 <div className="min-w-0">
                                     <div className="text-foreground font-medium">{t.title}</div>
                                     <div className="text-muted text-xs">
-                                        Échéance : {fmtTime(t.dueAt)} · {t.estMins} min · Priorité {t.priority}
+                                        Échéance : {fmtTime(t.dueAt)} · {t.estMins} min · {priorityLabel(t.priority)}
                                         {t.files && t.files.length > 0 && ` · ${t.files.length} fichier(s)`}
                                     </div>
                                 </div>
