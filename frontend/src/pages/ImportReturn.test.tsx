@@ -130,7 +130,7 @@ test('affiche le nombre et un exemple des cartes créées', async () => {
   api.importQuota.mockReset().mockResolvedValue({ remaining: 2, resetsAt: '2026-11-12T00:00:00Z' })
   api.importChapter.mockReset().mockResolvedValue({ id: 'cours-2', title: 'Fractions', summary: 'Résumé', origin: 'import' })
   api.chapters.mockReset().mockResolvedValue([{ id: 'cours-2', cards: [{ question: 'Combien font un demi plus un demi ?', answer: 'Un **entier** : $H_2O$.' }, { question: 'Que signifie fraction ?' }] }])
-  const router = createMemoryRouter([{ path: '/import', element: <ImportCourse /> }], { initialEntries: ['/import'] })
+  const router = createMemoryRouter([{ path: '/import', element: <ImportCourse /> }, { path: '/revision', element: <p>Séance</p> }], { initialEntries: ['/import'] })
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
   try {
@@ -143,6 +143,8 @@ test('affiche le nombre et un exemple des cartes créées', async () => {
     expect(host.querySelector('.katex')).not.toBeNull()
     expect(host.textContent).not.toContain('**')
     expect(host.textContent).toContain('Ajouter un autre cours')
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'Commencer la révision')).click())
+    expect(router.state.location.pathname + router.state.location.search).toBe('/revision?chapter=cours-2')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
 })
 
