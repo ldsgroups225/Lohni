@@ -11,7 +11,7 @@ vi.mock('../lib/api', async () => {
   const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
   const first = { id: '1', complete: false, position: 0, cards: [{ id: '1', chapterId: 'c', kind: 'basic', question: 'Question ?', answer: 'Oui' }, { id: '2', chapterId: 'c', kind: 'basic', question: 'Autre ?', answer: 'Oui' }] }
   return {
-  revisionAPI: { profile: () => { if (delayedProfile.wait) return new Promise(() => {}); rememberRevisionSnapshot('/profile', profile); return Promise.resolve(profile) }, session: async () => { rememberRevisionSnapshot('/session', first); return first }, answer: async () => ({ id: '1', complete: false, position: 1, cards: [{ id: '1', chapterId: 'c', kind: 'basic', question: 'Question ?', answer: 'Oui' }, { id: '2', chapterId: 'c', kind: 'basic', question: 'Autre ?', answer: 'Oui' }] }), chapters: async () => [{ id: 'c', subject: 'Mathématiques', title: 'Fractions' }] },
+  revisionAPI: { profile: () => { if (delayedProfile.wait) return new Promise(() => {}); rememberRevisionSnapshot('/profile', profile); return Promise.resolve(profile) }, session: async () => { rememberRevisionSnapshot('/session', first); return first }, answer: async () => ({ id: '1', complete: false, position: 1, cards: [{ id: '1', chapterId: 'c', kind: 'basic', question: 'Question ?', answer: 'Oui' }, { id: '2', chapterId: 'c', kind: 'basic', question: 'Autre ?', answer: 'Oui' }] }), chapters: async () => [{ id: 'c', subject: 'Mathématiques', title: 'Fractions' }], chapterSession: async () => first, continue: async () => ({ ...first, id: 'suite' }) },
   revisionPolicy: {}, revisionSyncStatus: () => ({ online: true, pending: 0 }), syncRevisionAnswers: () => {}, chatJSON: async () => ({ chatId: "1" }),
 }})
 import Revision from './Revision'
@@ -81,4 +81,30 @@ test('la première visite présente la session sans indiquer une session vide', 
     expect(host.textContent).not.toContain('On prépare ta session')
     expect(host.textContent).not.toContain('Aucune carte à réviser')
   } finally { delayedProfile.wait = false; act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
+})
+
+test('expliquer depuis une séance de chapitre garde le chemin de retour vers ce chapitre', async () => {
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/revision', element: <Revision /> }, { path: '/chat', element: <p>Tuteur ouvert</p> }], { initialEntries: ['/revision?chapter=c'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => required(host.querySelector<HTMLElement>('[aria-label="Question"]')).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })))
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent === 'Je ne savais pas')).click())
+    await act(async () => required([...host.querySelectorAll('button')].find(b => b.textContent === 'Explique-moi')).click())
+    expect(host.textContent).toContain('Tuteur ouvert')
+    expect((router.state.location.state as { returnTo?: string }).returnTo).toBe('/revision?chapter=c')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
+})
+
+test('arriver avec « continuer » enchaîne sur les cartes restantes', async () => {
+  const { revisionAPI } = await import('../lib/api')
+  const spy = vi.spyOn(revisionAPI, 'continue')
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/revision', element: <Revision /> }], { initialEntries: [{ pathname: '/revision', state: { continue: true } }] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(spy).toHaveBeenCalled()
+  } finally { spy.mockRestore(); act(() => root.unmount()); router.dispose(); host.remove(); document.querySelector('dialog')?.remove() }
 })

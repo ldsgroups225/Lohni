@@ -25,3 +25,13 @@ test('une panne du podcast dans le Tuteur est visible et permet de réessayer', 
     expect(required(button).disabled).toBe(false)
   } finally { act(() => root.unmount()); host.remove() }
 })
+
+test('« Reprendre ma session » revient à la séance d’où vient l’explication', async () => {
+  Element.prototype.scrollIntoView = vi.fn()
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<MemoryRouter initialEntries={[{ pathname: '/chat', state: { q: 'Question', answer: 'Une réponse', returnTo: '/revision?chapter=c' } }]}><Chat /></MemoryRouter>))
+    expect([...host.querySelectorAll('a')].find(a => a.textContent === 'Reprendre ma session')?.getAttribute('href')).toBe('/revision?chapter=c')
+  } finally { act(() => root.unmount()); host.remove() }
+})

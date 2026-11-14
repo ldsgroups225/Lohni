@@ -16,7 +16,7 @@ import { MENU_EXIT_MS, prefersReducedMotion, useExitTransition } from '../lib/mo
 import { SwipeCard } from '../components/Revision/SwipeCard'
 import { SessionRecap } from '../components/Revision/SessionRecap'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { chatJSON, revisionAPI, revisionPolicy, revisionSyncStatus, syncRevisionAnswers, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress, type RevisionChapter } from '../lib/api'
 
 // Premier rendu instantané au retour : la dernière séance connue (hors séances ciblées) avec son profil.
@@ -27,6 +27,8 @@ function lastKnown(scoped: boolean) {
 
 export default function Revision() {
   const [params] = useSearchParams()
+  // L’accueil demande les cartes restantes : on enchaîne au lieu de rouvrir le bilan de la séance finie.
+  const continueOnArrival = useRef((useLocation().state as { continue?: boolean } | null)?.continue === true).current
   const examId = params.get('exam')
   const missedId = params.get('missed')
   const scopeChapter = params.get('chapter')
@@ -130,7 +132,7 @@ export default function Revision() {
       const requestDevice = cachedDevice()
       try {
         const saved = await revisionAPI.profile()
-        const current = saved ? await loadSession() : null
+        const current = saved ? await loadSession(continueOnArrival) : null
         if (!active) return
         if (requestDevice !== cachedDevice()) {
           setProfile(null); setSession(null)
@@ -151,7 +153,7 @@ export default function Revision() {
     }
     void load()
     return () => { active = false }
-  }, [display, loadSession])
+  }, [display, loadSession, continueOnArrival])
   useEffect(() => {
     if (!validated || !chapterId) return
     let active = true
@@ -228,7 +230,7 @@ export default function Revision() {
       if (!chapter) throw new Error('Ce chapitre n’est plus disponible.')
       const q = `Explique-moi cette carte que je n’ai pas comprise, en français et à mon niveau.\nClasse : ${profile.schoolClass}${profile.series ? `, série ${profile.series}` : ''}.\nMatière : ${chapter.subject}.\nChapitre : ${chapter.title}.\nQuestion : ${missed.question}\n${missed.options ? `Choix : ${missed.options.join(' ; ')}\n` : ''}Réponse : ${missed.answer}`
       const result = await chatJSON({ q })
-      navigate(`/chat?chatId=${encodeURIComponent(result.chatId)}`, { state: { allowLeave: true, q, revisionSubject: chapter.subject, revisionTitle: chapter.title } })
+      navigate(`/chat?chatId=${encodeURIComponent(result.chatId)}`, { state: { allowLeave: true, q, revisionSubject: chapter.subject, revisionTitle: chapter.title, returnTo: `/revision${params.toString() ? `?${params}` : ''}` } })
     })
   }
 
