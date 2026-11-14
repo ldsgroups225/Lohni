@@ -45,7 +45,7 @@ export default function Home() {
         setHome(data)
         if (data) void revisionAPI.chapters().then(value => { if (active) setChapters(value) }).catch(() => { if (active) setProgressError('Le détail de tes cartes est temporairement indisponible.') })
         if (data) void revisionAPI.progress().then(value => { if (active) setProgress(value) }).catch(cause => {
-          if (active && !(cause instanceof Error && cause.message.startsWith('http 404'))) setProgressError('Ta progression est temporairement indisponible.')
+          if (active && (cause as { status?: number } | null)?.status !== 404) setProgressError('Ta progression est temporairement indisponible.')
         })
       } catch (cause) {
         if (active) {

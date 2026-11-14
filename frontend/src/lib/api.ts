@@ -107,13 +107,14 @@ async function req<T = unknown>(
     try { r = await fetch(url, { ...rest, signal: rest.signal ? AbortSignal.any([signal, rest.signal]) : signal }); }
     catch (error) {
       if (signal.aborted && !rest.signal?.aborted) throw new APIError('Le chargement prend trop de temps. Réessaie dans un instant.', 0, 'TIMEOUT');
+      if (error instanceof TypeError) throw new APIError('Connexion impossible. Vérifie ta connexion et réessaie.', 0, 'NETWORK');
       throw error;
     }
     if (!r.ok) {
       const txt = await r.text().catch(() => "");
       let detail: { error?: unknown; code?: unknown; chapterId?: unknown } | undefined;
       try { detail = JSON.parse(txt); } catch { /* Non-JSON responses keep their HTTP status. */ }
-      throw new APIError(typeof detail?.error === "string" ? detail.error : `http ${r.status}: ${txt || r.statusText}`,
+      throw new APIError(typeof detail?.error === "string" ? detail.error : r.status >= 500 ? 'Le serveur ne répond pas correctement. Réessaie.' : 'La demande a échoué. Réessaie.',
         r.status, typeof detail?.code === 'string' ? detail.code : undefined, typeof detail?.chapterId === 'string' ? detail.chapterId : undefined);
     }
     const ct = r.headers.get("content-type") || "";
@@ -703,7 +704,7 @@ async function revisionRequest<T>(path: string, method = 'GET', body?: unknown, 
     });
     return result.data;
   } catch (error) {
-    if (error instanceof TypeError) throw new RevisionConnectionError('Connexion impossible. Tes réponses restent enregistrées sur cet appareil.');
+    if (error instanceof APIError && error.code === 'NETWORK') throw new RevisionConnectionError('Connexion impossible. Tes réponses restent enregistrées sur cet appareil.');
     if (signal?.aborted) throw error;
     if (error instanceof APIError && error.code === 'TIMEOUT') throw new RevisionConnectionError('Le chargement prend trop de temps. Tes réponses restent enregistrées sur cet appareil.');
     throw error;

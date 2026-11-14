@@ -266,6 +266,21 @@ test('un appel qui dépasse le délai échoue avec un message français', async 
   vi.useRealTimers()
 })
 
+test('une réponse non JSON en 500 donne un message français sans détail technique', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>boom</html>', { status: 500 })))
+  await expect(api.podcastStart({ topic: 'x' })).rejects.toMatchObject({ status: 500, message: 'Le serveur ne répond pas correctement. Réessaie.' })
+})
+
+test('une erreur réseau donne un message français', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch') }))
+  await expect(api.podcastStart({ topic: 'x' })).rejects.toMatchObject({ code: 'NETWORK', message: 'Connexion impossible. Vérifie ta connexion et réessaie.' })
+})
+
+test('un 404 se reconnaît à son statut', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 404 })))
+  await expect(api.podcastStart({ topic: 'x' })).rejects.toMatchObject({ status: 404 })
+})
+
 test('examen et podcast portent l’en-tête d’appareil', async () => {
   const seen: Array<string | null> = []
   vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
