@@ -24,7 +24,7 @@ export type ProfileInput = { schoolClass: string; series?: string; subjects: str
 export type TimetableBlock = { day: number; start: string; end: string; subject: string }
 export type RevisionSettings = { dailyMinutes: number; restDays: number[] }
 export type RevisionCard = GeneratedCard & { id: string; chapterId: string; origin: 'ai' | 'import'; due: string; reviews: number }
-export type RevisionSession = { kind?: 'exam' | 'express'; id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number; summary?: RevisionSummary }
+export type RevisionSession = { kind?: 'exam' | 'express' | 'missed' | 'chapter'; sourceId?: string; chapterId?: string; id: string; localDate: string; cards: RevisionCard[]; position: number; complete: boolean; repeated: string[]; elapsedMs: number; earnedXP: number; summary?: RevisionSummary }
 export type RevisionSummary = {
   quiz: { total: number; correct: number }; flashcards: { total: number; knew: number };
   missed: { cardId: string; question: string; kind: 'basic' | 'mcq' }[]
@@ -201,9 +201,11 @@ export class RevisionService {
   }
   async getProgress(context: RevisionContext): Promise<RevisionProgress> {
     return this.execute(context, async () => {
-      const rows = await this.dependencies.db.all('SELECT card_id, knew, session_complete, local_date FROM revision_journal WHERE device_id = ?', [context.deviceId])
-      const xp = journalXP(rows)
-      const days = new Set(rows.filter(row => row.session_complete).map(row => row.local_date))
+      const rows = await this.dependencies.db.all('SELECT j.card_id, j.knew, j.session_complete, j.local_date, s.kind FROM revision_journal j LEFT JOIN revision_sessions s ON s.id = j.session_id WHERE j.device_id = ?', [context.deviceId])
+      // Revoir ses cartes ratées ne rapporte ni XP ni jour de série : la séance d’origine les a déjà comptés.
+      const counted = rows.filter(row => row.kind !== 'missed')
+      const xp = journalXP(counted)
+      const days = new Set(counted.filter(row => row.session_complete).map(row => row.local_date))
       // shortcut: seuls les jours sans carte constatés par une visite sont neutres ; historiser les échéances si ce suivi doit être exhaustif.
       const sessions = await this.dependencies.db.all("SELECT local_date, state FROM revision_sessions WHERE device_id = ? AND kind = 'daily' AND NOT (COALESCE(json_extract(state, '$.stale'), 0) = 1 AND json_extract(state, '$.position') = 0)", [context.deviceId])
       const emptyDays = new Set(sessions.filter(row => JSON.parse(row.state).cards.length === 0).map(row => row.local_date))
@@ -612,6 +614,24 @@ export class RevisionService {
       return { ...await this.sessionResult(session), kind }
     })
   }
+  // Nouvelle séance limitée aux cartes ratées d’une séance terminée : hors quota de nouvelles cartes, sans XP ni série.
+  async reviewMissed(context: RevisionContext, sourceId: string): Promise<RevisionSession> {
+    return this.execute(context, async () => {
+      const db = this.dependencies.db
+      const row = typeof sourceId === 'string' ? await db.get('SELECT state FROM revision_sessions WHERE id = ? AND device_id = ? AND local_date = ?', [sourceId, context.deviceId, context.localDate]) : undefined
+      if (!row) throw new RevisionError('Session introuvable.')
+      if (!JSON.parse(row.state).complete) throw new RevisionError('Termine d’abord ta séance.')
+      const saved = await db.get("SELECT state FROM revision_sessions WHERE device_id = ? AND kind = 'missed' AND json_extract(state, '$.sourceId') = ? AND json_extract(state, '$.complete') = 0 ORDER BY rowid DESC LIMIT 1", [context.deviceId, sourceId])
+      if (saved) return this.sessionResult(JSON.parse(saved.state))
+      const ids = (await this.sessionResult(JSON.parse(row.state))).summary!.missed.map(item => item.cardId)
+      const current = new Map((await db.all('SELECT c.*, ch.origin FROM revision_cards c JOIN revision_chapters ch ON ch.id = c.chapter_id WHERE c.device_id = ?', [context.deviceId])).map(card => [card.id, card]))
+      const cards = ids.flatMap(id => current.has(id) ? [revisionCard(current.get(id))] : []).slice(0, policy.sessionCards)
+      if (!cards.length) throw new RevisionError('Aucune carte ratée à revoir.')
+      const session: RevisionSession = { kind: 'missed', sourceId, id: randomUUID(), localDate: context.localDate, cards, position: 0, complete: false, repeated: [], elapsedMs: 0, earnedXP: 0 }
+      await db.run("INSERT INTO revision_sessions (id, device_id, local_date, state, kind) VALUES (?, ?, ?, ?, 'missed')", [session.id, context.deviceId, context.localDate, JSON.stringify(session)])
+      return this.sessionResult(session)
+    })
+  }
   private async selectSessionCards(context: RevisionContext, profile: ProfileInput): Promise<RevisionCard[]> {
     const db = this.dependencies.db
     const settings = await db.get('SELECT rest_days FROM revision_settings WHERE device_id = ?', [context.deviceId])
@@ -681,7 +701,7 @@ export class RevisionService {
         summary.missed.push({ cardId: card.id, question: card.question, kind: card.kind })
       }
     }
-    return { ...session, earnedXP: journalXP(rows), summary }
+    return { ...session, earnedXP: session.kind === 'missed' ? 0 : journalXP(rows), summary }
   }
   async answer(context: RevisionContext, input: RevisionAnswer): Promise<RevisionSession> {
     return this.execute(context, async () => {

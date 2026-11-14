@@ -84,6 +84,7 @@ export function revisionRoutes(app: any) {
   route('delete', '/revision/chapters/:id', (context, req) => revision.deleteChapter(context, req.params.id))
   route('get', '/revision/session', context => revision.getSession(context))
   route('post', '/revision/session/continue', context => revision.getSession(context, true))
+  route('post', '/revision/session/:id/review-missed', (context, req) => revision.reviewMissed(context, req.params.id))
   route('post', '/revision/session/answer', (context, req) => revision.answer(context, req.body))
   route('delete', '/revision/cards/:id', (context, req) => revision.deleteCard(context, req.params.id))
   route('put', '/revision/cards/:id', (context, req) => revision.updateCard(context, req.params.id, req.body))

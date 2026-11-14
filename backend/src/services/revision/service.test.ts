@@ -965,3 +965,42 @@ test('les dates terminées suivent la semaine locale et restent isolées', async
   now = new Date('2026-11-16T12:00:00Z')
   expect((await service.getProgress(context())).completedDates).toEqual([])
 })
+
+type Played = Awaited<ReturnType<typeof service.getSession>>
+async function play(session: Played, knew: (cardId: string) => boolean) {
+  let current = session
+  while (!current.complete) {
+    const position = current.position
+    const card = current.cards[position]
+    current = await service.answer(context(), { sessionId: current.id, cardId: card.id, position, knew: knew(card.id), durationMs: 1000 })
+  }
+  return current
+}
+
+test('revoir les cartes ratées : séance limitée aux ratées, sans XP ni jour de série en double', async () => {
+  await setup()
+  const daily = await service.getSession(context())
+  const failing = new Set(daily.cards.slice(0, 2).map(card => card.id))
+  const first = await play(daily, id => !failing.has(id))
+  expect(first.summary!.missed.map(item => item.cardId)).toEqual([...failing])
+  const before = await service.getProgress(context())
+  const review = await service.reviewMissed(context(), first.id)
+  expect(review.kind).toBe('missed')
+  expect(review.cards.map(card => card.id)).toEqual([...failing])
+  expect((await service.getSession(context())).id).toBe(first.id)
+  expect((await service.reviewMissed(context(), first.id)).id).toBe(review.id)
+  const done = await play(review, () => true)
+  expect(done.earnedXP).toBe(0)
+  const after = await service.getProgress(context())
+  expect(after.xp).toBe(before.xp)
+  expect(after.streak).toBe(before.streak)
+  expect((await service.getHome(context()))!.newCards).toBe(0)
+})
+
+test('revoir les cartes ratées refuse une séance sans erreur, inconnue ou d’un autre appareil', async () => {
+  await setup()
+  const clean = await play(await service.getSession(context()), () => true)
+  await expect(service.reviewMissed(context(), clean.id)).rejects.toThrow('Aucune carte ratée')
+  await expect(service.reviewMissed(context(), randomUUID())).rejects.toBeInstanceOf(RevisionError)
+  await expect(service.reviewMissed({ ...context(), deviceId: randomUUID() }, clean.id)).rejects.toBeInstanceOf(RevisionError)
+})
