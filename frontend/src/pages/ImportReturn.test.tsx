@@ -7,7 +7,7 @@ import { expect, test, vi } from 'vitest'
 import ImportCourse from './ImportCourse'
 import { APIError } from '../lib/api'
 
-const api = vi.hoisted(() => ({ profile: vi.fn(), importQuota: vi.fn(), importChapter: vi.fn(), retryImport: vi.fn(), chapters: vi.fn() }))
+const api = vi.hoisted(() => ({ profile: vi.fn(), importQuota: vi.fn(), importChapter: vi.fn(), retryImport: vi.fn(), discardImport: vi.fn(), chapters: vi.fn() }))
 vi.mock('../lib/api', () => ({ revisionAPI: api, revisionPolicy: { maxUploadMB: 10, maxTextChars: 100000, maxTitleChars: 200, dailyImports: 3 }, APIError: class extends Error { chapterId?: string; code?: string; constructor(message: string, _status: number, code?: string, id?: string) { super(message); this.code = code; this.chapterId = id } } }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -78,6 +78,31 @@ test('après un échec, réessayer prépare le cours déjà enregistré', async 
     await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'Réessayer')).click())
     expect(api.retryImport).toHaveBeenCalledWith('cours-1', expect.any(AbortSignal))
     expect(host.textContent).toContain('Tes cartes sont prêtes')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
+})
+
+test('après un échec, essayer avec un autre fichier retire le cours vide, garder le cours le conserve', async () => {
+  localStorage.setItem('lohni-device-id', 'import-autre-fichier')
+  api.profile.mockReset().mockResolvedValue({ schoolClass: '3e', subjects: ['Mathématiques'] })
+  api.importQuota.mockReset().mockResolvedValue({ remaining: 2, resetsAt: '2026-11-12T00:00:00Z' })
+  api.importChapter.mockReset().mockRejectedValue(new APIError('Erreur de génération', 400, 'IMPORT_GENERATION_FAILED', 'cours-1'))
+  api.discardImport.mockReset().mockResolvedValue(null)
+  const router = createMemoryRouter([{ path: '/import', element: <ImportCourse /> }, { path: '/courses', element: <p>Cours</p> }], { initialEntries: ['/import'] })
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const button = (label: string) => required([...host.querySelectorAll('button')].find(item => item.textContent === label))
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => required([...host.querySelectorAll('button')].find(item => item.textContent?.includes('Coller du texte'))).click())
+    await act(async () => required(host.querySelector('form')).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+    await act(async () => button('Garder le cours sans cartes').click())
+    expect(api.discardImport).not.toHaveBeenCalled()
+    await act(async () => { await router.navigate('/import') })
+    await act(async () => required([...host.querySelectorAll('button')].find(item => item.textContent?.includes('Coller du texte'))).click())
+    await act(async () => required(host.querySelector('form')).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+    await act(async () => button('Essayer avec un autre fichier').click())
+    expect(api.discardImport).toHaveBeenCalledWith('cours-1')
+    expect(host.textContent).toContain('Choisir un fichier')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
 })
 

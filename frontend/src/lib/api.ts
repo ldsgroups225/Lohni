@@ -955,6 +955,7 @@ export const revisionAPI = {
   generateChapter: (input: { subject: string; title: string }) => revisionMutation<{ id: string }>('/chapters', 'POST', input),
   importQuota: () => revisionRequest<RevisionImportQuota>('/import/quota'),
   retryImport: (id: string, signal?: AbortSignal) => revisionMutation<RevisionImportedChapter>(`/import/${encodeURIComponent(id)}/retry`, 'POST', undefined, signal),
+  discardImport: (id: string) => revisionMutation<null>(`/import/${encodeURIComponent(id)}`, 'DELETE'),
   importChapter: (input: { subject: string; title: string; text?: string; file?: File }, signal?: AbortSignal) => {
     if (!input.file) return revisionMutation<RevisionImportedChapter>('/import', 'POST', input, signal);
     const form = new FormData();
