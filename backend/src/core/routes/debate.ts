@@ -1,53 +1,32 @@
 import {
     createDebateSession,
     getDebateSession,
-    streamDebateResponse,
-    streamDebateAnalysis,
     listDebateSessions,
     deleteDebateSession,
     surrenderDebate,
+    runArgueTurn,
+    runAnalysis,
 } from "../../services/debate";
+import { createTaskRegistry } from "../../utils/tasks/registry";
 
-const debateSockets = new Map<string, Set<any>>();
-const analysisSockets = new Map<string, Set<any>>();
+// One task per argue turn or analysis; the screen follows it on /ws/debate?taskId=.
+const tasks = createTaskRegistry();
 
 export function debateRoutes(app: any) {
     app.ws("/ws/debate", (ws: any, req: any) => {
-        const url = new URL(req.url, "http://localhost");
-        const debateId = url.searchParams.get("debateId");
-        if (!debateId) {
-            return ws.close(1008, "debateId required");
+        const taskId = new URL(req.url, "http://localhost").searchParams.get("taskId");
+        if (!taskId) return ws.close(1008, "taskId required");
+        if (!tasks.subscribe(taskId, ws)) {
+            try { ws.send(JSON.stringify({ type: "error", error: "Cette réponse n’est plus disponible. Réessaie." })); } catch { }
+            ws.close(1008, "unknown taskId");
         }
-
-        const set = debateSockets.get(debateId) ?? new Set();
-        debateSockets.set(debateId, set);
-        set.add(ws);
-
-        ws.on("close", () => {
-            set.delete(ws);
-            if (set.size === 0) debateSockets.delete(debateId);
-        });
-
-        ws.send(JSON.stringify({ type: "ready", debateId }));
     });
 
-    app.ws("/ws/debate/analyze", (ws: any, req: any) => {
-        const url = new URL(req.url, "http://localhost");
-        const debateId = url.searchParams.get("debateId");
-        if (!debateId) {
-            return ws.close(1008, "debateId required");
+    app.delete("/debate/tasks/:taskId", (req: any, res: any) => {
+        if (tasks.cancel(req.params.taskId, req.headers?.["x-device-id"]) === "forbidden") {
+            return res.status(403).json({ ok: false, error: "Cette réponse appartient à un autre appareil." });
         }
-
-        const set = analysisSockets.get(debateId) ?? new Set();
-        analysisSockets.set(debateId, set);
-        set.add(ws);
-
-        ws.on("close", () => {
-            set.delete(ws);
-            if (set.size === 0) analysisSockets.delete(debateId);
-        });
-
-        ws.send(JSON.stringify({ type: "ready", debateId }));
+        res.json({ ok: true });
     });
 
     app.post("/debate/start", async (req: any, res: any) => {
@@ -79,7 +58,6 @@ export function debateRoutes(app: any) {
                     position: session.position,
                     createdAt: session.createdAt,
                 },
-                stream: `/ws/debate?debateId=${session.id}`,
             });
         } catch (error: any) {
             console.error("Error starting debate:", error);
@@ -110,57 +88,12 @@ export function debateRoutes(app: any) {
                 });
             }
 
-            res.status(202).json({
-                ok: true,
-                message: "Argument reçu, réponse en cours.",
+            const taskId = tasks.start({
+                owner: req.headers?.["x-device-id"],
+                startOn: "subscribe",
+                run: (ctx) => runArgueTurn(debateId, argument.trim(), ctx),
             });
-
-            const sockets = debateSockets.get(debateId);
-            if (!sockets || sockets.size === 0) {
-                console.warn(`No active WebSocket connections for debate ${debateId}`);
-                return;
-            }
-
-            const emitToDebate = (data: any) => {
-                sockets.forEach((ws) => {
-                    try {
-                        ws.send(JSON.stringify(data));
-                    } catch (err) {
-                        console.error("Error sending to WebSocket:", err);
-                    }
-                });
-            };
-
-            emitToDebate({ type: "user_argument", content: argument.trim() });
-            emitToDebate({ type: "ai_thinking" });
-
-            try {
-                let fullResponse = "";
-                for await (const token of streamDebateResponse(
-                    debateId,
-                    argument.trim()
-                )) {
-                    // Check if AI is conceding
-                    if (typeof token === "object" && token.type === "concede") {
-                        emitToDebate({
-                            type: "ai_concede",
-                            reason: token.reason
-                        });
-                        return;
-                    }
-
-                    fullResponse += token;
-                    emitToDebate({ type: "ai_token", token });
-                }
-
-                emitToDebate({ type: "ai_complete", content: fullResponse });
-            } catch (error: any) {
-                console.error("Error streaming debate response:", error);
-                emitToDebate({
-                    type: "error",
-                    error: "Impossible de générer la réponse. Réessaie.",
-                });
-            }
+            res.status(202).json({ ok: true, taskId, stream: `/ws/debate?taskId=${taskId}` });
         } catch (error: any) {
             console.error("Error in debate argue:", error);
             res.status(500).json({
@@ -281,55 +214,12 @@ export function debateRoutes(app: any) {
                 });
             }
 
-            console.log("[Debate Routes] Starting analysis for:", debateId);
-
-            // Send immediate response, actual analysis happens via WebSocket
-            res.status(202).json({
-                ok: true,
-                message: "Analyse lancée.",
-                stream: `/ws/debate/analyze?debateId=${debateId}`,
+            const taskId = tasks.start({
+                owner: req.headers?.["x-device-id"],
+                startOn: "subscribe",
+                run: (ctx) => runAnalysis(debateId, ctx),
             });
-
-            // Stream analysis via WebSocket
-            const sockets = analysisSockets.get(debateId);
-            if (!sockets || sockets.size === 0) {
-                console.warn(`No active analysis WebSocket connections for debate ${debateId}`);
-                return;
-            }
-
-            const emitToAnalysis = (data: any) => {
-                sockets.forEach((ws) => {
-                    try {
-                        ws.send(JSON.stringify(data));
-                    } catch (err) {
-                        console.error("Error sending to analysis WebSocket:", err);
-                    }
-                });
-            };
-
-            try {
-                for await (const event of streamDebateAnalysis(debateId)) {
-                    if (event.type === "phase") {
-                        emitToAnalysis({ type: "phase", value: event.value });
-                    } else if (event.type === "analysis") {
-                        emitToAnalysis({
-                            type: "complete",
-                            analysis: event.data,
-                            session: {
-                                ...session,
-                                winner: event.data.winner,
-                                status: session.status || "completed",
-                            }
-                        });
-                    }
-                }
-            } catch (error: any) {
-                console.error("Error streaming analysis:", error);
-                emitToAnalysis({
-                    type: "error",
-                    error: "Impossible d’analyser le débat. Réessaie.",
-                });
-            }
+            res.status(202).json({ ok: true, taskId, stream: `/ws/debate?taskId=${taskId}` });
         } catch (error: any) {
             console.error("Error analyzing debate:", error);
             res.status(500).json({
