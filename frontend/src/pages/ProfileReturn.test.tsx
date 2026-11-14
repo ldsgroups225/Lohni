@@ -226,7 +226,7 @@ test('Moi résume le parcours et ouvre les écrans dédiés', async () => {
     expect(host.querySelector('a[href="/me/examens"]')).not.toBeNull()
     await act(async () => { await router.navigate('/me/profil') })
     expect(host.querySelector('select')).not.toBeNull()
-    expect(host.querySelector('a[href="/me"]')).not.toBeNull()
+    expect(host.querySelector('button[aria-label="Retour à Moi"]')).not.toBeNull()
   } finally { close() }
 })
 

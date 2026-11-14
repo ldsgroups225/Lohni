@@ -1,6 +1,7 @@
 import { ExamButton } from '../components/Revision/ExamButton'
 import Timetable from '../components/Revision/Timetable'
-import { Button } from '../components/ui/Button'
+import { Button, ButtonLink } from '../components/ui/Button'
+import { ScreenHeader } from '../components/ui/ScreenHeader'
 import { PendingRead } from '../components/ui/PendingRead'
 import { humeurSerie } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
@@ -129,14 +130,13 @@ export default function Profile() {
 
   return <main className="loop-screen min-h-dvh px-4 pt-4 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-4">
-      <header className="flex items-center gap-3">
+      {page ? <ScreenHeader back="/me" backLabel="Retour à Moi" title={({ profil: 'Mon profil', examens: 'Examens', matieres: 'Matières', 'emploi-du-temps': 'Emploi du temps', rythme: 'Rythme de révision' } as Record<string, string>)[page] ?? 'Moi'} /> : <header className="flex items-center gap-3">
         {!error && progress && <span className="shrink-0"><Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={56} /></span>}
         {!error && !busy && !profile && !progress && <span className="shrink-0"><Mascotte humeur="au repos" taille={56} /></span>}
-        <div className="min-w-0 flex-1">{page && <Link className="inline-flex min-h-11 items-center text-primary underline" to="/me">← Retour à Moi</Link>}
-        <h1 className="text-[26px] font-extrabold text-foreground">{({ profil: 'Mon profil', examens: 'Examens', matieres: 'Matières', 'emploi-du-temps': 'Emploi du temps', rythme: 'Rythme de révision' } as Record<string, string>)[page] ?? 'Moi'}</h1>
-        {!page && profile && <p className="text-sm text-muted">{entry?.label.split(' · ')[0] ?? profile.schoolClass}{profile.series ? ` · Série ${profile.series}` : ''}</p>}</div>
-        {!page && profile && <Link className="inline-flex min-h-11 items-center rounded-2xl border border-border bg-surface px-4 font-semibold" to="/me/profil">Modifier</Link>}
-      </header>
+        <div className="min-w-0 flex-1"><h1 className="text-[26px] font-extrabold text-foreground">Moi</h1>
+        {profile && <p className="text-sm text-muted">{entry?.label.split(' · ')[0] ?? profile.schoolClass}{profile.series ? ` · Série ${profile.series}` : ''}</p>}</div>
+        {profile && <ButtonLink variant="secondary" to="/me/profil">Modifier</ButtonLink>}
+      </header>}
       {busy && !profile && <PendingRead title="Mon parcours" label="On récupère ton parcours…" />}
       {error && <div role="alert"><Mascotte humeur="désolée" taille={96} /><p>{error}</p></div>}
       {!page && progress && <dl className="grid grid-cols-3 gap-2 text-sm">
@@ -176,7 +176,7 @@ export default function Profile() {
         {!profile.subjects.length && <p role="status">Choisis au moins une matière.</p>}</>}
         <Button type="submit" disabled={busy || !profile.subjects.length}>Enregistrer</Button>
         {saved && <p role="status" className="text-foreground">Ton profil est enregistré.</p>}
-      </form> : !profile && !busy && !error && <p><Link to="/" className="underline">Commencer mon parcours</Link> pour créer mon profil.</p>}
+      </form> : !profile && !busy && !error && <div className="space-y-3"><p>Crée ton profil pour suivre ton parcours.</p><ButtonLink to="/" className="w-full">Commencer mon parcours</ButtonLink></div>}
       {profile && page === 'examens' && <section className="space-y-4 rounded-2xl border border-border p-6">
         <h2 className="text-xl text-foreground">Examens</h2>
         {exams.map(item => <div key={item.id} className="space-y-2 border-b border-border pb-3"><p>{item.title} · {new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p><p>{item.subjects.join(', ')}</p><ExamButton id={item.id} date={item.date} /><div className="flex gap-3"><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={() => setExam(item)}>Modifier</Button><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={async () => { if (!window.confirm('Supprimer cet examen ?')) return; try { await revisionAPI.deleteExam(item.id); setExams(current => current.filter(value => value.id !== item.id)); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Suppression impossible.') } }}>Supprimer</Button></div></div>)}
@@ -186,7 +186,7 @@ export default function Profile() {
           <label className="block space-y-2">Date<input className={input} required type="date" value={exam.date} onChange={event => setExam({ ...exam, date: event.target.value })} /></label>
           <fieldset><legend>Matières</legend>{profile.subjects.map(subject => <label key={subject} className="flex min-h-11 items-center gap-2 p-2"><input type="checkbox" checked={exam.subjects.includes(subject)} onChange={event => { const subjects = event.target.checked ? [...exam.subjects, subject] : exam.subjects.filter(value => value !== subject); setExam({ ...exam, subjects, chapterIds: exam.chapterIds.filter(id => chapters.some(chapter => chapter.id === id && subjects.includes(chapter.subject))) }) }} />{subject}</label>)}</fieldset>
           {chapters.some(chapter => exam.subjects.includes(chapter.subject)) && <fieldset><legend>Chapitres (facultatif)</legend><p className="text-sm text-muted">Sans sélection, tous les chapitres des matières sont inclus.</p>{chapters.filter(chapter => exam.subjects.includes(chapter.subject)).map(chapter => <label key={chapter.id} className="flex min-h-11 items-center gap-2 p-2"><input type="checkbox" checked={exam.chapterIds.includes(chapter.id)} onChange={event => setExam({ ...exam, chapterIds: event.target.checked ? [...exam.chapterIds, chapter.id] : exam.chapterIds.filter(id => id !== chapter.id) })} />{chapter.subject} · {chapter.title}</label>)}</fieldset>}
-          <div className="flex gap-3"><Button type="submit" disabled={!exam.subjects.length}>Enregistrer l’examen</Button><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={() => setExam(null)}>Annuler</Button></div>
+          <div className="flex gap-3"><Button type="submit" disabled={!exam.subjects.length}>Enregistrer l’examen</Button><Button variant="secondary" type="button" onClick={() => setExam(null)}>Annuler</Button></div>
         </form>}
       </section>}
       {profile && page === 'emploi-du-temps' && <Timetable profile={profile} onProfile={setProfile} />}
@@ -208,7 +208,7 @@ export default function Profile() {
           {settingsSaved && <p role="status">Tes réglages sont enregistrés.</p>}
         </form>}
       </section>}
-      {!page && <footer className="text-center text-xs text-muted">À propos · Lohni est basé sur <a href="https://github.com/CaviraOSS/PageLM" className="inline-flex min-h-11 items-center text-primary underline">PageLM</a> de nullure et recabasic, sous licence PageLM Community License.</footer>}
+      {!page && <footer className="text-center text-xs text-muted">À propos · Lohni est basé sur <a href="https://github.com/CaviraOSS/PageLM" className="inline-flex min-h-11 items-center font-semibold text-primary">PageLM</a> de nullure et recabasic, sous licence PageLM Community License.</footer>}
     </div>
   </main>
 }

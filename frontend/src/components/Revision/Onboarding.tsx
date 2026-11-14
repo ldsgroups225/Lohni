@@ -108,7 +108,7 @@ export default function Onboarding() {
     {step === 2 && <>
       <label className="block space-y-2"><span>Prénom (facultatif)</span><input className={input} autoComplete="given-name" value={firstName} onChange={event => { const value = event.target.value; setFirstName(value); if (nameDevice === revisionAPI.device()) writeFirstName(value, true) }} /></label>
       <p className="text-sm text-muted">Ton prénom reste sur cet appareil.</p>
-      <button type="button" className="min-h-11 underline" onClick={() => { setFirstName(''); if (nameDevice === revisionAPI.device()) writeFirstName('', true); setStep(3) }}>Passer cette étape</button>
+      <button type="button" className="ui-button-ghost" onClick={() => { setFirstName(''); if (nameDevice === revisionAPI.device()) writeFirstName('', true); setStep(3) }}>Passer cette étape</button>
     </>}
     {step === 3 && <>
       {[[curriculum.slice(0, 4), 'Collège'], [curriculum.slice(4), 'Lycée']].map(([items, label]) => <fieldset key={label as string}><legend className="mb-2 font-semibold">{label as string}</legend><div className={`grid gap-2 ${label === 'Collège' ? 'grid-cols-4' : 'grid-cols-3'}`}>{(items as typeof curriculum).map(item => <button key={item.schoolClass} type="button" aria-pressed={schoolClass === item.schoolClass} className={`min-h-13 rounded-2xl border px-1 font-semibold ${schoolClass === item.schoolClass ? 'border-primary bg-tint text-primary' : 'border-border bg-surface'}`} onClick={() => {
@@ -131,7 +131,7 @@ export default function Onboarding() {
     {step === 5 && <>
       <p>Cette date aide à répartir tes révisions. Tu peux la renseigner plus tard.</p>
       <label className="block space-y-2"><span>Date d’examen (facultative)</span><input className={input} type="date" value={examDate} onChange={event => setExamDate(event.target.value)} /></label>
-      <button type="button" className="block underline" onClick={() => { setExamDate(''); setStep(6) }}>Je ne connais pas encore la date</button>
+      <button type="button" className="ui-button-ghost" onClick={() => { setExamDate(''); setStep(6) }}>Je ne connais pas encore la date</button>
     </>}
     {step === 6 && <>
       <label className="block space-y-2"><span>Matière</span><select className={input} value={selectedSubject} onChange={event => setSubject(event.target.value)}>{subjects.map(name => <option key={name}>{name}</option>)}</select></label>

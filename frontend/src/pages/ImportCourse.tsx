@@ -1,9 +1,9 @@
-import { Button } from '../components/ui/Button'
-import { BackButton } from '../components/ui/BackButton'
+import { Button, ButtonLink } from '../components/ui/Button'
+import { ScreenHeader } from '../components/ui/ScreenHeader'
 import { ErrorState, LoadingState } from '../components/ui/LoadingState'
 import { PendingRead } from '../components/ui/PendingRead'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { APIError, revisionAPI, revisionPolicy, type RevisionProfile, type RevisionImportedChapter, type RevisionImportQuota, type RevisionChapter } from '../lib/api'
 import MarkdownContent from '../components/Chat/MarkdownContent'
 
@@ -91,10 +91,7 @@ export default function ImportCourse() {
 
   return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-5">
-      <header className="flex items-center gap-3">
-        {step === 'pick' ? <BackButton fallback="/courses" /> : step !== 'work' && <button type="button" aria-label="Retour" className="grid size-11 place-items-center text-2xl" onClick={back}>‹</button>}
-        <h1 className="text-2xl font-bold text-foreground">{step === 'pick' ? 'Ajouter un cours' : step === 'confirm' ? 'Vérifie et crée' : step === 'work' ? 'Un instant' : 'Terminé'}</h1>
-      </header>
+      <ScreenHeader back={step === 'pick' ? '/courses' : step === 'work' ? null : back} title={step === 'pick' ? 'Ajouter un cours' : step === 'confirm' ? 'Vérifie et crée' : step === 'work' ? 'Un instant' : 'Terminé'} />
       {busy && !profile && !error && <PendingRead title="Cours à réviser" label="On prépare ton import…" />}
       {failedChapter && !busy && !cancelled && <ErrorState title="Je n’ai pas pu créer tes cartes" detail="La création des cartes n’a pas abouti. Ton cours est bien enregistré, rien n’est perdu." actions={[
         { label: 'Réessayer', variant: 'primary', onClick: () => { setCancelled(false); importController.current = new AbortController(); setStep('work'); void run(async () => { const chapter = await revisionAPI.retryImport(failedChapter, importController.current?.signal); setImported(chapter); setFailedChapter(undefined); setStep('done'); try { setCards((await revisionAPI.chapters()).find(item => item.id === chapter.id)?.cards) } catch { setCards(undefined) }; try { setQuota(await revisionAPI.importQuota()) } catch { setQuota(undefined) } }) } },
@@ -103,7 +100,7 @@ export default function ImportCourse() {
       ]}><div className="w-full rounded-2xl border border-border bg-surface p-4 text-left"><p className="font-semibold">{title} · {subject}</p><p className="text-sm text-muted">{file?.name ?? 'Texte du cours'} · enregistré</p></div></ErrorState>}
       {cancelled && !busy && <ErrorState title="Annulation demandée" detail="Si le cours était déjà enregistré, il reste dans tes cours. Vérifie avant de réessayer pour éviter un doublon." actions={[{ label: 'Voir mes cours', variant: 'primary', onClick: () => navigate('/courses') }, { label: 'Retour', variant: 'link', onClick: () => { setCancelled(false); if (!failedChapter) setStep('confirm') } }]} />}
       {error && !busy && <ErrorState title={errorCode === 'IMPORT_QUOTA' ? 'Limite d’imports atteinte' : errorCode === 'IMPORT_FILE' ? 'Ce cours ne peut pas être lu' : 'Impossible de préparer ton cours'} detail={error} actions={[{ label: 'Réessayer', variant: 'primary', onClick: () => { setError(''); if (!profile || !quota) void run(() => load()); else setStep('confirm') } }, { label: 'Retour', variant: 'link', onClick: () => { setError(''); setStep('pick') } }]} />}
-      {!busy && !profile && quota && <p>Crée d’abord ton profil pour ranger ton cours dans une matière. <Link to="/" className="underline">Commencer</Link></p>}
+      {!busy && !profile && quota && <div className="space-y-3"><p>Crée d’abord ton profil pour ranger ton cours dans une matière.</p><ButtonLink to="/" className="w-full">Commencer</ButtonLink></div>}
       {profile && (!failedChapter || busy) && !error && !cancelled && <>
         {step === 'pick' && <section className="space-y-3">
           <p className="text-muted">Choisis comment ajouter ton cours. Lohni en fait des cartes à réviser.</p>
@@ -114,7 +111,7 @@ export default function ImportCourse() {
           <p className="text-sm text-muted">Fichiers : {revisionPolicy.maxUploadMB} Mo maximum · Texte : {revisionPolicy.maxTextChars.toLocaleString('fr-FR')} caractères maximum.</p>
         </section>}
         {step === 'confirm' && <form onSubmit={submit} className="space-y-5">
-          {mode === 'text' ? <label className="block space-y-2"><span className="font-semibold">Ton texte</span><textarea className={field} rows={6} maxLength={revisionPolicy.maxTextChars} value={text} onChange={event => setText(event.target.value)} /></label> : <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4"><span className="min-w-0 flex-1 truncate font-semibold">{file?.name}</span><button type="button" className="min-h-11 text-primary underline" onClick={() => setStep('pick')}>Changer</button></div>}
+          {mode === 'text' ? <label className="block space-y-2"><span className="font-semibold">Ton texte</span><textarea className={field} rows={6} maxLength={revisionPolicy.maxTextChars} value={text} onChange={event => setText(event.target.value)} /></label> : <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4"><span className="min-w-0 flex-1 truncate font-semibold">{file?.name}</span><Button variant="ghost" onClick={() => setStep('pick')}>Changer</Button></div>}
           <label className="block space-y-2"><span className="font-semibold">Nom du chapitre</span><input className={field} maxLength={revisionPolicy.maxTitleChars} value={title} onChange={event => setTitle(event.target.value)} placeholder="Ex. : Les fractions" /></label>
           <fieldset><legend className="font-semibold">Matière</legend><div className="mt-2 flex flex-wrap gap-2">{profile.subjects.map(name => <button type="button" key={name} aria-pressed={subject === name} onClick={() => setSubject(name)} className={`min-h-11 rounded-xl border px-4 ${subject === name ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface'}`}>{name}{suggested === name && <span className="ml-1 text-xs">suggérée</span>}</button>)}</div></fieldset>
           <Button className="w-full" type="submit" disabled={!!readyReason || busy}>Créer mes cartes</Button>

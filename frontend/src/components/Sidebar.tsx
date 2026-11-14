@@ -48,7 +48,9 @@ export default function Sidebar() {
   const active = pathname.startsWith('/me/') ? '/me' : pathname === '/chat' ? '/tutor'
     : ['/import', '/cards', '/exam', '/debate', '/tools', '/planner', '/quiz'].includes(pathname) ? '/courses'
     : ['/revision', '/plan'].includes(pathname) ? '/' : pathname
-  return <nav aria-label="Navigation principale" className="fixed inset-x-0 bottom-0 z-[var(--z-nav)] border-t border-border bg-surface px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:inset-x-auto md:left-3 md:top-4 md:bottom-4 md:w-20 md:rounded-card md:border md:px-1 md:py-6">
+  // Sur téléphone, la barre ne s’affiche que sur les quatre onglets ; les écrans secondaires ont leur bouton retour.
+  const secondary = !tabs.some(tab => tab.to === pathname)
+  return <nav aria-label="Navigation principale" className={`${secondary ? 'max-md:hidden ' : ''}fixed inset-x-0 bottom-0 z-[var(--z-nav)] border-t border-border bg-surface px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 md:inset-x-auto md:left-3 md:top-4 md:bottom-4 md:w-20 md:rounded-card md:border md:px-1 md:py-6`}>
     <div ref={nav} className="relative flex justify-around md:h-full md:flex-col md:justify-center md:gap-5">
       <span ref={indicator} aria-hidden="true" className="navigation-indicator" />
       {tabs.map(tab => <Link key={tab.to} to={tab.to} state={{ navigationTab: true }} replace={pathname !== '/'} onClick={event => {

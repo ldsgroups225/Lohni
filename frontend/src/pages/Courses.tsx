@@ -1,5 +1,6 @@
 import { HelpIcon, ClipboardIcon, DebateIcon, HeadphonesIcon } from '../components/ui/NavigationIcons'
 import { Button, ButtonLink } from '../components/ui/Button'
+import { ScreenHeader } from '../components/ui/ScreenHeader'
 import { PendingRead } from '../components/ui/PendingRead'
 import { confirmDialog } from '../lib/confirm'
 import { listDelay } from '../components/ui/revisionPresentation'
@@ -45,7 +46,7 @@ function CardEditor({ card, busy, onSave, onCancel, onDelete }: {
       </>}
       <label className="block space-y-2"><span>{card.kind === 'mcq' ? 'Explication' : 'Réponse'}</span><textarea className={input} required value={answer} onChange={event => setAnswer(event.target.value)} /></label>
       <div><span className="mb-2 block text-sm font-semibold text-muted">Aperçu comme en révision</span><div className="rounded-2xl border border-border bg-surface p-4"><MarkdownContent md={answer || 'Ta réponse apparaîtra ici.'} /></div></div>
-      <div className="mt-auto space-y-2 pt-4"><Button type="submit" className="w-full" disabled={!question.trim()}>Enregistrer</Button>{busy ? <p className="text-sm text-muted">Mise à jour en cours…</p> : !question.trim() && <p className="text-sm text-muted">Renseigne la question pour enregistrer.</p>}<button type="button" className="min-h-11 w-full text-primary underline" onClick={onDelete}>Supprimer cette carte</button><button type="button" className="min-h-11 w-full text-muted underline" onClick={onCancel}>Annuler</button></div>
+      <div className="mt-auto space-y-2 pt-4"><Button type="submit" className="w-full" disabled={!question.trim()}>Enregistrer</Button>{busy ? <p className="text-sm text-muted">Mise à jour en cours…</p> : !question.trim() && <p className="text-sm text-muted">Renseigne la question pour enregistrer.</p>}<Button variant="secondary" className="w-full text-danger" onClick={onDelete}>Supprimer cette carte</Button><Button variant="ghost" className="w-full" onClick={onCancel}>Annuler</Button></div>
     </fieldset>
   </form>
 }
@@ -94,8 +95,7 @@ export default function Courses() {
   const selected = chapters.find(chapter => chapter.id === selectedChapter)
   const selectedCard = selected?.cards.find(card => card.id === editing)
   if (selected) return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28"><div className="mx-auto max-w-2xl space-y-4">
-    <header className="flex items-center gap-3"><button type="button" className="grid size-11 place-items-center text-2xl" aria-label={selectedCard ? 'Annuler la modification' : 'Retour à Cours'} onClick={() => selectedCard ? setEditing(null) : setSelectedChapter(null)}>{selectedCard ? '×' : '‹'}</button>
-      <div className="min-w-0 flex-1"><h1 className="text-xl font-extrabold text-foreground">{selectedCard ? 'Modifier la carte' : selected.title}</h1>{!selectedCard && <p className="text-sm text-muted">{selected.subject} · {selected.cards.length} carte{selected.cards.length === 1 ? '' : 's'}</p>}</div>{!selectedCard && <MasteryBadge status={selected.status} />}</header>
+    <ScreenHeader back={() => selectedCard ? setEditing(null) : setSelectedChapter(null)} backLabel={selectedCard ? 'Annuler la modification' : 'Retour à Cours'} title={selectedCard ? 'Modifier la carte' : selected.title} subtitle={!selectedCard && `${selected.subject} · ${selected.cards.length} carte${selected.cards.length === 1 ? '' : 's'}`}>{!selectedCard && <MasteryBadge status={selected.status} />}</ScreenHeader>
     {error && <p role="alert" className="text-danger">{error}</p>}
     {selectedCard ? <CardEditor key={selectedCard.id} card={selectedCard} busy={busy || stale} onCancel={() => setEditing(null)} onSave={value => void run(async () => { await revisionAPI.updateCard(selectedCard.id, value); setEditing(null); await load() })} onDelete={() => { void confirmDialog('Supprimer cette carte ? Elle ne sera plus proposée en révision.').then(ok => { if (ok) void run(async () => { await revisionAPI.deleteCard(selectedCard.id); setEditing(null); await load() }) }) }} /> : <>
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">{selected.cards.map(card => <button key={card.id} type="button" aria-label={`Modifier : ${card.question}`} disabled={busy || stale} onClick={() => setEditing(card.id)} className="flex min-h-[72px] w-full items-center gap-2 border-b border-border px-4 py-3 text-left last:border-b-0 disabled:opacity-50"><span className="min-w-0 flex-1"><span className="block font-bold"><MarkdownContent md={card.question} inline /></span><span className="block text-sm text-muted"><MarkdownContent md={card.answer} inline /></span></span><span aria-hidden="true" className="grid size-11 place-items-center text-xl text-muted">›</span></button>)}</div>
@@ -124,14 +124,14 @@ export default function Courses() {
         </div>
       </nav>
       {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
-        <button type="button" className="ml-3 underline" disabled={busy} onClick={() => void run(load)}>Réessayer</button>
+        <Button variant="secondary" className="mt-3" disabled={busy} onClick={() => void run(load)}>Réessayer</Button>
       </div>}
       {busy && chapters.length === 0 && <PendingRead title="Mes cours" label="On prépare tes cours…" />}
       {!busy && !error && chapters.length === 0 && <section className="space-y-3 rounded-2xl border border-border p-6">
         <Mascotte humeur="au repos" taille={112} />
         <h2 className="text-xl text-foreground">Tes cours apparaîtront ici</h2>
         <p>Prépare ton premier chapitre pour commencer à réviser.</p>
-        <Link to="/revision" className="inline-block underline">Commencer ma révision</Link>
+        <ButtonLink to="/revision" className="w-full">Commencer ma révision</ButtonLink>
       </section>}
       {[...new Set(chapters.map(chapter => chapter.subject))].map((subject, subjectIndex) => {
         const own = chapters.filter(chapter => chapter.subject === subject)
@@ -164,7 +164,7 @@ export default function Courses() {
           </article>)}
         </section>
       })}
-      <Link to="/planner" className="inline-flex min-h-11 items-center text-sm text-muted underline">Planning des devoirs</Link>
+      <ButtonLink variant="secondary" to="/planner" className="w-full">Planning des devoirs</ButtonLink>
     </div>
   </main>
 }

@@ -1,5 +1,6 @@
 import { Button } from '../components/ui/Button'
 import { BackButton } from '../components/ui/BackButton'
+import { ScreenHeader } from '../components/ui/ScreenHeader'
 import { LoadingState } from '../components/ui/LoadingState'
 import { PendingRead } from '../components/ui/PendingRead'
 import { revisionCardVisibility } from '../components/ui/revisionPresentation'
@@ -233,21 +234,21 @@ export default function Revision() {
               <button type="button" role="menuitem" ref={focusMenuItem} disabled={busy || !validated || !!verdict || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte</button>
             </div>}
           </fieldset>
-        </header> : !(session && session.position > 0) && <header><h1 className="text-2xl font-semibold text-foreground">Session de révision</h1></header>}
+        </header> : !(session && session.position > 0) && <ScreenHeader back="/" title="Session de révision" />}
         {!scoped && (!sync.online || sync.pending > 0) && <aside role="status" className="space-y-2 rounded-xl border border-border p-4 text-foreground">
           {!sync.online && <p>Hors ligne. Tu peux terminer ta session déjà chargée.</p>}
           {sync.pending > 0 && <p>{sync.pending} réponse{sync.pending > 1 ? 's' : ''} enregistrée{sync.pending > 1 ? 's' : ''} sur cet appareil, en attente d’envoi. Tes XP et ta série seront confirmés au retour du réseau.</p>}
           {sync.error && <p>{sync.error}</p>}
-          {sync.online && sync.pending > 0 && <button type="button" className="underline" onClick={() => void syncRevisionAnswers()}>Réessayer l’envoi</button>}
+          {sync.online && sync.pending > 0 && <Button variant="secondary" onClick={() => void syncRevisionAnswers()}>Réessayer l’envoi</Button>}
         </aside>}
         {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground">{!card && <Mascotte humeur="désolée" taille={96} />}{error}
-          <button type="button" className="ml-3 underline" disabled={busy} onClick={() => void run(async () => {
+          <Button variant="secondary" className="mt-3" disabled={busy} onClick={() => void run(async () => {
             const saved = await revisionAPI.profile()
             setProfile(saved)
             setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
             if (saved) display(await loadSession())
             setProgress(await revisionAPI.progress())
-          })}>Réessayer</button>
+          })}>Réessayer</Button>
         </div>}
         {generating ? <div className="space-y-2"><LoadingState label="Lohni prépare tes cartes…" />{slow && <p role="status" className="text-center text-sm text-muted">Ça prend plus de temps que d’habitude. Ta demande est toujours en cours, tu peux rester sur cette page.</p>}</div> : busy && !session && <PendingRead title="Ta session" label="On prépare ta session…" />}
         {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}

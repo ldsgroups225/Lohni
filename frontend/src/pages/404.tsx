@@ -6,9 +6,9 @@ export default function NotFound() {
     <h2 className="text-3xl">Cette page est introuvable</h2>
     <p className="text-muted">Retrouve tes révisions depuis l’accueil.</p>
     <nav aria-label="Liens utiles" className="flex flex-wrap justify-center gap-4">
-      <Link className="text-primary underline" to="/">Retour à l’accueil</Link>
-      <Link className="text-primary underline" to="/chat">Discussion</Link>
-      <Link className="text-primary underline" to="/quiz">Faire un quiz</Link>
+      <Link className="ui-button inline-flex items-center justify-center" to="/">Retour à l’accueil</Link>
+      <Link className="ui-button-secondary" to="/chat">Discussion</Link>
+      <Link className="ui-button-secondary" to="/quiz">Faire un quiz</Link>
     </nav>
     <p className="text-muted">« Chaque erreur permet d’apprendre »</p>
   </main>
