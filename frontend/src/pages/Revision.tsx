@@ -8,7 +8,7 @@ import { CheckIcon, CloseIcon } from '../components/ui/NavigationIcons'
 import { Progress } from '../components/ui/Progress'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { useOverlayNavigation } from '../lib/useOverlayNavigation'
-import { cachedDevice, currentRevisionCacheVersion } from '../lib/cachedDevice'
+import { cachedDevice, revisionSnapshot } from '../lib/cachedDevice'
 import { useLeaveConfirmation } from '../lib/useLeaveConfirmation'
 import { withOccurrenceKeys } from '../lib/occurrenceKeys'
 import { confirmDialog } from '../lib/confirm'
@@ -19,7 +19,11 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { chatJSON, revisionAPI, revisionPolicy, revisionSyncStatus, syncRevisionAnswers, type RevisionCard, type RevisionProfile, type RevisionSession, type RevisionProgress, type RevisionChapter } from '../lib/api'
 
-let cachedRevision: { device: string | null; version: number; day: string; profile: RevisionProfile; session: RevisionSession } | null = null
+// Premier rendu instantané au retour : la dernière séance connue (hors séances ciblées) avec son profil.
+function lastKnown(scoped: boolean) {
+  const profile = revisionSnapshot<RevisionProfile | null>('/profile'), session = revisionSnapshot<RevisionSession>('/session')
+  return !scoped && profile && session ? { profile, session } : null
+}
 
 export default function Revision() {
   const [params] = useSearchParams()
@@ -30,11 +34,9 @@ export default function Revision() {
   const loadSession = useCallback((continuing = false) => examId ? revisionAPI.examSession(examId, continuing)
     : missedId ? revisionAPI.missedSession(missedId) : scopeChapter ? revisionAPI.chapterSession(scopeChapter)
     : continuing ? revisionAPI.continue() : revisionAPI.session(), [examId, missedId, scopeChapter])
-  const day = new Date().toDateString()
-  if (cachedRevision && (cachedRevision.device !== cachedDevice() || cachedRevision.day !== day)) cachedRevision = null
   const navigate = useNavigate()
-  const [profile, setProfile] = useState<RevisionProfile | null>(() => (!scoped ? cachedRevision?.profile : null) ?? null)
-  const [session, setSession] = useState<RevisionSession | null>(() => (!scoped ? cachedRevision?.session : null) ?? null)
+  const [profile, setProfile] = useState<RevisionProfile | null>(() => lastKnown(scoped)?.profile ?? null)
+  const [session, setSession] = useState<RevisionSession | null>(() => lastKnown(scoped)?.session ?? null)
   const [chapters, setChapters] = useState<RevisionChapter[]>([])
   const [progress, setProgress] = useState<RevisionProgress | null>(null)
   const [busy, setBusy] = useState(true)
@@ -43,7 +45,7 @@ export default function Revision() {
   const [error, setError] = useState('')
   const [revealed, setRevealed] = useState(false)
   const [choice, setChoice] = useState<number>()
-  const [subject, setSubject] = useState(() => cachedRevision?.profile.subjects[0] ?? '')
+  const [subject, setSubject] = useState(() => lastKnown(scoped)?.profile.subjects[0] ?? '')
   const [title, setTitle] = useState('')
   const [missed, setMissed] = useState<RevisionCard | null>(null)
   const [feedback, setFeedback] = useState<{ id: number; knew: boolean } | null>(null)
@@ -60,9 +62,6 @@ export default function Revision() {
   // QCM: la réponse est enregistrée au choix ; la carte suivante n’apparaît qu’au clic sur « Continuer ».
   const [verdict, setVerdict] = useState<{ choice: number; next: RevisionSession } | null>(null)
   const startedAt = useRef(Date.now())
-  useEffect(() => {
-    if (!scoped && profile && session && validated) cachedRevision = { device: cachedDevice(), version: currentRevisionCacheVersion(), day, profile, session }
-  }, [profile, session, day, validated, scoped])
   const card = session?.cards[session.position]
   const chapterId = card?.chapterId
   const chapter = chapters.find(value => value.id === chapterId)
@@ -130,12 +129,10 @@ export default function Revision() {
     async function load() {
       const requestDevice = cachedDevice()
       try {
-        const version = currentRevisionCacheVersion()
         const saved = await revisionAPI.profile()
         const current = saved ? await loadSession() : null
         if (!active) return
-        if (requestDevice !== cachedDevice() || version !== currentRevisionCacheVersion()) {
-          cachedRevision = null
+        if (requestDevice !== cachedDevice()) {
           setProfile(null); setSession(null)
           await load()
           return
@@ -145,7 +142,7 @@ export default function Revision() {
         if (current) display(current)
       } catch (e) {
         if (active && requestDevice !== cachedDevice()) {
-          cachedRevision = null; setProfile(null); setSession(null); setValidated(false)
+          setProfile(null); setSession(null); setValidated(false)
           await load()
           return
         }

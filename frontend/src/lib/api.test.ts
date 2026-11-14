@@ -274,6 +274,84 @@ test('examen et podcast portent l’en-tête d’appareil', async () => {
   }))
   await api.startExam('e1'); await api.cancelExam('r1'); await api.podcastStart({ topic: 'x' }); await api.podcastCancel('p1')
   expect(seen).toEqual([deviceId, deviceId, deviceId, deviceId])
+
+const json = (data: unknown) => new Response(JSON.stringify({ ok: true, data }), { headers: { 'Content-Type': 'application/json' } })
+
+test('un chemin invalidé garde sa dernière valeur mais devient périmé jusqu’à la prochaine lecture', async () => {
+  const { invalidateRevisionCache, revisionSnapshot, revisionSnapshotStale } = await import('./cachedDevice')
+  invalidateRevisionCache()
+  const chapters = [{ id: 'c', title: 'Les suites' }]
+  vi.stubGlobal('fetch', vi.fn(async () => json(chapters)))
+  await api.revisionAPI.chapters()
+  expect(revisionSnapshot('/chapters')).toEqual(chapters)
+  expect(revisionSnapshotStale('/chapters')).toBe(false)
+  invalidateRevisionCache('/chapters')
+  expect(revisionSnapshot('/chapters')).toEqual(chapters)
+  expect(revisionSnapshotStale('/chapters')).toBe(true)
+  await api.revisionAPI.chapters()
+  expect(revisionSnapshotStale('/chapters')).toBe(false)
+  invalidateRevisionCache()
+  expect(revisionSnapshot('/chapters')).toBeUndefined()
+})
+
+test('une lecture en vol pendant une modification est relue au lieu de livrer l’ancienne valeur', async () => {
+  const { invalidateRevisionCache, revisionSnapshot } = await import('./cachedDevice')
+  invalidateRevisionCache()
+  let finish!: (response: Response) => void
+  let reads = 0
+  vi.stubGlobal('fetch', vi.fn(() => ++reads === 1 ? new Promise<Response>(resolve => { finish = resolve }) : Promise.resolve(json([{ id: 'nouveau' }]))))
+  const read = api.revisionAPI.chapters()
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+  invalidateRevisionCache('/chapters')
+  finish(json([{ id: 'ancien' }]))
+  await expect(read).resolves.toEqual([{ id: 'nouveau' }])
+  expect(revisionSnapshot('/chapters')).toEqual([{ id: 'nouveau' }])
+})
+
+test('la séance lue est disponible tout de suite au retour sur l’écran', async () => {
+  const { invalidateRevisionCache, revisionSnapshot } = await import('./cachedDevice')
+  invalidateRevisionCache()
+  const session = { id: 's', localDate: '2026-11-09', cards: [], position: 0, complete: false }
+  vi.stubGlobal('fetch', vi.fn(async () => json(session)))
+  await api.revisionAPI.session()
+  expect(revisionSnapshot('/session')).toMatchObject({ id: 's' })
+})
+
+test('le quota d’import est partagé puis périmé par un import', async () => {
+  const { invalidateRevisionCache, revisionSnapshot, revisionSnapshotStale } = await import('./cachedDevice')
+  invalidateRevisionCache()
+  const quota = { remaining: 2, resetsAt: '2026-11-10T00:00:00Z' }
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => json(url.endsWith('/import') ? { id: 'c', title: 'T', summary: '', origin: 'import' } : quota)))
+  await api.revisionAPI.importQuota()
+  expect(revisionSnapshot('/import/quota')).toEqual(quota)
+  await api.revisionAPI.importChapter({ title: 'T', subject: 'Mathématiques', text: 'x' })
+  expect(revisionSnapshotStale('/import/quota')).toBe(true)
+})
+
+test('enregistrer le profil garde l’accueil et la progression affichables avec le nouveau profil', async () => {
+  const { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } = await import('./cachedDevice')
+  invalidateRevisionCache()
+  const updated = { schoolClass: '5e', subjects: ['Mathématiques'] }
+  rememberRevisionSnapshot('/home', { profile: { schoolClass: '3e', subjects: [] }, state: 'ready' })
+  rememberRevisionSnapshot('/progress', { streak: 3 })
+  rememberRevisionSnapshot('/chapters', [{ id: 'c' }])
+  vi.stubGlobal('fetch', vi.fn(async () => json(updated)))
+  await api.revisionAPI.saveProfile(updated as never)
+  expect(revisionSnapshot('/home')).toMatchObject({ state: 'ready', profile: updated })
+  expect(revisionSnapshot('/progress')).toEqual({ streak: 3 })
+  expect(revisionSnapshot('/chapters')).toBeUndefined()
+})
+
+test('un instantané n’est visible que pour son appareil et son jour', async () => {
+  const { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } = await import('./cachedDevice')
+  invalidateRevisionCache()
+  rememberRevisionSnapshot('/chapters', [{ id: 'c' }])
+  expect(revisionSnapshot('/chapters')).toEqual([{ id: 'c' }])
+  entries.set('lohni-device-id', '22222222-2222-4222-8222-222222222222')
+  expect(revisionSnapshot('/chapters')).toBeUndefined()
+  entries.set('lohni-device-id', deviceId)
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(Date.now() + 86400000)
+  try { expect(revisionSnapshot('/chapters')).toBeUndefined() } finally { vi.useRealTimers() }
 })
 
 test('un contexte non sécurisé affiche le message HTTPS avant toute requête', async () => {

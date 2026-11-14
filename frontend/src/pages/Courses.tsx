@@ -1,5 +1,5 @@
 import { HelpIcon, ClipboardIcon, DebateIcon, HeadphonesIcon } from '../components/ui/NavigationIcons'
-import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
+import { cachedDevice, revisionSnapshot, revisionSnapshotStale } from '../lib/cachedDevice'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { PendingRead } from '../components/ui/PendingRead'
 import { confirmDialog } from '../lib/confirm'
@@ -14,8 +14,6 @@ import MarkdownContent from '../components/Chat/MarkdownContent'
 import { revisionAPI, revisionPolicy, type RevisionCard, type RevisionCardInput, type RevisionChapter, type RevisionProgress } from '../lib/api'
 
 const ChapterSummary = lazy(() => import('../components/Revision/ChapterSummary'))
-
-let cachedCourses: { device: string | null; version: number; day: string; chapters: RevisionChapter[]; progress: RevisionProgress } | null = null
 
 const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
@@ -54,40 +52,33 @@ function CardEditor({ card, busy, onSave, onCancel, onDelete }: {
 }
 
 export default function Courses() {
-  const device = cachedDevice()
-  if (cachedCourses && (cachedCourses.device !== device || cachedCourses.day !== new Date().toDateString())) cachedCourses = null
   const sharedChapters = revisionSnapshot<RevisionChapter[]>('/chapters')
   const sharedProgress = revisionSnapshot<RevisionProgress>('/progress')
-  const animateEntry = useRef(!cachedCourses).current
-  const [chapters, setChapters] = useState<RevisionChapter[]>(() => cachedCourses?.chapters ?? sharedChapters ?? [])
-  const [, setProgress] = useState<RevisionProgress | null>(() => cachedCourses?.progress ?? sharedProgress ?? null)
+  const animateEntry = useRef(!sharedChapters).current
+  const [chapters, setChapters] = useState<RevisionChapter[]>(() => sharedChapters ?? [])
+  const [, setProgress] = useState<RevisionProgress | null>(() => sharedProgress ?? null)
+  const [stale, setStale] = useState(() => revisionSnapshotStale('/chapters', '/progress'))
   const [editing, setEditing] = useState<string | null>(null)
   const [summaryId, setSummaryId] = useState<string | null>(null)
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null)
   const [summaryOpen, setSummaryOpen] = useOverlayNavigation('chapter-summary')
-  const [stale, setStale] = useState(!!cachedCourses && cachedCourses.version !== currentRevisionCacheVersion())
-  const [busy, setBusy] = useState((!cachedCourses && !sharedChapters) || stale)
+  const [busy, setBusy] = useState(!sharedChapters || stale)
   const [error, setError] = useState('')
   const operating = useRef(false)
 
   const load = useCallback(async function load(isActive: () => boolean = () => true) {
     const requestDevice = cachedDevice()
-    const version = currentRevisionCacheVersion()
     let nextChapters: RevisionChapter[], nextProgress: RevisionProgress
     try { [nextChapters, nextProgress] = await Promise.all([revisionAPI.chapters(), revisionAPI.progress()]) }
     catch (cause) {
       if (isActive() && requestDevice && requestDevice !== cachedDevice()) {
-        cachedCourses = null; setChapters([]); setProgress(null); setBusy(true); setStale(true)
+        setChapters([]); setProgress(null); setBusy(true); setStale(true)
         return load(isActive)
       }
       throw cause
     }
     if (!isActive()) return
-    if ((requestDevice && requestDevice !== cachedDevice()) || version !== currentRevisionCacheVersion()) {
-      if (requestDevice && requestDevice !== cachedDevice()) { cachedCourses = null; setChapters([]); setProgress(null); setBusy(true); setStale(true) }
-      return load(isActive)
-    }
-    cachedCourses = { device: cachedDevice(), version: currentRevisionCacheVersion(), day: new Date().toDateString(), chapters: nextChapters, progress: nextProgress }
+    if (requestDevice && requestDevice !== cachedDevice()) { setChapters([]); setProgress(null); setBusy(true); setStale(true); return load(isActive) }
     setChapters(nextChapters)
     setProgress(nextProgress)
     setStale(false)

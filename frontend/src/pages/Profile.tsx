@@ -11,21 +11,18 @@ import curriculum from '../data/curriculum-ci.json'
 import { REVISION_POLICY as policy } from '../../../backend/src/services/revision/policy'
 import { revisionAPI, type RevisionProfile, type RevisionProgress, type RevisionExam, type RevisionChapter, type RevisionSettings } from '../lib/api'
 import { readFirstName, writeFirstName } from '../lib/localFirstName'
-import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
-
-let cachedProfile: { device: string | null; version: number; day: string; profile: RevisionProfile | null; progress: RevisionProgress } | null = null
+import { cachedDevice, revisionSnapshot } from '../lib/cachedDevice'
 
 let profileSave: Promise<RevisionProfile> | null = null
 
 export default function Profile() {
   const page = useLocation().pathname.split('/')[2] ?? ''
   const device = cachedDevice()
-  if (cachedProfile && (cachedProfile.device !== device || cachedProfile.day !== new Date().toDateString())) cachedProfile = null
   const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
   const sharedProgress = revisionSnapshot<RevisionProgress>('/progress')
-  const [profile, setProfile] = useState<RevisionProfile | null>(() => sharedProfile ?? cachedProfile?.profile ?? null)
-  const [progress, setProgress] = useState<RevisionProgress | null>(() => cachedProfile?.progress ?? sharedProgress ?? null)
-  const [busy, setBusy] = useState((!cachedProfile && sharedProfile === undefined) || !!profileSave)
+  const [profile, setProfile] = useState<RevisionProfile | null>(() => sharedProfile ?? null)
+  const [progress, setProgress] = useState<RevisionProgress | null>(() => sharedProgress ?? null)
+  const [busy, setBusy] = useState(sharedProfile === undefined || !!profileSave)
   const dirty = useRef(false)
   const edits = useRef(0)
   const saving = useRef(false)
@@ -56,27 +53,22 @@ export default function Profile() {
       if (!active) return
       const requestDevice = cachedDevice()
       if (nameDevice.current !== requestDevice) { nameDevice.current = requestDevice; setFirstName(readFirstName()) }
-      const version = currentRevisionCacheVersion()
       const requestEdits = edits.current
       let value: RevisionProfile | null, stats: RevisionProgress
       try { [value, stats] = await Promise.all([revisionAPI.profile(), revisionAPI.progress()]) }
       catch (cause) {
         if (active && requestDevice !== cachedDevice()) {
-          cachedProfile = null; setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true); setResourceVersion(value => value + 1)
+          setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true); setResourceVersion(value => value + 1)
           return load()
         }
         throw cause
       }
       if (!active) return
-      if (requestDevice !== cachedDevice() || version !== currentRevisionCacheVersion()) {
-        cachedProfile = null
-        if (requestDevice !== cachedDevice()) { setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true); setResourceVersion(value => value + 1) }
+      if (requestDevice !== cachedDevice()) {
+        setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true); setResourceVersion(value => value + 1)
         return load()
       }
-      if (requestEdits === edits.current && !saving.current) {
-        cachedProfile = { device: requestDevice, version, day: new Date().toDateString(), profile: value, progress: stats }
-        if (!dirty.current) setProfile(value)
-      }
+      if (requestEdits === edits.current && !saving.current && !dirty.current) setProfile(value)
       setProgress(stats)
     }
     load().catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Impossible de charger ton profil.') })
@@ -141,13 +133,12 @@ export default function Profile() {
       profileSave = promise
       const value = await promise
       if (requestDevice !== cachedDevice()) {
-        cachedProfile = null; setProfile(null); setProgress(null)
+        setProfile(null); setProgress(null)
         throw new Error('L’appareil a changé. Recharge la page avant de continuer.')
       }
       if (page === 'profil' && !writeFirstName(firstName.trim())) setError('Impossible d’enregistrer ton prénom sur cet appareil.')
       setProfile(value)
       dirty.current = false
-      cachedProfile = progress ? { device: cachedDevice(), version: currentRevisionCacheVersion(), day: new Date().toDateString(), profile: value, progress } : null
       setSaved(true)
     }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer ton profil.') }

@@ -1,4 +1,4 @@
-import { cachedDevice, currentRevisionCacheVersion, revisionSnapshot } from '../lib/cachedDevice'
+import { cachedDevice, revisionSnapshot, revisionSnapshotStale } from '../lib/cachedDevice'
 import { Button } from '../components/ui/Button'
 import { BackButton } from '../components/ui/BackButton'
 import { ErrorState, LoadingState } from '../components/ui/LoadingState'
@@ -7,16 +7,13 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { APIError, revisionAPI, revisionPolicy, type RevisionProfile, type RevisionImportedChapter, type RevisionImportQuota, type RevisionChapter } from '../lib/api'
 
-let cachedImport: { device: string | null; version: number; day: string; profile: RevisionProfile | null; quota: RevisionImportQuota } | null = null
-
 export default function ImportCourse() {
-  if (cachedImport && (cachedImport.device !== cachedDevice() || cachedImport.day !== new Date().toDateString())) cachedImport = null
   const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
   const navigate = useNavigate()
-  const [profile, setProfile] = useState<RevisionProfile | null>(() => sharedProfile ?? cachedImport?.profile ?? null)
-  const [quota, setQuota] = useState<RevisionImportQuota | undefined>(() => cachedImport?.version === currentRevisionCacheVersion() ? cachedImport.quota : undefined)
+  const [profile, setProfile] = useState<RevisionProfile | null>(() => sharedProfile ?? null)
+  const [quota, setQuota] = useState<RevisionImportQuota | undefined>(() => revisionSnapshotStale('/import/quota') ? undefined : revisionSnapshot<RevisionImportQuota>('/import/quota'))
   const [imported, setImported] = useState<RevisionImportedChapter>()
-  const [subject, setSubject] = useState(() => (sharedProfile ?? cachedImport?.profile)?.subjects[0] ?? '')
+  const [subject, setSubject] = useState(() => sharedProfile?.subjects[0] ?? '')
   const [title, setTitle] = useState('')
   const [mode, setMode] = useState<'text' | 'file' | 'photo'>('text')
   const [step, setStep] = useState<'pick' | 'confirm' | 'work' | 'done'>('pick')
@@ -27,7 +24,7 @@ export default function ImportCourse() {
   const [cancelled, setCancelled] = useState(false)
   const [text, setText] = useState('')
   const [file, setFile] = useState<File>()
-  const [busy, setBusy] = useState(!cachedImport && sharedProfile === undefined)
+  const [busy, setBusy] = useState(sharedProfile === undefined)
   const [checking, setChecking] = useState(true)
   const [error, setError] = useState('')
   const [errorCode, setErrorCode] = useState<string>()
@@ -39,7 +36,7 @@ export default function ImportCourse() {
     setError(''); setErrorCode(undefined)
     try { await operation() }
     catch (error) {
-      if (importController.current?.signal.aborted) { setCancelled(true); cachedImport = null; setQuota(undefined); void revisionAPI.importQuota().then(setQuota).catch(() => {}) }
+      if (importController.current?.signal.aborted) { setCancelled(true); setQuota(undefined); void revisionAPI.importQuota().then(setQuota).catch(() => {}) }
       else if (error instanceof APIError && error.chapterId) { setFailedChapter(error.chapterId); setError('') }
       else { setError(error instanceof Error ? error.message : 'Impossible d’importer le cours. Réessaie.'); setErrorCode(error instanceof APIError ? error.code : undefined) }
     }
@@ -47,22 +44,17 @@ export default function ImportCourse() {
   }
   const load = useCallback(async function load(isActive: () => boolean = () => true) {
     const device = cachedDevice()
-    const version = currentRevisionCacheVersion()
     let saved: RevisionProfile | null, currentQuota: RevisionImportQuota
     try { [saved, currentQuota] = await Promise.all([revisionAPI.profile(), revisionAPI.importQuota()]) }
     catch (cause) {
       if (isActive() && device !== cachedDevice()) {
-        cachedImport = null; setProfile(null); setQuota(undefined); setSubject(''); setBusy(true)
+        setProfile(null); setQuota(undefined); setSubject(''); setBusy(true)
         return load(isActive)
       }
       throw cause
     }
     if (!isActive()) return
-    if (device !== cachedDevice() || version !== currentRevisionCacheVersion()) {
-      if (device !== cachedDevice()) { cachedImport = null; setProfile(null); setQuota(undefined); setSubject(''); setBusy(true) }
-      return load(isActive)
-    }
-    cachedImport = { device, version, day: new Date().toDateString(), profile: saved, quota: currentQuota }
+    if (device !== cachedDevice()) { setProfile(null); setQuota(undefined); setSubject(''); setBusy(true); return load(isActive) }
     setProfile(saved)
     setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
     setQuota(currentQuota)
@@ -83,7 +75,6 @@ export default function ImportCourse() {
     void run(async () => {
       if (mode !== 'text' && (!file || file.size > revisionPolicy.maxUploadMB * 1024 * 1024)) throw new Error(`Choisis un fichier de ${revisionPolicy.maxUploadMB} Mo maximum.`)
       const chapter = await revisionAPI.importChapter({ title, subject, ...(mode !== 'text' ? { file } : { text }) }, importController.current?.signal)
-      cachedImport = null
       setImported(chapter)
       setStep('done')
       setFailedChapter(undefined)

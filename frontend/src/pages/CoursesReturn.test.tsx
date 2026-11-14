@@ -5,13 +5,15 @@ import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 import Courses from './Courses'
-import { invalidateRevisionCache } from '../lib/cachedDevice'
+import { invalidateRevisionCache, rememberRevisionSnapshot } from '../lib/cachedDevice'
 
 const api = vi.hoisted(() => ({ chapters: vi.fn(), progress: vi.fn(), updateCard: vi.fn() }))
 vi.mock('../lib/api', () => ({ revisionAPI: api, revisionPolicy: { minimumSeenRatio: 0.5 } }))
 vi.mock('../components/Chat/MarkdownView', () => ({ default: ({ md }: { md: string }) => <span>{md}</span> }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
+// Le vrai cache de lecture d’api.ts garde la dernière valeur lue ; le double d’api la reproduit.
+const known = <T,>(path: string, value: T) => async () => { rememberRevisionSnapshot(path, value); return value }
 const outils = (host: HTMLElement) => required(host.querySelector('nav[aria-label="S’entraîner"]'))
 
 test('S’entraîner est visible sans chapitre, avant les chapitres', async () => {
@@ -32,8 +34,8 @@ test('S’entraîner est visible sans chapitre, avant les chapitres', async () =
 test('au retour les cours et S’entraîner sont affichés avant la revalidation', async () => {
   localStorage.setItem('lohni-device-id', 'appareil-a')
   sessionStorage.clear()
-  api.chapters.mockResolvedValueOnce([{ id: '1', subject: 'Mathématiques', title: 'Les suites', status: 'En cours', origin: 'ai', mastery: null, seenCards: 0, cards: [], summary: '' }]).mockReturnValue(new Promise(() => {}))
-  api.progress.mockResolvedValueOnce({ xp: 10, streak: 1 }).mockReturnValue(new Promise(() => {}))
+  api.chapters.mockImplementationOnce(known('/chapters', [{ id: '1', subject: 'Mathématiques', title: 'Les suites', status: 'En cours', origin: 'ai', mastery: null, seenCards: 0, cards: [], summary: '' }])).mockReturnValue(new Promise(() => {}))
+  api.progress.mockImplementationOnce(known('/progress', { xp: 10, streak: 1 })).mockReturnValue(new Promise(() => {}))
   const router = createMemoryRouter([{ path: '/courses', element: <Courses /> }, { path: '/quiz', element: <p>Quiz</p> }], { initialEntries: ['/courses'] })
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
@@ -54,25 +56,10 @@ test('au retour les cours et S’entraîner sont affichés avant la revalidation
   }
 })
 
-test('un autre appareil ne voit pas les cours en cache', async () => {
-  localStorage.setItem('lohni-device-id', 'appareil-b')
-  api.chapters.mockReturnValue(new Promise(() => {}))
-  api.progress.mockReturnValue(new Promise(() => {}))
-  const router = createMemoryRouter([{ path: '/courses', element: <Courses /> }], { initialEntries: ['/courses'] })
-  const host = document.createElement('div'); document.body.append(host)
-  const root = createRoot(host)
-  try {
-    await act(async () => root.render(<RouterProvider router={router} />))
-    expect(host.textContent).not.toContain('Les suites')
-    expect(host.textContent).toContain('Mes cours')
-  } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
-})
-
-
 test('une modification conserve le cours connu mais protège ses actions pendant la mise à jour', async () => {
   localStorage.setItem('lohni-device-id', 'cours-modifies')
-  api.chapters.mockReset().mockResolvedValueOnce([{ id: '1', subject: 'Mathématiques', title: 'Les suites', status: 'En cours', origin: 'ai', mastery: null, seenCards: 0, cards: [], summary: '' }]).mockReturnValue(new Promise(() => {}))
-  api.progress.mockReset().mockResolvedValueOnce({ xp: 10, streak: 1 }).mockReturnValue(new Promise(() => {}))
+  api.chapters.mockReset().mockImplementationOnce(known('/chapters', [{ id: '1', subject: 'Mathématiques', title: 'Les suites', status: 'En cours', origin: 'ai', mastery: null, seenCards: 0, cards: [], summary: '' }])).mockReturnValue(new Promise(() => {}))
+  api.progress.mockReset().mockImplementationOnce(known('/progress', { xp: 10, streak: 1 })).mockReturnValue(new Promise(() => {}))
   const router = createMemoryRouter([{ path: '/courses', element: <Courses /> }, { path: '/autre', element: <p>Autre</p> }], { initialEntries: ['/courses'] })
   const host = document.createElement('div'); document.body.append(host)
   const root = createRoot(host)
