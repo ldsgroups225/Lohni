@@ -1,8 +1,8 @@
-import { useEffect, useId, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { useLocation } from "react-router-dom"
 import { podcastStart, connectPodcastStream, revisionAPI, type PodcastEvent, type RevisionChapter } from "../../lib/api"
 
-type Segment = { spk: string; md: string }
+type Segment = { spk: string; md: string; id: number }
 
 export default function PodcastGenerator() {
   const location = useLocation()
@@ -29,7 +29,7 @@ export default function PodcastGenerator() {
     return () => { active = false; generation.current++; cleanup.current() }
   }, [])
 
-  function connect(pid: string, token: number) {
+  const connect = useCallback((pid: string, token: number) => {
     const timeout = setTimeout(() => {
       if (generation.current !== token) return
       setStatus("La création prend trop de temps. Réessaie.")
@@ -41,7 +41,7 @@ export default function PodcastGenerator() {
       if (ev.type === 'ready' || ev.type === 'phase') setStatus('Écriture du script…')
       if (ev.type === 'script') {
         const segments = (ev.data as { segments?: unknown })?.segments
-        setTranscript(Array.isArray(segments) ? segments.filter((s): s is Segment => typeof s?.md === 'string') : [])
+        setTranscript(Array.isArray(segments) ? segments.filter(s => typeof s?.md === 'string').map((s, id) => ({ spk: s.spk, md: s.md, id })) : [])
         setStatus('Création de l’audio…')
       }
       if (ev.type === 'audio') {
@@ -55,7 +55,7 @@ export default function PodcastGenerator() {
       }
     })
     cleanup.current = () => { clearTimeout(timeout); close() }
-  }
+  }, [])
 
   useEffect(() => {
     if (!location.state?.podcastPid) return
@@ -65,7 +65,7 @@ export default function PodcastGenerator() {
     const token = ++generation.current
     connect(location.state.podcastPid, token)
     return () => { generation.current++; cleanup.current() }
-  }, [location.state])
+  }, [location.state, connect])
 
   async function onGenerate() {
     if (!topic.trim() || busy) return
@@ -86,6 +86,7 @@ export default function PodcastGenerator() {
 
   return (
     <section className="space-y-5">
+      <h2 className="text-2xl font-semibold text-foreground">Podcast</h2>
       {!busy && !audioFile && <>
         <p className="text-muted">Écoute ton cours comme une conversation, où tu veux.</p>
         <div>
@@ -108,7 +109,7 @@ export default function PodcastGenerator() {
           <div className="mt-3 flex gap-2"><button type="button" className={`${chip} flex-1`} aria-label="Reculer de 15 secondes" onClick={() => { if (audio.current) audio.current.currentTime = Math.max(0, audio.current.currentTime - 15) }}>−15 s</button><button type="button" className={`${chip} flex-1`} aria-label="Avancer de 15 secondes" onClick={() => { if (audio.current) audio.current.currentTime = Math.min(audio.current.duration || 0, audio.current.currentTime + 15) }}>+15 s</button><button type="button" className={`${chip} flex-1`} aria-label="Vitesse de lecture" onClick={() => { const next = rate === 1 ? 1.25 : rate === 1.25 ? 1.5 : 1; setRate(next); if (audio.current) audio.current.playbackRate = next }}>{String(rate).replace('.', ',')}×</button></div>
         </div>
         {status && status !== 'Terminé' && <p role="alert">{status}</p>}
-        {transcript.length > 0 && <details id={transcriptId} className="rounded-2xl border border-border bg-surface px-4"><summary className="min-h-14 cursor-pointer py-4 font-semibold">Lire la transcription</summary><div className="space-y-3 pb-4">{transcript.map((segment, index) => <p key={`${index}-${segment.spk}`}><strong>Intervenant {segment.spk === 'B' ? 'B' : 'A'} : </strong>{segment.md}</p>)}</div></details>}
+        {transcript.length > 0 && <details id={transcriptId} className="rounded-2xl border border-border bg-surface px-4"><summary className="min-h-14 cursor-pointer py-4 font-semibold">Lire la transcription</summary><div className="space-y-3 pb-4">{transcript.map((segment) => <p key={segment.id}><strong>Intervenant {segment.spk === 'B' ? 'B' : 'A'} : </strong>{segment.md}</p>)}</div></details>}
         <a href={audioFile} download={audioFilename} className="ui-button flex min-h-14 w-full items-center justify-center">Télécharger</a><button type="button" onClick={reset} className="min-h-14 w-full rounded-2xl border-2 border-primary bg-surface font-bold text-primary">Créer un autre podcast</button>
       </>}
     </section>
