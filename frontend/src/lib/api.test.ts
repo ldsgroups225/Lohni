@@ -146,7 +146,7 @@ test('une synchronisation tardive ne déplace pas la file vers un autre appareil
 test('au démarrage les données locales du jour sont immédiatement disponibles et la lecture est partagée', async () => {
   const day = new Date(); const date = [day.getFullYear(), String(day.getMonth() + 1).padStart(2, '0'), String(day.getDate()).padStart(2, '0')].join('-')
   const home = { profile: { schoolClass: '3e', subjects: [] }, state: 'ready', cardCount: 2 }
-  const { invalidateRevisionCache, revisionSnapshot } = await import('./revisionReadCache')
+  const { invalidateRevisionCache, revisionSnapshot } = await import('./revisionStore')
   invalidateRevisionCache()
   // Sans ses chapitres du jour, l’accueil en cache resterait incomplet : rien n’est restauré.
   entries.set(offlineKey, JSON.stringify({ pending: [], cache: { '/home': home, '/progress': null }, cacheDates: { '/home': date, '/progress': date } }))
@@ -163,7 +163,7 @@ test('au démarrage les données locales du jour sont immédiatement disponibles
 })
 
 test('le démarrage ignore les données quotidiennes anciennes et celles d’un autre appareil', async () => {
-  const { invalidateRevisionCache, revisionSnapshot } = await import('./revisionReadCache')
+  const { invalidateRevisionCache, revisionSnapshot } = await import('./revisionStore')
   invalidateRevisionCache()
   entries.set(offlineKey, JSON.stringify({ pending: [], cache: { '/home': { state: 'done' } }, cacheDates: { '/home': '2000-01-01' } }))
   api.prepareRevisionStartup()
@@ -186,7 +186,7 @@ test('le démarrage et les lectures partagent la synchronisation des réponses',
 })
 
 test('hors ligne, le compte à rebours utilise les examens en cache et ignore les examens passés', async () => {
-  const { invalidateRevisionCache } = await import('./revisionReadCache'); invalidateRevisionCache()
+  const { invalidateRevisionCache } = await import('./revisionStore'); invalidateRevisionCache()
   const today = new Date(); const day = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-')
   const future = new Date(`${day}T00:00:00Z`); future.setUTCDate(future.getUTCDate() + 3)
   const past = new Date(`${day}T00:00:00Z`); past.setUTCDate(past.getUTCDate() - 1)
@@ -300,7 +300,7 @@ test('examen et podcast portent l’en-tête d’appareil', async () => {
 const json = (data: unknown) => new Response(JSON.stringify({ ok: true, data }), { headers: { 'Content-Type': 'application/json' } })
 
 test('un chemin invalidé garde sa dernière valeur mais devient périmé jusqu’à la prochaine lecture', async () => {
-  const { invalidateRevisionCache, revisionSnapshot, revisionSnapshotStale } = await import('./revisionReadCache')
+  const { invalidateRevisionCache, revisionSnapshot, revisionSnapshotStale } = await import('./revisionStore')
   invalidateRevisionCache()
   const chapters = [{ id: 'c', title: 'Les suites' }]
   vi.stubGlobal('fetch', vi.fn(async () => json(chapters)))
@@ -317,7 +317,7 @@ test('un chemin invalidé garde sa dernière valeur mais devient périmé jusqu�
 })
 
 test('une lecture en vol pendant une modification est relue au lieu de livrer l’ancienne valeur', async () => {
-  const { invalidateRevisionCache, revisionSnapshot } = await import('./revisionReadCache')
+  const { invalidateRevisionCache, revisionSnapshot } = await import('./revisionStore')
   invalidateRevisionCache()
   let finish!: (response: Response) => void
   let reads = 0
@@ -331,7 +331,7 @@ test('une lecture en vol pendant une modification est relue au lieu de livrer l�
 })
 
 test('la séance lue est disponible tout de suite au retour sur l’écran', async () => {
-  const { invalidateRevisionCache, revisionSnapshot } = await import('./revisionReadCache')
+  const { invalidateRevisionCache, revisionSnapshot } = await import('./revisionStore')
   invalidateRevisionCache()
   const session = { id: 's', localDate: '2026-11-09', cards: [], position: 0, complete: false }
   vi.stubGlobal('fetch', vi.fn(async () => json(session)))
@@ -340,7 +340,7 @@ test('la séance lue est disponible tout de suite au retour sur l’écran', asy
 })
 
 test('le quota d’import est partagé puis périmé par un import', async () => {
-  const { invalidateRevisionCache, revisionSnapshot, revisionSnapshotStale } = await import('./revisionReadCache')
+  const { invalidateRevisionCache, revisionSnapshot, revisionSnapshotStale } = await import('./revisionStore')
   invalidateRevisionCache()
   const quota = { remaining: 2, resetsAt: '2026-11-10T00:00:00Z' }
   vi.stubGlobal('fetch', vi.fn(async (url: string) => json(url.endsWith('/import') ? { id: 'c', title: 'T', summary: '', origin: 'import' } : quota)))
@@ -351,7 +351,7 @@ test('le quota d’import est partagé puis périmé par un import', async () =>
 })
 
 test('enregistrer le profil garde l’accueil et la progression affichables avec le nouveau profil', async () => {
-  const { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } = await import('./revisionReadCache')
+  const { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } = await import('./revisionStore')
   invalidateRevisionCache()
   const updated = { schoolClass: '5e', subjects: ['Mathématiques'] }
   rememberRevisionSnapshot('/home', { profile: { schoolClass: '3e', subjects: [] }, state: 'ready' })
@@ -365,7 +365,7 @@ test('enregistrer le profil garde l’accueil et la progression affichables avec
 })
 
 test('un instantané n’est visible que pour son appareil et son jour', async () => {
-  const { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } = await import('./revisionReadCache')
+  const { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } = await import('./revisionStore')
   invalidateRevisionCache()
   rememberRevisionSnapshot('/chapters', [{ id: 'c' }])
   expect(revisionSnapshot('/chapters')).toEqual([{ id: 'c' }])
@@ -391,17 +391,69 @@ test('un contexte non sécurisé affiche le message HTTPS avant toute requête',
 
 
 
-test('revisionAPI.read écarte la réponse d’un autre appareil et relit pour le nouvel appareil', async () => {
+test('une lecture écarte la réponse d’un autre appareil et relit pour le nouvel appareil', async () => {
+  const { readOnDevice } = await import('./revisionStore')
   vi.stubGlobal('localStorage', { getItem: (key: string) => entries.get(key) ?? null })
   entries.set('lohni-device-id', deviceId)
   const changed = vi.fn()
   let calls = 0
-  const value = await api.revisionAPI.read(async () => {
+  const value = await readOnDevice(async () => {
     const call = ++calls
     if (call === 1) entries.set('lohni-device-id', '33333333-3333-4333-8333-333333333333')
     return `lecture ${call}`
   }, changed)
   expect(value).toBe('lecture 2')
   expect(changed).toHaveBeenCalledTimes(1)
+  entries.set('lohni-device-id', deviceId)
+})
+
+// Le test du contexte non sécurisé retire les globales du navigateur : on les remet pour les suivants.
+function stubBrowser() {
+  vi.stubGlobal('localStorage', { getItem: (key: string) => entries.get(key) ?? null, setItem: (key: string, value: string) => entries.set(key, value), removeItem: (key: string) => entries.delete(key) })
+  vi.stubGlobal('window', Object.assign(new EventTarget(), { setInterval: vi.fn() }))
+  vi.stubGlobal('navigator', { onLine: true, locks: { request: async (_name: string, save: () => void) => save() } })
+}
+const everyRead = ['/home', '/progress', '/chapters', '/plan:source', '/import/quota', '/profile', '/exams']
+async function staleAfter(write: () => Promise<unknown>) {
+  stubBrowser()
+  const { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshotStale } = await import('./revisionStore')
+  invalidateRevisionCache()
+  for (const path of everyRead) rememberRevisionSnapshot(path, {})
+  await write()
+  return everyRead.filter(path => revisionSnapshotStale(path))
+}
+const homeReads = ['/home', '/progress', '/chapters', '/plan:source']
+
+test('une réponse en séance périme exactement l’accueil, la progression, les cours et le plan', async () => {
+  const today = new Date()
+  const localDate = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-')
+  entries.set(offlineKey, JSON.stringify({ cache: {}, pending: [], session: { id: 's', localDate, position: 0, complete: false, repeated: [], elapsedMs: 0, earnedXP: 0,
+    cards: [{ id: 'c', chapterId: 'x', kind: 'basic', question: 'q', answer: 'a', origin: 'ai', due: localDate, reviews: 0 }] } }))
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: 'Réessaie' }), { status: 500, headers: { 'Content-Type': 'application/json' } })))
+  expect(await staleAfter(() => api.revisionAPI.answer({ sessionId: 's', cardId: 'c', position: 0, knew: true, durationMs: 1000 }))).toEqual(homeReads)
+  const saved = JSON.parse(required(entries.get(offlineKey)))
+  expect(saved.cacheDates?.['/chapters']).toBeUndefined()
+})
+
+test('une réponse d’examen périme les mêmes lectures que la réponse en séance', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json({ id: 's', cards: [], position: 1, complete: false })))
+  expect(await staleAfter(() => api.revisionAPI.examAnswer({ sessionId: 's', cardId: 'c', position: 0, knew: true, durationMs: 1000 }))).toEqual(homeReads)
+})
+
+test('une modification de cours ou d’examen périme l’accueil, la progression, les cours, le plan et le quota', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json(null)))
+  expect(await staleAfter(() => api.revisionAPI.deleteChapter('c'))).toEqual([...homeReads, '/import/quota'])
+})
+
+test('une modification refusée par le serveur ne périme rien', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: false, error: 'Non' }), { status: 400, headers: { 'Content-Type': 'application/json' } })))
+  expect(await staleAfter(() => api.revisionAPI.deleteChapter('c').catch(() => {}))).toEqual([])
+})
+
+test('changer d’appareil pendant une écriture lève le signal « appareil changé »', async () => {
+  stubBrowser()
+  const { DeviceChangedError } = await import('./revisionStore')
+  vi.stubGlobal('fetch', vi.fn(async () => { entries.set('lohni-device-id', '22222222-2222-4222-8222-222222222222'); return json(null) }))
+  await expect(api.revisionAPI.deleteChapter('c')).rejects.toBeInstanceOf(DeviceChangedError)
   entries.set('lohni-device-id', deviceId)
 })

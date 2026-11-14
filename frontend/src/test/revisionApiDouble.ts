@@ -1,5 +1,5 @@
 // Double de test : l’interface de cache de `revisionAPI`, adossée au vrai cache de lecture.
-import { cachedDevice, invalidateRevisionCache, readOnDevice, rememberRevisionSnapshot, revisionSnapshot, revisionSnapshotStale } from '../lib/revisionReadCache'
+import { deviceGuard, invalidateRevisionCache, rememberRevisionSnapshot, revisionCached, revisionSnapshot } from '../lib/revisionStore'
 
-export const revisionCacheDouble = { device: cachedDevice, snapshot: revisionSnapshot, snapshotStale: revisionSnapshotStale, read: readOnDevice }
+export const revisionCacheDouble = { cached: revisionCached, deviceGuard }
 export { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot }

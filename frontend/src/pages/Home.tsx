@@ -13,52 +13,49 @@ import { Link } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import Onboarding from '../components/Revision/Onboarding'
 import MobileHeader from '../components/MobileHeader'
-import { revisionAPI, revisionDeviceId, type RevisionHome, type RevisionProgress, type RevisionChapter, type RevisionProfile } from '../lib/api'
+import { useRevisionRead } from '../lib/useRevisionRead'
+import { revisionAPI, type RevisionHome, type RevisionProgress, type RevisionChapter } from '../lib/api'
 import { readFirstName } from '../lib/localFirstName'
 import { addDays, localDay, mondayOf } from '../../../backend/src/services/revision/day'
 
 export default function Home() {
-  const sharedProfile = revisionAPI.snapshot<RevisionProfile | null>('/profile')
-  const sharedHome = revisionAPI.snapshot<RevisionHome | null>('/home')
+  const sharedProfile = revisionAPI.cached.profile()
+  const sharedHome = revisionAPI.cached.home()
   const animateEntry = useRef(!sharedHome).current
   const shown = useRef(!!sharedHome)
   const [home, setHome] = useState<RevisionHome | null>(() => sharedHome ? { ...sharedHome, profile: sharedProfile ?? sharedHome.profile } : null)
-  const [progress, setProgress] = useState<RevisionProgress | null>(() => revisionAPI.snapshot<RevisionProgress>('/progress') ?? null)
+  const [progress, setProgress] = useState<RevisionProgress | null>(() => revisionAPI.cached.progress() ?? null)
   const [loading, setLoading] = useState(sharedHome === undefined)
   const [error, setError] = useState('')
   const [progressError, setProgressError] = useState('')
   const [attempt, setAttempt] = useState(0)
-  const [chapters, setChapters] = useState<RevisionChapter[] | null>(() => revisionAPI.snapshot<RevisionChapter[]>('/chapters') ?? null)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Une tentative explicite relance la lecture ; la valeur du cache ne doit pas déclencher de nouvelle requête.
-  useEffect(() => {
-    let active = true
-    async function load() {
-      setError('')
-      setProgressError('')
-      if (!shown.current) setLoading(true)
-      // Les trois lectures partent ensemble et l’accueil change d’un seul coup, sans état intermédiaire.
-      const details = () => [revisionAPI.chapters().then(value => ({ value }), error => ({ error })), revisionAPI.progress().then(value => ({ value }), error => ({ error }))] as const
-      let [chaptersRead, progressRead] = details()
-      try {
-        const data = await revisionAPI.read(revisionAPI.home, () => { shown.current = false; setHome(null); setProgress(null); setChapters(null); setLoading(true); [chaptersRead, progressRead] = details() }, () => active)
-        const [chaptersResult, progressResult] = data ? await Promise.all([chaptersRead, progressRead]) : []
-        if (!active) return
-        shown.current = !!data
-        setHome(data)
-        if (chaptersResult) 'value' in chaptersResult ? setChapters(chaptersResult.value) : setProgressError('Le détail de tes cartes est temporairement indisponible.')
-        if (progressResult) {
-          if ('value' in progressResult) setProgress(progressResult.value)
-          else if ((progressResult.error as { status?: number } | null)?.status !== 404) setProgressError('Ta progression est temporairement indisponible.')
-        }
-      } catch (cause) {
-        if (active) {
-          if (shown.current) setProgressError('La mise à jour de ton accueil est temporairement indisponible.')
-          else setError(cause instanceof Error ? cause.message : 'Impossible de charger l’accueil.')
-        }
-      } finally { if (active) setLoading(false) }
-    }
-    void load()
-    return () => { active = false }
+  const [chapters, setChapters] = useState<RevisionChapter[] | null>(() => revisionAPI.cached.chapters() ?? null)
+  // Les trois lectures partent ensemble et l’accueil change d’un seul coup, sans état intermédiaire.
+  useRevisionRead(async () => {
+    setError('')
+    setProgressError('')
+    if (!shown.current) setLoading(true)
+    const details = () => [revisionAPI.chapters().then(value => ({ value }), error => ({ error })), revisionAPI.progress().then(value => ({ value }), error => ({ error }))] as const
+    const [chaptersRead, progressRead] = details()
+    const data = await revisionAPI.home()
+    const [chaptersResult, progressResult] = data ? await Promise.all([chaptersRead, progressRead]) : []
+    return { data, chaptersResult, progressResult }
+  }, {
+    accept: ({ data, chaptersResult, progressResult }) => {
+      shown.current = !!data
+      setHome(data)
+      if (chaptersResult) 'value' in chaptersResult ? setChapters(chaptersResult.value) : setProgressError('Le détail de tes cartes est temporairement indisponible.')
+      if (progressResult) {
+        if ('value' in progressResult) setProgress(progressResult.value)
+        else if ((progressResult.error as { status?: number } | null)?.status !== 404) setProgressError('Ta progression est temporairement indisponible.')
+      }
+    },
+    onChanged: () => { shown.current = false; setHome(null); setProgress(null); setChapters(null); setLoading(true) },
+    fail: cause => {
+      if (shown.current) setProgressError('La mise à jour de ton accueil est temporairement indisponible.')
+      else setError(cause instanceof Error ? cause.message : 'Impossible de charger l’accueil.')
+    },
+    settled: () => setLoading(false),
   }, [attempt])
   // L’écran de démarrage d’index.html couvre l’accueil jusqu’à ce qu’il soit prêt (ou en erreur, ou à l’accueil d’inscription).
   useLayoutEffect(() => { if (!loading) document.getElementById('splash')?.remove() }, [loading])
@@ -66,11 +63,7 @@ export default function Home() {
   useEffect(() => {
     if (!progress) return
     try {
-      const key = `lohni-last-streak:${revisionDeviceId()}`
-      const previous = localStorage.getItem(key)
-      localStorage.setItem(key, String(progress.streak))
-      const value = Number(previous)
-      setStreakFrom(previous !== null && Number.isFinite(value) && value < progress.streak ? value : null)
+      setStreakFrom(revisionAPI.lastStreak(progress.streak))
     } catch { setStreakFrom(null) }
   }, [progress])
 
