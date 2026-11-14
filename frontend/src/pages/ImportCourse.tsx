@@ -23,6 +23,8 @@ export default function ImportCourse() {
   const [cards, setCards] = useState<RevisionChapter['cards']>()
   const [suggested, setSuggested] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
+  const importController = useRef<AbortController>(null)
+  const [cancelled, setCancelled] = useState(false)
   const [text, setText] = useState('')
   const [file, setFile] = useState<File>()
   const [busy, setBusy] = useState(!cachedImport && sharedProfile === undefined)
@@ -36,10 +38,11 @@ export default function ImportCourse() {
     setError('')
     try { await operation() }
     catch (error) {
-      if (error instanceof APIError && error.chapterId) { setFailedChapter(error.chapterId); setError('') }
+      if (importController.current?.signal.aborted) { setCancelled(true); cachedImport = null; setQuota(undefined); void revisionAPI.importQuota().then(setQuota).catch(() => {}) }
+      else if (error instanceof APIError && error.chapterId) { setFailedChapter(error.chapterId); setError('') }
       else setError(error instanceof Error ? error.message : 'Impossible d’importer le cours. Réessaie.')
     }
-    finally { setBusy(false) }
+    finally { importController.current = null; setBusy(false) }
   }
   const load = useCallback(async function load(isActive: () => boolean = () => true) {
     const device = cachedDevice()
@@ -63,6 +66,7 @@ export default function ImportCourse() {
     setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
     setQuota(currentQuota)
   }, [])
+  useEffect(() => () => { importController.current?.abort() }, [])
   useEffect(() => {
     let active = true
     load(() => active).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Impossible de charger ton import.') })
@@ -72,10 +76,12 @@ export default function ImportCourse() {
 
   function submit(event: FormEvent) {
     event.preventDefault()
+    setCancelled(false)
+    importController.current = new AbortController()
     setStep('work')
     void run(async () => {
       if (mode !== 'text' && (!file || file.size > revisionPolicy.maxUploadMB * 1024 * 1024)) throw new Error(`Choisis un fichier de ${revisionPolicy.maxUploadMB} Mo maximum.`)
-      const chapter = await revisionAPI.importChapter({ title, subject, ...(mode !== 'text' ? { file } : { text }) })
+      const chapter = await revisionAPI.importChapter({ title, subject, ...(mode !== 'text' ? { file } : { text }) }, importController.current?.signal)
       cachedImport = null
       setImported(chapter)
       setStep('done')
@@ -107,14 +113,15 @@ export default function ImportCourse() {
         <h1 className="text-2xl font-bold text-foreground">{step === 'pick' ? 'Ajouter un cours' : step === 'confirm' ? 'Vérifie et crée' : step === 'work' ? 'Un instant' : 'Terminé'}</h1>
       </header>
       {busy && !profile && !error && <PendingRead title="Cours à réviser" label="On prépare ton import…" />}
-      {failedChapter && !busy && <ErrorState title="Je n’ai pas pu créer tes cartes" detail="La création des cartes n’a pas abouti. Ton cours est bien enregistré, rien n’est perdu." actions={[
-        { label: 'Réessayer', variant: 'primary', onClick: () => { setStep('work'); void run(async () => { const chapter = await revisionAPI.retryImport(failedChapter); setImported(chapter); setFailedChapter(undefined); setStep('done'); try { setCards((await revisionAPI.chapters()).find(item => item.id === chapter.id)?.cards) } catch { setCards(undefined) }; try { setQuota(await revisionAPI.importQuota()) } catch { setQuota(undefined) } }) } },
+      {failedChapter && !busy && !cancelled && <ErrorState title="Je n’ai pas pu créer tes cartes" detail="La création des cartes n’a pas abouti. Ton cours est bien enregistré, rien n’est perdu." actions={[
+        { label: 'Réessayer', variant: 'primary', onClick: () => { setCancelled(false); importController.current = new AbortController(); setStep('work'); void run(async () => { const chapter = await revisionAPI.retryImport(failedChapter, importController.current?.signal); setImported(chapter); setFailedChapter(undefined); setStep('done'); try { setCards((await revisionAPI.chapters()).find(item => item.id === chapter.id)?.cards) } catch { setCards(undefined) }; try { setQuota(await revisionAPI.importQuota()) } catch { setQuota(undefined) } }) } },
         { label: 'Essayer avec un autre fichier', variant: 'outline', onClick: () => { setFailedChapter(undefined); setStep('pick') } },
         { label: 'Garder le cours sans cartes', variant: 'link', onClick: () => navigate('/courses') },
       ]}><div className="w-full rounded-2xl border border-border bg-surface p-4 text-left"><p className="font-semibold">{title} · {subject}</p><p className="text-sm text-muted">{file?.name ?? 'Texte du cours'} · enregistré</p></div></ErrorState>}
+      {cancelled && !busy && <ErrorState title="Annulation demandée" detail="Si le cours était déjà enregistré, il reste dans tes cours. Vérifie avant de réessayer pour éviter un doublon." actions={[{ label: 'Voir mes cours', variant: 'primary', onClick: () => navigate('/courses') }, { label: 'Retour', variant: 'link', onClick: () => { setCancelled(false); if (!failedChapter) setStep('confirm') } }]} />}
       {error && !busy && <ErrorState title="Impossible de préparer ton cours" detail={error} actions={[{ label: 'Réessayer', variant: 'primary', onClick: () => { setError(''); if (!profile || !quota) void run(() => load()); else setStep('confirm') } }, { label: 'Retour', variant: 'link', onClick: () => { setError(''); setStep('pick') } }]} />}
       {!busy && !profile && quota && <p>Crée d’abord ton profil pour ranger ton cours dans une matière. <Link to="/" className="underline">Commencer</Link></p>}
-      {profile && !failedChapter && !error && <>
+      {profile && (!failedChapter || busy) && !error && !cancelled && <>
         {step === 'pick' && <section className="space-y-3">
           <p className="text-muted">Choisis comment ajouter ton cours. Lohni en fait des cartes à réviser.</p>
           <button type="button" className={pickClass} onClick={() => chooseFile('photo')}><span aria-hidden="true" className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-2xl">📷</span><span><strong className="block text-lg">Prendre en photo</strong><span className="text-sm text-muted">Ton cahier ou ton livre</span></span></button>
@@ -130,7 +137,7 @@ export default function ImportCourse() {
           <Button className="w-full" type="submit" disabled={!!readyReason || busy}>Créer mes cartes</Button>
           <p className="text-center text-sm text-muted" aria-live="polite">{readyReason || 'Environ 10 secondes'}</p>
         </form>}
-        {step === 'work' && <><LoadingState label="Préparation de ton cours…" expectedDuration={10} steps={[{ after: 0, message: 'Lecture du cours…' }, { after: 3, message: 'Repérage des notions clés…' }, { after: 6, message: 'Création des cartes…' }]} /><div className="text-center"><button type="button" disabled className="min-h-11 text-muted">Annuler</button><p className="text-sm text-muted">L’annulation n’est pas encore disponible pendant la création.</p></div></>}
+        {step === 'work' && <LoadingState label="Préparation de ton cours…" expectedDuration={10} steps={[{ after: 0, message: 'Lecture du cours…' }, { after: 3, message: 'Repérage des notions clés…' }, { after: 6, message: 'Création des cartes…' }]} onCancel={() => importController.current?.abort()} />}
         {step === 'done' && imported && <section className="space-y-5 text-center" aria-live="polite"><div className="text-4xl text-success" aria-hidden="true">✓</div><h2 className="text-2xl font-bold">{cards ? `${cards.length} cartes prêtes` : 'Tes cartes sont prêtes'}</h2><p className="text-muted">{imported.title} · {subject}</p>{cards?.[0] && <div className="rounded-2xl border border-border bg-surface p-4 text-left"><p className="text-xs font-bold uppercase text-muted">Exemple</p><p className="mt-2 font-semibold">{cards[0].question}</p></div>}<p className="text-sm text-muted">Générées par IA : relis-les, elles peuvent contenir des erreurs.</p><Button className="w-full" disabled={busy} onClick={() => void run(async () => { await revisionAPI.continue(); navigate('/revision') })}>Commencer la révision</Button><button type="button" className="min-h-14 w-full rounded-xl border-2 border-primary font-semibold text-primary" disabled={busy} onClick={reset}>Ajouter un autre cours</button></section>}
       </>}
     </div>

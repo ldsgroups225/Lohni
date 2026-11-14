@@ -76,7 +76,7 @@ test('après un échec, réessayer prépare le cours déjà enregistré', async 
     expect(host.textContent).toContain('Ton cours')
     expect(host.textContent).toContain('bien enregistré')
     await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'Réessayer')).click())
-    expect(api.retryImport).toHaveBeenCalledWith('cours-1')
+    expect(api.retryImport).toHaveBeenCalledWith('cours-1', expect.any(AbortSignal))
     expect(host.textContent).toContain('Tes cartes sont prêtes')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
 })
@@ -114,5 +114,23 @@ test('affiche le nombre et un exemple des cartes créées', async () => {
     expect(host.textContent).toContain('2 cartes prêtes')
     expect(host.textContent).toContain('Combien font un demi plus un demi ?')
     expect(host.textContent).toContain('Ajouter un autre cours')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
+})
+
+test('annuler interrompt la demande et indique que le cours peut déjà être enregistré', async () => {
+  localStorage.setItem('lohni-device-id', 'import-annulation')
+  api.profile.mockReset().mockResolvedValue({ schoolClass: '3e', subjects: ['Mathématiques'] })
+  api.importQuota.mockReset().mockResolvedValue({ remaining: 2, resetsAt: '2026-11-12T00:00:00Z' })
+  api.importChapter.mockReset().mockImplementation((_input, signal: AbortSignal) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })))
+  const router = createMemoryRouter([{ path: '/import', element: <ImportCourse /> }], { initialEntries: ['/import'] })
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent?.includes('Coller du texte'))).click())
+    await act(async () => required(host.querySelector('form')).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'Annuler')).click())
+    expect(host.textContent).toContain('Annulation demandée')
+    expect(host.textContent).toContain('déjà enregistré')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
 })

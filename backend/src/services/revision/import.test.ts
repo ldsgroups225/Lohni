@@ -284,3 +284,58 @@ test('deux nouvelles tentatives ne créent pas de cartes en double', async () =>
   finally { release(); await pending }
   expect((await service.listChapters(context()))[0].cards).toHaveLength(2)
 })
+
+test('annuler pendant la génération interrompt le modèle sans enregistrer ni consommer le quota', async () => {
+  const controller = new AbortController()
+  let started!: () => void
+  const running = new Promise<void>(resolve => { started = resolve })
+  service = new RevisionService({ db, now: () => now, generateCards: async ({ signal }) => {
+    started()
+    await new Promise<void>((_resolve, reject) => signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true }))
+    return generated
+  } })
+  const pending = service.importChapter(context(), input, controller.signal)
+  await running
+  controller.abort()
+  await expect(pending).rejects.toThrow('Import annulé')
+  expect(await service.listChapters(context())).toEqual([])
+  expect((await service.getImportQuota(context())).remaining).toBe(3)
+})
+
+test('annuler une nouvelle tentative conserve le brouillon et libère le quota', async () => {
+  let fail = true
+  let started!: () => void
+  const running = new Promise<void>(resolve => { started = resolve })
+  service = new RevisionService({ db, now: () => now, generateCards: async ({ signal }) => {
+    if (fail) throw new Error('indisponible')
+    started()
+    await new Promise<void>((_resolve, reject) => signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true }))
+    return generated
+  } })
+  await expect(service.importChapter(context(), input)).rejects.toThrow()
+  const [draft] = await service.listChapters(context())
+  fail = false
+  const controller = new AbortController()
+  const pending = service.retryImport(context(), draft.id, controller.signal)
+  await running
+  controller.abort()
+  await expect(pending).rejects.toThrow('Import annulé')
+  expect(await service.listChapters(context())).toEqual([expect.objectContaining({ id: draft.id, cards: [] })])
+  expect((await service.getImportQuota(context())).remaining).toBe(3)
+})
+
+test('une génération qui se termine après annulation ne crée pas de chapitre', async () => {
+  let release!: () => void
+  let started!: () => void
+  const waiting = new Promise<void>(resolve => { release = resolve })
+  const running = new Promise<void>(resolve => { started = resolve })
+  service = new RevisionService({ db, now: () => now, generateCards: async () => { started(); await waiting; return generated } })
+  const controller = new AbortController()
+  const pending = service.importChapter(context(), input, controller.signal)
+  await running
+  controller.abort()
+  release()
+  await expect(pending).rejects.toThrow('Import annulé')
+  expect(await service.listChapters(context())).toEqual([])
+  expect((await service.getImportQuota(context())).remaining).toBe(3)
+})

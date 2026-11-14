@@ -40,9 +40,10 @@ export type RevisionProgress = {
   subjects: { subjectId: string; name: string; mastery: number | null; status: MasteryStatus }[]
 }
 export type RevisionHome = { profile: ProfileInput; nextExam: Pick<RevisionExam, 'id' | 'title' | 'date'> | null; daysUntilExam: number | null; totalCards: number; cardCount: number; reviewCards: number; newCards: number; estimatedMinutes: number; moreCards: boolean; started: boolean; state: 'ready' | 'done' | 'empty' }
-type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; series?: string; text?: string }) => Promise<GeneratedChapter>; transcribePhoto?: (file: UpFile) => Promise<string>; readTimetable?: (file: UpFile) => Promise<TimetableBlock[]> }
+type Dependencies = { db: SQLiteDatabase; now: () => Date; generateCards: (input: { title: string; subject: string; schoolClass: string; series?: string; text?: string; signal?: AbortSignal }) => Promise<GeneratedChapter>; transcribePhoto?: (file: UpFile, signal?: AbortSignal) => Promise<string>; readTimetable?: (file: UpFile) => Promise<TimetableBlock[]> }
 const validDate = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
+const checkImportCancelled = (signal?: AbortSignal) => { if (signal?.aborted) throw new RevisionError('Import annulé.') }
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0
 export const DEVICE_ID_ERROR = 'Identifiant appareil invalide.'
 export const validUUID = (value: unknown): value is string => typeof value === 'string' && /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(value)
@@ -430,7 +431,8 @@ export class RevisionService {
       return { id }
     })
   }
-  async importChapter(context: RevisionContext, input: { title: string; subject: string; text?: string; file?: UpFile }) {
+  async importChapter(context: RevisionContext, input: { title: string; subject: string; text?: string; file?: UpFile }, signal?: AbortSignal) {
+    checkImportCancelled(signal)
     const profile = await this.execute(context, () => this.requireProfile(context.deviceId))
     if (!input || !nonempty(input.title) || input.title.length > policy.maxTitleChars || !profile.subjects.includes(input.subject)) throw new RevisionError('Matière ou chapitre invalide.')
     if (input.file && input.text !== undefined) throw new RevisionError('Choisis un fichier ou du texte, pas les deux.')
@@ -447,40 +449,47 @@ export class RevisionService {
       await this.dependencies.db.run('INSERT INTO revision_imports VALUES (?, ?, ?)', [importId, context.deviceId, this.dependencies.now().toISOString().slice(0, 10)])
     })
     try {
+      checkImportCancelled(signal)
       let text = input.text
       if (input.file && mime) {
         try {
           if ((await stat(input.file.path)).size > policy.maxUploadMB * 1024 * 1024) throw new RevisionError(`Le fichier dépasse la limite de ${policy.maxUploadMB} Mo.`)
           if (mime.startsWith('image/')) {
             if (!this.dependencies.transcribePhoto) throw new RevisionError('La lecture des photos est indisponible. Colle le texte du cours ou réessaie plus tard.')
-            text = await this.dependencies.transcribePhoto({ ...input.file, mimeType: mime })
+            text = await this.dependencies.transcribePhoto({ ...input.file, mimeType: mime }, signal)
+            checkImportCancelled(signal)
             if (!nonempty(text)) throw new RevisionError('Photo illisible. Prends une photo nette et bien éclairée ou colle le texte du cours.')
           } else text = await extractText(input.file.path, mime)
         } catch (error) {
+          checkImportCancelled(signal)
           if (error instanceof RevisionError) throw error
           throw new RevisionError(mime.startsWith('image/')
             ? 'La lecture des photos est indisponible. Colle le texte du cours ou réessaie plus tard.'
             : 'Fichier illisible. Essaie un autre fichier ou colle le texte du cours.')
         }
       }
+      checkImportCancelled(signal)
       if (!nonempty(text)) throw new RevisionError('Le cours est vide. Ajoute du texte ou un fichier lisible.')
       if (text.length > policy.maxTextChars) throw new RevisionError(`Le cours est trop long. Importe un chapitre de moins de ${policy.maxTextChars.toLocaleString('fr-FR')} caractères.`)
       const saveFailedCourse = async (error: unknown): Promise<never> => {
+        checkImportCancelled(signal)
         const chapterId = await this.execute(context, async () => {
+          checkImportCancelled(signal)
           const db = this.dependencies.db
           const subject = await db.get('SELECT id FROM revision_subjects WHERE device_id = ? AND name = ?', [context.deviceId, input.subject])
           if (!subject) throw new RevisionError('Matière introuvable. Réessaie.')
           const id = randomUUID()
           await db.run('INSERT INTO revision_chapters VALUES (?, ?, ?, ?, ?, ?)', [id, context.deviceId, subject.id, input.title.trim(), text, 'import'])
           await db.run('INSERT INTO revision_import_drafts VALUES (?, ?, ?)', [id, context.deviceId, text])
+          checkImportCancelled(signal)
           return id
         })
         throw new RevisionError(error instanceof RevisionError ? error.message : 'Impossible de préparer ce cours. Réessaie dans un instant.', 'IMPORT_GENERATION_FAILED', chapterId)
       }
       let generated: GeneratedChapter
-      try { generated = await this.dependencies.generateCards({ title: input.title, subject: input.subject, text, schoolClass: profile.schoolClass, series: profile.series }) }
+      try { generated = await this.dependencies.generateCards({ title: input.title, subject: input.subject, text, schoolClass: profile.schoolClass, series: profile.series, signal }) }
       catch (error) { return await saveFailedCourse(error) }
-      try { return await this.storeChapter(context, input, generated, 'import') }
+      try { checkImportCancelled(signal); return await this.storeChapter(context, input, generated, 'import', undefined, signal) }
       catch (error) { if (error instanceof RevisionError) return await saveFailedCourse(error); throw error }
     } catch (error) {
       await this.execute(context, () => this.dependencies.db.run('DELETE FROM revision_imports WHERE id = ? AND device_id = ?', [importId, context.deviceId]))
@@ -488,7 +497,8 @@ export class RevisionService {
       throw new RevisionError('Impossible de préparer ce cours. Réessaie dans un instant.')
     }
   }
-  async retryImport(context: RevisionContext, chapterId: string) {
+  async retryImport(context: RevisionContext, chapterId: string, signal?: AbortSignal) {
+    checkImportCancelled(signal)
     if (this.retryingImports.has(chapterId)) throw new RevisionError('La préparation de ce cours est déjà en cours.')
     this.retryingImports.add(chapterId)
     const reservation = randomUUID()
@@ -506,10 +516,13 @@ export class RevisionService {
         return { chapter, profile }
       })
       try {
-        const generated = await this.dependencies.generateCards({ title: chapter.title, subject: chapter.subject, text: chapter.source, schoolClass: profile.schoolClass, series: profile.series })
-        return await this.storeChapter(context, chapter, generated, 'import', chapterId)
+        checkImportCancelled(signal)
+        const generated = await this.dependencies.generateCards({ title: chapter.title, subject: chapter.subject, text: chapter.source, schoolClass: profile.schoolClass, series: profile.series, signal })
+        checkImportCancelled(signal)
+        return await this.storeChapter(context, chapter, generated, 'import', chapterId, signal)
       } catch (error) {
         await this.execute(context, () => this.dependencies.db.run('DELETE FROM revision_imports WHERE id = ? AND device_id = ?', [reservation, context.deviceId]))
+        checkImportCancelled(signal)
         const draft = await this.execute(context, () => this.dependencies.db.get('SELECT chapter_id FROM revision_import_drafts WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId]))
         if (!draft) throw new RevisionError('Cours introuvable ou déjà préparé.')
         throw new RevisionError(error instanceof RevisionError ? error.message : 'Impossible de préparer ce cours. Réessaie dans un instant.', 'IMPORT_GENERATION_FAILED', chapterId)
@@ -524,12 +537,13 @@ export class RevisionService {
     const row = await this.dependencies.db.get('SELECT COUNT(*) AS count FROM revision_imports WHERE device_id = ? AND server_date = ?', [deviceId, date])
     return { remaining: Math.max(0, policy.dailyImports - row.count), resetsAt: new Date(Date.parse(date) + 86400000).toISOString() }
   }
-  private async storeChapter(context: RevisionContext, input: { title: string; subject: string }, generated: GeneratedChapter, origin: 'ai' | 'import', existingId?: string) {
+  private async storeChapter(context: RevisionContext, input: { title: string; subject: string }, generated: GeneratedChapter, origin: 'ai' | 'import', existingId?: string, signal?: AbortSignal) {
     if (!generated || !nonempty(generated.summary) || !Array.isArray(generated.notes) || !generated.notes.length || generated.notes.some(note =>
       !note || !nonempty(note.content) || !Array.isArray(note.cards) || !note.cards.length || note.cards.some(card => !validCard(card)))) throw new RevisionError('Génération invalide. Réessaie avec un autre chapitre.')
     if (origin === 'import' && (!generated.notes.some(note => note.cards.some(card => card.kind === 'basic'))
       || !generated.notes.some(note => note.cards.some(card => card.kind === 'mcq')))) throw new RevisionError('Génération invalide. Le cours doit contenir un résumé, des cartes et des QCM. Réessaie.')
     return this.execute(context, async () => {
+      checkImportCancelled(signal)
       const db = this.dependencies.db
       const subject = await db.get('SELECT id FROM revision_subjects WHERE device_id = ? AND name = ?', [context.deviceId, input.subject])
       const chapterId = existingId ?? randomUUID()
@@ -544,6 +558,7 @@ export class RevisionService {
         for (const card of note.cards) await db.run('INSERT INTO revision_cards(id, device_id, chapter_id, note_id, content, due) VALUES (?, ?, ?, ?, ?, ?)',
           [randomUUID(), context.deviceId, chapterId, noteId, JSON.stringify(card), this.dependencies.now().toISOString()])
       }
+      checkImportCancelled(signal)
       return { id: chapterId, title: input.title, summary: generated.summary, origin }
     })
   }

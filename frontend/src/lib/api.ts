@@ -103,7 +103,7 @@ async function req<T = unknown>(
   const { timeout = env.timeout, ...rest } = init;
   const { signal, done } = timeoutCtl(timeout);
   try {
-    const r = await fetch(url, { signal, ...rest });
+    const r = await fetch(url, { ...rest, signal: rest.signal ? AbortSignal.any([signal, rest.signal]) : signal });
     if (!r.ok) {
       const txt = await r.text().catch(() => "");
       let detail: { error?: unknown; code?: unknown; chapterId?: unknown } | undefined;
@@ -693,7 +693,7 @@ function revisionLocalDate(): string {
 
 class RevisionConnectionError extends Error {}
 
-async function revisionRequest<T>(path: string, method = 'GET', body?: unknown, localDate = revisionLocalDate(), timeout = Math.max(env.timeout, 120000)): Promise<T> {
+async function revisionRequest<T>(path: string, method = 'GET', body?: unknown, localDate = revisionLocalDate(), timeout = Math.max(env.timeout, 120000), signal?: AbortSignal): Promise<T> {
   const deviceId = revisionDeviceId();
   const multipart = body instanceof FormData;
   try {
@@ -701,11 +701,12 @@ async function revisionRequest<T>(path: string, method = 'GET', body?: unknown, 
       method,
       headers: { ...(!multipart && { 'Content-Type': 'application/json' }), 'X-Device-Id': deviceId, 'X-Local-Date': localDate },
       body: multipart ? body : body === undefined ? undefined : JSON.stringify(body),
-      timeout,
+      timeout, signal,
     });
     return result.data;
   } catch (error) {
     if (error instanceof TypeError) throw new RevisionConnectionError('Connexion impossible. Tes réponses restent enregistrées sur cet appareil.');
+    if (signal?.aborted) throw error;
     if (error instanceof Error && error.name === 'AbortError') throw new RevisionConnectionError('Le chargement prend trop de temps. Tes réponses restent enregistrées sur cet appareil.');
     throw error;
   }
@@ -862,14 +863,15 @@ async function revisionAnswer(input: Omit<RevisionAnswer, 'answerId'>): Promise<
   if (!next) throw new Error('Session introuvable. Recharge la page puis réessaie.');
   return next;
 }
-async function revisionMutation<T>(path: string, method: string, body?: unknown): Promise<T> {
+async function revisionMutation<T>(path: string, method: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   await syncRevisionAnswers();
   if (readOffline().pending.length) throw new Error('Reconnecte-toi pour envoyer tes réponses avant de modifier tes cours ou ton profil.');
+  signal?.throwIfAborted();
   const device = revisionDeviceId();
   let result: T;
-  try { result = await revisionRequest<T>(path, method, body); } catch (error) {
+  try { result = await revisionRequest<T>(path, method, body, undefined, undefined, signal); } catch (error) {
     if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
-    if (error instanceof APIError && error.chapterId) invalidateRevisionCache('/home', '/progress', '/chapters', '/plan');
+    if (signal?.aborted || (error instanceof APIError && error.chapterId)) invalidateRevisionCache('/home', '/progress', '/chapters', '/plan');
     throw error;
   }
   if (device !== cachedDevice()) throw new Error('L’appareil a changé. Recharge la page avant de continuer.');
@@ -947,13 +949,13 @@ export const revisionAPI = {
   saveTutorNote: (note: { subject: string; title: string; question: string; answer: string }) => revisionMutation<{ id: string }>('/notes', 'POST', note),
   generateChapter: (input: { subject: string; title: string }) => revisionMutation<{ id: string }>('/chapters', 'POST', input),
   importQuota: () => revisionRequest<RevisionImportQuota>('/import/quota'),
-  retryImport: (id: string) => revisionMutation<RevisionImportedChapter>(`/import/${encodeURIComponent(id)}/retry`, 'POST'),
-  importChapter: (input: { subject: string; title: string; text?: string; file?: File }) => {
-    if (!input.file) return revisionMutation<RevisionImportedChapter>('/import', 'POST', input);
+  retryImport: (id: string, signal?: AbortSignal) => revisionMutation<RevisionImportedChapter>(`/import/${encodeURIComponent(id)}/retry`, 'POST', undefined, signal),
+  importChapter: (input: { subject: string; title: string; text?: string; file?: File }, signal?: AbortSignal) => {
+    if (!input.file) return revisionMutation<RevisionImportedChapter>('/import', 'POST', input, signal);
     const form = new FormData();
     form.append('q', JSON.stringify({ title: input.title, subject: input.subject }));
     form.append('file', input.file);
-    return revisionMutation<RevisionImportedChapter>('/import', 'POST', form);
+    return revisionMutation<RevisionImportedChapter>('/import', 'POST', form, signal);
   },
   examSession: async (id: string, continuing = false) => {
     if (!navigator.onLine) throw new Error('Connecte-toi pour lancer une révision d’examen.')
