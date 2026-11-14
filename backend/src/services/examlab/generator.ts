@@ -1,6 +1,6 @@
-import { StateGraph, Annotation } from "@langchain/langgraph"
 import llm from "../../utils/llm/llm"
 import type { GenSpec, QuizLikeItem } from "./types"
+import { generateStructured, StructuredOutputError } from "../../lib/ai/structured"
 import { normalizeTopic } from "../../utils/text/normalize"
 
 export type QuizItem = {
@@ -28,16 +28,6 @@ const SYS_STRICT = (count: number) => `Nouvel essai : respecte strictement le fo
 Réponds uniquement avec un tableau JSON de ${count} objets, sans Markdown ni texte supplémentaire.
 Chaque objet doit contenir id (de 1 à ${count}), question (12 à 160 caractères), options (quatre chaînes précédées de A), B), C), D) ou 1), 2), 3), 4)), correct (de 1 à 4), hint (6 à 120 caractères) et explanation (12 à 200 caractères). Rédige en français.`
 
-function stripFences(s: string) {
-  return s.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "").trim()
-}
-function extractArray(s: string) {
-  const m = s.match(/\[[\s\S]*\]/)
-  return m ? m[0] : s
-}
-function tryParse<T = unknown>(s: string): T | null {
-  try { return JSON.parse(s) as T } catch { return null }
-}
 function nstr(x: any, min = 1, max = 240) {
   const t = String(x ?? "").replace(/\s+/g, " ").trim()
   return t.length < min ? "" : t.slice(0, max)
@@ -92,65 +82,18 @@ function validQuiz(a: any, count: number): a is QuizItem[] {
   return Array.isArray(a) && a.length === count && a.every(validItem)
 }
 
-async function ask(sys: string, user: string, _tag: string, signal?: AbortSignal) {
-  const msgs = [
-    { role: "system", content: sys },
-    { role: "user", content: user }
-  ] as const
-  const r = await llm.invoke([...msgs] as any, { signal })
-  const raw = typeof r === "string" ? r : String((r as any)?.content ?? "")
-  const txt = extractArray(stripFences(raw))
-  return tryParse<any>(txt)
+async function generateItems(sys: string, user: string, count: number, signal?: AbortSignal): Promise<QuizItem[]> {
+  const messages = (system: string) => [{ role: "system" as const, content: system }, { role: "user" as const, content: user }]
+  try {
+    return await generateStructured({
+      model: llm, messages: messages(sys), retryMessages: messages(SYS_STRICT(count)), shape: "array", signal,
+      validate: parsed => { const items = coerce(parsed, count); return validQuiz(items, count) ? items : null },
+    })
+  } catch (error) {
+    if (error instanceof StructuredOutputError) throw new Error("Les questions de l’examen n’ont pas pu être générées. Réessaie.")
+    throw error
+  }
 }
-
-type Ctx = {
-  sys: string
-  user: string
-  count: number
-  arr: any
-  norm: QuizItem[]
-}
-
-const S = Annotation.Root({
-  sys: Annotation<string>(),
-  user: Annotation<string>(),
-  count: Annotation<number>(),
-  arr: Annotation<any>(),
-  norm: Annotation<QuizItem[]>(),
-})
-
-const nGen = async (s: Ctx, config: { signal?: AbortSignal }) => {
-  const parsed = await ask(s.sys, s.user, "gen", config.signal)
-  if (parsed) return { ...s, arr: parsed }
-  return s
-}
-const nRetry = async (s: Ctx, config: { signal?: AbortSignal }) => {
-  if (Array.isArray(s.arr)) return s
-  const parsed = await ask(SYS_STRICT(s.count), s.user, "retry", config.signal)
-  if (parsed) return { ...s, arr: parsed }
-  return s
-}
-const nNormalize = async (s: Ctx) => {
-  const n = coerce(s.arr, s.count)
-  return { ...s, norm: n }
-}
-const nValidate = async (s: Ctx) => {
-  if (!validQuiz(s.norm, s.count)) throw new Error("Invalid exam JSON from model")
-  return s
-}
-
-const g = new StateGraph(S)
-g.addNode("gen", nGen)
-g.addNode("retry", nRetry)
-g.addNode("normalize", nNormalize)
-g.addNode("validate", nValidate)
-  ; (g as any).addEdge("__start__", "gen")
-  ; (g as any).addEdge("gen", "retry")
-  ; (g as any).addEdge("retry", "normalize")
-  ; (g as any).addEdge("normalize", "validate")
-  ; (g as any).addEdge("validate", "__end__")
-
-const compiled = g.compile()
 
 export async function generateSectionItems(gen: GenSpec, seed: string, signal?: AbortSignal): Promise<QuizLikeItem[]> {
   if (gen.type === "mcq") {
@@ -158,16 +101,14 @@ export async function generateSectionItems(gen: GenSpec, seed: string, signal?: 
     const sys = SYS(count, gen.style, gen.difficulty, normalizeTopic(gen.topic))
     const promptNorm = normalizeTopic(gen.prompt)
     const user = `${promptNorm}\nGraine : ${seed}\nRéponds uniquement avec le tableau JSON de ${count} objets.`
-    const s = await compiled.invoke({ sys, user, count, arr: null, norm: [] }, { signal })
-    return s.norm
+    return generateItems(sys, user, count, signal)
   }
   if (gen.type === "short") {
     const count = Math.max(1, Number(gen.count || 5))
     const sys = SYS(count, gen.style, gen.difficulty, normalizeTopic(gen.topic))
     const promptNorm = normalizeTopic(gen.prompt)
     const user = `Imagine d’abord ${count} bonnes questions à réponse courte sur le sujet, puis transforme chacune en QCM à quatre options avec une seule bonne réponse. Les réponses doivent être factuelles et concises.\n\n${promptNorm}\nGraine : ${seed}\nRéponds uniquement avec le tableau JSON de ${count} objets.`
-    const s = await compiled.invoke({ sys, user, count, arr: null, norm: [] }, { signal })
-    return s.norm
+    return generateItems(sys, user, count, signal)
   }
   return []
 }

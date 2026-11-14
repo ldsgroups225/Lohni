@@ -41,7 +41,6 @@ Utilise Markdown pour le résumé, les questions et les réponses, avec les form
 Échappe chaque antislash LaTeX dans le JSON : par exemple "a":"$\\frac{1}{2}$".
 Produis exactement ${policy.generatedBasicCards} cartes différentes. Si un cours est fourni, fonde le résumé et les cartes uniquement sur son contenu. Les cartes sont générées par IA et peuvent être supprimées par l’élève.`,
     cacheScope: 'revision',
-    reasoning: 'none',
     signal: input.signal,
     isCacheable: validLesson,
   })

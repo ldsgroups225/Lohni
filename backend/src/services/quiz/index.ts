@@ -1,6 +1,7 @@
 import { REVISION_POLICY as policy } from '../revision/policy'
 import { validQuiz } from "./validation"
 import llm from "../../utils/llm/llm"
+import { generateStructured, StructuredOutputError } from "../../lib/ai/structured"
 import { normalizeTopic } from "../../utils/text/normalize"
 
 export type QuizItem = {
@@ -61,9 +62,6 @@ explanation 12..200 chars
 Markdown is allowed inside JSON string values. Write LaTeX math in $...$ or $$...$$.
 Escape every backslash for JSON, e.g. "question":"Calculate $\\frac{1}{2}$".`
 
-function stripFences(s: string) { return s.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "").trim() }
-function extractArray(s: string) { const m = s.match(/\[[\s\S]*\]/); return m ? m[0] : s }
-function tryParse<T = unknown>(s: string): T | null { try { return JSON.parse(s) as T } catch { return null } }
 function normalizeQuiz(items: QuizItem[]): QuizItem[] {
   return items.map((item, index) => ({
     id: index + 1,
@@ -75,16 +73,7 @@ function normalizeQuiz(items: QuizItem[]): QuizItem[] {
   }))
 }
 
-async function ask(topicIn: any, sys: string, signal?: AbortSignal) {
-  const topic = normalizeTopic(topicIn)
-  const msgs = [
-    { role: "system", content: sys },
-    { role: "user", content: `Topic:\n${topic}\nReturn only the JSON array.` }
-  ] as const
-  const r = await llm.invoke([...msgs] as any, { reasoning: 'none', signal })
-  const raw = typeof r === "string" ? r : String((r as any)?.content ?? "")
-  const txt = extractArray(stripFences(raw))
-  const parsed = tryParse<any>(txt)
+function withExplanation(parsed: unknown) {
   return Array.isArray(parsed) ? parsed.map(item =>
     item && typeof item === "object" && item.explanation === undefined && typeof item.explication === "string"
       ? { ...item, explanation: item.explication } : item
@@ -93,18 +82,22 @@ async function ask(topicIn: any, sys: string, signal?: AbortSignal) {
 
 export async function handleQuiz(topic: string, language: "en" | "fr" = "en", signal?: AbortSignal): Promise<QuizItem[]> {
   const french = (prompt: string) => language === "fr" ? `${prompt.replace("plain English", "français")}\nToutes les questions, options et explications doivent être en français.` : prompt
-  signal?.throwIfAborted()
-  const parsed = await ask(topic, french(SYS), signal)
-  signal?.throwIfAborted()
-  if (validQuiz(parsed)) {
-    const normalized = normalizeQuiz(parsed)
-    if (validQuiz(normalized)) return normalized
+  const messages = (sys: string) => [
+    { role: "system" as const, content: french(sys) },
+    { role: "user" as const, content: `Topic:\n${normalizeTopic(topic)}\nReturn only the JSON array.` },
+  ]
+  try {
+    return await generateStructured({
+      model: llm, messages: messages(SYS), retryMessages: messages(SYS_STRICT), shape: "array", signal,
+      validate: parsed => {
+        const items = withExplanation(parsed)
+        if (!validQuiz(items)) return null
+        const normalized = normalizeQuiz(items)
+        return validQuiz(normalized) ? normalized : null
+      },
+    })
+  } catch (error) {
+    if (error instanceof StructuredOutputError) throw new InvalidQuizError("Invalid quiz JSON from model")
+    throw error
   }
-  const parsed2 = await ask(topic, french(SYS_STRICT), signal)
-  signal?.throwIfAborted()
-  if (validQuiz(parsed2)) {
-    const normalized = normalizeQuiz(parsed2)
-    if (validQuiz(normalized)) return normalized
-  }
-  throw new InvalidQuizError("Invalid quiz JSON from model")
 }

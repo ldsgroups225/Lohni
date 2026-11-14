@@ -3,35 +3,17 @@ import path from "node:path"
 import crypto from "node:crypto"
 import llm from "../../utils/llm/llm"
 import { execDirect } from "../../agents/runtime"
+import { generateStructured, StructuredOutputError } from "./structured"
 import { normalizeTopic } from "../../utils/text/normalize"
 
 export type AskCard = { q: string; a: string; tags?: string[] }
 export type AskPayload = { topic: string; answer: string; flashcards: AskCard[] }
-
-function toText(out: any): string {
-  if (!out) return ""
-  if (typeof out === "string") return out
-  if (typeof out?.content === "string") return out.content
-  if (Array.isArray(out?.content)) return out.content.map((p: any) => (typeof p === "string" ? p : p?.text ?? "")).join("")
-  if (Array.isArray(out?.generations) && out.generations[0]?.text) return out.generations[0].text
-  return String(out ?? "")
-}
 
 function guessTopic(q: string): string {
   const t = String(q ?? "").trim().replace(/\s+/g, " ")
   if (t.length <= 80) return t
   const m = t.match(/\babout\s+([^?.!]{3,80})/i) || t.match(/\b(on|of|for|in)\s+([^?.!]{3,80})/i)
   return (m?.[2] || m?.[1] || t.slice(0, 80)).trim()
-}
-
-function extractFirstJsonObject(s: string): string {
-  let depth = 0, start = -1
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i]
-    if (ch === "{") { if (depth === 0) start = i; depth++ }
-    else if (ch === "}") { depth--; if (depth === 0 && start !== -1) return s.slice(start, i + 1) }
-  }
-  return ""
 }
 
 function tryParse<T = unknown>(s: string): T | null {
@@ -297,7 +279,6 @@ type AskWithContextOptions = {
   systemPrompt?: string
   history?: HistoryMessage[]
   cacheScope?: string
-  reasoning?: 'none'
   isCacheable?: (payload: AskPayload) => boolean
   signal?: AbortSignal
 }
@@ -330,22 +311,26 @@ export async function askWithContext(opts: AskWithContextOptions): Promise<AskPa
   })
 
   opts.signal?.throwIfAborted()
-  const res = opts.reasoning
-    ? await llm.call(messages as any, { reasoning: opts.reasoning, signal: opts.signal })
-    : await llm.call(messages as any, { signal: opts.signal })
-  opts.signal?.throwIfAborted()
-  const draft = toText(res).trim()
-  const jsonStr = extractFirstJsonObject(draft) || draft
-  const parsed = tryParse<any>(jsonStr)
-
-  const out: AskPayload =
-    parsed && typeof parsed === "object"
-      ? {
-        topic: typeof parsed.topic === "string" ? parsed.topic : topic,
-        answer: typeof parsed.answer === "string" ? parsed.answer : "",
-        flashcards: Array.isArray(parsed.flashcards) ? (parsed.flashcards as AskCard[]) : [],
-      }
-      : salvageTruncatedJson(draft, topic) ?? { topic, answer: draft, flashcards: [] }
+  const fromObject = (parsed: unknown): AskPayload | null => {
+    const o = parsed as any
+    return o && typeof o === "object" ? {
+      topic: typeof o.topic === "string" ? o.topic : topic,
+      answer: typeof o.answer === "string" ? o.answer : "",
+      flashcards: Array.isArray(o.flashcards) ? (o.flashcards as AskCard[]) : [],
+    } : null
+  }
+  let out: AskPayload
+  try {
+    out = await generateStructured({
+      model: llm, via: "call", messages: messages as any, shape: "object", attempts: 1, signal: opts.signal,
+      validate: fromObject,
+      salvage: draft => salvageTruncatedJson(draft, topic),
+    })
+  } catch (error) {
+    // Not JSON at all: show the model's text as the answer rather than failing the chat.
+    if (!(error instanceof StructuredOutputError)) throw error
+    out = { topic, answer: error.raw, flashcards: [] }
+  }
 
   if (!opts.isCacheable || opts.isCacheable(out)) writeCache(ck, out)
   return out

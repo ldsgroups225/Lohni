@@ -1,5 +1,6 @@
 import llm from "../../utils/llm/llm";
 import db from "../../utils/database/keyv";
+import { toText } from "../../lib/ai/structured";
 
 export type DebateMessage = {
     role: "user" | "assistant";
@@ -32,19 +33,6 @@ const DEBATE_LIST_KEY = "debate:sessions";
 
 async function getDebatesList(): Promise<{ id: string }[]> {
     return (await db.get(DEBATE_LIST_KEY)) || [];
-}
-
-function toText(out: any): string {
-    if (!out) return "";
-    if (typeof out === "string") return out;
-    if (typeof out?.content === "string") return out.content;
-    if (Array.isArray(out?.content))
-        return out.content
-            .map((p: any) => (typeof p === "string" ? p : p?.text ?? ""))
-            .join("");
-    if (Array.isArray(out?.generations) && out.generations[0]?.text)
-        return out.generations[0].text;
-    return String(out ?? "");
 }
 
 export async function createDebateSession(topic: string, position: "for" | "against"): Promise<DebateSession> {

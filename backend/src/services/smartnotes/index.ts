@@ -3,6 +3,7 @@ import path from "node:path"
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
 import fontkit from "@pdf-lib/fontkit"
 import llm from "../../utils/llm/llm"
+import { generateStructured, StructuredOutputError } from "../../lib/ai/structured"
 import { normalizeTopic } from "../../utils/text/normalize"
 
 export type SmartNotesOptions = { topic?: any; notes?: string; filePath?: string }
@@ -44,20 +45,6 @@ async function readInput(opts: SmartNotesOptions) {
   throw new Error("No input")
 }
 
-function extractFirstJsonObject(s: string) {
-  let depth = 0, start = -1
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i]
-    if (ch === "{") { if (depth === 0) start = i; depth++ }
-    else if (ch === "}") { depth--; if (depth === 0 && start !== -1) return s.slice(start, i + 1) }
-  }
-  return ""
-}
-
-function safeParse<T = any>(raw: string): T | null {
-  try { return JSON.parse(raw) as T } catch { return null }
-}
-
 async function generateNotes(text: string) {
   const prompt = `
 ROLE
@@ -86,19 +73,17 @@ RULES
 - For each question, the corresponding answer must be in the same index in answers.
 `.trim()
 
-  const r1 = await llm.invoke([{ role: "user", content: `${prompt}\n\nINPUT:\n${text}` }] as any)
-  const raw1 = typeof r1 === "string" ? r1 : String((r1 as any)?.content ?? "")
-  const parsed1 = safeParse<any>(extractFirstJsonObject(raw1) || raw1)
-  if (parsed1 && typeof parsed1 === "object") return parsed1
-
   const retrySys = `Return only a JSON object matching the schema. No markdown. No extra text.`
-  const r2 = await llm.invoke([
-    { role: "system", content: retrySys },
-    { role: "user", content: `${prompt}\n\nINPUT:\n${text}` }
-  ] as any)
-  const raw2 = typeof r2 === "string" ? r2 : String((r2 as any)?.content ?? "")
-  const parsed2 = safeParse<any>(extractFirstJsonObject(raw2) || raw2)
-  if (parsed2 && typeof parsed2 === "object") return parsed2
+  try {
+    return await generateStructured<any>({
+      model: llm, shape: "object",
+      messages: [{ role: "user", content: `${prompt}\n\nINPUT:\n${text}` }],
+      retryMessages: [{ role: "system", content: retrySys }, { role: "user", content: `${prompt}\n\nINPUT:\n${text}` }],
+      validate: parsed => (parsed && typeof parsed === "object" ? parsed : null),
+    })
+  } catch (error) {
+    if (!(error instanceof StructuredOutputError)) throw error
+  }
 
   const fallback = {
     title: "Notes",
