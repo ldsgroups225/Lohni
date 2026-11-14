@@ -279,6 +279,7 @@ type AskWithContextOptions = {
   systemPrompt?: string
   history?: HistoryMessage[]
   cacheScope?: string
+  reasoning?: 'none'
   isCacheable?: (payload: AskPayload) => boolean
   signal?: AbortSignal
 }
@@ -322,7 +323,7 @@ export async function askWithContext(opts: AskWithContextOptions): Promise<AskPa
   let out: AskPayload
   try {
     out = await generateStructured({
-      model: llm, via: "call", messages: messages as any, shape: "object", attempts: 1, signal: opts.signal,
+      model: llm, via: "call", messages: messages as any, shape: "object", attempts: 1, reasoning: opts.reasoning ?? false, signal: opts.signal,
       validate: fromObject,
       salvage: draft => salvageTruncatedJson(draft, topic),
     })

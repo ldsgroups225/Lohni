@@ -46,6 +46,8 @@ type StructuredOptions<T> = {
   /** Last chance on a reply that does not parse (e.g. cut by the token limit). */
   salvage?: (raw: string) => T | null
   attempts?: number
+  /** 'none' by default; false leaves the model's own reasoning on (tutor, chat). */
+  reasoning?: 'none' | false
   signal?: AbortSignal
 }
 
@@ -55,7 +57,7 @@ export async function generateStructured<T>(opts: StructuredOptions<T>): Promise
   for (let attempt = 0; attempt < attempts; attempt++) {
     opts.signal?.throwIfAborted()
     const messages = attempt > 0 && opts.retryMessages ? opts.retryMessages : opts.messages
-    const reply = await opts.model[opts.via ?? 'invoke'](messages, { reasoning: 'none', signal: opts.signal })
+    const reply = await opts.model[opts.via ?? 'invoke'](messages, { ...(opts.reasoning === false ? {} : { reasoning: 'none' as const }), signal: opts.signal })
     opts.signal?.throwIfAborted()
     raw = toText(reply).trim()
     const parsed = parseModelJson(raw, opts.shape)

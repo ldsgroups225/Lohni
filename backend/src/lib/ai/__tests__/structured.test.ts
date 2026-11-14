@@ -25,6 +25,12 @@ describe('generateStructured', () => {
     expect(calls[0].options.reasoning).toBe('none')
   })
 
+  test('reasoning: false ne transmet pas reasoning au modèle', async () => {
+    const { model, calls } = scripted('[1]')
+    await generateStructured({ model, messages, shape: 'array', validate: numbers, reasoning: false })
+    expect('reasoning' in calls[0].options).toBe(false)
+  })
+
   test('retire les balises de code et le texte autour', async () => {
     const { model } = scripted('Voici :\n```json\n[4,5]\n```')
     expect(await generateStructured({ model, messages, shape: 'array', validate: numbers })).toEqual([4, 5])
