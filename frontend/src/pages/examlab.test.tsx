@@ -5,13 +5,15 @@ import { createRoot } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 
-const stream = vi.hoisted(() => ({ event: null as unknown }))
+const stream = vi.hoisted(() => ({ event: null as unknown, pending: false, cancel: vi.fn(), close: vi.fn() }))
 vi.mock('../lib/api', () => ({
+  revisionAPI: { chapters: async () => [] },
+  cancelExam: stream.cancel,
   getExams: async () => ({ exams: [{ id: 'test', name: 'Examen test', sections: ['a'] }] }),
   startExam: async () => ({ runId: '1' }),
   connectExamStream: (_id: string, onEvent: (event: unknown) => void) => {
-    queueMicrotask(() => onEvent(stream.event ?? { type: 'exam', payload: [{ id: 1, question: 'Question ?', options: ['Oui', 'Non'], correct: 1, hint: 'Indice', explanation: 'Explication' }] }))
-    return { close: () => {} }
+    if (!stream.pending) queueMicrotask(() => onEvent(stream.event ?? { type: 'exam', payload: [{ id: 1, question: 'Question ?', options: ['Oui', 'Non'], correct: 1, hint: 'Indice', explanation: 'Explication' }] }))
+    return { close: stream.close }
   },
 }))
 vi.mock('../components/Chat/MarkdownView', () => ({ default: ({ md }: { md: string }) => <span>{md}</span> }))
@@ -33,6 +35,8 @@ test('un examen affiche la correction avant le résultat et permet de revoir sa 
   try {
     await act(async () => { root.render(<MemoryRouter><ExamLabs /></MemoryRouter>) })
     await click('Examen test')
+    expect(host.textContent).toContain('Ton examen est prêt')
+    await click('Commencer')
     expect(host.textContent).toContain('Examen test')
     await act(async () => required([...host.querySelectorAll<HTMLButtonElement>('#answerOptions button')].find(button => button.textContent?.includes('Non'))).click())
     expect(host.textContent).toContain('Réponse incorrecte')
@@ -81,4 +85,21 @@ test('une panne de connexion invite à réessayer sans afficher une erreur techn
     act(() => root.unmount())
     host.remove()
   }
+})
+
+
+test('annuler arrête la préparation et retourne aux examens', async () => {
+  stream.pending = true
+  stream.cancel.mockResolvedValue({})
+  const host = document.createElement('div')
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<MemoryRouter><ExamLabs /></MemoryRouter>))
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent?.includes('Examen test'))).click())
+    expect(host.textContent).toContain('Préparation de ton examen')
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'Annuler')).click())
+    expect(stream.cancel).toHaveBeenCalledWith('1')
+    expect(stream.close).toHaveBeenCalled()
+    expect(host.textContent).toContain('Commencer cet examen')
+  } finally { stream.pending = false; act(() => root.unmount()) }
 })

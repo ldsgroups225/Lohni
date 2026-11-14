@@ -28,7 +28,7 @@ const nLoad = async (s: Ctx) => {
   return { ...s, spec }
 }
 
-const nGen = async (s: Ctx) => {
+const nGen = async (s: Ctx, config: { signal?: AbortSignal }) => {
   const spec = s.spec
   if (!spec) throw new Error("exam not found")
   log("nGen:start", { sections: spec.sections.length })
@@ -37,7 +37,7 @@ const nGen = async (s: Ctx) => {
     const t0 = Date.now()
     const seed = `${spec.id}:${sec.id}:${t0}`
     log("nGen:sec:start", { sectionId: sec.id, genType: (sec as any).gen?.type })
-    const items: QuizLikeItem[] = await generateSectionItems(sec.gen, seed)
+    const items: QuizLikeItem[] = await generateSectionItems(sec.gen, seed, config.signal)
     log("nGen:sec:ok", { sectionId: sec.id, items: items.length, ms: Date.now() - t0 })
     sections.push({ id: sec.id, title: sec.title, durationSec: sec.durationSec, items })
   }
@@ -75,9 +75,9 @@ edge("validate", "__end__")
 
 const compiled = g.compile()
 
-export async function handleExam(examId: string): Promise<ExamPayload> {
+export async function handleExam(examId: string, signal?: AbortSignal): Promise<ExamPayload> {
   log("handleExam:invoke", { examId })
-  const s = await compiled.invoke({ examId, spec: null, payload: null })
+  const s = await compiled.invoke({ examId, spec: null, payload: null }, { signal })
   log("handleExam:done", { sections: s.payload?.sections?.length })
   return s.payload as ExamPayload
 }

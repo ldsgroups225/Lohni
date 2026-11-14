@@ -12,10 +12,10 @@ export const makeLLM: MkLLM = (cfg: any) => {
     temperature: cfg.temp ?? 0.7,
     maxTokens: cfg.max_tokens,
   }))
-  const invoke = async (ms: Msg[]) => {
+  const invoke = async (ms: Msg[], options?: { signal?: AbortSignal }) => {
     let lastError: unknown
     for (const chat of chats) {
-      try { return await chat.invoke(ms) } catch (error) { lastError = error }
+      try { return await chat.invoke(ms, options) } catch (error) { if (options?.signal?.aborted) throw error; lastError = error }
     }
     throw lastError
   }

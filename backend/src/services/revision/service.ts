@@ -12,7 +12,7 @@ import { buildPlan, type RevisionExam, type RevisionPlan } from './plan'
 export type { RevisionExam } from './plan'
 
 export class RevisionError extends Error {
-  constructor(message: string, readonly code?: string) { super(message) }
+  constructor(message: string, readonly code?: string, readonly chapterId?: string) { super(message) }
 }
 
 export type RevisionContext = { deviceId: string; localDate: string }
@@ -55,6 +55,7 @@ const journalXP = (rows: { knew: number; session_complete: number }[]) => rows.r
 
 export class RevisionService {
   private ready: Promise<void>
+  private retryingImports = new Set<string>()
   private scheduler = fsrs({ request_retention: policy.retention, enable_fuzz: false })
   constructor(private dependencies: Dependencies) {
     this.ready = dependencies.db.transaction(async () => {
@@ -62,6 +63,7 @@ export class RevisionService {
         `CREATE TABLE IF NOT EXISTS revision_generations (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, server_date TEXT NOT NULL)`,
         `CREATE INDEX IF NOT EXISTS revision_generations_daily ON revision_generations(device_id, server_date)`,
         `CREATE TABLE IF NOT EXISTS revision_imports (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, server_date TEXT NOT NULL)`,
+        `CREATE TABLE IF NOT EXISTS revision_import_drafts (chapter_id TEXT PRIMARY KEY, device_id TEXT NOT NULL, source TEXT NOT NULL)`,
         `CREATE INDEX IF NOT EXISTS revision_imports_daily ON revision_imports(device_id, server_date)`,
         `CREATE TABLE IF NOT EXISTS revision_profiles (device_id TEXT PRIMARY KEY, school_class TEXT NOT NULL, series TEXT, exam_date TEXT, xp INTEGER NOT NULL DEFAULT 0)`,
         `CREATE TABLE IF NOT EXISTS revision_exams (id TEXT PRIMARY KEY, device_id TEXT NOT NULL, title TEXT NOT NULL, date TEXT NOT NULL, subjects TEXT NOT NULL, chapter_ids TEXT NOT NULL)`,
@@ -463,13 +465,56 @@ export class RevisionService {
       }
       if (!nonempty(text)) throw new RevisionError('Le cours est vide. Ajoute du texte ou un fichier lisible.')
       if (text.length > policy.maxTextChars) throw new RevisionError(`Le cours est trop long. Importe un chapitre de moins de ${policy.maxTextChars.toLocaleString('fr-FR')} caractères.`)
-      const generated = await this.dependencies.generateCards({ title: input.title, subject: input.subject, text, schoolClass: profile.schoolClass, series: profile.series })
-      return await this.storeChapter(context, input, generated, 'import')
+      const saveFailedCourse = async (error: unknown): Promise<never> => {
+        const chapterId = await this.execute(context, async () => {
+          const db = this.dependencies.db
+          const subject = await db.get('SELECT id FROM revision_subjects WHERE device_id = ? AND name = ?', [context.deviceId, input.subject])
+          if (!subject) throw new RevisionError('Matière introuvable. Réessaie.')
+          const id = randomUUID()
+          await db.run('INSERT INTO revision_chapters VALUES (?, ?, ?, ?, ?, ?)', [id, context.deviceId, subject.id, input.title.trim(), text, 'import'])
+          await db.run('INSERT INTO revision_import_drafts VALUES (?, ?, ?)', [id, context.deviceId, text])
+          return id
+        })
+        throw new RevisionError(error instanceof RevisionError ? error.message : 'Impossible de préparer ce cours. Réessaie dans un instant.', 'IMPORT_GENERATION_FAILED', chapterId)
+      }
+      let generated: GeneratedChapter
+      try { generated = await this.dependencies.generateCards({ title: input.title, subject: input.subject, text, schoolClass: profile.schoolClass, series: profile.series }) }
+      catch (error) { return await saveFailedCourse(error) }
+      try { return await this.storeChapter(context, input, generated, 'import') }
+      catch (error) { if (error instanceof RevisionError) return await saveFailedCourse(error); throw error }
     } catch (error) {
       await this.execute(context, () => this.dependencies.db.run('DELETE FROM revision_imports WHERE id = ? AND device_id = ?', [importId, context.deviceId]))
       if (error instanceof RevisionError) throw error
       throw new RevisionError('Impossible de préparer ce cours. Réessaie dans un instant.')
     }
+  }
+  async retryImport(context: RevisionContext, chapterId: string) {
+    if (this.retryingImports.has(chapterId)) throw new RevisionError('La préparation de ce cours est déjà en cours.')
+    this.retryingImports.add(chapterId)
+    const reservation = randomUUID()
+    try {
+      const { chapter, profile } = await this.execute(context, async () => {
+        const db = this.dependencies.db
+        const profile = await this.requireProfile(context.deviceId)
+        const chapter = await db.get(`SELECT c.title, s.name AS subject, d.source FROM revision_import_drafts d
+          JOIN revision_chapters c ON c.id = d.chapter_id AND c.device_id = d.device_id
+          JOIN revision_subjects s ON s.id = c.subject_id AND s.device_id = c.device_id
+          WHERE d.chapter_id = ? AND d.device_id = ?`, [chapterId, context.deviceId])
+        if (!chapter) throw new RevisionError('Cours introuvable ou déjà préparé.')
+        if (!(await this.readImportQuota(context.deviceId)).remaining) throw new RevisionError(`Tu as atteint tes ${policy.dailyImports} imports du jour.`)
+        await db.run('INSERT INTO revision_imports VALUES (?, ?, ?)', [reservation, context.deviceId, this.dependencies.now().toISOString().slice(0, 10)])
+        return { chapter, profile }
+      })
+      try {
+        const generated = await this.dependencies.generateCards({ title: chapter.title, subject: chapter.subject, text: chapter.source, schoolClass: profile.schoolClass, series: profile.series })
+        return await this.storeChapter(context, chapter, generated, 'import', chapterId)
+      } catch (error) {
+        await this.execute(context, () => this.dependencies.db.run('DELETE FROM revision_imports WHERE id = ? AND device_id = ?', [reservation, context.deviceId]))
+        const draft = await this.execute(context, () => this.dependencies.db.get('SELECT chapter_id FROM revision_import_drafts WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId]))
+        if (!draft) throw new RevisionError('Cours introuvable ou déjà préparé.')
+        throw new RevisionError(error instanceof RevisionError ? error.message : 'Impossible de préparer ce cours. Réessaie dans un instant.', 'IMPORT_GENERATION_FAILED', chapterId)
+      }
+    } finally { this.retryingImports.delete(chapterId) }
   }
   async getImportQuota(context: RevisionContext) {
     return this.execute(context, () => this.readImportQuota(context.deviceId))
@@ -479,7 +524,7 @@ export class RevisionService {
     const row = await this.dependencies.db.get('SELECT COUNT(*) AS count FROM revision_imports WHERE device_id = ? AND server_date = ?', [deviceId, date])
     return { remaining: Math.max(0, policy.dailyImports - row.count), resetsAt: new Date(Date.parse(date) + 86400000).toISOString() }
   }
-  private async storeChapter(context: RevisionContext, input: { title: string; subject: string }, generated: GeneratedChapter, origin: 'ai' | 'import') {
+  private async storeChapter(context: RevisionContext, input: { title: string; subject: string }, generated: GeneratedChapter, origin: 'ai' | 'import', existingId?: string) {
     if (!generated || !nonempty(generated.summary) || !Array.isArray(generated.notes) || !generated.notes.length || generated.notes.some(note =>
       !note || !nonempty(note.content) || !Array.isArray(note.cards) || !note.cards.length || note.cards.some(card => !validCard(card)))) throw new RevisionError('Génération invalide. Réessaie avec un autre chapitre.')
     if (origin === 'import' && (!generated.notes.some(note => note.cards.some(card => card.kind === 'basic'))
@@ -487,8 +532,12 @@ export class RevisionService {
     return this.execute(context, async () => {
       const db = this.dependencies.db
       const subject = await db.get('SELECT id FROM revision_subjects WHERE device_id = ? AND name = ?', [context.deviceId, input.subject])
-      const chapterId = randomUUID()
-      await db.run('INSERT INTO revision_chapters VALUES (?, ?, ?, ?, ?, ?)', [chapterId, context.deviceId, subject.id, input.title.trim(), generated.summary, origin])
+      const chapterId = existingId ?? randomUUID()
+      if (existingId) {
+        const draft = await db.run('DELETE FROM revision_import_drafts WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId])
+        if (!draft.changes) throw new RevisionError('Cours introuvable ou déjà préparé.')
+        await db.run('UPDATE revision_chapters SET summary = ? WHERE id = ? AND device_id = ?', [generated.summary, chapterId, context.deviceId])
+      } else await db.run('INSERT INTO revision_chapters VALUES (?, ?, ?, ?, ?, ?)', [chapterId, context.deviceId, subject.id, input.title.trim(), generated.summary, origin])
       for (const note of generated.notes) {
         const noteId = randomUUID()
         await db.run('INSERT INTO revision_notes VALUES (?, ?, ?, ?)', [noteId, context.deviceId, chapterId, note.content])
@@ -701,6 +750,7 @@ export class RevisionService {
       if (!deleted.changes) throw new RevisionError('Chapitre introuvable.')
       await db.run('DELETE FROM revision_cards WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId])
       await db.run('DELETE FROM revision_notes WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId])
+      await db.run('DELETE FROM revision_import_drafts WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId])
       await this.refreshSessions(context.deviceId)
     })
   }
