@@ -338,6 +338,8 @@ export async function askWithContext(opts: AskWithContextOptions): Promise<AskPa
     if (!(error instanceof StructuredOutputError) || opts.validate) throw error
     out = { topic, answer: error.raw, flashcards: [] }
   }
+  // Some models wrap the whole Markdown answer in a ```markdown fence, which would render as a code block.
+  out.answer = out.answer.replace(/^\s*```(?:markdown|md)\s*\n([\s\S]*?)\n```\s*$/i, '$1')
 
   if (!opts.isCacheable || opts.isCacheable(out)) writeCache(ck, out)
   return out
