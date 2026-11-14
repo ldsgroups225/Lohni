@@ -799,15 +799,24 @@ export class RevisionService {
       await this.refreshSessions(context.deviceId)
     })
   }
+  private async removeChapter(deviceId: string, chapterId: string): Promise<void> {
+    const db = this.dependencies.db
+    const deleted = await db.run('DELETE FROM revision_chapters WHERE id = ? AND device_id = ?', [chapterId, deviceId])
+    if (!deleted.changes) throw new RevisionError('Chapitre introuvable.')
+    await db.run('DELETE FROM revision_cards WHERE chapter_id = ? AND device_id = ?', [chapterId, deviceId])
+    await db.run('DELETE FROM revision_notes WHERE chapter_id = ? AND device_id = ?', [chapterId, deviceId])
+    await db.run('DELETE FROM revision_import_drafts WHERE chapter_id = ? AND device_id = ?', [chapterId, deviceId])
+    await this.refreshSessions(deviceId)
+  }
   async deleteChapter(context: RevisionContext, chapterId: string): Promise<void> {
+    return this.execute(context, () => this.removeChapter(context.deviceId, chapterId))
+  }
+  // « Essayer avec un autre fichier » : le cours gardé sans cartes (brouillon) est retiré ; un cours préparé ne l’est jamais.
+  async discardFailedImport(context: RevisionContext, chapterId: string): Promise<void> {
     return this.execute(context, async () => {
-      const db = this.dependencies.db
-      const deleted = await db.run('DELETE FROM revision_chapters WHERE id = ? AND device_id = ?', [chapterId, context.deviceId])
-      if (!deleted.changes) throw new RevisionError('Chapitre introuvable.')
-      await db.run('DELETE FROM revision_cards WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId])
-      await db.run('DELETE FROM revision_notes WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId])
-      await db.run('DELETE FROM revision_import_drafts WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId])
-      await this.refreshSessions(context.deviceId)
+      const draft = await this.dependencies.db.get('SELECT chapter_id FROM revision_import_drafts WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId])
+      if (!draft) throw new RevisionError('Cours introuvable ou déjà préparé.')
+      await this.removeChapter(context.deviceId, chapterId)
     })
   }
 }

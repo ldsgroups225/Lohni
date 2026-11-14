@@ -344,3 +344,19 @@ test('une génération qui se termine après annulation ne crée pas de chapitre
   expect(await service.listChapters(context())).toEqual([])
   expect((await service.getImportQuota(context())).remaining).toBe(3)
 })
+
+test('abandonner un import en échec supprime le chapitre vide, sans toucher un cours préparé ni un autre appareil', async () => {
+  let fail = true
+  service = new RevisionService({ db, now: () => now, generateCards: async () => { if (fail) throw new Error('IA en panne'); return generated } })
+  const failure = await service.importChapter(context(), input).catch(error => error)
+  expect(failure.chapterId).toBeTruthy()
+  expect((await service.listChapters(context())).map(chapter => chapter.id)).toEqual([failure.chapterId])
+  await expect(service.discardFailedImport({ ...context(), deviceId: randomUUID() }, failure.chapterId)).rejects.toThrow('Cours introuvable')
+  await service.discardFailedImport(context(), failure.chapterId)
+  expect(await service.listChapters(context())).toEqual([])
+  await expect(service.retryImport(context(), failure.chapterId)).rejects.toThrow('Cours introuvable')
+  fail = false
+  const prepared = await service.importChapter(context(), input)
+  await expect(service.discardFailedImport(context(), prepared.id)).rejects.toThrow('Cours introuvable ou déjà préparé')
+  expect(await service.listChapters(context())).toHaveLength(1)
+})

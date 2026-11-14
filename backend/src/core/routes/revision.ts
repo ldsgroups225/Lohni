@@ -61,6 +61,7 @@ export function revisionRoutes(app: any) {
   route('post', '/revision/chapters', (context, req) => revision.generateChapter(context, req.body))
   route('get', '/revision/chapters', context => revision.listChapters(context))
   route('get', '/revision/import/quota', context => revision.getImportQuota(context))
+  route('delete', '/revision/import/:id', (context, req) => revision.discardFailedImport(context, req.params.id))
   importRoute('/revision/import/:id/retry', (context, req, signal) => revision.retryImport(context, req.params.id, signal))
   importRoute('/revision/import', async (context, req, signal) => {
     if (!req.headers['content-type']?.includes('multipart/form-data')) {
