@@ -1024,3 +1024,15 @@ test('réviser un chapitre refuse un chapitre inconnu, vide ou d’un autre appa
   await expect(service.getChapterSession(context(), randomUUID())).rejects.toThrow('Chapitre introuvable')
   await expect(service.getChapterSession({ ...context(), deviceId: randomUUID() }, chapter.id)).rejects.toBeInstanceOf(RevisionError)
 })
+
+test('une carte revue tard le soir par un élève en avance sur UTC tombe sur son jour local', async () => {
+  now = new Date('2026-11-09T22:30:00Z') // 01 h 30 le 10 à UTC+3
+  const local = () => ({ deviceId, localDate: '2026-11-10' })
+  generated = cards(1)
+  await service.saveProfile(local(), { schoolClass: '3e', subjects: ['Mathématiques'] })
+  await service.generateChapter(local(), { subject: 'Mathématiques', title: 'Fractions' })
+  let session = await service.getSession(local())
+  session = await service.answer(local(), { answerId: randomUUID(), sessionId: session.id, cardId: session.cards[0].id, position: 0, knew: true, durationMs: 1000 })
+  const [card] = (await service.listChapters(local()))[0].cards
+  expect(card.due.slice(0, 10)).toBe('2026-11-10') // pas la veille UTC
+})

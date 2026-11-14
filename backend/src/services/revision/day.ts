@@ -14,3 +14,8 @@ export const mondayOf = (day: string) => addDays(day, -((weekday(day) + 6) % 7))
 
 // Révision express: the exam is tomorrow.
 export const isExpress = (examDate: string, today: string) => daysBetween(today, examDate) === 1
+
+// A card's due instant, moved by the gap between the student's day and the server's UTC day when it was scheduled,
+// so its first ten characters name the student's local day. FSRS intervals keep the time of day, so only the day boundary moves.
+export const dueOnLocalDay = (due: Date, now: Date, today: string) =>
+  new Date(due.getTime() + daysBetween(now.toISOString().slice(0, 10), today) * DAY_MS).toISOString()

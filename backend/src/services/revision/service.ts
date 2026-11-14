@@ -5,7 +5,7 @@ import { extractText } from '../../lib/parser/extract'
 import type { UpFile } from '../../lib/parser/upload'
 import type { SQLiteDatabase } from '../../utils/database/sqlite'
 import { REVISION_POLICY as policy } from './policy'
-import { addDays, daysBetween, isExpress, mondayOf, weekday } from './day'
+import { addDays, daysBetween, dueOnLocalDay, isExpress, mondayOf, weekday } from './day'
 import { advanceSession, answerXP } from './session'
 import { createEmptyCard, fsrs, Rating } from 'ts-fsrs'
 import { validItem } from '../quiz/validation'
@@ -763,8 +763,9 @@ export class RevisionService {
       const other = await db.get("SELECT j.scheduling FROM revision_journal j JOIN revision_sessions s ON s.id = j.session_id WHERE j.device_id = ? AND j.local_date = ? AND j.card_id = ? AND j.session_id != ? AND s.kind != 'express' LIMIT 1", [context.deviceId, context.localDate, card.id, session.id])
       const scheduled = other ? JSON.parse(other.scheduling) : this.scheduler.next(row.scheduling ? JSON.parse(row.scheduling) : createEmptyCard(now), now, knew ? Rating.Good : Rating.Again)
       if (saved.kind !== 'express' && !other) {
-        await db.run('UPDATE revision_cards SET scheduling = ?, due = ?, reviews = reviews + 1 WHERE id = ? AND device_id = ?', [JSON.stringify(scheduled.card), scheduled.card.due.toISOString(), card.id, context.deviceId])
-        card.due = scheduled.card.due.toISOString()
+        const due = dueOnLocalDay(new Date(scheduled.card.due), now, context.localDate)
+        await db.run('UPDATE revision_cards SET scheduling = ?, due = ?, reviews = reviews + 1 WHERE id = ? AND device_id = ?', [JSON.stringify(scheduled.card), due, card.id, context.deviceId])
+        card.due = due
         card.reviews = row.reviews + 1
       } else if (saved.kind === 'express' && !other) scheduled.card = JSON.parse(row.scheduling)
       advanceSession(session, knew, durationMs)
