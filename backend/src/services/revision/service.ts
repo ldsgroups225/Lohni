@@ -54,6 +54,9 @@ const validCard = (card: GeneratedCard) => card && nonempty(card.question) && no
 const journalXP = (rows: { knew: number; session_complete: number }[]) => rows.reduce((total, row) =>
   total + answerXP(Boolean(row.knew), Boolean(row.session_complete)), 0)
 
+const importFailure = (error: unknown, chapterId: string) =>
+  new RevisionError(error instanceof RevisionError ? error.message : 'Impossible de préparer ce cours. Réessaie dans un instant.', 'IMPORT_GENERATION_FAILED', chapterId)
+
 export class RevisionService {
   private ready: Promise<void>
   private retryingImports = new Set<string>()
@@ -484,7 +487,7 @@ export class RevisionService {
           checkImportCancelled(signal)
           return id
         })
-        throw new RevisionError(error instanceof RevisionError ? error.message : 'Impossible de préparer ce cours. Réessaie dans un instant.', 'IMPORT_GENERATION_FAILED', chapterId)
+        throw importFailure(error, chapterId)
       }
       let generated: GeneratedChapter
       try { generated = await this.dependencies.generateCards({ title: input.title, subject: input.subject, text, schoolClass: profile.schoolClass, series: profile.series, signal }) }
@@ -525,7 +528,7 @@ export class RevisionService {
         checkImportCancelled(signal)
         const draft = await this.execute(context, () => this.dependencies.db.get('SELECT chapter_id FROM revision_import_drafts WHERE chapter_id = ? AND device_id = ?', [chapterId, context.deviceId]))
         if (!draft) throw new RevisionError('Cours introuvable ou déjà préparé.')
-        throw new RevisionError(error instanceof RevisionError ? error.message : 'Impossible de préparer ce cours. Réessaie dans un instant.', 'IMPORT_GENERATION_FAILED', chapterId)
+        throw importFailure(error, chapterId)
       }
     } finally { this.retryingImports.delete(chapterId) }
   }
