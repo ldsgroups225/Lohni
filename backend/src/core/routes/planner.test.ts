@@ -16,6 +16,8 @@ vi.mock('../../services/planner/ai', async importOriginal => ({
 
 const ask = vi.hoisted(() => vi.fn())
 vi.mock('../../lib/ai/ask', () => ({ handleAsk: ask }))
+const invoke = vi.hoisted(() => vi.fn())
+vi.mock('../../utils/llm/llm', () => ({ default: { invoke } }))
 
 type Handler = (req: any, res: any) => Promise<void>
 let directory: string
@@ -101,11 +103,11 @@ test('un échec d’ajout renvoie un message français', async () => {
 test('une fiche demandée est générée avec le bon type et renvoyée dans la réponse', async () => {
   const id = (await call('post', '/tasks/ingest', a, { text: 'Maths' })).body.task.id
   const mine = connect(a)
-  ask.mockResolvedValueOnce({ answer: '[{"front":"2+2","back":"4"}]' })
+  invoke.mockResolvedValueOnce('[{"front":"2+2","back":"4"}]')
   const r = await call('post', '/tasks/:id/materials', a, { type: 'flashcards' }, { id })
   expect(r.status).toBe(200)
   expect(r.body.materials).toEqual([{ front: '2+2', back: '4' }])
-  expect(ask.mock.calls[ask.mock.calls.length - 1]![0]).toMatch(/flashcards/)
+  expect(JSON.stringify(invoke.mock.calls[0])).toMatch(/cartes de révision/)
   expect(mine.sent.some(m => m.includes('materials'))).toBe(false)
 })
 
@@ -128,5 +130,18 @@ test('un échec du générateur renvoie un message français sans détail intern
   expect(r.status).toBe(500)
   expect(r.body.error).toMatch(/fiche/)
   expect(JSON.stringify(r.body)).not.toMatch(/sk-123|402/)
+  log.mockRestore()
+})
+
+test('des cartes invalides deux fois donnent une erreur française, sans carte factice', async () => {
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const id = (await call('post', '/tasks/ingest', a, { text: 'Maths' })).body.task.id
+  invoke.mockClear()
+  invoke.mockResolvedValueOnce('pas du JSON').mockResolvedValueOnce('[{"front":"","back":"x"}]')
+  const r = await call('post', '/tasks/:id/materials', a, { type: 'flashcards' }, { id })
+  expect(invoke).toHaveBeenCalledTimes(2)
+  expect(r.status).toBe(500)
+  expect(r.body.error).toMatch(/fiche/)
+  expect(r.body.materials).toBeUndefined()
   log.mockRestore()
 })

@@ -3,6 +3,8 @@ import type { PlannerStore } from "./store"
 import { parseTask, generateSteps, replan } from "./ai"
 import { planTask, planTasks, weeklyPlan, defaultPolicy } from "./scheduler"
 import { handleAsk } from "../../lib/ai/ask"
+import llm from "../../utils/llm/llm"
+import { generateStructured } from "../../lib/ai/structured"
 import crypto from "node:crypto"
 
 export class PlannerService {
@@ -206,50 +208,47 @@ export class PlannerService {
     }
 
     private async generateSummary(content: string): Promise<string> {
-        const prompt = `Create a clear, concise summary of this study material that highlights the key concepts and important points:`
+        const prompt = `Rédige en français un résumé clair et concis de ce contenu, niveau collège/lycée. Mets en avant les notions clés et les points importants. Réponds en Markdown, avec les formules en LaTeX entre $...$.`
         const response = await handleAsk(`${prompt}\n\n${content}`)
         return response.answer
     }
 
     private async generateStudyGuide(content: string, task: Task): Promise<string> {
-        const prompt = `Create a comprehensive study guide for this ${task.type || 'assignment'}. Include:
-        - Key concepts and definitions
-        - Important formulas or principles
-        - Practice questions
-        - Study tips specific to this topic
+        const prompt = `Rédige en français un guide de révision complet pour ce travail (${task.type || 'devoir'}), niveau collège/lycée. Inclus :
+        - les notions et définitions clés
+        - les formules ou principes importants
+        - des questions d’entraînement
+        - des conseils de révision propres à ce sujet
 
-        Format as a structured guide with clear sections:`
+        Réponds en Markdown avec des sections claires, et les formules en LaTeX entre $...$ :`
 
         const response = await handleAsk(`${prompt}\n\n${content}`)
         return response.answer
     }
 
     private async generateFlashcards(content: string, task: Task): Promise<Array<{ front: string; back: string }>> {
-        const prompt = `Create 10-15 flashcards for this ${task.type || 'assignment'}. 
-        Return as JSON array with "front" and "back" properties.
-        Focus on key concepts, definitions, formulas, and important facts.
-        
-        Example format:
+        const prompt = `Crée 10 à 15 cartes de révision en français pour ce travail (${task.type || 'devoir'}), niveau collège/lycée.
+        Réponds uniquement avec un tableau JSON d’objets {"front": "...", "back": "..."} : « front » est la question, « back » la réponse courte.
+        Porte-toi sur les notions clés, les définitions, les formules et les faits importants. Écris les formules en LaTeX entre $...$.
+
+        Exemple :
         [
-          {"front": "What is the derivative of x^2?", "back": "2x"},
-          {"front": "Define photosynthesis", "back": "The process by which plants convert light energy into chemical energy"}
+          {"front": "Quelle est la dérivée de $x^2$ ?", "back": "$2x$"},
+          {"front": "Définis la photosynthèse", "back": "Le processus par lequel les plantes transforment l’énergie lumineuse en énergie chimique."}
         ]`
 
-        try {
-            const response = await handleAsk(`${prompt}\n\n${content}`)
-            return JSON.parse(response.answer)
-        } catch {
-            console.warn('Failed to parse flashcards JSON, returning default')
-            return [
-                { front: `Key concept from ${task.title}`, back: 'Review the main material' }
-            ]
-        }
+        const messages = [{ role: 'user' as const, content: `${prompt}\n\n${content}` }]
+        const filled = (x: unknown) => typeof x === 'string' && x.trim() !== ''
+        return generateStructured({
+            model: llm, messages, shape: 'array',
+            retryMessages: [{ role: 'system', content: 'Réponds uniquement avec un tableau JSON, sans Markdown ni texte autour.' }, ...messages],
+            validate: parsed => Array.isArray(parsed) && parsed.length > 0 && parsed.every((c: any) => filled(c?.front) && filled(c?.back))
+                ? parsed.map((c: any) => ({ front: c.front, back: c.back })) : null,
+        })
     }
 
     private async generateQuiz(content: string, task: Task): Promise<any> {
-        const prompt = `Create a 5-question quiz for this ${task.type || 'assignment'}.
-        Include multiple choice and short answer questions.
-        Focus on testing understanding of key concepts.`
+        const prompt = `Crée en français un quiz de 5 questions pour ce travail (${task.type || 'devoir'}), niveau collège/lycée. Mélange des questions à choix multiples et des questions à réponse courte, pour tester la compréhension des notions clés. Réponds en Markdown, avec les formules en LaTeX entre $...$.`
 
         const response = await handleAsk(`${prompt}\n\n${content}`)
         return response.answer
