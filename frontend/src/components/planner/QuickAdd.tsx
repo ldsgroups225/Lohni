@@ -107,7 +107,7 @@ export default function QuickAdd({ onAdd, loading, error }: QuickAddProps) {
                                 <span className="text-muted">({Math.round(file.size / 1024)}KB)</span>
                                 <button type="button"
                                     onClick={() => removeFile(i)}
-                                    className="text-muted hover:text-foreground ml-1"
+                                    className="grid size-11 place-items-center text-muted hover:text-foreground" aria-label={`Retirer ${file.name}`}
                                 >×</button>
                             </div>
                         ))}

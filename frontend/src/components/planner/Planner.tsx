@@ -240,12 +240,18 @@ export default function Planner() {
     return (
         <div className="space-y-4">
             <QuickAdd onAdd={add} loading={loading} error={addError} />
-            <div role="tablist" aria-label="Tâches" className="grid grid-cols-2 gap-1 rounded-2xl bg-tint p-1">
-                {([['todo', 'À faire'], ['done', 'Faites']] as const).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={taskTab === id} onClick={() => setTaskTab(id)} className={`min-h-11 rounded-xl text-sm font-bold ${taskTab === id ? 'bg-surface text-foreground' : 'text-muted'}`}>{label} · {tasks.filter(t => (t.status === 'done') === (id === 'done')).length}</button>)}
+            <div role="tablist" aria-label="Tâches" className="grid grid-cols-2 gap-1 rounded-2xl bg-tint p-1" onKeyDown={e => {
+                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+                e.preventDefault()
+                const next = taskTab === 'todo' ? 'done' : 'todo'
+                setTaskTab(next)
+                ;(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next === 'todo' ? 0 : 1])?.focus()
+            }}>
+                {([['todo', 'À faire'], ['done', 'Faites']] as const).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={taskTab === id} tabIndex={taskTab === id ? 0 : -1} onClick={() => setTaskTab(id)} className={`min-h-11 rounded-xl text-sm font-bold ${taskTab === id ? 'bg-surface text-foreground' : 'text-muted'}`}>{label} · {tasks.filter(t => (t.status === 'done') === (id === 'done')).length}</button>)}
             </div>
             <div role="tabpanel" className="overflow-hidden rounded-card border border-border bg-surface">
                 {tasks.filter(t => (t.status === 'done') === (taskTab === 'done')).map(task => <div key={task.id} className="flex items-center gap-1 border-b border-border px-1 last:border-b-0">
-                    <button type="button" aria-label={`${task.status === 'done' ? 'Remettre à faire' : 'Marquer'} ${task.title}${task.status === 'done' ? '' : ' comme faite'}`} onClick={() => void toggleTask(task)} className="grid size-12 shrink-0 place-items-center"><span className={`grid size-7 place-items-center rounded-lg border-2 ${task.status === 'done' ? 'border-secondary bg-secondary text-on-secondary' : 'border-primary'}`}>{task.status === 'done' && '✓'}</span></button>
+                    <button type="button" aria-label={`${task.status === 'done' ? 'Remettre à faire' : 'Marquer'} ${task.title}${task.status === 'done' ? '' : ' comme faite'}`} onClick={() => void toggleTask(task)} className="grid size-12 shrink-0 place-items-center"><span className={`grid size-7 place-items-center rounded-lg border-2 ${task.status === 'done' ? 'border-success bg-success text-on-primary' : 'border-primary'}`}>{task.status === 'done' && '✓'}</span></button>
                     <div className="min-w-0 py-3"><div className={`font-bold ${task.status === 'done' ? 'text-muted line-through' : 'text-foreground'}`}>{task.title}</div><div className="text-sm text-muted">{new Date(task.dueAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · {task.estMins} min</div></div>
                 </div>)}
                 {tasks.filter(t => (t.status === 'done') === (taskTab === 'done')).length === 0 && <p className="p-6 text-center text-sm text-muted">{taskTab === 'todo' ? 'Rien à préparer. Profites-en !' : 'Aucune tâche terminée pour l’instant.'}</p>}
@@ -257,7 +263,7 @@ export default function Planner() {
                 <div role="tablist" aria-label="Vue du planning" onKeyDown={onTabKey} className="grid min-w-0 flex-1 grid-cols-3 gap-1 rounded-xl border border-border bg-surface p-1">
                     {views.map(([id, label, full]) => (
                         <button type="button" key={id} role="tab" aria-selected={view === id} aria-label={full} tabIndex={view === id ? 0 : -1} onClick={() => setView(id)}
-                            className={`min-h-10 rounded-lg px-2 text-sm font-medium ${view === id ? 'bg-tint text-foreground font-bold' : 'text-foreground'}`}>{label}</button>
+                            className={`min-h-11 rounded-lg px-2 text-sm font-medium ${view === id ? 'bg-tint text-foreground font-bold' : 'text-foreground'}`}>{label}</button>
                     ))}
                 </div>
                 <button type="button" onClick={reload} aria-label="Actualiser" title="Actualiser" className="press-icon grid size-11 shrink-0 place-items-center rounded-xl border border-border bg-surface text-foreground">
@@ -328,7 +334,7 @@ export default function Planner() {
                                     <button type="button" onClick={() => planTask(t.id)} className="min-h-11 rounded-lg bg-tint px-3 text-sm text-foreground">Planifier</button>
                                     <button type="button" onClick={() => gen(t.id, "summary")} className="min-h-11 rounded-lg bg-tint px-3 text-sm text-foreground">Résumé</button>
                                     <button type="button" onClick={() => gen(t.id, "flashcards")} className="min-h-11 rounded-lg bg-tint px-3 text-sm text-foreground">Cartes</button>
-                                    <button type="button" onClick={() => { void confirmDialog(`Supprimer la tâche « ${t.title} » ?`).then(ok => { if (ok) void del(t.id) }) }} className="ml-auto min-h-10 rounded-lg border border-danger px-3 text-sm text-danger">Supprimer</button>
+                                    <button type="button" onClick={() => { void confirmDialog(`Supprimer la tâche « ${t.title} » ?`).then(ok => { if (ok) void del(t.id) }) }} className="ml-auto min-h-11 rounded-lg border border-danger px-3 text-sm text-danger">Supprimer</button>
                                 </div>
 
                                 {/* Task Files */}
@@ -342,7 +348,7 @@ export default function Planner() {
                                                     <span className="text-muted">({Math.round(file.size / 1024)}KB)</span>
                                                     <button type="button"
                                                         onClick={() => deleteFile(t.id, file.id)}
-                                                        className="text-muted hover:text-foreground ml-1"
+                                                        className="grid size-11 place-items-center text-muted hover:text-foreground" aria-label={`Supprimer ${file.originalName}`}
                                                         title="Supprimer le fichier"
                                                     >×</button>
                                                 </div>
