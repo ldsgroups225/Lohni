@@ -9,7 +9,7 @@ export const config = {
   url: process.env.VITE_BACKEND_URL || '',
   timeout: Number(process.env.VITE_TIMEOUT || 90000),
   openrouter: process.env.OPENROUTER_API_KEY || '',
-  openrouter_model: process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-5.5,deepseek/deepseek-v4.1-flash-1017,openrouter/free',
+  openrouter_model: process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-5.5,deepseek/deepseek-v4.1-flash-1017,particle-ai/particle-1:free,nvidia/nemotron-3.5-super-vl:free,nvidia/nemotron-3.5-lightning:free,openrouter/free',
   openrouter_embed_model: process.env.OPENROUTER_EMBED_MODEL || 'openai/text-embedding-3-large',
   transcription_model: process.env.TRANSCRIPTION_MODEL || 'openai/gpt-4o-mini-transcribe',
   temp: Number(process.env.LLM_TEMP || 1),
