@@ -6,9 +6,9 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 import ImportCourse from './ImportCourse'
 import { APIError } from '../lib/api'
-import { rememberRevisionSnapshot } from '../lib/revisionApiDouble'
+import { rememberRevisionSnapshot } from '../test/revisionApiDouble'
 import { revisionAPI as revisionDouble } from '../lib/api'
-import { revisionCacheDouble } from '../lib/revisionApiDouble'
+import { revisionCacheDouble } from '../test/revisionApiDouble'
 Object.assign(revisionDouble, revisionCacheDouble)
 
 const api = vi.hoisted(() => ({ profile: vi.fn(), importQuota: vi.fn(), importChapter: vi.fn(), retryImport: vi.fn(), discardImport: vi.fn(), chapters: vi.fn() }))

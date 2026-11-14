@@ -9,9 +9,9 @@ vi.mock('../lib/api', () => ({ revisionAPI: api, revisionDeviceId: () => 'device
 vi.mock('../components/Revision/Onboarding', () => ({ default: () => <p>Onboarding</p> }))
 import Home from './Home'
 import Profile from './Profile'
-import { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } from '../lib/revisionApiDouble'
+import { invalidateRevisionCache, rememberRevisionSnapshot, revisionSnapshot } from '../test/revisionApiDouble'
 import { revisionAPI as revisionDouble } from '../lib/api'
-import { revisionCacheDouble } from '../lib/revisionApiDouble'
+import { revisionCacheDouble } from '../test/revisionApiDouble'
 Object.assign(revisionDouble, revisionCacheDouble)
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 

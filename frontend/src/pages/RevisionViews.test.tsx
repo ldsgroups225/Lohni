@@ -11,7 +11,7 @@ vi.mock('../lib/api', () => ({ revisionAPI: {}, revisionPolicy: { minimumSeenRat
 import Home from './Home'
 import Courses from './Courses'
 import { revisionAPI as revisionDouble } from '../lib/api'
-import { revisionCacheDouble } from '../lib/revisionApiDouble'
+import { revisionCacheDouble } from '../test/revisionApiDouble'
 Object.assign(revisionDouble, revisionCacheDouble)
 
 const profile = { schoolClass: 'terminale', series: 'C', subjects: ['Mathématiques'] }

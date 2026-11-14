@@ -5,9 +5,9 @@ import { createRoot } from 'react-dom/client'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import Profile from './Profile'
-import { rememberRevisionSnapshot } from '../lib/revisionApiDouble'
+import { rememberRevisionSnapshot } from '../test/revisionApiDouble'
 import { revisionAPI as revisionDouble } from '../lib/api'
-import { revisionCacheDouble } from '../lib/revisionApiDouble'
+import { revisionCacheDouble } from '../test/revisionApiDouble'
 Object.assign(revisionDouble, revisionCacheDouble)
 
 const api = vi.hoisted(() => ({ timetable: vi.fn(async () => []), readTimetablePhotos: vi.fn(), saveTimetable: vi.fn(), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn() }))

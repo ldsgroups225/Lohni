@@ -7,7 +7,7 @@ import { expect, test, vi } from 'vitest'
 const delayedProfile = vi.hoisted(() => ({ wait: false }))
 vi.mock('../lib/api', async () => {
   // Le double d’api reproduit la dernière valeur lue que garde le vrai cache.
-  const { rememberRevisionSnapshot } = await import('../lib/revisionApiDouble')
+  const { rememberRevisionSnapshot } = await import('../test/revisionApiDouble')
   const profile = { schoolClass: '3e', subjects: ['Mathématiques'] }
   const first = { id: '1', complete: false, position: 0, cards: [{ id: '1', chapterId: 'c', kind: 'basic', question: 'Question ?', answer: 'Oui' }, { id: '2', chapterId: 'c', kind: 'basic', question: 'Autre ?', answer: 'Oui' }] }
   return {
@@ -16,7 +16,7 @@ vi.mock('../lib/api', async () => {
 }})
 import Revision from './Revision'
 import { revisionAPI as revisionDouble } from '../lib/api'
-import { revisionCacheDouble } from '../lib/revisionApiDouble'
+import { revisionCacheDouble } from '../test/revisionApiDouble'
 Object.assign(revisionDouble, revisionCacheDouble)
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 window.scrollTo = () => {}

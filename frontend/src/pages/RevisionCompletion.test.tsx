@@ -5,7 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { expect, test, vi } from 'vitest'
 import Revision from './Revision'
 import { revisionAPI as revisionDouble } from '../lib/api'
-import { revisionCacheDouble } from '../lib/revisionApiDouble'
+import { revisionCacheDouble } from '../test/revisionApiDouble'
 Object.assign(revisionDouble, revisionCacheDouble)
 
 vi.mock('../lib/api', () => ({

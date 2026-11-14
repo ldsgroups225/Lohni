@@ -9,7 +9,7 @@ const api = vi.hoisted(() => ({ chapters: vi.fn(), profile: vi.fn(async () => ({
 vi.mock('../lib/api', () => ({ revisionAPI: { chapters: api.chapters, profile: api.profile }, chatJSON: api.chatJSON, chatMultipart: vi.fn(), getChats: api.getChats }))
 import Landing from './Landing'
 import { revisionAPI as revisionDouble } from '../lib/api'
-import { revisionCacheDouble } from '../lib/revisionApiDouble'
+import { revisionCacheDouble } from '../test/revisionApiDouble'
 Object.assign(revisionDouble, revisionCacheDouble)
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 

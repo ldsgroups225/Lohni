@@ -14,7 +14,7 @@ vi.mock('../../lib/api', () => ({
 }))
 import Revision from '../../pages/Revision'
 import { revisionAPI as revisionDouble } from '../../lib/api'
-import { revisionCacheDouble } from '../../lib/revisionApiDouble'
+import { revisionCacheDouble } from '../../test/revisionApiDouble'
 Object.assign(revisionDouble, revisionCacheDouble)
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true

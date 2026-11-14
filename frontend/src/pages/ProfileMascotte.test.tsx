@@ -7,7 +7,7 @@ vi.mock('react', async importOriginal => ({ ...await importOriginal<typeof impor
 vi.mock('../lib/api', () => ({ revisionAPI: {} }))
 import Profile from './Profile'
 import { revisionAPI as revisionDouble } from '../lib/api'
-import { revisionCacheDouble } from '../lib/revisionApiDouble'
+import { revisionCacheDouble } from '../test/revisionApiDouble'
 Object.assign(revisionDouble, revisionCacheDouble)
 
 test.each([[0, 0, false, 'au repos'], [0, 12, false, 'au repos'], [0, 12, true, 'endormie'], [2, 12, true, 'contente']])('Moi annonce une seule mascotte selon la série %s et les XP %s', (streak, xp, streakStarted, humeur) => {
