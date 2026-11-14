@@ -3,6 +3,7 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { AdaptiveErrorBoundary, adaptiveToast } from '@cognicatch/react'
 import { Link, useNavigate } from "react-router-dom";
+import { useRevisionRead } from "../lib/useRevisionRead";
 import PromptBox from "../components/Landing/PromptBox";
 import { chatMultipart, chatJSON, getChats, revisionAPI, type RevisionChapter, type RevisionProfile, type ChatInfo } from "../lib/api";
 
@@ -40,23 +41,8 @@ export default function Landing() {
   const [profile, setProfile] = useState<RevisionProfile | null>(null);
   const [profileError, setProfileError] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
-  useEffect(() => {
-    let active = true;
-    async function loadCourses() {
-      try {
-        const value = await revisionAPI.read(revisionAPI.chapters, () => setChapters(null), () => active);
-        if (active) setChapters(value);
-      } catch { if (active) setChaptersError(true); }
-    }
-    async function loadProfile() {
-      try {
-        const value = await revisionAPI.read(revisionAPI.profile, () => setProfile(null), () => active);
-        if (active) { setProfile(value); setProfileLoaded(true); }
-      } catch { if (active) setProfileError(true); }
-    }
-    void loadCourses(); void loadProfile();
-    return () => { active = false; };
-  }, []);
+  useRevisionRead(revisionAPI.chapters, { accept: setChapters, fail: () => setChaptersError(true), onChanged: () => setChapters(null) });
+  useRevisionRead(revisionAPI.profile, { accept: value => { setProfile(value); setProfileLoaded(true); }, fail: () => setProfileError(true), onChanged: () => setProfile(null) });
   const [prompt, setPrompt] = useState("");
   const [mode, setMode] = useState<"Discussion" | "Quiz">("Discussion");
   const [responseLength, setResponseLength] = useState<"Courte" | "Moyenne" | "Longue">("Moyenne");

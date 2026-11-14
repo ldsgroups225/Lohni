@@ -7,8 +7,9 @@ import { listDelay } from '../components/ui/revisionPresentation'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { Progress } from '../components/ui/Progress'
 import MasteryBadge from '../components/ui/MasteryBadge'
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { useRevisionRead } from '../lib/useRevisionRead'
 import { useOverlayNavigation } from '../lib/useOverlayNavigation'
 import { useSecondaryScreen } from '../components/Sidebar'
 import MarkdownContent from '../components/Chat/MarkdownContent'
@@ -53,12 +54,12 @@ function CardEditor({ card, busy, onSave, onCancel, onDelete }: {
 }
 
 export default function Courses() {
-  const sharedChapters = revisionAPI.snapshot<RevisionChapter[]>('/chapters')
-  const sharedProgress = revisionAPI.snapshot<RevisionProgress>('/progress')
+  const sharedChapters = revisionAPI.cached.chapters()
+  const sharedProgress = revisionAPI.cached.progress()
   const animateEntry = useRef(!sharedChapters).current
   const [chapters, setChapters] = useState<RevisionChapter[]>(() => sharedChapters ?? [])
   const [, setProgress] = useState<RevisionProgress | null>(() => sharedProgress ?? null)
-  const [stale, setStale] = useState(() => revisionAPI.snapshotStale('/chapters', '/progress'))
+  const [stale, setStale] = useState(() => revisionAPI.cached.stale('chapters', 'progress'))
   const [editing, setEditing] = useState<string | null>(null)
   const [summaryId, setSummaryId] = useState<string | null>(null)
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null)
@@ -67,14 +68,12 @@ export default function Courses() {
   const [error, setError] = useState('')
   const operating = useRef(false)
 
-  const load = useCallback(async function load(isActive: () => boolean = () => true) {
-    const [nextChapters, nextProgress] = await revisionAPI.read(() => Promise.all([revisionAPI.chapters(), revisionAPI.progress()]),
-      () => { setChapters([]); setProgress(null); setBusy(true); setStale(true) }, isActive)
-    if (!isActive()) return
-    setChapters(nextChapters)
-    setProgress(nextProgress)
-    setStale(false)
-  }, [])
+  const load = useRevisionRead(() => Promise.all([revisionAPI.chapters(), revisionAPI.progress()]), {
+    accept: ([nextChapters, nextProgress]) => { setChapters(nextChapters); setProgress(nextProgress); setStale(false) },
+    onChanged: () => { setChapters([]); setProgress(null); setBusy(true); setStale(true) },
+    fail: error => setError(error instanceof Error ? error.message : 'Impossible de charger tes cours.'),
+    settled: () => { if (!operating.current) setBusy(false) },
+  })
   async function run(operation: () => Promise<void>) {
     operating.current = true
     setBusy(true)
@@ -83,13 +82,6 @@ export default function Courses() {
     catch (error) { setError(error instanceof Error ? error.message : 'Impossible de charger tes cours.') }
     finally { operating.current = false; setBusy(false) }
   }
-  useEffect(() => {
-    let active = true
-    load(() => active).catch(error => {
-      if (active) setError(error instanceof Error ? error.message : 'Impossible de charger tes cours.')
-    }).finally(() => { if (active && !operating.current) setBusy(false) })
-    return () => { active = false }
-  }, [load])
 
   const summaryChapter = chapters.find(chapter => chapter.id === summaryId)
   useSecondaryScreen(!!(summaryOpen && summaryChapter) || chapters.some(chapter => chapter.id === selectedChapter))

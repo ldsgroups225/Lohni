@@ -2,16 +2,17 @@ import { Button, ButtonLink } from '../components/ui/Button'
 import { ScreenHeader } from '../components/ui/ScreenHeader'
 import { ErrorState, LoadingState } from '../components/ui/LoadingState'
 import { PendingRead } from '../components/ui/PendingRead'
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useRevisionRead } from '../lib/useRevisionRead'
 import { APIError, revisionAPI, revisionPolicy, type RevisionProfile, type RevisionImportedChapter, type RevisionImportQuota, type RevisionChapter } from '../lib/api'
 import MarkdownContent from '../components/Chat/MarkdownContent'
 
 export default function ImportCourse() {
-  const sharedProfile = revisionAPI.snapshot<RevisionProfile | null>('/profile')
+  const sharedProfile = revisionAPI.cached.profile()
   const navigate = useNavigate()
   const [profile, setProfile] = useState<RevisionProfile | null>(() => sharedProfile ?? null)
-  const [quota, setQuota] = useState<RevisionImportQuota | undefined>(() => revisionAPI.snapshotStale('/import/quota') ? undefined : revisionAPI.snapshot<RevisionImportQuota>('/import/quota'))
+  const [quota, setQuota] = useState<RevisionImportQuota | undefined>(() => revisionAPI.cached.stale('importQuota') ? undefined : revisionAPI.cached.importQuota())
   const [imported, setImported] = useState<RevisionImportedChapter>()
   const [subject, setSubject] = useState(() => sharedProfile?.subjects[0] ?? '')
   const [title, setTitle] = useState('')
@@ -42,21 +43,17 @@ export default function ImportCourse() {
     }
     finally { importController.current = null; setBusy(false) }
   }
-  const load = useCallback(async function load(isActive: () => boolean = () => true) {
-    const [saved, currentQuota] = await revisionAPI.read(() => Promise.all([revisionAPI.profile(), revisionAPI.importQuota()]),
-      () => { setProfile(null); setQuota(undefined); setSubject(''); setBusy(true) }, isActive)
-    if (!isActive()) return
-    setProfile(saved)
-    setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
-    setQuota(currentQuota)
-  }, [])
+  const load = useRevisionRead(() => Promise.all([revisionAPI.profile(), revisionAPI.importQuota()]), {
+    accept: ([saved, currentQuota]) => {
+      setProfile(saved)
+      setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
+      setQuota(currentQuota)
+    },
+    onChanged: () => { setProfile(null); setQuota(undefined); setSubject(''); setBusy(true) },
+    fail: cause => setError(cause instanceof Error ? cause.message : 'Impossible de charger ton import.'),
+    settled: () => { setBusy(false); setChecking(false) },
+  })
   useEffect(() => () => { importController.current?.abort() }, [])
-  useEffect(() => {
-    let active = true
-    load(() => active).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Impossible de charger ton import.') })
-      .finally(() => { if (active) { setBusy(false); setChecking(false) } })
-    return () => { active = false }
-  }, [load])
 
   function submit(event: FormEvent) {
     event.preventDefault()

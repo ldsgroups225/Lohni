@@ -6,20 +6,20 @@ import { PendingRead } from '../components/ui/PendingRead'
 import { humeurSerie } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import curriculum from '../data/curriculum-ci.json'
 import { REVISION_POLICY as policy } from '../../../backend/src/services/revision/policy'
 import { DEVICE_CHANGED, revisionAPI, type RevisionProfile, type RevisionProgress, type RevisionExam, type RevisionChapter, type RevisionSettings } from '../lib/api'
+import { useRevisionRead } from '../lib/useRevisionRead'
 import { readFirstName, writeFirstName } from '../lib/localFirstName'
 
 let profileSave: Promise<RevisionProfile> | null = null
 
 export default function Profile() {
   const page = useLocation().pathname.split('/')[2] ?? ''
-  const device = revisionAPI.device()
-  const sharedProfile = revisionAPI.snapshot<RevisionProfile | null>('/profile')
-  const sharedProgress = revisionAPI.snapshot<RevisionProgress>('/progress')
+  const sharedProfile = revisionAPI.cached.profile()
+  const sharedProgress = revisionAPI.cached.progress()
   const [profile, setProfile] = useState<RevisionProfile | null>(() => sharedProfile ?? null)
   const [progress, setProgress] = useState<RevisionProgress | null>(() => sharedProgress ?? null)
   const [busy, setBusy] = useState(sharedProfile === undefined || !!profileSave)
@@ -29,7 +29,7 @@ export default function Profile() {
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
   const [firstName, setFirstName] = useState(() => readFirstName())
-  const nameDevice = useRef(device)
+  const nameDevice = useRef(revisionAPI.deviceGuard())
   const [exams, setExams] = useState<RevisionExam[]>([])
   const [examsLoaded, setExamsLoaded] = useState(false)
   const [timetableCount, setTimetableCount] = useState<number | null>(null)
@@ -45,51 +45,37 @@ export default function Profile() {
   const available = entry ? (entry.series as Record<string, string[] | undefined>)[profile?.series ?? ''] ?? [] : []
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
-  useEffect(() => {
-    let active = true
-    async function load(): Promise<void> {
-      const pending = profileSave
-      if (pending) await pending.catch(() => {})
-      if (!active) return
-      const requestEdits = edits.current
-      const [value, stats] = await revisionAPI.read(() => {
-        const requestDevice = revisionAPI.device()
-        if (nameDevice.current !== requestDevice) { nameDevice.current = requestDevice; setFirstName(readFirstName()) }
-        return Promise.all([revisionAPI.profile(), revisionAPI.progress()])
-      }, () => { setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true); setResourceVersion(value => value + 1) }, () => active)
-      if (!active) return
+  useRevisionRead(async () => {
+    const pending = profileSave
+    if (pending) await pending.catch(() => {})
+    const requestEdits = edits.current
+    if (nameDevice.current.changed()) { nameDevice.current = revisionAPI.deviceGuard(); setFirstName(readFirstName()) }
+    const [value, stats] = await Promise.all([revisionAPI.profile(), revisionAPI.progress()])
+    return { value, stats, requestEdits }
+  }, {
+    accept: ({ value, stats, requestEdits }) => {
       if (requestEdits === edits.current && !saving.current && !dirty.current) setProfile(value)
       setProgress(stats)
-    }
-    load().catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Impossible de charger ton profil.') })
-      .finally(() => { if (active && !saving.current) setBusy(false) })
-    return () => { active = false }
-  }, [])
+    },
+    onChanged: () => { setProfile(null); setProgress(null); setExams([]); setExamsLoaded(false); setChapters([]); setSettings(null); setTimetableCount(null); dirty.current = false; setBusy(true); setResourceVersion(value => value + 1) },
+    fail: cause => setError(cause instanceof Error ? cause.message : 'Impossible de charger ton profil.'),
+    settled: () => { if (!saving.current) setBusy(false) },
+  })
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Recharger les ressources après la détection d’un nouvel appareil.
-  useEffect(() => {
-    let active = true
-    async function load<T>(read: () => Promise<T>, accept: (value: T) => void, fail: (cause: unknown) => void): Promise<void> {
-      try {
-        const value = await revisionAPI.read(read, () => {}, () => active)
-        if (active) accept(value)
-      } catch (cause) { if (active) fail(cause) }
-    }
-    void load(revisionAPI.timetable, value => { setTimetableCount(value.length); setTimetableError(false) }, () => setTimetableError(true))
-    void load(revisionAPI.exams, value => { setExams(value); setExamsLoaded(true) }, cause => setError(cause instanceof Error ? cause.message : 'Impossible de charger tes examens.'))
-    void load(revisionAPI.chapters, setChapters, () => {})
-    void load(revisionAPI.settings, value => { setSettings(value); setSettingsError('') }, () => setSettingsError('Impossible de charger tes réglages de révision.'))
-    return () => { active = false }
-  }, [resourceVersion])
+  useRevisionRead(revisionAPI.timetable, { accept: value => { setTimetableCount(value.length); setTimetableError(false) }, fail: () => setTimetableError(true) }, [resourceVersion])
+  useRevisionRead(revisionAPI.exams, { accept: value => { setExams(value); setExamsLoaded(true) }, fail: cause => setError(cause instanceof Error ? cause.message : 'Impossible de charger tes examens.') }, [resourceVersion])
+  useRevisionRead(revisionAPI.chapters, { accept: setChapters }, [resourceVersion])
+  useRevisionRead(revisionAPI.settings, { accept: value => { setSettings(value); setSettingsError('') }, fail: () => setSettingsError('Impossible de charger tes réglages de révision.') }, [resourceVersion])
 
   async function saveSettings(event: FormEvent) {
     event.preventDefault()
     if (!settings || settingsBusy) return
     setSettingsBusy(true); setSettingsError(''); setSettingsSaved(false)
-    const device = revisionAPI.device()
+    const guard = revisionAPI.deviceGuard()
     try {
       const value = await revisionAPI.saveSettings(settings)
-      if (device !== revisionAPI.device()) { setSettings(null); throw new Error(DEVICE_CHANGED) }
+      if (guard.changed()) setSettings(null)
+      guard.assert()
       setSettings(value)
       setSettingsSaved(true)
     } catch (cause) { setSettingsError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer tes réglages.') }
@@ -105,20 +91,18 @@ export default function Profile() {
   async function save(event: FormEvent) {
     event.preventDefault()
     if (!profile || profileSave) return
-    if (page === 'profil' && nameDevice.current !== revisionAPI.device()) { setError(DEVICE_CHANGED); return }
+    if (page === 'profil' && nameDevice.current.changed()) { setError(DEVICE_CHANGED); return }
     saving.current = true
     setBusy(true)
     setSaved(false)
     setError('')
-    const requestDevice = revisionAPI.device()
+    const guard = revisionAPI.deviceGuard()
     try {
       const promise = revisionAPI.saveProfile({ ...profile, examDate: undefined })
       profileSave = promise
       const value = await promise
-      if (requestDevice !== revisionAPI.device()) {
-        setProfile(null); setProgress(null)
-        throw new Error(DEVICE_CHANGED)
-      }
+      if (guard.changed()) { setProfile(null); setProgress(null) }
+      guard.assert()
       if (page === 'profil' && !writeFirstName(firstName.trim())) setError('Impossible d’enregistrer ton prénom sur cet appareil.')
       setProfile(value)
       dirty.current = false

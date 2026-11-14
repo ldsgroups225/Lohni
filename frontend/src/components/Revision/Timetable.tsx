@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { REVISION_POLICY as policy } from '../../../../backend/src/services/revision/policy'
+import { useRevisionRead } from '../../lib/useRevisionRead'
 import { revisionAPI, type RevisionProfile, type TimetableBlock } from '../../lib/api'
 import { Button } from '../ui/Button'
 
@@ -13,17 +14,7 @@ export default function Timetable({ profile, onProfile }: { profile: RevisionPro
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
-  useEffect(() => {
-    let active = true
-    async function load() {
-      try {
-        const value = await revisionAPI.read(revisionAPI.timetable, () => {}, () => active)
-        if (active) setBlocks(value)
-      } catch { if (active) setError('Impossible de charger ton emploi du temps.') }
-    }
-    void load()
-    return () => { active = false }
-  }, [])
+  useRevisionRead(revisionAPI.timetable, { accept: setBlocks, fail: () => setError('Impossible de charger ton emploi du temps.') })
   const unknown = [...new Set((blocks ?? []).map(block => block.subject.trim()).filter(subject => subject && !profile.subjects.includes(subject)))]
   const update = (index: number, patch: Partial<TimetableBlock>) => { setBlocks(current => current?.map((block, i) => i === index ? { ...block, ...patch } : block) ?? null); setSaved(false) }
   async function save() {
