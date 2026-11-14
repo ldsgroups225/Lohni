@@ -5,6 +5,7 @@ import { useOverlayNavigation } from "../lib/useOverlayNavigation";
 import { withOccurrenceKeys } from "../lib/occurrenceKeys";
 import { confirmDialog } from "../lib/confirm";
 import { BackButton } from "../components/ui/BackButton";
+import MarkdownContent from "../components/Chat/MarkdownContent";
 import { ToolPage } from "../components/ui/ToolPage";
 import * as api from "../lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -454,11 +455,11 @@ export default function Debate() {
                     <div key={key} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                         <div className={`max-w-[84%] px-4 py-3 rounded-2xl ${msg.role === "user" ? "rounded-br-md bg-tint" : "rounded-bl-md border border-border bg-surface"}`}>
                             <div className={`mb-1 text-sm font-bold text-muted ${msg.role === "user" ? "text-right" : ""}`}>{msg.role === "user" ? "Toi" : "Lohni"}</div>
-                            <p className="whitespace-pre-wrap leading-snug">{msg.content}</p>
+                            {msg.role === "user" ? <p className="whitespace-pre-wrap leading-snug">{msg.content}</p> : <div className="leading-snug [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"><MarkdownContent md={msg.content} /></div>}
                         </div>
                     </div>
                 ))}
-                {isStreaming && <div className="max-w-[84%] rounded-2xl rounded-bl-md border border-border bg-surface px-4 py-3 text-muted"><span className="mb-1 block text-sm font-bold">Lohni</span>{streamingContent || "Lohni réfléchit…"}</div>}
+                {isStreaming && <div className="max-w-[84%] rounded-2xl rounded-bl-md border border-border bg-surface px-4 py-3 text-muted"><span className="mb-1 block text-sm font-bold">Lohni</span>{streamingContent ? <div className="leading-snug [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"><MarkdownContent md={streamingContent} /></div> : "Lohni réfléchit…"}</div>}
 
                 <div ref={messagesEndRef} />
             </div>

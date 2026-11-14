@@ -103,3 +103,17 @@ test('les suggestions préremplissent un argument et expliquent les actions indi
     }
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); vi.unstubAllGlobals() }
 })
+
+test('les réponses de Lohni affichent leur markdown', async () => {
+  vi.stubGlobal('WebSocket', class { close() {} })
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: true, session: { topic: 'Sujet', position: 'for', messages: [{ role: 'user', content: 'Mon **idée**', timestamp: 1 }, { role: 'assistant', content: 'Un argument **fort**.', timestamp: 2 }] } }), { headers: { 'content-type': 'application/json' } })))
+  Element.prototype.scrollIntoView = vi.fn()
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/debate', element: <Debate /> }], { initialEntries: ['/debate?debateId=1'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect([...host.querySelectorAll('strong')].map(node => node.textContent)).toEqual(['fort'])
+    expect(host.textContent).toContain('Mon **idée**')
+  } finally { act(() => root.unmount()); router.dispose(); host.remove(); vi.unstubAllGlobals() }
+})

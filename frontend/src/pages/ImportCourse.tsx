@@ -6,6 +6,7 @@ import { PendingRead } from '../components/ui/PendingRead'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { APIError, revisionAPI, revisionPolicy, type RevisionProfile, type RevisionImportedChapter, type RevisionImportQuota, type RevisionChapter } from '../lib/api'
+import MarkdownContent from '../components/Chat/MarkdownContent'
 
 export default function ImportCourse() {
   const sharedProfile = revisionSnapshot<RevisionProfile | null>('/profile')
@@ -130,7 +131,7 @@ export default function ImportCourse() {
           <p className="text-center text-sm text-muted" aria-live="polite">{readyReason || 'Environ 10 secondes'}</p>
         </form>}
         {step === 'work' && <LoadingState label="Préparation de ton cours…" expectedDuration={10} steps={[{ after: 0, message: 'Lecture du cours…' }, { after: 3, message: 'Repérage des notions clés…' }, { after: 6, message: 'Création des cartes…' }]} onCancel={() => importController.current?.abort()} />}
-        {step === 'done' && imported && <section className="space-y-5 text-center" aria-live="polite"><div className="text-4xl text-success" aria-hidden="true">✓</div><h2 className="text-2xl font-bold">{cards ? `${cards.length} cartes prêtes` : 'Tes cartes sont prêtes'}</h2><p className="text-muted">{imported.title} · {subject}</p>{cards?.[0] && <div className="rounded-2xl border border-border bg-surface p-4 text-left"><p className="text-xs font-bold uppercase text-muted">Exemple</p><p className="mt-2 font-semibold">{cards[0].question}</p><p className="mt-2 text-sm text-muted">{cards[0].answer}</p></div>}<p className="text-sm text-muted">Générées par IA : relis-les, elles peuvent contenir des erreurs.</p><Button className="w-full" disabled={busy} onClick={() => void run(async () => { await revisionAPI.continue(); navigate('/revision') })}>Commencer la révision</Button><button type="button" className="min-h-14 w-full rounded-xl border-2 border-primary font-semibold text-primary" disabled={busy} onClick={reset}>Ajouter un autre cours</button></section>}
+        {step === 'done' && imported && <section className="space-y-5 text-center" aria-live="polite"><div className="text-4xl text-success" aria-hidden="true">✓</div><h2 className="text-2xl font-bold">{cards ? `${cards.length} cartes prêtes` : 'Tes cartes sont prêtes'}</h2><p className="text-muted">{imported.title} · {subject}</p>{cards?.[0] && <div className="rounded-2xl border border-border bg-surface p-4 text-left"><p className="text-xs font-bold uppercase text-muted">Exemple</p><div className="mt-2 font-semibold"><MarkdownContent md={cards[0].question} inline /></div><div className="mt-2 text-sm text-muted"><MarkdownContent md={cards[0].answer} inline /></div></div>}<p className="text-sm text-muted">Générées par IA : relis-les, elles peuvent contenir des erreurs.</p><Button className="w-full" disabled={busy} onClick={() => void run(async () => { await revisionAPI.continue(); navigate('/revision') })}>Commencer la révision</Button><button type="button" className="min-h-14 w-full rounded-xl border-2 border-primary font-semibold text-primary" disabled={busy} onClick={reset}>Ajouter un autre cours</button></section>}
       </>}
     </div>
   </main>

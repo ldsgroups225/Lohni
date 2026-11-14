@@ -351,7 +351,7 @@ export default function Transcriber() {
                       {withOccurrenceKeys(studyMaterials.keyPoints, point => point).map(({ value: point, key }) => (
                         <li key={key} className="text-foreground text-sm flex items-start gap-2">
                           <span className="text-primary mt-1">•</span>
-                          {point}
+                          <MarkdownView md={point} inline />
                         </li>
                       ))}
                     </ul>
@@ -411,7 +411,7 @@ export default function Transcriber() {
                           <h5 className="text-foreground font-medium mb-2">Questions de révision</h5>
                           <ul className="space-y-1">
                             {withOccurrenceKeys(studyMaterials.studyGuide.questions, question => question).map(({ value: question, key }) => (
-                              <li key={key} className="text-muted text-sm">• {question}</li>
+                              <li key={key} className="text-muted text-sm">• <MarkdownView md={question} inline /></li>
                             ))}
                           </ul>
                         </div>
