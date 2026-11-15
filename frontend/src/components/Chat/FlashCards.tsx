@@ -14,9 +14,9 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
     <div className="w-full">
       <div className="lg:sticky lg:top-6 lg:h-[calc(100vh-8rem)] flex flex-col">
         <div className="mb-4">
-          <div className="rounded-2xl bg-surface border border-border px-4 py-3 flex items-center justify-between">
+          <div className="px-4 py-3 flex items-center justify-between ui-card">
             <div className="flex items-center gap-2">
-              <h3 className="text-foreground font-semibold tracking-wide text-sm">Cartes à retenir</h3>
+              <h3 className="ui-label">Cartes à retenir</h3>
               <span className="text-[11px] font-medium text-muted bg-surface px-2 py-0.5 rounded-full border border-border">
                 {items.length}
               </span>
@@ -38,7 +38,7 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
 
         <div className="flex-1 overflow-y-auto pr-1 custom-scroll space-y-4 mb-8">
           {items.length === 0 ? (
-            <div className="text-muted text-sm bg-surface border border-border rounded-2xl p-6 text-center">
+            <div className="text-muted text-sm p-6 text-center ui-card">
               Aucune carte pour le moment
             </div>
           ) : (
@@ -48,7 +48,7 @@ export default function FlashCards({ items = [], onAdd, onToggleCollapse, disabl
               return (
                 <div
                   key={key}
-                  className="group rounded-2xl bg-surface border border-border hover:bg-surface transition-opacity "
+                  className="group hover:bg-surface transition-opacity ui-card"
                 >
                   <div className="p-5">
                     <div className="flex items-start gap-3">

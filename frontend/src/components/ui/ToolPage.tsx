@@ -6,12 +6,14 @@ export function ToolPage({ title, back = '/courses', beta = true, wide = false, 
   title: string; back?: string; beta?: boolean; wide?: boolean; actions?: ReactNode; children: ReactNode
 }) {
   return (
-    <main className={`loop-screen mx-auto w-full px-4 pb-28 pt-3 md:pb-14 md:pl-28 ${wide ? 'max-w-6xl' : 'max-w-2xl'}`}>
+    <main className="loop-screen ui-page">
+      <div className={wide ? 'ui-page-body-wide' : 'ui-page-body-tool'}>
       <ScreenHeader title={title} back={back}>
         {actions}
         {beta && <span className="shrink-0 rounded-full border border-border bg-tint px-3 py-1 text-xs font-medium text-foreground">BÊTA</span>}
       </ScreenHeader>
       <div className="mt-4 space-y-4">{children}</div>
+      </div>
     </main>
   )
 }

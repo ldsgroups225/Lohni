@@ -4,8 +4,9 @@ import { ScreenHeader } from '../components/ui/ScreenHeader'
 import { LoadingState } from '../components/ui/LoadingState'
 import { PendingRead } from '../components/ui/PendingRead'
 import { revisionCardVisibility } from '../components/ui/revisionPresentation'
-import Mascotte from '../components/Mascotte/Mascotte'
-import { CheckIcon, CloseIcon } from '../components/ui/NavigationIcons'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorNotice } from '../components/ui/ErrorNotice'
+import { CheckIcon, CloseIcon, MoreIcon } from '../components/ui/NavigationIcons'
 import { Progress } from '../components/ui/Progress'
 import MarkdownView from '../components/Chat/MarkdownView'
 import { useOverlayNavigation } from '../lib/useOverlayNavigation'
@@ -216,12 +217,12 @@ export default function Revision() {
   if (!busy && !error && !profile) return <Navigate to="/" replace />
 
   return (
-    <main className={`loop-screen flex min-h-dvh flex-col overflow-clip px-4 md:pl-28 ${session && !session.complete && card ? `pt-1 ${verdict ? 'pb-[calc(max(2rem,env(safe-area-inset-bottom))+var(--hidden-bottom,0px))]' : 'pb-[max(.5rem,env(safe-area-inset-bottom))]'}` : 'pt-8 pb-36'}`}>
-      <div className={`mx-auto flex w-full max-w-xl flex-1 flex-col ${session && !session.complete && card ? 'space-y-2' : 'space-y-6'}`}>
+    <main className={`loop-screen flex flex-col overflow-clip ${session && !session.complete && card ? `min-h-dvh px-4 pt-1 md:pl-28 ${verdict ? 'pb-[calc(max(2rem,env(safe-area-inset-bottom))+var(--hidden-bottom,0px))]' : 'pb-[max(.5rem,env(safe-area-inset-bottom))]'}` : 'ui-page'}`}>
+      <div className={`ui-page-body flex flex-1 flex-col ${session && !session.complete && card ? 'space-y-2' : 'space-y-6'}`}>
         {session && !session.complete && card ? <header className="flex items-center gap-3"><h1 className="sr-only">Session de révision</h1><BackButton fallback="/" label="Quitter la session" className="press-icon -ml-3 inline-grid size-11 place-items-center rounded-xl text-muted"><CloseIcon /></BackButton>{session && <div className="flex-1"><div className="motion-progress" aria-hidden="true"><span style={{ transform: `scaleX(${session.cards.length ? session.position / session.cards.length : 0})` }} /></div><Progress className="sr-only" value={session.position} max={session.cards.length} aria-label="Progression de la session" /></div>}{session && <span className="text-sm tabular-nums text-muted">{session.position + 1}/{session.cards.length}</span>}
           <fieldset aria-label="Options de révision" className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
-            <button ref={menuButton} type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} className="press-icon -mr-2 grid size-11 place-items-center rounded-xl text-xl leading-none text-muted">⋯</button>
-            {menuExit.mounted && <div role="menu" data-state={menuExit.state} className="motion-menu absolute right-0 top-full z-10 mt-1 rounded-xl border border-border bg-surface p-1 shadow-lg">
+            <button ref={menuButton} type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} className="press-icon -mr-2 grid size-11 place-items-center rounded-xl text-muted"><MoreIcon className="size-5" /></button>
+            {menuExit.mounted && <div role="menu" data-state={menuExit.state} className="motion-menu absolute right-0 top-full z-10 mt-1 p-1 shadow-lg ui-card">
               <button type="button" role="menuitem" ref={focusMenuItem} disabled={busy || !validated || !!verdict || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte{deleteReason && <span className="block text-xs font-normal text-muted">{deleteReason}</span>}</button>
             </div>}
           </fieldset>
@@ -232,15 +233,13 @@ export default function Revision() {
           {sync.error && <p>{sync.error}</p>}
           {sync.online && sync.pending > 0 && <button type="button" className="ui-button-ghost min-h-11 font-semibold text-primary" onClick={() => void syncRevisionAnswers()}>Réessayer l’envoi</button>}
         </aside>}
-        {error && <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">{!card && <Mascotte humeur="désolée" taille={96} />}<p>{error}</p>
-          <Button variant="secondary" disabled={busy} onClick={() => void run(async () => {
+        {error && <ErrorNotice message={error} mascot={!card} busy={busy} onRetry={() => void run(async () => {
             const saved = await revisionAPI.profile()
             setProfile(saved)
             setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')
             if (saved) display(await loadSession())
             setProgress(await revisionAPI.progress())
-          })}>Réessayer</Button>
-        </div>}
+          })} />}
         {generating ? <div className="space-y-2"><LoadingState label="Lohni prépare tes cartes…" />{slow && <p role="status" className="text-center text-sm text-muted">Ça prend plus de temps que d’habitude. Ta demande est toujours en cours, tu peux rester sur cette page.</p>}</div> : busy && !session && <PendingRead title="Ta session" label="On prépare ta session…" />}
         {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}
         {session && !session.complete && card ? (<>
@@ -249,7 +248,7 @@ export default function Revision() {
             : <article key={`${card.id}-${session.position}-${revealed}`} className={`shrink-0 space-y-4 rounded-2xl border border-border bg-surface p-5 ${revealed && card.kind !== 'mcq' ? 'motion-flip' : 'motion-enter'}`}>
               {chapter && <p className="line-clamp-2 [overflow-wrap:anywhere] text-xs font-semibold uppercase tracking-wide text-muted">{chapter.subject} · {chapter.title}</p>}
               {card.origin === 'ai' && <p className="text-xs text-muted">Générée par IA · Peut contenir des erreurs</p>}
-              <h2 className="text-xl text-foreground"><MarkdownView md={card.question} inline /></h2>
+              <h2 className="ui-section-title"><MarkdownView md={card.question} inline /></h2>
               {card.kind === 'mcq' && <fieldset disabled={busy || !validated || !!verdict} className="space-y-3">
                 <legend className="mb-3">Choisis ta réponse</legend>
                 {withOccurrenceKeys(card.options ?? [], option => option).map(({ value: option, key }, i) => {
@@ -281,21 +280,19 @@ export default function Revision() {
             {!sync.online && <p className="text-sm text-muted">Disponible en ligne</p>}
           </aside>}
         </>) : (!busy || !!session) && <>
-          {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} chapters={chapters} pending={sync.pending} loading={recapLoading && !error} moreCards={moreCards} busy={busy || !validated} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onReviewMissed={() => navigate(`/revision?missed=${encodeURIComponent(session.id)}`)} onContinue={() => void run(async () => display(await loadSession(true)))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
-            {!error && <Mascotte humeur="au repos" taille={112} />}
-            <h2 className="text-xl">{session.kind === 'express' ? 'Rien de fragile à revoir pour cet examen. Bravo !' : 'Aucune carte à réviser pour le moment'}</h2>
+          {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} chapters={chapters} pending={sync.pending} loading={recapLoading && !error} moreCards={moreCards} busy={busy || !validated} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onReviewMissed={() => navigate(`/revision?missed=${encodeURIComponent(session.id)}`)} onContinue={() => void run(async () => display(await loadSession(true)))} /> : <EmptyState live title={session.kind === 'express' ? 'Rien de fragile à revoir pour cet examen. Bravo !' : 'Aucune carte à réviser pour le moment'}>
             {session.kind !== 'express' && <p>Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.</p>}
             <button type="button" className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await loadSession(true)))}>Chercher d’autres cartes</button>
             {(!sync.online || sync.pending > 0) && <p className="text-sm text-muted">{!sync.online ? 'Disponible en ligne' : 'Disponible après l’envoi de tes réponses'}</p>}
-          </section>)}
+          </EmptyState>)}
           {!scoped && profile && !(session && session.position > 0) && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-border p-6">
-            <h2 className="text-xl text-foreground">Préparer un chapitre</h2>
+            <h2 className="ui-section-title">Préparer un chapitre</h2>
             <label className="block space-y-2"><span>Matière</span><select className={input} required value={subject} onChange={e => setSubject(e.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
             <label className="block space-y-2"><span>Chapitre étudié</span><input className={input} required maxLength={revisionPolicy.maxTitleChars} value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex. : Les fractions" /></label>
             {session && session.position > 0 ? <button type="submit" className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0}>Générer mes cartes</button> : <Button type="submit" disabled={busy || !validated || !sync.online || sync.pending > 0}>Générer mes cartes</Button>}
           </form>}
         </>}
-        {!scoped && profile && !(session && !session.complete && card) && !(session && session.position > 0) && <Link to="/import" className="block rounded-xl border border-border p-4 text-center text-foreground">Importer mon cours</Link>}
+        {!scoped && profile && !(session && !session.complete && card) && !(session && session.position > 0) && <Link to="/import" className="ui-button-secondary w-full">Importer mon cours</Link>}
       </div>
     </main>
   )

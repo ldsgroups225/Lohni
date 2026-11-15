@@ -1,8 +1,9 @@
-import { PartyIcon, TrophyIcon, BookIcon, DumbbellIcon } from '../components/ui/NavigationIcons'
+import { PendingRead } from '../components/ui/PendingRead'
+import { ErrorNotice } from '../components/ui/ErrorNotice'
+import { BookIcon, CheckIcon, DumbbellIcon, PartyIcon, TrophyIcon } from '../components/ui/NavigationIcons'
 import { useEffect, useMemo, useRef, useState } from "react"
 import { runTask } from "../lib/taskRun"
 import { getExams, startExam, cancelExam, connectExamStream, revisionAPI, type ExamEvent } from "../lib/api"
-import LoadingIndicator from "../components/Chat/LoadingIndicator"
 import { LoadingState } from "../components/ui/LoadingState"
 import { ToolPage } from "../components/ui/ToolPage"
 import QuizHeader from "../components/Quiz/QuizHeader"
@@ -159,9 +160,9 @@ export default function ExamLabs() {
     return (
   <ToolPage title="Examens">
 
-      {loadingExams && <LoadingIndicator label="Chargement des examens…" />}
+      {loadingExams && <PendingRead title="Examens" label="On prépare tes examens…" />}
 
-      <div className="rounded-2xl border border-border bg-surface p-4">
+      <div className="p-4 ui-card">
         <button type="button" disabled className="min-h-11 text-left font-semibold text-muted">Examen à réponse rédigée</button>
         <p className="text-sm text-muted">Indisponible pour le moment : les examens proposés sont des QCM.</p>
       </div>
@@ -208,15 +209,12 @@ export default function ExamLabs() {
         )}
 
         {failure && !qs.length && (
-          <div role="alert" className="mt-10 space-y-4 text-center">
-            <p className="text-foreground">{failure}</p>
-            <button type="button" onClick={() => setActiveExam(null)} className="ui-button min-h-11">Retour aux examens</button>
-          </div>
+          <div className="mt-10"><ErrorNotice message={failure} onRetry={() => setActiveExam(null)} retryLabel="Retour aux examens" /></div>
         )}
 
         {ready && <section className="mx-auto flex max-w-sm flex-col items-center gap-6 px-6 py-12 text-center" role="status">
-          <span aria-hidden="true" className="grid size-18 place-items-center rounded-full bg-success text-3xl text-on-success">✓</span>
-          <h2 className="text-2xl font-bold">Ton examen est prêt</h2>
+          <span aria-hidden="true" className="grid size-18 place-items-center rounded-full bg-success text-on-success"><CheckIcon className="size-8" /></span>
+          <h2 className="ui-title">Ton examen est prêt</h2>
           <button type="button" className="ui-button min-h-11 w-full" onClick={() => setReady(false)}>Commencer</button>
         </section>}
         {qs.length > 0 && !ready && !done && q && (

@@ -28,7 +28,7 @@ export default function SmartNotes() {
   }
 
   return (
-    <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-primary transition-[transform,opacity] duration-300  ">
+    <div className="group p-4 hover:border-primary transition-[transform,opacity] duration-300 ui-card">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">

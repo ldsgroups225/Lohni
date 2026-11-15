@@ -1,3 +1,4 @@
+import { CheckIcon, CloseIcon } from '../ui/NavigationIcons'
 import { priorityLabel } from "../../lib/priorityLabel"
 import MarkdownView from "../Chat/MarkdownView"
 import { confirmDialog } from "../../lib/confirm"
@@ -15,7 +16,7 @@ function fmtTime(ts: number) {
 
 function DaySlots({ date, slots, tasks }: { date: string; slots: PlannerSlot[]; tasks: Record<string, PlannerTask> }) {
     return (
-        <div className="rounded-xl border border-border bg-surface p-3">
+        <div className="p-3 ui-card">
             <div className="text-xs text-muted mb-2">{new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
             <div className="space-y-2">
                 {slots.length === 0 && <div className="text-muted text-sm">Aucun créneau</div>}
@@ -252,7 +253,7 @@ export default function Planner() {
             </div>
             <div role="tabpanel" className="overflow-hidden rounded-card border border-border bg-surface">
                 {tasks.filter(t => (t.status === 'done') === (taskTab === 'done')).map(task => <div key={task.id} className="flex items-center gap-1 border-b border-border px-1 last:border-b-0">
-                    <button type="button" aria-label={`${task.status === 'done' ? 'Remettre à faire' : 'Marquer'} ${task.title}${task.status === 'done' ? '' : ' comme faite'}`} onClick={() => void toggleTask(task)} className="grid size-12 shrink-0 place-items-center"><span className={`grid size-7 place-items-center rounded-lg border-2 ${task.status === 'done' ? 'border-success bg-success text-on-primary' : 'border-primary'}`}>{task.status === 'done' && '✓'}</span></button>
+                    <button type="button" aria-label={`${task.status === 'done' ? 'Remettre à faire' : 'Marquer'} ${task.title}${task.status === 'done' ? '' : ' comme faite'}`} onClick={() => void toggleTask(task)} className="grid size-12 shrink-0 place-items-center"><span className={`grid size-7 place-items-center rounded-lg border-2 ${task.status === 'done' ? 'border-success bg-success text-on-primary' : 'border-primary'}`}>{task.status === 'done' && <CheckIcon className="size-4" />}</span></button>
                     <div className="min-w-0 py-3"><div className={`font-bold ${task.status === 'done' ? 'text-muted line-through' : 'text-foreground'}`}>{task.title}</div><div className="text-sm text-muted">{new Date(task.dueAt).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · {task.estMins} min</div></div>
                 </div>)}
                 {tasks.filter(t => (t.status === 'done') === (taskTab === 'done')).length === 0 && <p className="p-6 text-center text-sm text-muted">{taskTab === 'todo' ? 'Rien à préparer. Profites-en !' : 'Aucune tâche terminée pour l’instant.'}</p>}
@@ -261,7 +262,7 @@ export default function Planner() {
             {undo && <div role="status" className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 rounded-2xl bg-foreground p-2 pl-4 text-sm font-semibold text-surface"><span className="flex-1">Tâche terminée, bravo</span><button type="button" className="min-h-11 rounded-xl px-3 font-bold text-primary" onClick={() => { void mark(undo.id, undo.status).then(() => { setUndo(null); setStatusError('') }).catch(() => setStatusError('Impossible d’annuler. Réessaie.')) }}>Annuler</button></div>}
             <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-muted">Options avancées</summary>
             <div className="space-y-4"><div className="flex items-center gap-2">
-                <div role="tablist" aria-label="Vue du planning" onKeyDown={onTabKey} className="grid min-w-0 flex-1 grid-cols-3 gap-1 rounded-xl border border-border bg-surface p-1">
+                <div role="tablist" aria-label="Vue du planning" onKeyDown={onTabKey} className="grid min-w-0 flex-1 grid-cols-3 gap-1 p-1 ui-card">
                     {views.map(([id, label, full]) => (
                         <button type="button" key={id} role="tab" aria-selected={view === id} aria-label={full} tabIndex={view === id ? 0 : -1} onClick={() => setView(id)}
                             className={`min-h-11 rounded-lg px-2 text-sm font-medium ${view === id ? 'bg-tint text-foreground font-bold' : 'text-foreground'}`}>{label}</button>
@@ -317,7 +318,7 @@ export default function Planner() {
                     <div className="grid gap-3">
                         {tasks.length === 0 && <p className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">Aucune tâche pour le moment. Ajoute-en une depuis « Aujourd’hui ».</p>}
                         {tasks.map(t => (
-                            <div key={t.id} className="min-w-0 rounded-xl border border-border bg-surface p-3">
+                            <div key={t.id} className="min-w-0 p-3 ui-card">
                                 <div className="min-w-0">
                                     <div className="text-foreground font-medium">{t.title}</div>
                                     <div className="text-muted text-xs">
@@ -351,7 +352,7 @@ export default function Planner() {
                                                         onClick={() => deleteFile(t.id, file.id)}
                                                         className="grid size-11 place-items-center text-muted hover:text-foreground" aria-label={`Supprimer ${file.originalName}`}
                                                         title="Supprimer le fichier"
-                                                    >×</button>
+                                                    ><CloseIcon className="size-4" /></button>
                                                 </div>
                                             ))}
                                         </div>
@@ -367,7 +368,7 @@ export default function Planner() {
                                 {Array.isArray(materials[t.id]?.flashcards) && (
                                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         {withOccurrenceKeys(materials[t.id].flashcards as Array<{ front: string; back: string }>, c => JSON.stringify([c.front, c.back])).map(({ value: c, key }) => (
-                                            <div key={key} className="border border-border rounded-lg p-2">
+                                            <div key={key} className="p-2 ui-card">
                                                 <div className="text-foreground text-sm font-medium">Q: <MarkdownView md={c.front} inline /></div>
                                                 <div className="text-muted text-sm">A: <MarkdownView md={c.back} /></div>
                                             </div>

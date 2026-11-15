@@ -1,4 +1,5 @@
-import { ZapIcon, TrophyIcon, DumbbellIcon, ThumbsUpIcon, ThumbsDownIcon, ScaleIcon, BotIcon, HandshakeIcon, ChartIcon, TrendingDownIcon, AlertIcon } from '../components/ui/NavigationIcons'
+import { LoadingState } from '../components/ui/LoadingState'
+import { AlertIcon, BotIcon, ChartIcon, CheckIcon, CloseIcon, DumbbellIcon, HandshakeIcon, ScaleIcon, ThumbsDownIcon, ThumbsUpIcon, TrendingDownIcon, TrophyIcon, ZapIcon } from '../components/ui/NavigationIcons'
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import { useOverlayNavigation } from "../lib/useOverlayNavigation";
@@ -294,13 +295,13 @@ export default function Debate() {
             <ToolPage title="Débat">
                 <div className="w-full space-y-4">
                     <div className="space-y-1">
-                        <h2 className="text-xl font-semibold text-foreground">Commencer un débat</h2>
+                        <h2 className="ui-section-title">Commencer un débat</h2>
                         <p className="text-sm text-muted">
                             Défends ton point de vue dans un débat avec l’IA
                         </p>
                     </div>
 
-                    <div className="bg-surface border border-border rounded-2xl p-5 space-y-5">
+                    <div className="p-5 space-y-5 ui-card">
                         <div>
                             <label htmlFor="debate-topic" className="block text-sm font-medium text-foreground mb-2">
                                 Sujet du débat
@@ -373,12 +374,12 @@ export default function Debate() {
             <header className="flex-shrink-0 px-4 pt-4">
                 <div className="flex items-center gap-2">
                     <BackButton fallback="/courses" />
-                    <div className="min-w-0 flex-1"><h1 className="text-xl font-bold">Débat</h1><p className="text-sm text-muted">{messages.filter(message => message.role === "user").length} échange(s)</p></div>
+                    <div className="min-w-0 flex-1"><h1 className="ui-title">Débat</h1><p className="text-sm text-muted">{messages.filter(message => message.role === "user").length} échange(s)</p></div>
                     <span className="rounded-full border border-border bg-tint px-3 py-1 text-xs font-medium">BÊTA</span>
                     <button type="button" onClick={() => { setDebateId(null); setSession(null); setMessages([]); navigate("/debate"); }} className="ui-button-ghost text-sm">Nouveau débat</button>
                 </div>
-                <div className="mt-1 rounded-2xl border border-border bg-surface px-4 py-3">
-                    <h2 title={session?.topic} className="line-clamp-2 font-bold leading-tight">{session?.topic || "Débat"}</h2>
+                <div className="mt-1 px-4 py-3 ui-card">
+                    <h2 title={session?.topic} className="ui-card-title">{session?.topic || "Débat"}</h2>
                     <div className="mt-2 flex gap-2 text-xs font-bold">
                         <span className="rounded-xl bg-tint px-3 py-1 text-primary">Toi : {session?.position === "for" ? "pour" : "contre"}</span>
                         <span className="rounded-xl border border-border bg-background px-3 py-1 text-muted">Lohni : {session?.position === "for" ? "contre" : "pour"}</span>
@@ -391,7 +392,7 @@ export default function Debate() {
                     <div className="flex items-center justify-center h-full">
                         <div className="text-center space-y-4 max-w-md">
                             <div className="animate-[fadeIn_0.5s_ease-in-out]"><ScaleIcon className="size-16" /></div>
-                            <h2 className="text-2xl font-bold text-foreground animate-[fadeIn_0.6s_ease-in-out]">
+                            <h2 className="ui-section-title animate-[fadeIn_0.6s_ease-in-out]">
                                 Prêt à débattre !
                             </h2>
                             <p className="text-muted animate-[fadeIn_0.7s_ease-in-out]">
@@ -410,7 +411,7 @@ export default function Debate() {
                         </div>
                     </div>
                 ))}
-                {isStreaming && <div className="max-w-[84%] rounded-2xl rounded-bl-md border border-border bg-surface px-4 py-3 text-muted"><span className="mb-1 block text-sm font-bold">Lohni</span>{streamingContent ? <div className="leading-snug [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"><MarkdownContent md={streamingContent} /></div> : "Lohni réfléchit…"}</div>}
+                {isStreaming && <div className="max-w-[84%] rounded-bl-md px-4 py-3 text-muted ui-card"><span className="mb-1 block text-sm font-bold">Lohni</span>{streamingContent ? <div className="leading-snug [&_p:first-child]:mt-0 [&_p:last-child]:mb-0"><MarkdownContent md={streamingContent} /></div> : "Lohni réfléchit…"}</div>}
 
                 <div ref={messagesEndRef} />
             </div>
@@ -472,14 +473,14 @@ export default function Debate() {
 
             {analysisOpen && isDebateEnded && analysis && (
                 <div className="fixed inset-0 bg-background flex items-center justify-center p-4 z-[var(--z-modal)] animate-[fadeIn_0.3s_ease-in-out]" role="dialog" aria-modal="true">
-                    <div className="bg-surface border border-border rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto custom-scroll shadow-2xl animate-[scaleIn_0.3s_ease-out]">
+                    <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto custom-scroll shadow-2xl animate-[scaleIn_0.3s_ease-out] ui-card">
                         <div className="p-8 space-y-6">
                             {/* Header */}
                             <div className="text-center space-y-4">
                                 <div className="text-6xl">
                                     {analysis.winner === "user" ? <TrophyIcon className="size-16" /> : analysis.winner === "ai" ? <BotIcon className="size-16" /> : <HandshakeIcon className="size-16" />}
                                 </div>
-                                <h2 className="text-3xl font-bold text-foreground">
+                                <h2 className="ui-title">
                                     {analysis.winner === "user"
                                         ? "Tu as gagné !"
                                         : analysis.winner === "ai"
@@ -490,8 +491,8 @@ export default function Debate() {
                             </div>
 
                             {/* Overall Assessment */}
-                            <div className="bg-surface border border-border rounded-xl p-6">
-                                <h3 className="text-xl font-bold text-foreground mb-3"><ChartIcon /> Bilan général</h3>
+                            <div className="p-6 ui-card">
+                                <h3 className="ui-section-title mb-3"><ChartIcon /> Bilan général</h3>
                                 <p className="text-foreground leading-relaxed">{analysis.overallAssessment}</p>
                             </div>
 
@@ -500,11 +501,11 @@ export default function Debate() {
                                 {/* User Performance */}
                                 <div className="space-y-4">
                                     <div className="bg-tint border border-success rounded-xl p-5">
-                                        <h3 className="text-lg font-bold text-foreground mb-3"><DumbbellIcon /> Tes points forts</h3>
+                                        <h3 className="ui-section-title mb-3"><DumbbellIcon /> Tes points forts</h3>
                                         <ul className="space-y-2">
                                             {withOccurrenceKeys(analysis.userStrengths, value => value).map(({ value: strength, key }) => (
                                                 <li key={key} className="text-foreground text-sm flex items-start gap-2">
-                                                    <span className="text-success mt-0.5">✓</span>
+                                                    <span className="mt-0.5 text-success"><CheckIcon className="size-4" /></span>
                                                     <span>{strength}</span>
                                                 </li>
                                             ))}
@@ -512,11 +513,11 @@ export default function Debate() {
                                     </div>
                                     {analysis.userWeaknesses.length > 0 && (
                                         <div className="bg-tint border border-danger rounded-xl p-5">
-                                            <h3 className="text-lg font-bold text-foreground mb-3"><TrendingDownIcon /> Points à améliorer</h3>
+                                            <h3 className="ui-section-title mb-3"><TrendingDownIcon /> Points à améliorer</h3>
                                             <ul className="space-y-2">
                                                 {withOccurrenceKeys(analysis.userWeaknesses, value => value).map(({ value: weakness, key }) => (
                                                     <li key={key} className="text-foreground text-sm flex items-start gap-2">
-                                                        <span className="text-foreground mt-0.5">✗</span>
+                                                        <span className="mt-0.5 text-foreground"><CloseIcon className="size-4" /></span>
                                                         <span>{weakness}</span>
                                                     </li>
                                                 ))}
@@ -528,11 +529,11 @@ export default function Debate() {
                                 {/* AI Performance */}
                                 <div className="space-y-4">
                                     <div className="bg-tint border border-border rounded-xl p-5">
-                                        <h3 className="text-lg font-bold text-foreground mb-3"><BotIcon /> Points forts de l’IA</h3>
+                                        <h3 className="ui-section-title mb-3"><BotIcon /> Points forts de l’IA</h3>
                                         <ul className="space-y-2">
                                             {withOccurrenceKeys(analysis.aiStrengths, value => value).map(({ value: strength, key }) => (
                                                 <li key={key} className="text-foreground text-sm flex items-start gap-2">
-                                                    <span className="text-foreground mt-0.5">✓</span>
+                                                    <span className="mt-0.5 text-foreground"><CheckIcon className="size-4" /></span>
                                                     <span>{strength}</span>
                                                 </li>
                                             ))}
@@ -540,11 +541,11 @@ export default function Debate() {
                                     </div>
                                     {analysis.aiWeaknesses.length > 0 && (
                                         <div className="bg-tint border border-danger rounded-xl p-5">
-                                            <h3 className="text-lg font-bold text-foreground mb-3"><TrendingDownIcon /> Points faibles de l’IA</h3>
+                                            <h3 className="ui-section-title mb-3"><TrendingDownIcon /> Points faibles de l’IA</h3>
                                             <ul className="space-y-2">
                                                 {withOccurrenceKeys(analysis.aiWeaknesses, value => value).map(({ value: weakness, key }) => (
                                                     <li key={key} className="text-foreground text-sm flex items-start gap-2">
-                                                        <span className="text-foreground mt-0.5">✗</span>
+                                                        <span className="mt-0.5 text-foreground"><CloseIcon className="size-4" /></span>
                                                         <span>{weakness}</span>
                                                     </li>
                                                 ))}
@@ -556,8 +557,8 @@ export default function Debate() {
 
                             {/* Key Moments */}
                             {analysis.keyMoments.length > 0 && (
-                                <div className="bg-surface border border-border rounded-xl p-6">
-                                    <h3 className="text-xl font-bold text-foreground mb-4"><ZapIcon /> Moments clés</h3>
+                                <div className="p-6 ui-card">
+                                    <h3 className="ui-section-title mb-3"><ZapIcon /> Moments clés</h3>
                                     <ul className="space-y-3">
                                         {withOccurrenceKeys(analysis.keyMoments, value => value).map(({ value: moment, key }, idx) => (
                                             <li key={key} className="text-foreground flex items-start gap-3">
@@ -599,13 +600,7 @@ export default function Debate() {
 
             {analysisOpen && analysisState === "loading" && (
                 <div className="fixed inset-0 bg-background flex items-center justify-center z-[var(--z-modal)]" role="dialog" aria-modal="true">
-                    <div className="bg-surface border border-border rounded-2xl p-8 text-center space-y-4 min-w-[300px]">
-                        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-                        <p className="text-foreground font-semibold">Analyse du débat…</p>
-                        {analysisPhase && (
-                            <p className="text-primary text-sm animate-pulse">{analysisPhase}</p>
-                        )}
-                    </div>
+                    <LoadingState label="Analyse du débat…" steps={analysisPhase ? [{ after: 0, message: analysisPhase }] : undefined} expectedDuration={analysisPhase ? 30 : undefined} />
                 </div>
             )}
 
@@ -616,9 +611,9 @@ export default function Debate() {
                         <div className="flex-1">{error}</div>
                         <button type="button"
                             onClick={() => setError(null)}
-                            className="text-foreground hover:text-foreground"
+                            aria-label="Fermer le message d’erreur" className="grid size-11 place-items-center text-foreground hover:text-foreground"
                         >
-                            ✕
+                            <CloseIcon />
                         </button>
                     </div>
                 </div>

@@ -21,8 +21,8 @@ export default function QuestionCard({
   const ok = selected === q.correct;
   return (
     <div id="quizContent" className="motion-enter space-y-4">
-      <div id="questionCard" className="space-y-4 rounded-2xl border border-border bg-surface p-5">
-        <h2 id="questionText" className="text-xl font-semibold text-foreground"><MarkdownView md={q.question} inline /></h2>
+      <div id="questionCard" className="space-y-4 p-5 ui-card">
+        <h2 id="questionText" className="ui-section-title"><MarkdownView md={q.question} inline /></h2>
 
         <fieldset id="answerOptions" className="space-y-3">
           <legend className="sr-only">Choisis ta réponse</legend>
@@ -52,7 +52,7 @@ export default function QuestionCard({
         {!showExp && (
           <div>
             {!showHint && (
-              <button type="button" onClick={onHint} className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-surface px-4 text-foreground">
+              <button type="button" onClick={onHint} className="ui-button-secondary">
                 <LightbulbIcon /> Afficher un indice
               </button>
             )}

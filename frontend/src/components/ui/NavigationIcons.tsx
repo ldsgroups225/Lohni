@@ -21,11 +21,11 @@ export function ProfileIcon() {
 export function FlameIcon() {
   return <svg aria-hidden="true" {...svgProps}><path fill="none" {...strokeProps} d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0a5 5 0 0 1 1-3a1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/></svg>
 }
-export function CheckIcon() {
-  return <svg aria-hidden="true" {...svgProps}><path fill="none" {...strokeProps} d="M20 6L9 17l-5-5"/></svg>
+export function CheckIcon({ className = svgProps.className }: { className?: string } = {}) {
+  return <svg aria-hidden="true" viewBox={svgProps.viewBox} className={className}><path fill="none" {...strokeProps} d="M20 6L9 17l-5-5"/></svg>
 }
-export function CloseIcon() {
-  return <svg aria-hidden="true" {...svgProps}><path fill="none" {...strokeProps} d="M18 6L6 18M6 6l12 12"/></svg>
+export function CloseIcon({ className = svgProps.className }: { className?: string } = {}) {
+  return <svg aria-hidden="true" viewBox={svgProps.viewBox} className={className}><path fill="none" {...strokeProps} d="M18 6L6 18M6 6l12 12"/></svg>
 }
 
 export function NoteIcon({ className = svgProps.className }: { className?: string } = {}) {
@@ -122,4 +122,24 @@ export function AlertIcon({ className = svgProps.className }: { className?: stri
 
 export function CameraIcon({ className = svgProps.className }: { className?: string } = {}) {
   return <svg aria-hidden="true" viewBox={svgProps.viewBox} className={inlineClassName(className)}><g fill="none" {...strokeProps}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></g></svg>
+}
+
+export function PlusIcon({ className = svgProps.className }: { className?: string } = {}) {
+  return <svg aria-hidden="true" viewBox={svgProps.viewBox} className={inlineClassName(className)}><path fill="none" {...strokeProps} d="M12 5v14M5 12h14"/></svg>
+}
+
+export function MoreIcon({ className = svgProps.className }: { className?: string } = {}) {
+  return <svg aria-hidden="true" viewBox={svgProps.viewBox} className={inlineClassName(className)}><g fill="currentColor"><circle cx="5" cy="12" r="1.75"/><circle cx="12" cy="12" r="1.75"/><circle cx="19" cy="12" r="1.75"/></g></svg>
+}
+
+export function ChevronRightIcon({ className = svgProps.className }: { className?: string } = {}) {
+  return <svg aria-hidden="true" viewBox={svgProps.viewBox} className={inlineClassName(className)}><path fill="none" {...strokeProps} d="m9 6 6 6-6 6"/></svg>
+}
+
+export function PlayIcon({ className = svgProps.className }: { className?: string } = {}) {
+  return <svg aria-hidden="true" viewBox={svgProps.viewBox} className={inlineClassName(className)}><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+}
+
+export function PauseIcon({ className = svgProps.className }: { className?: string } = {}) {
+  return <svg aria-hidden="true" viewBox={svgProps.viewBox} className={inlineClassName(className)}><path fill="currentColor" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
 }

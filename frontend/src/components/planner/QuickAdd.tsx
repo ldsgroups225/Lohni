@@ -1,4 +1,4 @@
-import { PaperclipIcon } from '../ui/NavigationIcons'
+import { CloseIcon, PaperclipIcon } from '../ui/NavigationIcons'
 import { useState, useRef } from "react"
 import { withOccurrenceKeys } from "../../lib/occurrenceKeys"
 
@@ -34,8 +34,8 @@ export default function QuickAdd({ onAdd, loading, error }: QuickAddProps) {
     }
 
     return (
-        <div className="rounded-xl border border-border bg-surface p-4">
-            <h2 className="text-foreground font-medium mb-3 flex items-center gap-2">
+        <div className="p-4 ui-card">
+            <h2 className="ui-section-title mb-3 flex items-center gap-2">
                 Qu’as-tu à préparer ?
             </h2>
 
@@ -108,7 +108,7 @@ export default function QuickAdd({ onAdd, loading, error }: QuickAddProps) {
                                 <button type="button"
                                     onClick={() => removeFile(i)}
                                     className="grid size-11 place-items-center text-muted hover:text-foreground" aria-label={`Retirer ${file.name}`}
-                                >×</button>
+                                ><CloseIcon className="size-4" /></button>
                             </div>
                         ))}
                     </div>

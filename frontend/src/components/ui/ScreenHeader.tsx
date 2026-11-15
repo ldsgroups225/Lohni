@@ -8,7 +8,7 @@ export function ScreenHeader({ title, back, backLabel, subtitle, fullTitle, chil
   return <header className="flex items-center gap-3">
     {typeof back === 'string' ? <BackButton fallback={back} label={backLabel} /> : back && <BackButton onClick={back} label={backLabel} />}
     <div className="min-w-0 flex-1">
-      <h1 className={`${fullTitle ? '' : 'line-clamp-2 '}text-2xl font-bold leading-tight text-foreground [overflow-wrap:anywhere]`}>{title}</h1>
+      <h1 className={`ui-title ${fullTitle ? '' : 'line-clamp-2'}`}>{title}</h1>
       {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
     </div>
     {children}

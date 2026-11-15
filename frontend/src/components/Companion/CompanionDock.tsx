@@ -255,7 +255,7 @@ export default function CompanionDock() {
 
           {busy && (
             <div className="flex justify-start">
-              <div className="px-4 py-2 rounded-2xl bg-surface border border-border text-xs text-foreground animate-pulse">
+              <div className="px-4 py-2 text-xs text-foreground animate-pulse ui-card">
                 Réflexion…
               </div>
             </div>

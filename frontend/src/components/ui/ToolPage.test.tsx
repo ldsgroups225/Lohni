@@ -13,6 +13,6 @@ test('en-tête commun : retour vers Cours, titre h1 et badge bêta', () => {
 })
 test('retour, badge et largeur sont réglables', () => {
   const out = html({ back: '/', beta: false, wide: true })
-  expect(out).not.toContain('BÊTA'); expect(out).toContain('max-w-6xl')
+  expect(out).not.toContain('BÊTA'); expect(out).toContain('ui-page-body-wide')
 })
 test('la zone tactile du retour fait 44 px', () => { expect(html()).toContain('size-11') })

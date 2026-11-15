@@ -9,7 +9,7 @@ export default function Tools() {
   return (
     <ToolPage title="Outils">
         <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-          <Link to="/revision" className="rounded-2xl border border-border bg-surface px-5 py-4 text-foreground hover:bg-tint">Session de révision →</Link>
+          <Link to="/revision" className="ui-card block px-5 py-4 hover:bg-tint">Session de révision →</Link>
           <SmartNotes />
           <PodcastGenerator />
           <Transcriber />

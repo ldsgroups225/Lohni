@@ -2,7 +2,7 @@ export default function ComingSoon() {
   return (
     <div className="mt-8">
       <div className="flex items-center gap-3 mb-6">
-        <h2 className="text-xl font-semibold text-foreground">
+        <h2 className="ui-section-title">
           D’autres outils à venir
         </h2>
         <div className="flex-1 h-px bg-gradient-to-r from-tint to-transparent"></div>
@@ -13,7 +13,7 @@ export default function ComingSoon() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* AI Study Planner */}
-        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-primary transition-[transform,opacity] duration-300  ">
+        <div className="group p-4 hover:border-primary transition-[transform,opacity] duration-300 ui-card">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -48,7 +48,7 @@ export default function ComingSoon() {
         </div>
 
         {/* Mind Map Generator */}
-        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-[transform,opacity] duration-300  ">
+        <div className="group p-4 hover:border-border transition-[transform,opacity] duration-300 ui-card">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -83,7 +83,7 @@ export default function ComingSoon() {
         </div>
 
         {/* Presentation Builder */}
-        <div className="group rounded-2xl bg-surface border border-border p-4 hover:border-border transition-[transform,opacity] duration-300  ">
+        <div className="group p-4 hover:border-border transition-[transform,opacity] duration-300 ui-card">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">

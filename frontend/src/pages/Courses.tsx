@@ -1,10 +1,11 @@
-import { HelpIcon, ClipboardIcon, DebateIcon, HeadphonesIcon } from '../components/ui/NavigationIcons'
+import { ChevronRightIcon, ClipboardIcon, DebateIcon, HeadphonesIcon, HelpIcon, MoreIcon, PlusIcon } from '../components/ui/NavigationIcons'
 import { Button, ButtonLink } from '../components/ui/Button'
 import { ScreenHeader } from '../components/ui/ScreenHeader'
 import { PendingRead } from '../components/ui/PendingRead'
 import { confirmDialog } from '../lib/confirm'
 import { listDelay } from '../components/ui/revisionPresentation'
-import Mascotte from '../components/Mascotte/Mascotte'
+import { ErrorNotice } from '../components/ui/ErrorNotice'
+import { EmptyState } from '../components/ui/EmptyState'
 import { Progress } from '../components/ui/Progress'
 import MasteryBadge from '../components/ui/MasteryBadge'
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
@@ -47,7 +48,7 @@ function CardEditor({ card, busy, onSave, onCancel, onDelete }: {
         </select></label>
       </>}
       <label className="block space-y-2"><span>{card.kind === 'mcq' ? 'Explication' : 'Réponse'}</span><textarea className={input} required value={answer} onChange={event => setAnswer(event.target.value)} /></label>
-      <div><span className="mb-2 block text-sm font-semibold text-muted">Aperçu comme en révision</span><div className="rounded-2xl border border-border bg-surface p-4"><MarkdownContent md={answer || 'Ta réponse apparaîtra ici.'} /></div></div>
+      <div><span className="mb-2 block text-sm font-semibold text-muted">Aperçu comme en révision</span><div className="p-4 ui-card"><MarkdownContent md={answer || 'Ta réponse apparaîtra ici.'} /></div></div>
       <div className="mt-auto space-y-2 pt-4"><Button type="submit" className="w-full" disabled={!question.trim()}>Enregistrer</Button>{busy ? <p className="text-sm text-muted">Mise à jour en cours…</p> : !question.trim() && <p className="text-sm text-muted">Renseigne la question pour enregistrer.</p>}<Button variant="secondary" className="w-full text-danger" onClick={onDelete}>Supprimer cette carte</Button><Button variant="ghost" className="w-full" onClick={onCancel}>Annuler</Button></div>
     </fieldset>
   </form>
@@ -88,23 +89,23 @@ export default function Courses() {
   if (summaryOpen && summaryChapter) return <Suspense fallback={<PendingRead title="Résumé" label="On prépare ton résumé…" />}><ChapterSummary {...summaryChapter} onBack={() => setSummaryOpen(false)} onCards={() => { setSelectedChapter(summaryChapter.id); setSummaryOpen(false) }} /></Suspense>
   const selected = chapters.find(chapter => chapter.id === selectedChapter)
   const selectedCard = selected?.cards.find(card => card.id === editing)
-  if (selected) return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28"><div className="mx-auto max-w-2xl space-y-4">
+  if (selected) return <main className="loop-screen ui-page"><div className="ui-page-body space-y-4">
     <ScreenHeader back={() => selectedCard ? setEditing(null) : setSelectedChapter(null)} backLabel={selectedCard ? 'Annuler la modification' : 'Retour à Cours'} title={selectedCard ? 'Modifier la carte' : selected.title} fullTitle subtitle={!selectedCard && `${selected.subject} · ${selected.cards.length} carte${selected.cards.length === 1 ? '' : 's'}`}>{!selectedCard && <MasteryBadge status={selected.status} />}</ScreenHeader>
-    {error && <p role="alert" className="text-danger">{error}</p>}
+    {error && <ErrorNotice message={error} />}
     {selectedCard ? <CardEditor key={selectedCard.id} card={selectedCard} busy={busy || stale} onCancel={() => setEditing(null)} onSave={value => void run(async () => { await revisionAPI.updateCard(selectedCard.id, value); setEditing(null); await load() })} onDelete={() => { void confirmDialog('Supprimer cette carte ? Elle ne sera plus proposée en révision.').then(ok => { if (ok) void run(async () => { await revisionAPI.deleteCard(selectedCard.id); setEditing(null); await load() }) }) }} /> : <>
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface">{selected.cards.map(card => <button key={card.id} type="button" aria-label={`Modifier : ${card.question}`} disabled={busy || stale} onClick={() => setEditing(card.id)} className="flex min-h-[72px] w-full items-center gap-2 border-b border-border px-4 py-3 text-left last:border-b-0 disabled:opacity-50"><span className="min-w-0 flex-1"><span className="block font-bold"><MarkdownContent md={card.question} inline /></span><span className="block text-sm text-muted"><MarkdownContent md={card.answer} inline /></span></span><span aria-hidden="true" className="grid size-11 place-items-center text-xl text-muted">›</span></button>)}</div>
+      <div className="overflow-hidden ui-card">{selected.cards.map(card => <button key={card.id} type="button" aria-label={`Modifier : ${card.question}`} disabled={busy || stale} onClick={() => setEditing(card.id)} className="flex min-h-[72px] w-full items-center gap-2 border-b border-border px-4 py-3 text-left last:border-b-0 disabled:opacity-50"><span className="min-w-0 flex-1"><span className="block font-bold"><MarkdownContent md={card.question} inline /></span><span className="block text-sm text-muted"><MarkdownContent md={card.answer} inline /></span></span><span aria-hidden="true" className="grid size-11 place-items-center text-muted"><ChevronRightIcon /></span></button>)}</div>
       <div className="space-y-2">{selected.cards.length ? <ButtonLink className="w-full" to={`/revision?chapter=${encodeURIComponent(selected.id)}`}>Réviser ce chapitre</ButtonLink> : <Button className="w-full" disabled>Réviser ce chapitre</Button>}{!selected.cards.length && <p className="text-sm text-muted">Ce chapitre n’a pas encore de cartes à réviser.</p>}</div>
     </>}
   </div></main>
 
-  return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28">
-    <div className="mx-auto max-w-2xl space-y-4">
+  return <main className="loop-screen ui-page">
+    <div className="ui-page-body space-y-4">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-extrabold text-foreground">Cours</h1>
-        <ButtonLink to="/import" aria-label="Importer mon cours" className="min-h-11 px-4 py-2">＋ Importer</ButtonLink>
+        <h1 className="ui-title">Cours</h1>
+        <ButtonLink to="/import" aria-label="Importer mon cours" className="min-h-11 gap-1.5 px-4 py-2"><PlusIcon className="size-5" /> Importer</ButtonLink>
       </header>
       <nav aria-label="S’entraîner" className="space-y-2">
-        <h2 className="font-semibold text-muted">S’entraîner</h2>
+        <h2 className="ui-label">S’entraîner</h2>
         <div className="grid grid-cols-4 gap-2">
           {([
             ['/exam', ClipboardIcon, 'Examens'],
@@ -117,27 +118,23 @@ export default function Courses() {
           </Link>)}
         </div>
       </nav>
-      {error && <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} /><p>{error}</p>
-        <Button variant="secondary" disabled={busy} onClick={() => void run(load)}>Réessayer</Button>
-      </div>}
+      {error && <ErrorNotice message={error} busy={busy} onRetry={() => void run(load)} />}
       {busy && chapters.length === 0 && <PendingRead title="Mes cours" label="On prépare tes cours…" />}
-      {!busy && !error && chapters.length === 0 && <section className="space-y-3 rounded-2xl border border-border p-6">
-        <Mascotte humeur="au repos" taille={112} />
-        <h2 className="text-xl text-foreground">Tes cours apparaîtront ici</h2>
+      {!busy && !error && chapters.length === 0 && <EmptyState title="Tes cours apparaîtront ici">
         <p>Prépare ton premier chapitre pour commencer à réviser.</p>
         <ButtonLink to="/revision" className="w-full">Commencer ma révision</ButtonLink>
-      </section>}
+      </EmptyState>}
       {[...new Set(chapters.map(chapter => chapter.subject))].map((subject, subjectIndex) => {
         const own = chapters.filter(chapter => chapter.subject === subject)
         return <section key={subject} style={{ animationDelay: listDelay(subjectIndex), marginBlockStart: 8 }} className={`${animateEntry ? 'motion-list ' : ''}space-y-2`} aria-busy={busy}>
-          <h2 className="text-sm font-semibold text-muted">{subject}</h2>
+          <h2 className="ui-label">{subject}</h2>
           {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: listDelay(index) }} className={`${animateEntry ? 'motion-list ' : ''}space-y-1 rounded-2xl border border-border bg-surface p-4`}>
             <div className="flex items-start gap-2">
-              <h3 className="line-clamp-2 min-w-0 flex-1 [overflow-wrap:anywhere] text-lg font-extrabold text-foreground">{chapter.title}</h3>
+              <h3 className="ui-card-title min-w-0 flex-1">{chapter.title}</h3>
               <MasteryBadge status={chapter.status} />
               <details className="relative">
-                <summary aria-label={`Options du chapitre ${chapter.title}`} className="course-summary grid size-11 cursor-pointer list-none place-items-center rounded-xl text-xl text-muted focus-visible:outline-2 focus-visible:outline-primary">⋮</summary>
-                <div className="absolute right-0 z-10 w-max rounded-xl border border-border bg-surface p-2 shadow-lg">
+                <summary aria-label={`Options du chapitre ${chapter.title}`} className="course-summary grid size-11 cursor-pointer list-none place-items-center rounded-xl text-muted focus-visible:outline-2 focus-visible:outline-primary"><MoreIcon className="size-5 rotate-90" /></summary>
+                <div className="absolute right-0 z-10 w-max p-2 shadow-lg ui-card">
                   <button type="button" className="min-h-11 px-3 text-sm text-danger disabled:opacity-50" disabled={busy || stale} onClick={() => {
                     void confirmDialog(`Supprimer le chapitre « ${chapter.title} » et toutes ses cartes ? Cette action est définitive.`).then(ok => { if (ok) void run(async () => {
                       await revisionAPI.deleteChapter(chapter.id)
@@ -152,8 +149,8 @@ export default function Courses() {
             <p className="text-sm text-muted">{chapter.seenCards} carte{chapter.seenCards === 1 ? '' : 's'} vue{chapter.seenCards === 1 ? '' : 's'} sur {chapter.cards.length}{chapter.mastery !== null && ` · maîtrise estimée ${Math.round(chapter.mastery)} %`}
               {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && ` · encore ${Math.ceil(chapter.cards.length * revisionPolicy.minimumSeenRatio) - chapter.seenCards} pour faire évoluer la maîtrise`}</p>
             <div className="grid grid-cols-2 gap-2">
-            <button type="button" className="min-h-11 rounded-xl border border-border bg-background px-3 py-2 font-semibold text-foreground" onClick={() => { setSummaryId(chapter.id); setSummaryOpen(true) }}>Résumé</button>
-            <button type="button" className="min-h-11 rounded-xl border border-border bg-background px-3 py-2 font-semibold text-foreground" onClick={() => setSelectedChapter(chapter.id)}>{chapter.cards.length === 1 ? 'Voir la carte' : `Voir les ${chapter.cards.length} cartes`}</button>
+            <button type="button" className="ui-button-secondary" onClick={() => { setSummaryId(chapter.id); setSummaryOpen(true) }}>Résumé</button>
+            <button type="button" className="ui-button-secondary" onClick={() => setSelectedChapter(chapter.id)}>{chapter.cards.length === 1 ? 'Voir la carte' : `Voir les ${chapter.cards.length} cartes`}</button>
             </div>
           </article>)}
         </section>

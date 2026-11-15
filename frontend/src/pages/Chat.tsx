@@ -1,3 +1,4 @@
+import { ErrorNotice } from '../components/ui/ErrorNotice'
 import { BackButton } from "../components/ui/BackButton";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -278,12 +279,12 @@ export default function Chat() {
       )}
           </div>
         </div>
-        {profile ? <details className="rounded-xl border border-border p-3"><summary className="cursor-pointer text-sm">Enregistrer les cartes dans mes révisions</summary><fieldset className="mt-3 flex flex-wrap gap-3">
+        {profile ? <details className="p-3 ui-card"><summary className="cursor-pointer text-sm">Enregistrer les cartes dans mes révisions</summary><fieldset className="mt-3 flex flex-wrap gap-3">
           <label className="min-w-40 flex-1">Matière<select className="mt-1 w-full rounded-lg bg-surface p-2" value={subject} onChange={event => setSubject(event.target.value)}>{profile.subjects.map(name => <option key={name}>{name}</option>)}</select></label>
           <label className="min-w-40 flex-1">Chapitre<input className="mt-1 w-full rounded-lg bg-surface p-2" maxLength={revisionPolicy.maxTitleChars} value={noteTitle} placeholder={(topic || 'Notes du Tuteur').slice(0, revisionPolicy.maxTitleChars)} onChange={event => setNoteTitle(event.target.value)} /></label>
         </fieldset></details> : <Link to="/" className="ui-button-secondary w-full">Créer mon profil pour enregistrer des cartes</Link>}
         {saveMessage && <p role="status" className="text-foreground">{saveMessage} <Link to="/courses" className="ui-button-ghost">Voir mes cours</Link></p>}
-        {error && <p role="alert" className="text-foreground">{error}</p>}
+        {error && <ErrorNotice message={error} />}
       </div>
 
       <div
@@ -299,7 +300,7 @@ export default function Chat() {
                 if (m.role === "assistant") {
                   return (
                     <div key={key} className="w-full flex justify-start">
-                      <div className="w-full mx-auto rounded-3xl bg-surface border border-border ring-1 ring-border backdrop-blur px-5 sm:px-8 py-5 sm:py-8 max-w-full">
+                      <div className="w-full mx-auto ring-1 ring-border backdrop-blur px-5 sm:px-8 py-5 sm:py-8 max-w-full ui-card">
                         <div className="animate-[fadeIn_300ms_ease-out] leading-7 md:leading-8 overflow-x-auto">
                           <MarkdownView md={m.content} />
                         </div>

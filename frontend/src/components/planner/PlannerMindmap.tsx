@@ -1,3 +1,4 @@
+import { CloseIcon, MoreIcon } from '../ui/NavigationIcons'
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { forceSimulation, forceManyBody, forceCollide, forceRadial, type Simulation } from "d3-force"
 import { anchorLine } from "./mindmap/geometry"
@@ -530,7 +531,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                 <div className="pointer-events-none absolute -inset-2 opacity-35" style={{ background: `radial-gradient(22px 22px at 50% 65%, color-mix(in srgb, var(--color-secondary) 20%, transparent), transparent 70%)` }} />
                                 <div onPointerDown={e => onDown(e, t.id)} className="cursor-grab active:cursor-grabbing rounded-full border bg-surface border-border pl-3 pr-1.5 py-1.5  backdrop-blur flex items-center gap-1.5">
                                     <div className="text-[12px] text-foreground whitespace-nowrap max-w-[260px] truncate">{t.title}</div>
-                                    <button type="button" aria-label={`Options de ${t.title}`} aria-expanded={menuOpen === t.id} onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-foreground hover:text-foreground px-1 rounded hover:bg-tint">⋯</button>
+                                    <button type="button" aria-label={`Options de ${t.title}`} aria-expanded={menuOpen === t.id} onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === t.id ? null : t.id) }} className="text-[12px] text-foreground hover:text-foreground px-1 rounded hover:bg-tint"><MoreIcon className="size-4" /></button>
                                 </div>
                                 {menuOpen === t.id && (
                                     <div className="absolute left-0 top-[120%] z-30 bg-surface border border-border rounded-md shadow-lg min-w-[160px] p-1">
@@ -596,7 +597,7 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                             }}
                                             className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-tint text-foreground hover:bg-primary hover:text-on-primary flex items-center justify-center z-20"
                                             aria-label="Supprimer la bulle"
-                                        >×</button>
+                                        ><CloseIcon className="size-4" /></button>
                                         <span className="relative px-2">{label}{cnt ? ` (${cnt})` : ''}</span>
                                     </div>
                                 )
@@ -625,14 +626,14 @@ export default function PlannerMindmap({ tasks, plan, onPlan, onAssist, onUpdate
                                     <button type="button" className="text-[12px] text-foreground" onClick={() => setEditingId(n.id)}>{n.label}</button>
                                 )}
                                 <button type="button" onClick={() => setCustomNodes(list => list.filter(x => x.id !== n.id))}
-                                    className="text-[11px] text-foreground hover:text-foreground">×</button>
+                                    className="text-[11px] text-foreground hover:text-foreground"><CloseIcon className="size-4" /></button>
                             </div>
                         </div>
                     </div>
                 </div>
             ))}
 
-            <div className="absolute top-3 right-3 z-20 bg-surface border border-border rounded-lg px-2 py-1 flex items-center gap-2 text-xs text-foreground">
+            <div className="absolute top-3 right-3 z-20 px-2 py-1 flex items-center gap-2 text-xs text-foreground ui-card">
                 <button type="button" onClick={() => {
                     const rect = wrapRef.current?.getBoundingClientRect()
                     const cx = rect ? rect.width / 2 : 300
