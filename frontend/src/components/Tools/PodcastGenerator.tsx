@@ -38,7 +38,7 @@ export default function PodcastGenerator() {
         <div>
           <label htmlFor="podcast-topic" className="mb-2 block text-sm font-semibold text-foreground">Sujet ou notes</label>
           <textarea id="podcast-topic" value={topic} onChange={e => podcastJob.topic(e.target.value)} placeholder="Ex. : la photosynthèse, ou colle tes notes" className="h-28 w-full resize-none rounded-2xl border border-border bg-surface p-4 text-foreground" />
-          <div className="mt-2 flex flex-wrap gap-2">{chapters.map(chapter => <button key={chapter.id} type="button" className={chip} onClick={() => podcastJob.topic(chapter.summary || chapter.title)}>Depuis {chapter.title}</button>)}</div>
+          <div className="mt-2 flex flex-wrap gap-2">{chapters.map(chapter => <button key={chapter.id} type="button" className={`${chip} min-w-0 py-2 text-left`} onClick={() => podcastJob.topic(chapter.summary || chapter.title)}><span className="line-clamp-2 [overflow-wrap:anywhere]">Depuis {chapter.title}</span></button>)}</div>
         </div>
         <fieldset><legend className="mb-2 text-sm font-semibold text-foreground">Durée</legend><div className="flex gap-2">{(['short', 'long'] as const).map(value => <button key={value} type="button" aria-pressed={duration === value} onClick={() => setDuration(value)} className={`${chip} flex-1 ${duration === value ? 'border-primary bg-tint text-primary' : ''}`}>{value === 'short' ? 'Court' : 'Détaillé'}</button>)}</div></fieldset>
         {status && <ErrorNotice message={status} />}

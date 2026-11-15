@@ -9,6 +9,7 @@ vi.mock('../../lib/api', () => ({
   connectPlannerStream: () => ({ ws: {}, close: () => {} }),
   plannerList: vi.fn(async () => ({ ok: true, tasks: [] })),
   plannerWeekly: vi.fn(async () => ({ ok: true, plan: { days: [] } })),
+  plannerTask: (t: unknown) => t,
   plannerIngest: vi.fn(),
   plannerUpdate: vi.fn(),
   plannerMaterials: vi.fn(),
@@ -88,4 +89,14 @@ test('« Résumé » affiche le résumé, et un échec reste en français', asyn
   await press('Cartes')
   expect(container.textContent).toContain('La fiche n’a pas pu être générée')
   expect(container.textContent).not.toContain('boom interne')
+})
+
+test('un chargement raté affiche l’erreur partagée, puis « Réessayer » recharge', async () => {
+  vi.mocked(api.plannerList).mockRejectedValueOnce(new Error('Le planning est indisponible. Réessaie dans un instant.'))
+  await act(async () => root.render(<Planner />))
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('Le planning est indisponible')
+  vi.mocked(api.plannerList).mockResolvedValueOnce({ ok: true, tasks: [task] })
+  await press('Réessayer')
+  expect(container.querySelector('[role="alert"]')).toBeNull()
+  expect(container.textContent).toContain('À faire · 1')
 })

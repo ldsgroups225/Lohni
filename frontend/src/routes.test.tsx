@@ -41,3 +41,25 @@ test('la navigation remet en haut et le retour restaure la position, même aprè
     scrollTo.mockRestore()
   }
 })
+
+const Boom = () => { throw new Error('boom') }
+
+test('un écran qui plante affiche l’écran d’erreur Lohni, pas la page développeur', async () => {
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const host = document.createElement('div')
+  document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ ...routes[0], children: [...(routes[0].children ?? []), { path: 'boom', element: <Boom /> }] }], { initialEntries: ['/boom'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    expect(host.textContent).not.toContain('Unexpected Application Error')
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Cet écran n’a pas pu s’afficher')
+    expect([...host.querySelectorAll('button')].map(b => b.textContent)).toContain('Recharger')
+    expect(host.querySelector('a[href="/"]')).not.toBeNull()
+  } finally {
+    act(() => root.unmount())
+    router.dispose()
+    host.remove()
+    error.mockRestore()
+  }
+})
