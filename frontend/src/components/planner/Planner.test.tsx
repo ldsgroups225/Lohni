@@ -5,11 +5,15 @@ import { createRoot } from 'react-dom/client'
 import Planner from './Planner'
 import * as api from '../../lib/api'
 
+let emit: (ev: unknown) => void = () => {}
+const seenTasks = vi.hoisted(() => ({ current: [] as any[] }))
+vi.mock('./TodayFocus', () => ({ default: (p: { tasks: any[] }) => { seenTasks.current = p.tasks; return null } }))
 vi.mock('../../lib/api', () => ({
-  connectPlannerStream: () => ({ ws: {}, close: () => {} }),
+  connectPlannerStream: (cb: (ev: unknown) => void) => { emit = cb; return { ws: {}, close: () => {} } },
   plannerList: vi.fn(async () => ({ ok: true, tasks: [] })),
   plannerWeekly: vi.fn(async () => ({ ok: true, plan: { days: [] } })),
   plannerTask: (t: unknown) => t,
+  plannerSlot: (s: { start: unknown; end: unknown }) => ({ ...s, start: Date.parse(s.start as string), end: Date.parse(s.end as string) }),
   plannerIngest: vi.fn(),
   plannerUpdate: vi.fn(),
   plannerMaterials: vi.fn(),
@@ -99,4 +103,11 @@ test('un chargement raté affiche l’erreur partagée, puis « Réessayer » re
   await press('Réessayer')
   expect(container.querySelector('[role="alert"]')).toBeNull()
   expect(container.textContent).toContain('À faire · 1')
+})
+
+test('plan.update normalise les créneaux ISO en millisecondes', async () => {
+  vi.mocked(api.plannerList).mockResolvedValueOnce({ ok: true, tasks: [task] })
+  await act(async () => root.render(<Planner />))
+  await act(async () => emit({ type: 'plan.update', taskId: '1', slots: [{ id: 's', taskId: '1', kind: 'focus', start: '2026-11-18T09:00:00Z', end: '2026-11-18T09:30:00Z' }] }))
+  expect(seenTasks.current[0].plan.slots[0]).toMatchObject({ start: Date.parse('2026-11-18T09:00:00Z'), end: Date.parse('2026-11-18T09:30:00Z') })
 })
