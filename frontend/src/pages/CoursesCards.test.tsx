@@ -57,3 +57,22 @@ test('modifier une carte affiche un aperçu formaté et protège la suppression'
     expect(api.deleteCard).toHaveBeenCalledWith('c')
   } finally { act(() => root.unmount()); host.remove(); localStorage.removeItem('lohni-device-id'); HTMLDialogElement.prototype.showModal = show; HTMLDialogElement.prototype.close = close }
 })
+
+test('le bouton des cartes reste court et ne propose pas d’ouvrir un chapitre vide', async () => {
+  localStorage.setItem('lohni-device-id', 'chapitre-vide')
+  const card = (id: string) => ({ id, kind: 'basic', question: 'Q ?', answer: 'R' })
+  api.chapters.mockResolvedValue([
+    { id: 'vide', subject: 'Maths', title: 'Vide', status: 'Fragile', mastery: null, seenCards: 0, cards: [], summary: '' },
+    { id: 'plein', subject: 'Maths', title: 'Plein', status: 'Fragile', mastery: null, seenCards: 0, cards: [card('a'), card('b'), card('c')], summary: '' },
+  ])
+  api.progress.mockResolvedValue({})
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  try {
+    await act(async () => root.render(<MemoryRouter><Courses /></MemoryRouter>))
+    const labels = [...host.querySelectorAll('button')].map(button => [button.textContent, button.disabled] as const)
+    expect(labels).toContainEqual(['Aucune carte', true])
+    expect(labels).toContainEqual(['Voir les cartes', false])
+    expect(host.textContent).not.toContain('Voir les 0 cartes')
+  } finally { act(() => root.unmount()); host.remove(); localStorage.removeItem('lohni-device-id') }
+})

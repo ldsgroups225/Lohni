@@ -150,7 +150,8 @@ export default function Courses() {
               {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && ` · encore ${Math.ceil(chapter.cards.length * revisionPolicy.minimumSeenRatio) - chapter.seenCards} pour faire évoluer la maîtrise`}</p>
             <div className="grid grid-cols-2 gap-2">
             <button type="button" className="ui-button-secondary" onClick={() => { setSummaryId(chapter.id); setSummaryOpen(true) }}>Résumé</button>
-            <button type="button" className="ui-button-secondary" onClick={() => setSelectedChapter(chapter.id)}>{chapter.cards.length === 1 ? 'Voir la carte' : `Voir les ${chapter.cards.length} cartes`}</button>
+            {/* Le nombre de cartes est déjà dans la ligne au-dessus : le libellé reste court pour tenir sur une ligne à 320 px. */}
+            <button type="button" className="ui-button-secondary" disabled={!chapter.cards.length} onClick={() => setSelectedChapter(chapter.id)}>{!chapter.cards.length ? 'Aucune carte' : chapter.cards.length === 1 ? 'Voir la carte' : 'Voir les cartes'}</button>
             </div>
           </article>)}
         </section>
