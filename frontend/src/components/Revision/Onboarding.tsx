@@ -1,3 +1,4 @@
+import { ErrorNotice } from '../ui/ErrorNotice'
 import Mascotte from '../Mascotte/Mascotte'
 import { Button } from '../ui/Button'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
@@ -95,7 +96,7 @@ export default function Onboarding() {
     </div>
     <div className="mt-6 flex items-center gap-4">
       <span className="shrink-0"><Mascotte humeur={error ? "désolée" : busy ? "pensive" : happy ? "contente" : "au repos"} taille={70} /></span>
-      <div><h2 className="text-2xl font-extrabold leading-tight text-foreground">{['Choisis ta langue et ton pays', 'Comment t’appelles-tu ?', 'Dans quelle classe es-tu ?', 'Quelles matières révises-tu ?', 'Quand passes-tu ton examen ?', 'Tu étudies quoi en ce moment ?'][step - 1]}</h2>
+      <div><h2 className="ui-title">{['Choisis ta langue et ton pays', 'Comment t’appelles-tu ?', 'Dans quelle classe es-tu ?', 'Quelles matières révises-tu ?', 'Quand passes-tu ton examen ?', 'Tu étudies quoi en ce moment ?'][step - 1]}</h2>
       {step === 3 && <p className="mt-2 text-sm text-muted">Programme de Côte d’Ivoire. Aucun compte à créer.</p>}</div>
     </div>
     <div key={step} className="motion-enter mt-5 flex-1 space-y-4">
@@ -139,10 +140,10 @@ export default function Onboarding() {
       <p className="text-sm text-muted">{revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes générées par IA pour démarrer, puis quelques cartes par jour. Elles peuvent contenir des erreurs : tu peux les supprimer pendant ta session.</p>
     </>}
     </div>
-    {error && <p role="alert" className="text-foreground">{error}</p>}
+    {error && <ErrorNotice message={error} mascot={false} />}
     {busy && <p role="status">Préparation de tes {revisionPolicy.generatedBasicCards + revisionPolicy.generatedMCQCards} cartes… Cela peut prendre un instant.</p>}
     <div className="sticky bottom-0 z-10 -mx-4 mt-4 flex items-center gap-3 bg-background px-4 py-4">
-      {step > 1 && <button type="button" disabled={busy} className="rounded-xl border border-border px-4 py-3" onClick={() => depth ? navigate(-1) : setSearch({ etape: String(step - 1) }, { replace: true })}>Retour</button>}
+      {step > 1 && <button type="button" disabled={busy} className="ui-button-secondary" onClick={() => depth ? navigate(-1) : setSearch({ etape: String(step - 1) }, { replace: true })}>Retour</button>}
       <Button className="min-h-14 flex-1" type="submit" disabled={busy || (step === 3 && needsSeries && (!series || !seriesConfirmed)) || (step === 4 && !subjects.length) || (step === 6 && !title.trim())}>{step === 6 ? 'Créer mes cartes et commencer' : 'Continuer'}</Button>
     </div>
   </form>

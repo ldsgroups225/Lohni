@@ -21,11 +21,10 @@ test('le chapitre présente ses cartes, mène à sa révision et explique l’aj
   const root = createRoot(host)
   try {
     await act(async () => root.render(<MemoryRouter><Courses /></MemoryRouter>))
-    await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent === '1 carte')?.click() })
+    await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent === 'Voir la carte')?.click() })
     expect(host.textContent).toContain('Dans les chloroplastes')
     expect([...host.querySelectorAll('a')].find(link => link.textContent === 'Réviser ce chapitre')?.getAttribute('href')).toBe('/revision?chapter=1')
-    expect([...host.querySelectorAll('button')].find(button => button.textContent === '+ Ajouter une carte')?.disabled).toBe(true)
-    expect(host.textContent).toContain('Ajouter une carte à la main n’est pas encore disponible.')
+    expect(host.textContent).not.toContain('Ajouter une carte')
   } finally { act(() => root.unmount()); host.remove(); localStorage.removeItem('lohni-device-id') }
 })
 
@@ -41,7 +40,7 @@ test('modifier une carte affiche un aperçu formaté et protège la suppression'
   const root = createRoot(host)
   try {
     await act(async () => root.render(<MemoryRouter><Courses /></MemoryRouter>))
-    await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent === '1 carte')?.click() })
+    await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent === 'Voir la carte')?.click() })
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Modifier : Où ?"]')?.click())
     expect(host.querySelector('strong')?.textContent).toBe('chloroplastes')
     const question = required(host.querySelector('textarea'))

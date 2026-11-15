@@ -1,7 +1,7 @@
 import { LightbulbIcon } from '../ui/NavigationIcons'
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import MarkdownView from "../Chat/MarkdownView";
-import { revealAtBottom } from "../../lib/motion";
+import { useRevealButton } from "../../lib/useRevealButton";
 import type { Question } from "../../pages/Quiz";
 import { withOccurrenceKeys } from "../../lib/occurrenceKeys";
 
@@ -16,23 +16,13 @@ export default function QuestionCard({
 }) {
   const next = useRef<HTMLButtonElement>(null);
   const keyboardAnswer = useRef(false);
-  // Après la réponse : défiler jusqu'à l'explication et « Continuer », avec une marge sous le bouton.
-  // Second passage : le Markdown se charge à la demande et peut allonger la page.
-  useEffect(() => {
-    if (!showExp) return;
-    if (keyboardAnswer.current) next.current?.focus({ preventScroll: true });
-    keyboardAnswer.current = false;
-    const go = () => { if (next.current) revealAtBottom(next.current); };
-    go();
-    const timer = window.setTimeout(go, 350);
-    return () => window.clearTimeout(timer);
-  }, [showExp]);
+  useRevealButton(next, showExp, keyboardAnswer);
 
   const ok = selected === q.correct;
   return (
     <div id="quizContent" className="motion-enter space-y-4">
-      <div id="questionCard" className="space-y-4 rounded-2xl border border-border bg-surface p-5">
-        <h2 id="questionText" className="text-xl font-semibold text-foreground"><MarkdownView md={q.question} inline /></h2>
+      <div id="questionCard" className="space-y-4 p-5 ui-card">
+        <h2 id="questionText" className="ui-section-title"><MarkdownView md={q.question} inline /></h2>
 
         <fieldset id="answerOptions" className="space-y-3">
           <legend className="sr-only">Choisis ta réponse</legend>
@@ -62,7 +52,7 @@ export default function QuestionCard({
         {!showExp && (
           <div>
             {!showHint && (
-              <button type="button" onClick={onHint} className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-surface px-4 text-foreground">
+              <button type="button" onClick={onHint} className="ui-button-secondary">
                 <LightbulbIcon /> Afficher un indice
               </button>
             )}

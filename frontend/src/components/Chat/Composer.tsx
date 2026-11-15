@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { enterSends } from "../../lib/enterSends";
 
 type Props = {
   disabled?: boolean;
@@ -33,7 +34,7 @@ export default function Composer({ disabled, onSend }: Props) {
   return (
     <div className="fixed bottom-0 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-border left-4 right-4 md:left-32 z-[var(--z-dock)] bg-background">
       <div className="max-w-4xl mx-auto">
-        <div className="relative rounded-3xl bg-surface border border-border shadow-[inset_0_3px_15px] shadow-border flex items-end backdrop-blur-lg">
+        <div className="relative shadow-[inset_0_3px_15px] shadow-border flex items-end backdrop-blur-lg ui-card">
           <textarea
             ref={inputRef}
             placeholder="Pose une question ou demande d’autres exemples…"
@@ -41,7 +42,7 @@ export default function Composer({ disabled, onSend }: Props) {
             rows={1}
             className="w-full text-foreground bg-transparent rounded-3xl p-4 pl-2 pr-20 outline-none resize-none overflow-y-auto max-h-64 min-h-[2.5rem]"
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey && enterSends()) {
                 e.preventDefault();
                 if (!disabled) send();
               }
@@ -55,9 +56,8 @@ export default function Composer({ disabled, onSend }: Props) {
               aria-label="Envoyer"
               title={disabled ? "Patiente…" : "Envoyer"}
             >
-              <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className="size-5">
-                <path d="M7.33496 15.5V4.5C7.33496 4.13275 7.63275 3.83499 8 3.83496C8.36727 3.83496 8.66504 4.13273 8.66504 4.5V15.5C8.66504 15.8673 8.36727 16.165 8 16.165C7.63275 16.165 7.33496 15.8673 7.33496 15.5ZM11.335 13.1309V7.20801C11.335 6.84075 11.6327 6.54298 12 6.54297C12.3673 6.54297 12.665 6.84074 12.665 7.20801V13.1309C12.665 13.4981 12.3672 13.7959 12 13.7959C11.6328 13.7959 11.335 13.4981 11.335 13.1309ZM3.33496 11.3535V8.81543C3.33496 8.44816 3.63273 8.15039 4 8.15039C4.36727 8.15039 4.66504 8.44816 4.66504 8.81543V11.3535C4.66504 11.7208 4.36727 12.0186 4 12.0186C3.63273 12.0186 3.33496 11.7208 3.33496 11.3535ZM15.335 11.3535V8.81543C15.335 8.44816 15.6327 8.15039 16 8.15039C16.3673 8.15039 16.665 8.44816 16.665 8.81543V11.3535C16.665 11.7208 16.3673 12.0186 16 12.0186C15.6327 12.0186 15.335 11.7208 15.335 11.3535Z"></path>
-              </svg>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-5">
+                <path d="M4 12h16m-7-7 7 7-7 7" /></svg>
             </button>
           </div>
         </div>

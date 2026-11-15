@@ -103,15 +103,19 @@ export function useExitTransition(open: boolean, durationMs: number): { mounted:
   return { mounted: open || (shown && !reduced), state: open ? 'enter' : 'exit' }
 }
 
+/** Zone réellement visible : sur Chrome Android, barre d'adresse affichée, elle est plus courte que la fenêtre de mise en page. */
+const visibleBottom = () => window.visualViewport ? window.visualViewport.height + window.visualViewport.offsetTop : window.innerHeight
+
+/** Écrit `--hidden-bottom`, la hauteur cachée par la barre : la page l'ajoute sous son contenu (var(--hidden-bottom)),
+ *  sinon le défilement maximal (calculé sur la fenêtre de mise en page) s'arrête avant d'avoir montré le bouton. */
+export function reserveHiddenBottom(): void {
+  document.documentElement.style.setProperty('--hidden-bottom', `${Math.max(0, document.documentElement.clientHeight - visibleBottom())}px`)
+}
+
 /** Fait défiler pour que le bas de `element`, plus `gap` px, arrive au bas de la zone réellement visible.
- *  Sur Chrome Android, barre d'adresse affichée, la zone visible (visualViewport) est plus courte que la fenêtre
- *  de mise en page : scrollIntoView({ block: 'end' }) laissait le bouton sous le bas de l'écran. */
+ *  scrollIntoView({ block: 'end' }) laissait le bouton sous le bas de l'écran quand la barre est affichée. */
 export function revealAtBottom(element: HTMLElement, gap = 32): void {
-  const visible = window.visualViewport ? window.visualViewport.height + window.visualViewport.offsetTop : window.innerHeight
-  // Hauteur cachée par la barre : l'écran l'ajoute sous son contenu (var(--hidden-bottom)), sinon le défilement maximal
-  // (calculé sur la fenêtre de mise en page) s'arrête avant d'avoir montré le bouton.
-  document.documentElement.style.setProperty('--hidden-bottom', `${Math.max(0, document.documentElement.clientHeight - visible)}px`)
-  const overflow = element.getBoundingClientRect().bottom + gap - visible
+  const overflow = element.getBoundingClientRect().bottom + gap - visibleBottom()
   if (overflow <= 0) return
   window.scrollTo({ top: window.scrollY + overflow, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
 }

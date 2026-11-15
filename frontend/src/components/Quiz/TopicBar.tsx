@@ -20,7 +20,7 @@ export default function TopicBar({
       className="space-y-4 rounded-2xl border border-border bg-surface p-5"
     >
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Sur quel sujet veux-tu t’entraîner ?</h2>
+        <h2 className="ui-section-title">Sur quel sujet veux-tu t’entraîner ?</h2>
         <p className="mt-1 text-sm text-muted">Lohni prépare un quiz à choix multiples. Tu vois la correction après chaque question.</p>
       </div>
       <input

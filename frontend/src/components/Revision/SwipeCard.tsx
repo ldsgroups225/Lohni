@@ -1,6 +1,6 @@
 // biome-ignore-all lint/a11y/useSemanticElements: Le fieldset natif empêche le positionnement de la face de carte.
 // biome-ignore-all lint/a11y/noNoninteractiveTabindex: La carte doit recevoir les flèches et les touches de retournement.
-import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { memo, useCallback, useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react'
 import MarkdownView from '../Chat/MarkdownView'
 import { spring } from '../../lib/motion'
 
@@ -21,6 +21,7 @@ type Props = {
   origin?: string
   onExplain?: () => void
   explainDisabled?: boolean
+  explainReason?: string
   onToggle: () => void
   onSwipe: (knew: boolean) => void
 }
@@ -28,13 +29,12 @@ type Props = {
 /** Carte plein écran : toucher retourne, glisser à droite = « Je savais », à gauche = « Je ne savais pas ».
  *  Le glissement n'est actif qu'une fois la réponse vue. Flèches du clavier et boutons restent disponibles.
  *  Pendant le geste, la carte suit le doigt sans rendu React ; au lâcher, un ressort repart de la vitesse réelle. */
-export function SwipeCard({ question, answer, revealed, enabled, context, origin, onExplain, explainDisabled, onToggle, onSwipe }: Props) {
+export function SwipeCard({ question, answer, revealed, enabled, context, origin, onExplain, explainDisabled, explainReason, onToggle, onSwipe }: Props) {
   const card = useRef<HTMLDivElement>(null)
   const x = useRef(0)
   const stop = useRef<(() => void) | null>(null)
   const drag = useRef<{ id: number; origin: number; start: number; points: [number, number][]; moved: boolean } | null>(null)
   const sent = useRef(false)
-  const [hint, setHint] = useState(false)
 
   const apply = useCallback((value: number) => {
     x.current = value
@@ -88,7 +88,7 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
     drag.current = null
     if (sent.current) return // la sortie est lancée : ne pas la couper
     if (!d.moved) { if (x.current !== 0) animate(0, 0); return onToggle() }
-    if (!revealed || !enabled) { if (!revealed) setHint(true); animate(0, 0); return }
+    if (!revealed || !enabled) { animate(0, 0); return }
     // Vitesse réelle du doigt (px/s) ; un doigt immobile avant le lâcher ne garde pas une vitesse ancienne.
     const [t0, x0] = d.points[0]
     const [t1, x1] = d.points[d.points.length - 1]
@@ -119,7 +119,7 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
         className="flex min-h-[55dvh] flex-1 touch-pan-y select-none flex-col rounded-3xl border border-[color:var(--swipe-border)] bg-surface p-5 will-change-transform"
       >
         <div className="flex-1 touch-pan-y overflow-y-auto break-words">
-          {context && <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted">{context}</p>}
+          {context && <p className="mb-4 line-clamp-2 [overflow-wrap:anywhere] text-xs font-semibold uppercase tracking-wide text-muted">{context}</p>}
           <div className="text-2xl font-bold leading-snug text-foreground"><CardMarkdown md={question} inline /></div>
           <div className="mt-6 border-t border-border pt-5" hidden={!revealed}>
             <p className="mb-4 text-xs font-bold uppercase tracking-wide text-success">Réponse</p>
@@ -128,16 +128,15 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
         </div>
         <div className="mt-5 flex items-center justify-between gap-3 border-t border-border pt-4 text-xs text-muted">
           <span>{origin === 'ai' ? 'Générée par IA · peut contenir des erreurs' : 'Cours importé'}</span>
-          {onExplain && <button type="button" disabled={explainDisabled} onPointerDown={event => event.stopPropagation()} onPointerUp={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} onClick={onExplain} className="ui-button-ghost shrink-0 text-sm">Explique-moi</button>}
+          {onExplain && <span className="flex shrink-0 flex-col items-end">{explainDisabled && explainReason && <span className="text-xs">{explainReason}</span>}<button type="button" disabled={explainDisabled} onPointerDown={event => event.stopPropagation()} onPointerUp={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} onClick={onExplain} className="ui-button-ghost text-sm">Explique-moi</button></span>}
         </div>
       </div>
       <p id="swipe-hint" className="py-3 text-center text-sm text-muted">
-        {!revealed ? 'Touche la carte pour voir la réponse' : hint ? 'Glisse la carte à gauche ou à droite' : <>← <b className="font-semibold text-foreground">Je ne savais pas</b> · <b className="font-semibold text-foreground">Je savais</b> →</>}
+        {revealed ? 'Glisse la carte ou choisis :' : 'Touche la carte pour voir la réponse'}
       </p>
-      {/* Sans geste : flèches du clavier ou ces boutons, masqués à l'écran mais lus et focalisables. */}
-      {revealed && <div className="sr-only focus-within:not-sr-only focus-within:mt-2 focus-within:grid focus-within:grid-cols-2 focus-within:gap-3">
-        <button type="button" disabled={!enabled} onClick={() => rate(false)} className="rounded-xl border border-border bg-surface px-2 py-3 text-foreground disabled:opacity-50">Je ne savais pas</button>
-        <button type="button" disabled={!enabled} onClick={() => rate(true)} className="rounded-xl bg-success px-2 py-3 font-semibold text-on-success disabled:opacity-50">Je savais</button>
+      {revealed && <div className="grid grid-cols-2 gap-3">
+        <button type="button" disabled={!enabled} onClick={() => rate(false)} className="rounded-xl border border-border bg-surface min-h-11 px-2 py-3 text-foreground disabled:opacity-50">Je ne savais pas</button>
+        <button type="button" disabled={!enabled} onClick={() => rate(true)} className="rounded-xl bg-success min-h-11 px-2 py-3 font-semibold text-on-success disabled:opacity-50">Je savais</button>
       </div>}
     </div>
   )

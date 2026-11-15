@@ -1,3 +1,5 @@
+import { PendingRead } from '../components/ui/PendingRead'
+import { ErrorNotice } from '../components/ui/ErrorNotice'
 import { ExamButton } from '../components/Revision/ExamButton'
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
@@ -15,15 +17,15 @@ export default function Plan() {
   useEffect(() => { if (plan && hash) document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView?.() }, [plan, hash])
   const missing = [...new Set(plan?.days.flatMap(day => day.actions.map(action => action.subject)))]
   return <ToolPage title="Mon plan" back="/" beta={false}>
-    {error && <p role="alert">{error}</p>}
-    {!error && !plan && <p>Chargement du plan…</p>}
+    {error && <ErrorNotice message={error} />}
+    {!error && !plan && <PendingRead title="Mon plan" label="On prépare ton plan…" />}
     {plan && <>
       {result?.offline && <p>Plan du {frenchDate(plan.today)}</p>}
-      <h2 className="text-xl font-semibold">Examens à venir</h2>
+      <h2 className="ui-section-title">Examens à venir</h2>
       {!plan.exams.length && <ButtonLink variant="secondary" to="/me/examens" className="w-full">Ajoute une date d’examen</ButtonLink>}
-      {plan.exams.map(exam => <article id={`exam-${exam.id}`} key={exam.id} className="rounded-xl border border-border p-4"><h3 className="font-semibold">{exam.title}</h3><p>{frenchDate(exam.date)}</p>{exam.overloaded && <p>Plan trop chargé pour {exam.title}</p>}<ExamButton id={exam.id} date={exam.date} /></article>)}
+      {plan.exams.map(exam => <article id={`exam-${exam.id}`} key={exam.id} className="p-4 ui-card"><h3 className="ui-card-title">{exam.title}</h3><p>{frenchDate(exam.date)}</p>{exam.overloaded && <p>Plan trop chargé pour {exam.title}</p>}<ExamButton id={exam.id} date={exam.date} /></article>)}
       {missing.length > 0 && <div className="space-y-2"><p>Sans chapitre : {missing.join(', ')}.</p><ButtonLink variant="secondary" to="/import" className="w-full">Ajouter un chapitre</ButtonLink></div>}
-      {plan.days.map(day => <section key={day.date} className="rounded-xl border border-border p-4"><h2 className="font-semibold">{frenchDate(day.date)}</h2>
+      {plan.days.map(day => <section key={day.date} className="p-4 ui-card"><h2 className="ui-card-title">{frenchDate(day.date)}</h2>
         {day.rest && <p>Repos</p>}
         {!day.rest && day.heavy && <p>Grosse journée de cours</p>}
         {!day.rest && day.overloaded && <p>Trop de cartes prévues ce jour</p>}

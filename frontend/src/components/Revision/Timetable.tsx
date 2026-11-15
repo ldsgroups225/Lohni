@@ -1,3 +1,4 @@
+import { ErrorNotice } from '../ui/ErrorNotice'
 import { useState } from 'react'
 import { REVISION_POLICY as policy } from '../../../../backend/src/services/revision/policy'
 import { useRevisionRead } from '../../lib/useRevisionRead'
@@ -28,8 +29,8 @@ export default function Timetable({ profile, onProfile }: { profile: RevisionPro
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer ton emploi du temps.') }
     finally { setBusy(false) }
   }
-  return <section className="space-y-4 rounded-2xl border border-border p-6">
-    {error && <p role="alert">{error}</p>}
+  return <section className="space-y-4 p-6 ui-card">
+    {error && <ErrorNotice message={error} />}
     {review && <p>Relis et corrige les cours avant de les enregistrer.</p>}
     {/* biome-ignore lint/suspicious/noArrayIndexKey: les champs sont contrôlés et ne portent pas d’état propre. */}
     {blocks?.map((block, index) => <fieldset key={index} className="space-y-2 rounded-xl border border-border p-3" disabled={busy}>

@@ -31,8 +31,8 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
     const activeTasks = tasks.filter(t => t.status === 'doing')
 
     return (
-        <div className="rounded-xl border border-border bg-surface p-4">
-            <h2 className="text-foreground font-medium mb-3 flex items-center gap-2">
+        <div className="p-4 ui-card">
+            <h2 className="ui-section-title mb-3 flex items-center gap-2">
                 <TargetIcon />
                 Priorités du jour
             </h2>
@@ -71,7 +71,7 @@ export default function TodayFocus({ tasks, onStartSession, onCompleteTask }: To
                         <div className="text-foreground text-sm mb-2">Pour aujourd’hui ({todayTasks.length}):</div>
                         <div className="space-y-2">
                             {todayTasks.slice(0, 3).map(task => (
-                                <div key={task.id} className="bg-surface border border-border rounded-lg p-3">
+                                <div key={task.id} className="p-3 ui-card">
                                     <div className="flex items-center justify-between gap-3">
                                         <div className="min-w-0">
                                             <div className="text-foreground font-medium">{task.title}</div>

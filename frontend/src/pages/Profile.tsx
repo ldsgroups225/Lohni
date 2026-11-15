@@ -1,3 +1,4 @@
+import { ChevronRightIcon } from '../components/ui/NavigationIcons'
 import { ExamButton } from '../components/Revision/ExamButton'
 import Timetable from '../components/Revision/Timetable'
 import { Button, ButtonLink } from '../components/ui/Button'
@@ -5,9 +6,12 @@ import { ScreenHeader } from '../components/ui/ScreenHeader'
 import { PendingRead } from '../components/ui/PendingRead'
 import { humeurSerie } from '../components/ui/revisionPresentation'
 import { AnimatedNumber } from '../components/ui/AnimatedNumber'
+import { ErrorNotice } from '../components/ui/ErrorNotice'
+import { EmptyState } from '../components/ui/EmptyState'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { confirmDialog } from '../lib/confirm'
 import curriculum from '../data/curriculum-ci.json'
 import { REVISION_POLICY as policy } from '../../../backend/src/services/revision/policy'
 import { DEVICE_CHANGED, revisionAPI, type RevisionProfile, type RevisionProgress, type RevisionExam, type RevisionChapter, type RevisionSettings } from '../lib/api'
@@ -45,7 +49,7 @@ export default function Profile() {
   const available = entry ? (entry.series as Record<string, string[] | undefined>)[profile?.series ?? ''] ?? [] : []
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
-  useRevisionRead(async () => {
+  const reload = useRevisionRead(async () => {
     const pending = profileSave
     if (pending) await pending.catch(() => {})
     const requestEdits = edits.current
@@ -112,32 +116,39 @@ export default function Profile() {
     finally { profileSave = null; saving.current = false; setBusy(false) }
   }
 
-  return <main className="loop-screen min-h-dvh px-4 pt-4 pb-36 md:pl-28">
-    <div className="mx-auto max-w-xl space-y-4">
+  function retry() {
+    setError('')
+    setBusy(true)
+    setResourceVersion(value => value + 1)
+    reload().catch(cause => setError(cause instanceof Error ? cause.message : 'Impossible de charger ton profil.')).finally(() => setBusy(false))
+  }
+
+  return <main className="loop-screen ui-page">
+    <div className="ui-page-body space-y-4">
       {page ? <ScreenHeader back="/me" backLabel="Retour à Moi" title={({ profil: 'Mon profil', examens: 'Examens', matieres: 'Matières', 'emploi-du-temps': 'Emploi du temps', rythme: 'Rythme de révision' } as Record<string, string>)[page] ?? 'Moi'} /> : <header className="flex items-center gap-3">
         {!error && progress && <span className="shrink-0"><Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={56} /></span>}
         {!error && !busy && !profile && !progress && <span className="shrink-0"><Mascotte humeur="au repos" taille={56} /></span>}
-        <div className="min-w-0 flex-1"><h1 className="text-[26px] font-extrabold text-foreground">Moi</h1>
+        <div className="min-w-0 flex-1"><h1 className="ui-title">Moi</h1>
         {profile && <p className="text-sm text-muted">{entry?.label.split(' · ')[0] ?? profile.schoolClass}{profile.series ? ` · Série ${profile.series}` : ''}</p>}</div>
         {profile && <ButtonLink variant="secondary" to="/me/profil">Modifier</ButtonLink>}
       </header>}
       {busy && !profile && <PendingRead title="Mon parcours" label="On récupère ton parcours…" />}
-      {error && <div role="alert"><Mascotte humeur="désolée" taille={96} /><p>{error}</p></div>}
+      {error && <ErrorNotice message={error} busy={busy} onRetry={retry} />}
       {!page && progress && <dl className="grid grid-cols-3 gap-2 text-sm">
-        <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-3"><dt className="order-2 text-muted">XP</dt><dd className="order-1 text-2xl font-bold text-foreground"><AnimatedNumber value={progress.xp} /></dd></div>
-        <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-3"><dt className="order-2 text-muted">de série</dt><dd className="order-1 text-2xl font-bold text-foreground"><AnimatedNumber value={progress.streak} /> j</dd></div>
-        <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-3"><dt className="order-2 text-muted">cartes</dt><dd className="order-1 text-2xl font-bold text-foreground"><AnimatedNumber value={progress.learnedCards} /></dd></div>
+        <div className="flex min-w-0 flex-col p-3 ui-card"><dt className="order-2 text-muted">XP</dt><dd className="order-1 text-2xl font-bold text-foreground"><AnimatedNumber value={progress.xp} /></dd></div>
+        <div className="flex min-w-0 flex-col p-3 ui-card"><dt className="order-2 text-muted">de série</dt><dd className="order-1 text-2xl font-bold text-foreground"><AnimatedNumber value={progress.streak} /> j</dd></div>
+        <div className="flex min-w-0 flex-col p-3 ui-card"><dt className="order-2 text-muted">cartes</dt><dd className="order-1 text-2xl font-bold text-foreground"><AnimatedNumber value={progress.learnedCards} /></dd></div>
       </dl>}
       {!page && profile && <>
-        <h2 className="font-semibold text-muted">Mon organisation</h2>
-        <section aria-label="Mon organisation" style={{ marginBlockStart: 4 }} className="overflow-hidden rounded-2xl border border-border bg-surface">
+        <h2 className="ui-label">Mon organisation</h2>
+        <section aria-label="Mon organisation" style={{ marginBlockStart: 4 }} className="overflow-hidden ui-card">
           {[
             ['/me/examens', 'Examens', examsLoaded ? (exams.length ? exams.map(item => `${item.title} · ${new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`).join(', ') : 'Aucun examen ajouté') : 'Chargement…'],
             ['/me/matieres', 'Matières', `${profile.subjects.length} matière${profile.subjects.length > 1 ? 's' : ''}`],
             ['/me/emploi-du-temps', 'Emploi du temps', timetableError ? 'Chargement impossible' : timetableCount === null ? 'Chargement…' : timetableCount ? `${timetableCount} cours ajouté${timetableCount > 1 ? 's' : ''}` : 'Aucun cours ajouté'],
             ['/me/rythme', 'Rythme de révision', settings ? `${settings.dailyMinutes} min par jour · ${settings.restDays.length} jour${settings.restDays.length > 1 ? 's' : ''} de repos` : settingsError ? 'Chargement impossible' : 'Chargement…'],
             ['/plan', 'Mon plan', !examsLoaded ? 'Voir mon plan de révision' : exams.length ? 'Voir mon plan de révision' : 'Ajoute un examen pour préparer ton plan'],
-          ].map(([to, title, detail]) => <Link key={to} to={to} className="flex min-h-16 items-center justify-between gap-4 border-b border-border px-4 py-2.5 last:border-b-0"><span><strong className="block text-foreground">{title}</strong><span className="text-sm text-muted">{detail}</span></span><span aria-hidden="true">›</span></Link>)}
+          ].map(([to, title, detail]) => <Link key={to} to={to} className="flex min-h-16 items-center justify-between gap-4 border-b border-border px-4 py-2.5 last:border-b-0"><span><strong className="block text-foreground">{title}</strong><span className="text-sm text-muted">{detail}</span></span><ChevronRightIcon className="size-5 shrink-0 text-muted" /></Link>)}
         </section>
       </>}
       {profile && (page === 'profil' || page === 'matieres') ? <form onSubmit={save} className="space-y-5 rounded-2xl border border-border p-6" aria-busy={busy}>
@@ -159,9 +170,9 @@ export default function Profile() {
         {!profile.subjects.length && <p role="status">Choisis au moins une matière.</p>}</>}
         <Button type="submit" disabled={busy || !profile.subjects.length}>Enregistrer</Button>
         {saved && <p role="status" className="text-foreground">Ton profil est enregistré.</p>}
-      </form> : !profile && !busy && !error && <div className="space-y-3"><p>Crée ton profil pour suivre ton parcours.</p><ButtonLink to="/" className="w-full">Commencer mon parcours</ButtonLink></div>}
-      {profile && page === 'examens' && <section className="space-y-4 rounded-2xl border border-border p-6">
-        {exams.map(item => <div key={item.id} className="space-y-2 border-b border-border pb-3"><p>{item.title} · {new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p><p>{item.subjects.join(', ')}</p><ExamButton id={item.id} date={item.date} /><div className="flex gap-3"><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={() => setExam(item)}>Modifier</Button><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={async () => { if (!window.confirm('Supprimer cet examen ?')) return; try { await revisionAPI.deleteExam(item.id); setExams(current => current.filter(value => value.id !== item.id)); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Suppression impossible.') } }}>Supprimer</Button></div></div>)}
+      </form> : !profile && !busy && !error && <EmptyState title="Ton parcours commence ici" mascot={false}><p>Crée ton profil pour suivre ton parcours.</p><ButtonLink to="/" className="w-full">Commencer mon parcours</ButtonLink></EmptyState>}
+      {profile && page === 'examens' && <section className="space-y-4 p-6 ui-card">
+        {exams.map(item => <div key={item.id} className="space-y-2 border-b border-border pb-3"><p>{item.title} · {new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p><p>{item.subjects.join(', ')}</p><ExamButton id={item.id} date={item.date} /><div className="flex gap-3"><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={() => setExam(item)}>Modifier</Button><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={async () => { if (!await confirmDialog('Supprimer cet examen ? Il ne sera plus pris en compte dans ton plan.')) return; try { await revisionAPI.deleteExam(item.id); setExams(current => current.filter(value => value.id !== item.id)); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Suppression impossible.') } }}>Supprimer</Button></div></div>)}
         {!exam && <Button type="button" disabled={!examsLoaded || exams.length >= policy.maxExams} onClick={() => setExam({ title: '', date: '', subjects: [], chapterIds: [] })}>Ajouter un examen</Button>}
         {exam && <form className="space-y-4" onSubmit={async event => { event.preventDefault(); try { const value = await revisionAPI.saveExam(exam); setExams(current => [...current.filter(item => item.id !== value.id), value]); setExam(null); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Enregistrement impossible.') } }}>
           <label className="block space-y-2">Intitulé<input className={input} required maxLength={policy.maxTitleChars} value={exam.title} onChange={event => setExam({ ...exam, title: event.target.value })} /></label>
@@ -172,8 +183,8 @@ export default function Profile() {
         </form>}
       </section>}
       {profile && page === 'emploi-du-temps' && <Timetable profile={profile} onProfile={setProfile} />}
-      {page === 'rythme' && <section className="space-y-4 rounded-2xl border border-border p-6">
-        {settingsError && <p role="alert">{settingsError}</p>}
+      {page === 'rythme' && <section className="space-y-4 p-6 ui-card">
+        {settingsError && <ErrorNotice message={settingsError} onRetry={() => { setSettingsError(''); setResourceVersion(value => value + 1) }} />}
         {settings && <form onSubmit={saveSettings} className="space-y-4" aria-busy={settingsBusy}>
           <fieldset disabled={settingsBusy} className="space-y-2"><legend>Minutes par jour</legend>
             {policy.dailyMinutesChoices.map(minutes => <label key={minutes} className="mr-4 inline-flex min-h-11 items-center gap-2"><input type="radio" name="dailyMinutes" checked={settings.dailyMinutes === minutes} onChange={() => { setSettings({ ...settings, dailyMinutes: minutes }); setSettingsSaved(false) }} />{minutes} min</label>)}

@@ -42,7 +42,7 @@ export function LoadingState({ label = 'On prépare ta page…', fullPage = fals
           <span className="ui-pip" /><span className="ui-pip" style={{ animationDelay: '0.16s' }} /><span className="ui-pip" style={{ animationDelay: '0.32s' }} />
         </div>
       </div>
-      {fragileCard ? <div className="w-full rounded-2xl border border-border bg-surface p-4 text-left text-sm text-muted">En attendant, relis une carte fragile : <b className="text-foreground">{fragileCard}</b></div> : !expectedDuration && <div aria-hidden="true" className="w-full rounded-2xl border border-border bg-surface p-4 text-left">
+      {fragileCard ? <div className="w-full p-4 text-left text-sm text-muted ui-card">En attendant, relis une carte fragile : <b className="text-foreground">{fragileCard}</b></div> : !expectedDuration && <div aria-hidden="true" className="w-full p-4 text-left ui-card">
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">Astuce</p>
         <p key={tip} className="motion-enter mt-1 min-h-12 text-sm text-foreground">{tips[tip]}</p>
       </div>}
@@ -54,7 +54,7 @@ export function LoadingState({ label = 'On prépare ta page…', fullPage = fals
 export function ErrorState({ title, detail, children, actions }: { title: string; detail?: string; children?: ReactNode; actions: { label: string; onClick: () => void; variant: 'primary' | 'outline' | 'link' }[] }) {
   return <section role="alert" className="mx-auto flex w-full max-w-sm flex-col items-center gap-4 px-6 py-12 text-center">
     <Mascotte humeur="désolée" taille={104} decorative />
-    <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+    <h2 className="ui-section-title">{title}</h2>
     {detail && <p className="text-muted">{detail}</p>}
     {children}
     {actions.map(action => <button key={action.label} type="button" onClick={action.onClick} className={action.variant === 'primary' ? 'ui-button min-h-11 w-full' : action.variant === 'outline' ? 'min-h-11 w-full rounded-control border border-primary text-primary' : 'ui-button-ghost'}>{action.label}</button>)}

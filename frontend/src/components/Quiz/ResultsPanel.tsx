@@ -1,3 +1,4 @@
+import { CheckIcon, CloseIcon } from '../ui/NavigationIcons'
 import MarkdownView from "../Chat/MarkdownView";
 import type { UA } from "../../pages/Quiz";
 import { withOccurrenceKeys } from "../../lib/occurrenceKeys";
@@ -12,9 +13,9 @@ export default function ResultsPanel({
   const wrong = answers.filter(a => !a.correct);
   return (
     <div id="resultsScreen" className="motion-enter space-y-4">
-      <section className="space-y-4 rounded-2xl border border-border bg-surface p-5 text-center">
+      <section className="space-y-4 p-5 text-center ui-card">
         <div id="resultIcon" aria-hidden="true" className="motion-pop text-5xl">{visual.icon}</div>
-        <h2 className="text-2xl font-bold text-foreground">Quiz terminé !</h2>
+        <h2 className="ui-section-title">Quiz terminé !</h2>
         <p className="text-foreground">
           <span id="finalScore" className="text-3xl font-bold text-primary">{score}/{total}</span>
           <span className="ml-2 text-muted">{percentage} % de réussite</span>
@@ -23,13 +24,13 @@ export default function ResultsPanel({
         <p className="text-sm text-muted">{answers.length - wrong.length} bonne{answers.length - wrong.length > 1 ? "s" : ""} réponse{answers.length - wrong.length > 1 ? "s" : ""}, {wrong.length} erreur{wrong.length > 1 ? "s" : ""}.</p>
       </section>
 
-      <details className="rounded-2xl border border-border p-5">
+      <details className="p-5 ui-card">
         <summary className="cursor-pointer font-semibold text-foreground">Revoir mes réponses ({answers.length})</summary>
         <ol className="mt-3 space-y-3">
           {withOccurrenceKeys(answers, answer => String(answer.questionId)).map(({ value: a, key }, i) => (
             <li key={key} className="space-y-1 rounded-xl border border-border bg-surface p-3 text-sm">
               <p className="font-medium text-foreground">{i + 1}. <MarkdownView md={a.question} inline /></p>
-              <p className="flex items-start gap-1 text-foreground"><span aria-hidden="true">{a.correct ? "✓" : "✗"}</span><span><span className="text-muted">Ta réponse : </span><MarkdownView md={a.selectedOption} inline />{a.correct ? " — correcte" : " — incorrecte"}</span></p>
+              <p className="flex items-start gap-1 text-foreground"><span aria-hidden="true">{a.correct ? <CheckIcon className="size-4" /> : <CloseIcon className="size-4" />}</span><span><span className="text-muted">Ta réponse : </span><MarkdownView md={a.selectedOption} inline />{a.correct ? " — correcte" : " — incorrecte"}</span></p>
               {!a.correct && <p className="text-foreground"><span className="text-muted">Bonne réponse : </span><MarkdownView md={a.correctOption} inline /></p>}
               {a.explanation && <div className="text-muted"><MarkdownView md={a.explanation} /></div>}
             </li>
@@ -39,7 +40,7 @@ export default function ResultsPanel({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <button type="button" onClick={onRetake} className="ui-button min-h-11">Refaire le quiz</button>
-        <button type="button" onClick={onNewTopic} className="min-h-11 rounded-xl border border-border bg-surface px-4 text-foreground">Nouveau sujet</button>
+        <button type="button" onClick={onNewTopic} className="ui-button-secondary">Nouveau sujet</button>
       </div>
     </div>
   );
