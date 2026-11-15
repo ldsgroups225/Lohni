@@ -119,7 +119,7 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
         className="flex min-h-[55dvh] flex-1 touch-pan-y select-none flex-col rounded-3xl border border-[color:var(--swipe-border)] bg-surface p-5 will-change-transform"
       >
         <div className="flex-1 touch-pan-y overflow-y-auto break-words">
-          {context && <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted">{context}</p>}
+          {context && <p className="mb-4 line-clamp-2 [overflow-wrap:anywhere] text-xs font-semibold uppercase tracking-wide text-muted">{context}</p>}
           <div className="text-2xl font-bold leading-snug text-foreground"><CardMarkdown md={question} inline /></div>
           <div className="mt-6 border-t border-border pt-5" hidden={!revealed}>
             <p className="mb-4 text-xs font-bold uppercase tracking-wide text-success">Réponse</p>
@@ -132,7 +132,7 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
         </div>
       </div>
       <p id="swipe-hint" className="py-3 text-center text-sm text-muted">
-        {revealed ? 'Glisse la carte à gauche ou à droite, ou touche un bouton' : 'Touche la carte pour voir la réponse'}
+        {revealed ? 'Glisse la carte ou choisis :' : 'Touche la carte pour voir la réponse'}
       </p>
       {revealed && <div className="grid grid-cols-2 gap-3">
         <button type="button" disabled={!enabled} onClick={() => rate(false)} className="rounded-xl border border-border bg-surface min-h-11 px-2 py-3 text-foreground disabled:opacity-50">Je ne savais pas</button>

@@ -147,7 +147,7 @@ test('l’indice suit l’état sans répéter les boutons', async () => {
   await render({ revealed: false })
   expect(hintText()).toBe('Touche la carte pour voir la réponse')
   await render({ revealed: true })
-  expect(hintText()).toBe('Glisse la carte à gauche ou à droite, ou touche un bouton')
+  expect(hintText()).toBe('Glisse la carte ou choisis :')
   expect(host.querySelectorAll('#swipe-hint b').length).toBe(0)
 })
 

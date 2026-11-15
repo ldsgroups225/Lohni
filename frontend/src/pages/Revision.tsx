@@ -247,7 +247,7 @@ export default function Revision() {
           <section className="flex flex-1 flex-col space-y-4" aria-label="Session de révision" aria-busy={busy}>
             {card.kind === 'basic' ? <SwipeCard key={`${card.id}-${session.position}`} question={card.question} answer={card.answer} context={chapter ? `${chapter.subject} · ${chapter.title}` : undefined} origin={card.origin} onExplain={() => explain(card)} explainDisabled={busy || !sync.online} explainReason={!sync.online ? 'Disponible en ligne' : undefined} revealed={revealed} enabled={!busy && validated} onToggle={() => setRevealed(value => !value)} onSwipe={answer} />
             : <article key={`${card.id}-${session.position}-${revealed}`} className={`shrink-0 space-y-4 rounded-2xl border border-border bg-surface p-5 ${revealed && card.kind !== 'mcq' ? 'motion-flip' : 'motion-enter'}`}>
-              {chapter && <p className="text-xs font-semibold uppercase tracking-wide text-muted">{chapter.subject} · {chapter.title}</p>}
+              {chapter && <p className="line-clamp-2 [overflow-wrap:anywhere] text-xs font-semibold uppercase tracking-wide text-muted">{chapter.subject} · {chapter.title}</p>}
               {card.origin === 'ai' && <p className="text-xs text-muted">Générée par IA · Peut contenir des erreurs</p>}
               <h2 className="text-xl text-foreground"><MarkdownView md={card.question} inline /></h2>
               {card.kind === 'mcq' && <fieldset disabled={busy || !validated || !!verdict} className="space-y-3">
