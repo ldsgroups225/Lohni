@@ -1,6 +1,7 @@
 import { lazy } from "react";
 import { createRoutesFromElements, Navigate, Route } from "react-router-dom";
 import App from "./App";
+import RouteError from './components/ui/RouteError'
 import Home from "./pages/Home"
 import Landing from './pages/Landing'
 import Profile from './pages/Profile'
@@ -19,7 +20,7 @@ const PlannerPage = lazy(() => import('./pages/Planner'))
 const Debate = lazy(() => import('./pages/Debate'))
 
 export const routes = createRoutesFromElements(
-  <Route path="/" element={<App />}>
+  <Route path="/" element={<App />} errorElement={<RouteError />}>
     <Route path="*" element={<NotFound />} />
     <Route index element={<Home />} />
     <Route path="tutor" element={<Landing />} />

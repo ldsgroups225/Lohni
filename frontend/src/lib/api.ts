@@ -382,12 +382,23 @@ const deviceHeaders = (json = false) => {
   return h;
 };
 
+// The server sends ISO dates (backend/src/services/planner/types.ts); the screens work in milliseconds.
+const ms = (v: unknown) => typeof v === "string" ? Date.parse(v) : v as number
+export const plannerTask = <T extends { dueAt?: unknown }>(t: T): T =>
+  ({ ...t, dueAt: ms(t.dueAt), ...("createdAt" in t ? { createdAt: ms((t as any).createdAt) } : {}), ...("updatedAt" in t ? { updatedAt: ms((t as any).updatedAt) } : {}) })
+const plannerUnavailable = () => new APIError("Le planning est indisponible. Réessaie dans un instant.", 0, "BAD_PAYLOAD")
+async function plannerOne<R extends { task: PlannerTask }>(call: Promise<R>) {
+  const res = await call
+  if (!res?.task) throw plannerUnavailable()
+  return { ...res, task: plannerTask(res.task) }
+}
+
 export async function plannerIngest(text: string) {
-  return req<{ ok: boolean; task: PlannerTask }>(`${env.backend}/tasks/ingest`, {
+  return plannerOne(req<{ ok: boolean; task: PlannerTask }>(`${env.backend}/tasks/ingest`, {
     method: "POST",
     headers: deviceHeaders(true),
     body: JSON.stringify({ text })
-  })
+  }))
 }
 
 export async function plannerList(params?: { status?: string; dueBefore?: number; course?: string }) {
@@ -396,23 +407,28 @@ export async function plannerList(params?: { status?: string; dueBefore?: number
   if (params?.dueBefore) q.set("dueBefore", String(params.dueBefore))
   if (params?.course) q.set("course", params.course)
   const url = `${env.backend}/tasks${q.toString() ? `?${q}` : ""}`
-  return req<{ ok: boolean; tasks: PlannerTask[] }>(url, { method: "GET", headers: deviceHeaders() })
+  const res = await req<{ ok: boolean; tasks: PlannerTask[] }>(url, { method: "GET", headers: deviceHeaders() })
+  // Not an array: an HTML page or an error payload answered with 200 (proxy, backend down).
+  if (!Array.isArray(res?.tasks)) throw plannerUnavailable()
+  return { ...res, tasks: res.tasks.map(plannerTask) }
 }
 
 export async function plannerPlan(id: string) {
-  return req<{ ok: boolean; task: PlannerTask & { plan?: { slots: PlannerSlot[] } } }>(`${env.backend}/tasks/${encodeURIComponent(id)}/plan`, {
+  return plannerOne(req<{ ok: boolean; task: PlannerTask & { plan?: { slots: PlannerSlot[] } } }>(`${env.backend}/tasks/${encodeURIComponent(id)}/plan`, {
     method: "POST",
     headers: deviceHeaders(true),
     body: JSON.stringify({})
-  })
+  }))
 }
 
 export async function plannerWeekly() {
-  return req<{ ok: boolean; plan: WeeklyPlan }>(`${env.backend}/planner/weekly`, {
+  const res = await req<{ ok: boolean; plan?: { days?: { date: string; slots?: PlannerSlot[] }[] } }>(`${env.backend}/planner/weekly`, {
     method: "POST",
     headers: deviceHeaders(true),
     body: JSON.stringify({})
   })
+  const days = Array.isArray(res?.plan?.days) ? res.plan.days : []
+  return { ok: true, plan: { days: days.map(d => ({ date: d.date, slots: (Array.isArray(d.slots) ? d.slots : []).map(s => ({ ...s, start: ms(s.start), end: ms(s.end) })) })) } as WeeklyPlan }
 }
 
 export async function plannerMaterials(id: string, type: "summary" | "studyGuide" | "flashcards" | "quiz") {
@@ -437,11 +453,11 @@ export function connectPlannerStream(onEvent: (ev: PlannerEvent) => void) {
 }
 
 export async function plannerUpdate(id: string, patch: Partial<PlannerTask>) {
-  return req<{ ok: boolean; task: PlannerTask }>(`${env.backend}/tasks/${encodeURIComponent(id)}`, {
+  return plannerOne(req<{ ok: boolean; task: PlannerTask }>(`${env.backend}/tasks/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: deviceHeaders(true),
     body: JSON.stringify(patch)
-  })
+  }))
 }
 
 export async function plannerDelete(id: string) {
@@ -460,12 +476,12 @@ export async function plannerCreateWithFiles(data: { text?: string; title?: stri
     }
   }
 
-  return req<{ ok: boolean; task: PlannerTask & { files?: any[] } }>(`${env.backend}/tasks`, {
+  return plannerOne(req<{ ok: boolean; task: PlannerTask & { files?: any[] } }>(`${env.backend}/tasks`, {
     method: "POST",
     headers: deviceHeaders(),
     body: formData,
     timeout: Math.max(env.timeout, 300000),
-  })
+  }))
 }
 
 export async function plannerUploadFiles(taskId: string, files: File[]) {

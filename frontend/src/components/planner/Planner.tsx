@@ -6,8 +6,9 @@ import { withOccurrenceKeys } from "../../lib/occurrenceKeys"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import PlannerMindmap from "./PlannerMindmap"
 import TodayFocus from "./TodayFocus"
+import { ErrorNotice } from "../ui/ErrorNotice"
 import QuickAdd from "./QuickAdd"
-import { connectPlannerStream, plannerDelete, plannerIngest, plannerList, plannerMaterials, plannerPlan, plannerUpdate, plannerWeekly, plannerCreateWithFiles, plannerUploadFiles, plannerDeleteFile, type PlannerEvent, type PlannerSlot, type PlannerTask, type WeeklyPlan } from "../../lib/api"
+import { connectPlannerStream, plannerDelete, plannerIngest, plannerList, plannerMaterials, plannerPlan, plannerTask, plannerUpdate, plannerWeekly, plannerCreateWithFiles, plannerUploadFiles, plannerDeleteFile, type PlannerEvent, type PlannerSlot, type PlannerTask, type WeeklyPlan } from "../../lib/api"
 
 function fmtTime(ts: number) {
     const d = new Date(ts)
@@ -40,6 +41,7 @@ export default function Planner() {
     const [undo, setUndo] = useState<{ id: string; status: PlannerTask["status"] } | null>(null)
     const [statusError, setStatusError] = useState("")
     const [addError, setAddError] = useState("")
+    const [loadError, setLoadError] = useState("")
     const [tasks, setTasks] = useState<PlannerTask[]>([])
     const [plan, setPlan] = useState<WeeklyPlan | null>(null)
     const [materials, setMaterials] = useState<Record<string, any>>({})
@@ -73,11 +75,11 @@ export default function Planner() {
                 plannerWeekly().then(wp => setPlan(wp.plan)).catch(() => { })
             }
             if (ev.type === "task.created") {
-                setTasks(t => [ev.task, ...t.filter(x => x.id !== ev.task.id)])
+                setTasks(t => [plannerTask(ev.task), ...t.filter(x => x.id !== ev.task.id)])
                 addNotification("success", `Tâche « ${ev.task.title} » créée`)
             }
             if (ev.type === "task.updated") {
-                setTasks(t => t.map(x => x.id === ev.task.id ? ev.task : x))
+                setTasks(t => t.map(x => x.id === ev.task.id ? plannerTask(ev.task) : x))
             }
             if (ev.type === "task.deleted") {
                 setTasks(t => t.filter(x => x.id !== ev.taskId))
@@ -123,10 +125,15 @@ export default function Planner() {
     }, [])
 
     const reload = useCallback(async () => {
-        const res = await plannerList()
-        setTasks(res.tasks)
-        const wp = await plannerWeekly()
-        setPlan(wp.plan)
+        setLoadError("")
+        try {
+            const res = await plannerList()
+            setTasks(res.tasks)
+            const wp = await plannerWeekly()
+            setPlan(wp.plan)
+        } catch (error) {
+            setLoadError(error instanceof Error && error.message ? error.message : "Le planning est indisponible. Réessaie dans un instant.")
+        }
     }, [])
 
     useEffect(() => { void reload() }, [reload])
@@ -152,7 +159,7 @@ export default function Planner() {
             // Server messages are French; raw network or HTTP errors are not shown as is.
             setAddError(message && !/^http \d|failed to fetch|abort|load failed/i.test(message) ? message
                 : "La tâche n’a pas pu être ajoutée. Vérifie ta connexion et réessaie ; ton texte est conservé.")
-            void reload().catch(() => { }) // the task may have been created even if the answer was lost
+            void reload() // the task may have been created even if the answer was lost
             return false
         } finally {
             setLoading(false)
@@ -241,6 +248,7 @@ export default function Planner() {
 
     return (
         <div className="space-y-4">
+            {loadError && <ErrorNotice message={loadError} onRetry={() => void reload()} />}
             <QuickAdd onAdd={add} loading={loading} error={addError} />
             <div role="tablist" aria-label="Tâches" className="grid grid-cols-2 gap-1 rounded-2xl bg-tint p-1" onKeyDown={e => {
                 if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
@@ -268,7 +276,7 @@ export default function Planner() {
                             className={`min-h-11 rounded-lg px-2 text-sm font-medium ${view === id ? 'bg-tint text-foreground font-bold' : 'text-foreground'}`}>{label}</button>
                     ))}
                 </div>
-                <button type="button" onClick={reload} aria-label="Actualiser" title="Actualiser" className="press-icon grid size-11 shrink-0 place-items-center rounded-xl border border-border bg-surface text-foreground">
+                <button type="button" onClick={() => void reload()} aria-label="Actualiser" title="Actualiser" className="press-icon grid size-11 shrink-0 place-items-center rounded-xl border border-border bg-surface text-foreground">
                     <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992V4.356M20.5 9.5A8.25 8.25 0 0 0 5.4 7.4M7.977 14.652H2.985v4.992M3.5 14.5a8.25 8.25 0 0 0 15.1 2.1" /></svg>
                 </button>
             </div>
