@@ -373,7 +373,7 @@ export default function Planner() {
                 )}
                 {view === 'list' && (
                     <div>
-                        <div className="text-foreground text-sm mb-2">Planning de la semaine</div>
+                        <h2 className="ui-section-title mb-2">Planning de la semaine</h2>
                         {plan ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {plan.days.map(d => (
