@@ -206,18 +206,6 @@ export async function createFlashcard(input: {
   });
 }
 
-export async function listFlashcards() {
-  return req<{ ok: true; flashcards: SavedFlashcard[] }>(`${env.backend}/flashcards`, {
-    method: "GET",
-  });
-}
-
-export async function deleteFlashcard(id: string) {
-  return req<{ ok: true }>(`${env.backend}/flashcards/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-}
-
 export async function getExams() {
   return req<{ ok: true; exams: { id: string; name: string; sections: any[] }[] }>(
     `${env.backend}/exams`,
@@ -384,6 +372,7 @@ const deviceHeaders = (json = false) => {
 
 // The server sends ISO dates (backend/src/services/planner/types.ts); the screens work in milliseconds.
 const ms = (v: unknown) => typeof v === "string" ? Date.parse(v) : v as number
+export const plannerSlot = (s: PlannerSlot): PlannerSlot => ({ ...s, start: ms(s.start), end: ms(s.end) })
 export const plannerTask = <T extends { dueAt?: unknown }>(t: T): T =>
   ({ ...t, dueAt: ms(t.dueAt), ...("createdAt" in t ? { createdAt: ms((t as any).createdAt) } : {}), ...("updatedAt" in t ? { updatedAt: ms((t as any).updatedAt) } : {}) })
 const plannerUnavailable = () => new APIError("Le planning est indisponible. Réessaie dans un instant.", 0, "BAD_PAYLOAD")
@@ -428,7 +417,7 @@ export async function plannerWeekly() {
     body: JSON.stringify({})
   })
   const days = Array.isArray(res?.plan?.days) ? res.plan.days : []
-  return { ok: true, plan: { days: days.map(d => ({ date: d.date, slots: (Array.isArray(d.slots) ? d.slots : []).map(s => ({ ...s, start: ms(s.start), end: ms(s.end) })) })) } as WeeklyPlan }
+  return { ok: true, plan: { days: days.map(d => ({ date: d.date, slots: (Array.isArray(d.slots) ? d.slots : []).map(plannerSlot) })) } as WeeklyPlan }
 }
 
 export async function plannerMaterials(id: string, type: "summary" | "studyGuide" | "flashcards" | "quiz") {

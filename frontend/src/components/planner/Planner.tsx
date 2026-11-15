@@ -8,7 +8,7 @@ import PlannerMindmap from "./PlannerMindmap"
 import TodayFocus from "./TodayFocus"
 import { ErrorNotice } from "../ui/ErrorNotice"
 import QuickAdd from "./QuickAdd"
-import { connectPlannerStream, plannerDelete, plannerIngest, plannerList, plannerMaterials, plannerPlan, plannerTask, plannerUpdate, plannerWeekly, plannerCreateWithFiles, plannerUploadFiles, plannerDeleteFile, type PlannerEvent, type PlannerSlot, type PlannerTask, type WeeklyPlan } from "../../lib/api"
+import { connectPlannerStream, plannerDelete, plannerIngest, plannerList, plannerMaterials, plannerPlan, plannerSlot, plannerTask, plannerUpdate, plannerWeekly, plannerCreateWithFiles, plannerUploadFiles, plannerDeleteFile, type PlannerEvent, type PlannerSlot, type PlannerTask, type WeeklyPlan } from "../../lib/api"
 
 function fmtTime(ts: number) {
     const d = new Date(ts)
@@ -71,7 +71,7 @@ export default function Planner() {
     useEffect(() => {
         wsRef.current = connectPlannerStream((ev: PlannerEvent) => {
             if (ev.type === "plan.update") {
-                setTasks(t => t.map(x => x.id === ev.taskId ? { ...x, plan: { ...(x as any).plan, slots: ev.slots } } as any : x))
+                setTasks(t => t.map(x => x.id === ev.taskId ? { ...x, plan: { ...(x as any).plan, slots: ev.slots.map(plannerSlot) } } as any : x))
                 plannerWeekly().then(wp => setPlan(wp.plan)).catch(() => { })
             }
             if (ev.type === "task.created") {
