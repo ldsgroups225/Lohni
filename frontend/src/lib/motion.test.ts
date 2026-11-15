@@ -1,6 +1,6 @@
 import { required } from '../test/required'
 import { afterEach, expect, test, vi } from 'vitest'
-import { prefersReducedMotion, revealAtBottom, spring, springLinear, springStep } from './motion'
+import { prefersReducedMotion, reserveHiddenBottom, revealAtBottom, spring, springLinear, springStep } from './motion'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -89,7 +89,9 @@ test('revealAtBottom amène le bas de l’élément, plus une marge, au bas de l
   const element = { getBoundingClientRect: () => ({ bottom: 900 }) } as HTMLElement
   revealAtBottom(element, 32)
   expect(scrollTo).toHaveBeenCalledWith({ top: 100 + 900 + 32 - 640, behavior: 'smooth' })
+  expect(setProperty).not.toHaveBeenCalled() // le défilement seul ne touche pas à la mise en page
   // La page gagne en bas la hauteur cachée par la barre, sinon le défilement maximal s'arrête avant le bouton.
+  reserveHiddenBottom()
   expect(setProperty).toHaveBeenCalledWith('--hidden-bottom', '60px')
 })
 

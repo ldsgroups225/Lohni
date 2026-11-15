@@ -21,6 +21,7 @@ type Props = {
   origin?: string
   onExplain?: () => void
   explainDisabled?: boolean
+  explainReason?: string
   onToggle: () => void
   onSwipe: (knew: boolean) => void
 }
@@ -28,7 +29,7 @@ type Props = {
 /** Carte plein écran : toucher retourne, glisser à droite = « Je savais », à gauche = « Je ne savais pas ».
  *  Le glissement n'est actif qu'une fois la réponse vue. Flèches du clavier et boutons restent disponibles.
  *  Pendant le geste, la carte suit le doigt sans rendu React ; au lâcher, un ressort repart de la vitesse réelle. */
-export function SwipeCard({ question, answer, revealed, enabled, context, origin, onExplain, explainDisabled, onToggle, onSwipe }: Props) {
+export function SwipeCard({ question, answer, revealed, enabled, context, origin, onExplain, explainDisabled, explainReason, onToggle, onSwipe }: Props) {
   const card = useRef<HTMLDivElement>(null)
   const x = useRef(0)
   const stop = useRef<(() => void) | null>(null)
@@ -127,7 +128,7 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
         </div>
         <div className="mt-5 flex items-center justify-between gap-3 border-t border-border pt-4 text-xs text-muted">
           <span>{origin === 'ai' ? 'Générée par IA · peut contenir des erreurs' : 'Cours importé'}</span>
-          {onExplain && <button type="button" disabled={explainDisabled} onPointerDown={event => event.stopPropagation()} onPointerUp={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} onClick={onExplain} className="ui-button-ghost shrink-0 text-sm">Explique-moi</button>}
+          {onExplain && <span className="flex shrink-0 flex-col items-end">{explainDisabled && explainReason && <span className="text-xs">{explainReason}</span>}<button type="button" disabled={explainDisabled} onPointerDown={event => event.stopPropagation()} onPointerUp={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} onClick={onExplain} className="ui-button-ghost text-sm">Explique-moi</button></span>}
         </div>
       </div>
       <p id="swipe-hint" className="py-3 text-center text-sm text-muted">

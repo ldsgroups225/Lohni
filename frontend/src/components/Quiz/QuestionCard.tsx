@@ -1,7 +1,7 @@
 import { LightbulbIcon } from '../ui/NavigationIcons'
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import MarkdownView from "../Chat/MarkdownView";
-import { revealAtBottom } from "../../lib/motion";
+import { useRevealButton } from "../../lib/useRevealButton";
 import type { Question } from "../../pages/Quiz";
 import { withOccurrenceKeys } from "../../lib/occurrenceKeys";
 
@@ -16,17 +16,7 @@ export default function QuestionCard({
 }) {
   const next = useRef<HTMLButtonElement>(null);
   const keyboardAnswer = useRef(false);
-  // Après la réponse : défiler jusqu'à l'explication et « Continuer », avec une marge sous le bouton.
-  // Second passage : le Markdown se charge à la demande et peut allonger la page.
-  useEffect(() => {
-    if (!showExp) return;
-    if (keyboardAnswer.current) next.current?.focus({ preventScroll: true });
-    keyboardAnswer.current = false;
-    const go = () => { if (next.current) revealAtBottom(next.current); };
-    go();
-    const timer = window.setTimeout(go, 350);
-    return () => window.clearTimeout(timer);
-  }, [showExp]);
+  useRevealButton(next, showExp, keyboardAnswer);
 
   const ok = selected === q.correct;
   return (

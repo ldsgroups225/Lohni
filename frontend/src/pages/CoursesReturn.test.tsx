@@ -28,7 +28,7 @@ test('S’entraîner est visible sans chapitre, avant les chapitres', async () =
   const root = createRoot(host)
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
-    expect([...outils(host).querySelectorAll('a')].map(a => [a.textContent, a.getAttribute('href')])).toEqual([['Examens', '/exam'], ['Quiz', '/quiz'], ['Débat', '/debate'], ['Podcast', '/tools']])
+    expect([...outils(host).querySelectorAll('a')].map(a => [a.textContent, a.getAttribute('href')])).toEqual([['Examens', '/exam'], ['Quiz', '/quiz'], ['Débat', '/debate'], ['Outils', '/tools']])
     expect(host.textContent).toContain('S’entraîner')
     expect(host.querySelector('details')).toBeNull()
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
@@ -117,7 +117,7 @@ test('une revalidation terminée ne réactive pas le formulaire pendant son enre
   try {
     await act(async () => root.render(<RouterProvider router={router} />))
     await act(async () => { await router.navigate('/autre'); await router.navigate(-1) })
-    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === '1 carte')).click())
+    await act(async () => required([...host.querySelectorAll('button')].find(button => button.textContent === 'Voir la carte')).click())
     await act(async () => required(host.querySelector<HTMLButtonElement>('[aria-label="Modifier : Question"]')).click())
     await act(async () => required(host.querySelector('form')).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
     expect(api.updateCard).toHaveBeenCalledOnce()

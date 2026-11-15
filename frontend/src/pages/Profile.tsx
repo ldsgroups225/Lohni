@@ -125,7 +125,7 @@ export default function Profile() {
       {page ? <ScreenHeader back="/me" backLabel="Retour à Moi" title={({ profil: 'Mon profil', examens: 'Examens', matieres: 'Matières', 'emploi-du-temps': 'Emploi du temps', rythme: 'Rythme de révision' } as Record<string, string>)[page] ?? 'Moi'} /> : <header className="flex items-center gap-3">
         {!error && progress && <span className="shrink-0"><Mascotte humeur={humeurSerie(progress.streak, progress.streakStarted)} taille={56} /></span>}
         {!error && !busy && !profile && !progress && <span className="shrink-0"><Mascotte humeur="au repos" taille={56} /></span>}
-        <div className="min-w-0 flex-1"><h1 className="text-[26px] font-extrabold text-foreground">Moi</h1>
+        <div className="min-w-0 flex-1"><h1 className="text-2xl font-extrabold text-foreground">Moi</h1>
         {profile && <p className="text-sm text-muted">{entry?.label.split(' · ')[0] ?? profile.schoolClass}{profile.series ? ` · Série ${profile.series}` : ''}</p>}</div>
         {profile && <ButtonLink variant="secondary" to="/me/profil">Modifier</ButtonLink>}
       </header>}

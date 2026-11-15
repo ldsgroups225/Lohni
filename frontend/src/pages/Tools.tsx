@@ -7,7 +7,7 @@ import ComingSoon from "../components/Tools/ComingSoon"
 
 export default function Tools() {
   return (
-    <ToolPage title="Podcast et outils">
+    <ToolPage title="Outils">
         <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
           <Link to="/revision" className="rounded-2xl border border-border bg-surface px-5 py-4 text-foreground hover:bg-tint">Session de révision →</Link>
           <SmartNotes />

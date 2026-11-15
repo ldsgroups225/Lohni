@@ -10,7 +10,7 @@ import { revisionAPI as revisionDouble } from '../lib/api'
 import { revisionCacheDouble } from '../test/revisionApiDouble'
 Object.assign(revisionDouble, revisionCacheDouble)
 
-const api = vi.hoisted(() => ({ timetable: vi.fn(async () => []), readTimetablePhotos: vi.fn(), saveTimetable: vi.fn(), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn(), deleteExam: vi.fn() }))
+const api = vi.hoisted(() => ({ timetable: vi.fn(async () => []), readTimetablePhotos: vi.fn(), saveTimetable: vi.fn(), exams: vi.fn(async (): Promise<unknown[]> => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn(), deleteExam: vi.fn() }))
 const confirmation = vi.hoisted(() => vi.fn())
 vi.mock('../lib/confirm', () => ({ confirmDialog: confirmation }))
 vi.mock('../lib/api', () => ({ revisionAPI: api, DEVICE_CHANGED: 'L’appareil a changé. Recharge la page avant de continuer.' }))

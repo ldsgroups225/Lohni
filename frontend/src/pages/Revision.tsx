@@ -12,7 +12,9 @@ import { useOverlayNavigation } from '../lib/useOverlayNavigation'
 import { useLeaveConfirmation } from '../lib/useLeaveConfirmation'
 import { withOccurrenceKeys } from '../lib/occurrenceKeys'
 import { confirmDialog } from '../lib/confirm'
-import { MENU_EXIT_MS, revealAtBottom, useExitTransition } from '../lib/motion'
+import { MENU_EXIT_MS, useExitTransition } from '../lib/motion'
+import { useRevealButton } from '../lib/useRevealButton'
+import { prerenderCard } from '../components/Revision/prerenderCard'
 import { SwipeCard } from '../components/Revision/SwipeCard'
 import { SessionRecap } from '../components/Revision/SessionRecap'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
@@ -70,30 +72,11 @@ export default function Revision() {
   const chapterId = card?.chapterId
   const chapter = chapters.find(value => value.id === chapterId)
   useLeaveConfirmation(!!session && !session.complete && !!card, 'Quitter la session ? Ta progression est enregistrée.')
-  // Après un QCM : fait défiler jusqu'à l'indice et « Continuer », avec une marge sous le bouton.
-  // Deuxième passage : le Markdown se charge à la demande et peut allonger la page après le premier.
-  useEffect(() => {
-    if (!verdict) return
-    if (keyboardAnswer.current) continueButton.current?.focus({ preventScroll: true })
-    keyboardAnswer.current = false
-    const go = () => { if (continueButton.current) revealAtBottom(continueButton.current) }
-    go()
-    const timer = window.setTimeout(go, 350)
-    return () => window.clearTimeout(timer)
-  }, [verdict])
-  // Pendant que l'élève lit cette carte, la suivante est rendue (Markdown, KaTeX) au repos : la transition n'a plus ce travail à faire.
+  useRevealButton(continueButton, !!verdict, keyboardAnswer, true)
+  // Pendant que l'élève lit cette carte, la suivante est rendue au repos : la transition n'a plus ce travail à faire.
   const nextCard = session && !session.complete ? session.cards[session.position + 1] : undefined
-  useEffect(() => {
-    if (!nextCard) return
-    const texts = [{ md: nextCard.question, inline: true }, { md: nextCard.answer }, ...(nextCard.options ?? []).map(md => ({ md, inline: true }))]
-    const idle = window.requestIdleCallback ?? ((run: () => void) => window.setTimeout(run, 200))
-    const cancel = window.cancelIdleCallback ?? window.clearTimeout
-    // Un texte par moment de repos : un geste qui commence n'attend jamais tout le rendu de la carte suivante.
-    let handle = 0, stopped = false
-    const step = () => { handle = idle(() => { void import('../components/Chat/MarkdownContent').then(module => { const text = texts.shift(); if (stopped || !text) return; module.prerenderMarkdown([text]); if (texts.length) step() }) }) }
-    step()
-    return () => { stopped = true; cancel(handle) }
-  }, [nextCard])
+  useEffect(() => (nextCard ? prerenderCard(nextCard) : undefined), [nextCard])
+  const deleteReason = !sync.online ? 'Disponible en ligne' : sync.pending > 0 ? 'Disponible après l’envoi de tes réponses' : verdict ? 'Disponible après ta réponse' : ''
   const secondaryButton = 'rounded-xl border border-border bg-surface px-4 py-3 text-foreground disabled:opacity-50 disabled:cursor-wait'
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
@@ -240,15 +223,15 @@ export default function Revision() {
           <fieldset aria-label="Options de révision" className="relative" onKeyDown={e => { if (e.key === 'Escape') { setMenu(false); menuButton.current?.focus() } }}>
             <button ref={menuButton} type="button" aria-label="Plus d’options" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} className="press-icon -mr-2 grid size-11 place-items-center rounded-xl text-xl leading-none text-muted">⋯</button>
             {menuExit.mounted && <div role="menu" data-state={menuExit.state} className="motion-menu absolute right-0 top-full z-10 mt-1 rounded-xl border border-border bg-surface p-1 shadow-lg">
-              <button type="button" role="menuitem" ref={focusMenuItem} disabled={busy || !validated || !!verdict || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte</button>
+              <button type="button" role="menuitem" ref={focusMenuItem} disabled={busy || !validated || !!verdict || !sync.online || sync.pending > 0} className="whitespace-nowrap rounded-lg px-4 py-3 text-sm text-danger disabled:opacity-50" onClick={() => void removeCard()}>Supprimer cette carte{deleteReason && <span className="block text-xs font-normal text-muted">{deleteReason}</span>}</button>
             </div>}
           </fieldset>
         </header> : !(session && session.position > 0) && <ScreenHeader back="/" title="Session de révision" />}
-        {!scoped && (!sync.online || (sync.pending > 0 && !!sync.error)) && <aside role="status" className="space-y-2 rounded-xl border border-border p-4 text-foreground">
-          {!sync.online && <p>Hors ligne. Tu peux terminer ta session déjà chargée.</p>}
-          {sync.pending > 0 && <p>{sync.pending} réponse{sync.pending > 1 ? 's' : ''} enregistrée{sync.pending > 1 ? 's' : ''} sur cet appareil, en attente d’envoi. Tes XP et ta série seront confirmés au retour du réseau.</p>}
+        {!scoped && (!sync.online || (sync.pending > 0 && !!sync.error)) && <aside role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-border px-3 py-2 text-sm text-foreground">
+          {!sync.online && <p>Hors ligne : tu peux terminer ta session.</p>}
+          {sync.pending > 0 && <p>{sync.pending} réponse{sync.pending > 1 ? 's' : ''} en attente d’envoi. XP et série seront confirmés au retour du réseau.</p>}
           {sync.error && <p>{sync.error}</p>}
-          {sync.online && sync.pending > 0 && <Button variant="secondary" onClick={() => void syncRevisionAnswers()}>Réessayer l’envoi</Button>}
+          {sync.online && sync.pending > 0 && <button type="button" className="ui-button-ghost min-h-11 font-semibold text-primary" onClick={() => void syncRevisionAnswers()}>Réessayer l’envoi</button>}
         </aside>}
         {error && <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">{!card && <Mascotte humeur="désolée" taille={96} />}<p>{error}</p>
           <Button variant="secondary" disabled={busy} onClick={() => void run(async () => {
@@ -263,7 +246,7 @@ export default function Revision() {
         {feedback && <span key={feedback.id} aria-hidden="true" className="motion-feedback" onAnimationEnd={() => setFeedback(null)}>{feedback.knew ? 'Bien joué !' : 'À revoir'}</span>}
         {session && !session.complete && card ? (<>
           <section className="flex flex-1 flex-col space-y-4" aria-label="Session de révision" aria-busy={busy}>
-            {card.kind === 'basic' ? <SwipeCard key={`${card.id}-${session.position}`} question={card.question} answer={card.answer} context={chapter ? `${chapter.subject} · ${chapter.title}` : undefined} origin={card.origin} onExplain={() => explain(card)} explainDisabled={busy || !sync.online} revealed={revealed} enabled={!busy && validated} onToggle={() => setRevealed(value => !value)} onSwipe={answer} />
+            {card.kind === 'basic' ? <SwipeCard key={`${card.id}-${session.position}`} question={card.question} answer={card.answer} context={chapter ? `${chapter.subject} · ${chapter.title}` : undefined} origin={card.origin} onExplain={() => explain(card)} explainDisabled={busy || !sync.online} explainReason={!sync.online ? 'Disponible en ligne' : undefined} revealed={revealed} enabled={!busy && validated} onToggle={() => setRevealed(value => !value)} onSwipe={answer} />
             : <article key={`${card.id}-${session.position}-${revealed}`} className={`shrink-0 space-y-4 rounded-2xl border border-border bg-surface p-5 ${revealed && card.kind !== 'mcq' ? 'motion-flip' : 'motion-enter'}`}>
               {chapter && <p className="text-xs font-semibold uppercase tracking-wide text-muted">{chapter.subject} · {chapter.title}</p>}
               {card.origin === 'ai' && <p className="text-xs text-muted">Générée par IA · Peut contenir des erreurs</p>}
@@ -296,13 +279,15 @@ export default function Revision() {
           {missed && <aside className="motion-enter space-y-3 rounded-2xl border border-danger p-4" aria-live="polite">
             <p>À retravailler : <MarkdownView md={missed.question} inline /></p>
             <Button disabled={busy || !sync.online} onClick={() => explain(missed)}>Explique-moi</Button>
+            {!sync.online && <p className="text-sm text-muted">Disponible en ligne</p>}
           </aside>}
         </>) : (!busy || !!session) && <>
           {session && (session.position > 0 ? <SessionRecap session={session} progress={progress} chapters={chapters} pending={sync.pending} loading={recapLoading && !error} moreCards={moreCards} busy={busy || !validated} online={sync.online} error={!!error} onExplain={id => explain(session.cards.find(c => c.id === id))} onReviewMissed={() => navigate(`/revision?missed=${encodeURIComponent(session.id)}`)} onContinue={() => void run(async () => display(await loadSession(true)))} /> : <section className="space-y-4 rounded-2xl border border-border p-6" aria-live="polite">
             {!error && <Mascotte humeur="au repos" taille={112} />}
             <h2 className="text-xl">{session.kind === 'express' ? 'Rien de fragile à revoir pour cet examen. Bravo !' : 'Aucune carte à réviser pour le moment'}</h2>
             {session.kind !== 'express' && <p>Les nouvelles cartes arrivent progressivement chaque jour. Tu peux aussi préparer un autre chapitre.</p>}
-            <button type="button" className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await loadSession(true)))}>Continuer</button>
+            <button type="button" className={secondaryButton} disabled={busy || !validated || !sync.online || sync.pending > 0} onClick={() => void run(async () => display(await loadSession(true)))}>Chercher d’autres cartes</button>
+            {(!sync.online || sync.pending > 0) && <p className="text-sm text-muted">{!sync.online ? 'Disponible en ligne' : 'Disponible après l’envoi de tes réponses'}</p>}
           </section>)}
           {!scoped && profile && !(session && session.position > 0) && <form onSubmit={generate} className="space-y-4 rounded-2xl border border-border p-6">
             <h2 className="text-xl text-foreground">Préparer un chapitre</h2>

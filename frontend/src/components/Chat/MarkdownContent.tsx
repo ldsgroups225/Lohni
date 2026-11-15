@@ -59,11 +59,11 @@ const withoutCode = [rehypeKatex];
 const hasCode = (md: string) => md.includes("```") || md.includes("~~~") || /^( {4}|\t)\S/m.test(md);
 
 // Markdown + KaTeX is synchronous and heavy on a low-end phone: render each text once, and prepare the next card ahead of time.
-const rendered = new Map<string, ReactElement>();
+const renderedCache = new Map<string, ReactElement>();
 const MAX_RENDERED = 200;
-function render(md: string, inline: boolean): ReactElement {
+function renderCached(md: string, inline: boolean): ReactElement {
   const key = `${inline ? "i" : "b"}:${md}`;
-  let element = rendered.get(key);
+  let element = renderedCache.get(key);
   if (!element) {
     element = ReactMarkdown({
       skipHtml: true,
@@ -74,22 +74,22 @@ function render(md: string, inline: boolean): ReactElement {
       unwrapDisallowed: inline,
       children: plainNumbers(md),
     });
-    if (rendered.size >= MAX_RENDERED) rendered.delete(rendered.keys().next().value as string);
-    rendered.set(key, element);
+    if (renderedCache.size >= MAX_RENDERED) renderedCache.delete(renderedCache.keys().next().value as string);
+    renderedCache.set(key, element);
   }
   return element;
 }
 
 /** Renders texts now (e.g. the next revision card while the student reads this one) so showing them later costs no parsing. */
 export function prerenderMarkdown(texts: { md: string; inline?: boolean }[]) {
-  for (const { md, inline = false } of texts) if (md) render(md, inline);
+  for (const { md, inline = false } of texts) if (md) renderCached(md, inline);
 }
 
 export default function MarkdownView({ md, inline = false }: Props) {
   const Wrapper = inline ? "span" : "div";
   return (
     <Wrapper className={inline ? "break-words" : "max-w-none leading-relaxed w-full overflow-hidden"}>
-      {render(md || "", inline)}
+      {renderCached(md || "", inline)}
     </Wrapper>
   );
 }

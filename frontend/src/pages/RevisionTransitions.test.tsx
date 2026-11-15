@@ -79,7 +79,7 @@ test('une réponse en cours d’envoi en ligne n’affiche pas d’encart au-des
 test('une réponse qui n’a pas pu partir reste signalée', async () => {
   api.sync = { online: true, pending: 1, error: 'Synchronisation impossible. Réessaie.' }
   await act(async () => { window.dispatchEvent(new Event('revision-sync')) })
-  expect(host.textContent).toContain('1 réponse enregistrée sur cet appareil, en attente d’envoi')
+  expect(host.textContent).toContain('1 réponse en attente d’envoi')
 })
 
 test('la carte qui sort de l’écran ne rend pas la page défilable', () => {

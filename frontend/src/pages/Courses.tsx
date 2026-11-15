@@ -93,14 +93,14 @@ export default function Courses() {
     {error && <p role="alert" className="text-danger">{error}</p>}
     {selectedCard ? <CardEditor key={selectedCard.id} card={selectedCard} busy={busy || stale} onCancel={() => setEditing(null)} onSave={value => void run(async () => { await revisionAPI.updateCard(selectedCard.id, value); setEditing(null); await load() })} onDelete={() => { void confirmDialog('Supprimer cette carte ? Elle ne sera plus proposée en révision.').then(ok => { if (ok) void run(async () => { await revisionAPI.deleteCard(selectedCard.id); setEditing(null); await load() }) }) }} /> : <>
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">{selected.cards.map(card => <button key={card.id} type="button" aria-label={`Modifier : ${card.question}`} disabled={busy || stale} onClick={() => setEditing(card.id)} className="flex min-h-[72px] w-full items-center gap-2 border-b border-border px-4 py-3 text-left last:border-b-0 disabled:opacity-50"><span className="min-w-0 flex-1"><span className="block font-bold"><MarkdownContent md={card.question} inline /></span><span className="block text-sm text-muted"><MarkdownContent md={card.answer} inline /></span></span><span aria-hidden="true" className="grid size-11 place-items-center text-xl text-muted">›</span></button>)}</div>
-      <div className="space-y-2">{selected.cards.length ? <ButtonLink className="w-full" to={`/revision?chapter=${encodeURIComponent(selected.id)}`}>Réviser ce chapitre</ButtonLink> : <Button className="w-full" disabled>Réviser ce chapitre</Button>}<button type="button" disabled className="min-h-12 w-full rounded-xl border border-primary font-semibold text-primary opacity-60">+ Ajouter une carte</button><p className="text-sm text-muted">{selected.cards.length ? 'Ajouter une carte à la main n’est pas encore disponible.' : 'Ce chapitre n’a pas encore de cartes à réviser. Ajouter une carte à la main n’est pas encore disponible.'}</p></div>
+      <div className="space-y-2">{selected.cards.length ? <ButtonLink className="w-full" to={`/revision?chapter=${encodeURIComponent(selected.id)}`}>Réviser ce chapitre</ButtonLink> : <Button className="w-full" disabled>Réviser ce chapitre</Button>}{!selected.cards.length && <p className="text-sm text-muted">Ce chapitre n’a pas encore de cartes à réviser.</p>}</div>
     </>}
   </div></main>
 
   return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28">
     <div className="mx-auto max-w-2xl space-y-4">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold text-foreground">Cours</h1>
+        <h1 className="text-2xl font-extrabold text-foreground">Cours</h1>
         <ButtonLink to="/import" aria-label="Importer mon cours" className="min-h-11 px-4 py-2">＋ Importer</ButtonLink>
       </header>
       <nav aria-label="S’entraîner" className="space-y-2">
@@ -110,7 +110,7 @@ export default function Courses() {
             ['/exam', ClipboardIcon, 'Examens'],
             ['/quiz', HelpIcon, 'Quiz'],
             ['/debate', DebateIcon, 'Débat'],
-            ['/tools', HeadphonesIcon, 'Podcast'],
+            ['/tools', HeadphonesIcon, 'Outils'],
           ] satisfies [string, () => ReactNode, string][]).map(([to, Icon, label]) => <Link key={to} to={to} className="flex min-h-[76px] min-w-0 flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-1 py-3 text-sm text-foreground">
             <span aria-hidden="true" className="text-primary"><Icon /></span>
             <span className="font-semibold">{label}</span>
@@ -149,11 +149,11 @@ export default function Courses() {
               </details>
             </div>
             <Progress className={`mastery-progress w-full ${chapter.status === 'Solide' ? '[&::-webkit-progress-value]:!bg-success [&::-moz-progress-bar]:!bg-success' : ''}`} value={chapter.cards.length ? chapter.seenCards / chapter.cards.length : 0} max={1} aria-label={`Cartes vues du chapitre ${chapter.title}`} />
-            <p className="text-sm text-muted">{chapter.seenCards} carte{chapter.seenCards === 1 ? '' : 's'} vue{chapter.seenCards === 1 ? '' : 's'} sur {chapter.cards.length}{chapter.mastery !== null && ` · rappel estimé ${Math.round(chapter.mastery)} %`}
+            <p className="text-sm text-muted">{chapter.seenCards} carte{chapter.seenCards === 1 ? '' : 's'} vue{chapter.seenCards === 1 ? '' : 's'} sur {chapter.cards.length}{chapter.mastery !== null && ` · maîtrise estimée ${Math.round(chapter.mastery)} %`}
               {chapter.cards.length > 0 && chapter.seenCards < chapter.cards.length * revisionPolicy.minimumSeenRatio && ` · encore ${Math.ceil(chapter.cards.length * revisionPolicy.minimumSeenRatio) - chapter.seenCards} pour faire évoluer la maîtrise`}</p>
             <div className="grid grid-cols-2 gap-2">
             <button type="button" className="min-h-11 rounded-xl border border-border bg-background px-3 py-2 font-semibold text-foreground" onClick={() => { setSummaryId(chapter.id); setSummaryOpen(true) }}>Résumé</button>
-            <button type="button" className="min-h-11 rounded-xl border border-border bg-background px-3 py-2 font-semibold text-foreground" onClick={() => setSelectedChapter(chapter.id)}>{chapter.cards.length} carte{chapter.cards.length === 1 ? '' : 's'}</button>
+            <button type="button" className="min-h-11 rounded-xl border border-border bg-background px-3 py-2 font-semibold text-foreground" onClick={() => setSelectedChapter(chapter.id)}>{chapter.cards.length === 1 ? 'Voir la carte' : `Voir les ${chapter.cards.length} cartes`}</button>
             </div>
           </article>)}
         </section>

@@ -89,7 +89,7 @@ export default function ImportCourse() {
 
   return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-5">
-      <ScreenHeader back={step === 'pick' ? '/courses' : step === 'work' ? null : back} title={step === 'pick' ? 'Ajouter un cours' : step === 'confirm' ? 'Vérifie et crée' : step === 'work' ? 'Un instant' : 'Terminé'} />
+      <ScreenHeader back={step === 'pick' ? '/courses' : step === 'work' ? null : back} title={step === 'pick' ? 'Ajouter un chapitre' : step === 'confirm' ? 'Vérifie et crée' : step === 'work' ? 'Un instant' : 'Terminé'} />
       {busy && !profile && !error && <PendingRead title="Cours à réviser" label="On prépare ton import…" />}
       {failedChapter && !busy && !cancelled && <ErrorState title="Je n’ai pas pu créer tes cartes" detail="La création des cartes n’a pas abouti. Ton cours est bien enregistré, rien n’est perdu." actions={[
         { label: 'Réessayer', variant: 'primary', onClick: () => { setCancelled(false); importController.current = new AbortController(); setStep('work'); void run(async () => { const chapter = await revisionAPI.retryImport(failedChapter, importController.current?.signal); setImported(chapter); setFailedChapter(undefined); setStep('done'); try { setCards((await revisionAPI.chapters()).find(item => item.id === chapter.id)?.cards) } catch { setCards(undefined) }; try { setQuota(await revisionAPI.importQuota()) } catch { setQuota(undefined) } }) } },
