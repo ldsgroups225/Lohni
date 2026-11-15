@@ -169,6 +169,12 @@ test('le contexte et le lien vers le tuteur restent dans la carte sans la retour
   expect(onToggle).not.toHaveBeenCalled()
 })
 
+test('« Explique-moi » indisponible dit pourquoi', async () => {
+  await act(async () => root.render(<SwipeCard question="Q ?" answer="R" revealed enabled onToggle={onToggle} onSwipe={onSwipe} onExplain={() => {}} explainDisabled explainReason="Disponible en ligne" />))
+  expect(card().textContent).toContain('Disponible en ligne')
+  expect(required([...card().querySelectorAll('button')].find(item => item.textContent === 'Explique-moi')).disabled).toBe(true)
+})
+
 // Chrome arrête la recherche de touch-action au premier conteneur défilant : sans pan-y sur lui, un doigt
 // qui glisse à l'horizontale sur le texte est pris par le navigateur (retour arrière) au lieu de déplacer la carte.
 test('chaque zone défilante de la carte laisse le glissement horizontal à la carte', async () => {
