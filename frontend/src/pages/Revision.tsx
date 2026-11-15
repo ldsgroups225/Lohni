@@ -158,7 +158,6 @@ export default function Revision() {
     return () => { active = false }
   }, [session?.id, session?.complete, sync.pending, sync.online])
 
-  // Déclaré en dernier : les tests de page fournissent les états précédents dans l'ordre.
   const [recapLoading, setRecapLoading] = useState(false)
   function generate(event: FormEvent) {
     event.preventDefault()
