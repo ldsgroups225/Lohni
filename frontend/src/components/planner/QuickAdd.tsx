@@ -56,32 +56,22 @@ export default function QuickAdd({ onAdd, loading, error }: QuickAddProps) {
                     className="hidden"
                 />
                 {/* Quick Templates */}
-                <div className="flex flex-wrap gap-2">
-                    <div className="w-full text-xs text-muted">Exemples</div>
-                    <button type="button"
-                        onClick={() => setText("Contrôle de maths ")}
-                        className="min-h-11 rounded-xl bg-tint px-3 text-sm text-foreground"
-                    >
-                        Contrôle de maths
-                    </button>
-                    <button type="button"
-                        onClick={() => setText("Exposé sur ")}
-                        className="min-h-11 rounded-xl bg-tint px-3 text-sm text-foreground"
-                    >
-                        Exposé
-                    </button>
-                    <button type="button"
-                        onClick={() => setText("Devoir à rendre : ")}
-                        className="min-h-11 rounded-xl bg-tint px-3 text-sm text-foreground"
-                    >
-                        Devoir à rendre
-                    </button>
-                </div>
+                <fieldset className="space-y-2">
+                    <legend className="ui-label mb-2">Exemples</legend>
+                    {/* Libellés courts : les trois tiennent sur une ligne de largeurs égales ; le texte inséré reste complet. */}
+                    <div className="grid grid-cols-3 gap-2">
+                        {([["Contrôle", "Contrôle de maths "], ["Exposé", "Exposé sur "], ["Devoir", "Devoir à rendre : "]] as const).map(([label, start]) => (
+                            <button key={label} type="button" onClick={() => setText(start)} aria-label={`Exemple : ${start.replace(/[ :]+$/, '')}`} className="min-h-11 rounded-xl bg-tint px-2 text-sm font-semibold text-foreground">
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </fieldset>
                 {error && <p role="alert" className="rounded-lg border border-primary bg-tint px-3 py-2 text-sm text-foreground">{error}</p>}
                 <div className="flex gap-2">
                     <button type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="press-icon grid size-11 shrink-0 place-items-center rounded-xl border border-border bg-tint text-foreground"
+                        className="press-icon grid size-11 shrink-0 place-items-center rounded-xl border border-border bg-surface text-foreground"
                         title="Ajouter les fichiers du devoir"
                         aria-label="Joindre des fichiers au devoir"
                     >

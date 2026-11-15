@@ -8,31 +8,12 @@ import PlannerMindmap from "./PlannerMindmap"
 import TodayFocus from "./TodayFocus"
 import { ErrorNotice } from "../ui/ErrorNotice"
 import QuickAdd from "./QuickAdd"
+import DaySlots from "./DaySlots"
 import { connectPlannerStream, plannerDelete, plannerIngest, plannerList, plannerMaterials, plannerPlan, plannerSlot, plannerTask, plannerUpdate, plannerWeekly, plannerCreateWithFiles, plannerUploadFiles, plannerDeleteFile, type PlannerEvent, type PlannerSlot, type PlannerTask, type WeeklyPlan } from "../../lib/api"
 
 function fmtTime(ts: number) {
     const d = new Date(ts)
     return d.toLocaleString('fr-FR', { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })
-}
-
-function DaySlots({ date, slots, tasks }: { date: string; slots: PlannerSlot[]; tasks: Record<string, PlannerTask> }) {
-    return (
-        <div className="p-3 ui-card">
-            <div className="text-xs text-muted mb-2">{new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-            <div className="space-y-2">
-                {slots.length === 0 && <div className="text-muted text-sm">Aucun créneau</div>}
-                {slots.map(s => (
-                    <div key={s.id} className="flex items-center justify-between text-sm text-foreground">
-                        <div className="truncate">
-                            <span className="px-1.5 py-0.5 rounded bg-tint text-[10px] mr-2">{{ focus: 'Concentration', review: 'Révision', buffer: 'Pause' }[s.kind]}</span>
-                            <span className="font-medium">{tasks[s.taskId]?.title || s.taskId}</span>
-                        </div>
-                        <div className="text-muted text-xs">{fmtTime(s.start)} → {new Date(s.end).toLocaleTimeString('fr-FR', { hour: "2-digit", minute: "2-digit" })}</div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    )
 }
 
 export default function Planner() {
@@ -327,24 +308,27 @@ export default function Planner() {
                         {tasks.length === 0 && <p className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">Aucune tâche pour le moment. Ajoute-en une depuis « Aujourd’hui ».</p>}
                         {tasks.map(t => (
                             <div key={t.id} className="min-w-0 p-3 ui-card">
-                                <div className="min-w-0">
-                                    <div className="text-foreground font-medium">{t.title}</div>
-                                    <div className="text-muted text-xs">
+                                <div className="min-w-0 space-y-1">
+                                    <h3 className="ui-card-title line-clamp-2 [overflow-wrap:anywhere]">{t.title}</h3>
+                                    <p className="text-muted text-xs">
                                         Échéance : {fmtTime(t.dueAt)} · {t.estMins} min · {priorityLabel(t.priority)}
                                         {t.files && t.files.length > 0 && ` · ${t.files.length} fichier(s)`}
-                                    </div>
+                                    </p>
                                 </div>
-                                <div className="mt-3 flex flex-wrap items-center gap-2">
-                                    <select value={t.status} onChange={e => mark(t.id, e.target.value as any)} aria-label={`Statut de ${t.title}`} className="min-h-11 rounded-lg border border-border bg-surface px-2 text-sm text-foreground">
+                                {/* Actions sur une grille égale, puis statut et suppression sur une ligne à part. */}
+                                <div className="mt-3 grid grid-cols-3 gap-2">
+                                    <button type="button" onClick={() => planTask(t.id)} className="min-h-11 rounded-xl bg-tint px-2 text-sm font-semibold text-foreground">Planifier</button>
+                                    <button type="button" onClick={() => gen(t.id, "summary")} className="min-h-11 rounded-xl bg-tint px-2 text-sm font-semibold text-foreground">Résumé</button>
+                                    <button type="button" onClick={() => gen(t.id, "flashcards")} className="min-h-11 rounded-xl bg-tint px-2 text-sm font-semibold text-foreground">Cartes</button>
+                                </div>
+                                <div className="mt-2 flex items-center gap-2">
+                                    <select value={t.status} onChange={e => mark(t.id, e.target.value as any)} aria-label={`Statut de ${t.title}`} className="min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-surface px-3 text-sm text-foreground">
                                         <option value="todo">À faire</option>
                                         <option value="doing">En cours</option>
                                         <option value="done">Terminé</option>
                                         <option value="blocked">Bloqué</option>
                                     </select>
-                                    <button type="button" onClick={() => planTask(t.id)} className="min-h-11 rounded-lg bg-tint px-3 text-sm text-foreground">Planifier</button>
-                                    <button type="button" onClick={() => gen(t.id, "summary")} className="min-h-11 rounded-lg bg-tint px-3 text-sm text-foreground">Résumé</button>
-                                    <button type="button" onClick={() => gen(t.id, "flashcards")} className="min-h-11 rounded-lg bg-tint px-3 text-sm text-foreground">Cartes</button>
-                                    <button type="button" onClick={() => { void confirmDialog(`Supprimer la tâche « ${t.title} » ?`).then(ok => { if (ok) void del(t.id) }) }} className="ml-auto min-h-11 rounded-lg border border-danger px-3 text-sm text-danger">Supprimer</button>
+                                    <button type="button" onClick={() => { void confirmDialog(`Supprimer la tâche « ${t.title} » ?`).then(ok => { if (ok) void del(t.id) }) }} className="min-h-11 shrink-0 rounded-xl border border-danger px-4 text-sm font-semibold text-danger">Supprimer</button>
                                 </div>
 
                                 {/* Task Files */}
