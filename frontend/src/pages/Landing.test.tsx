@@ -63,3 +63,23 @@ test('une réponse de profil tardive ne montre pas les matières du précédent 
     expect(host.textContent).toContain('Physique')
   } finally { act(() => root.unmount()); router.dispose(); host.remove(); localStorage.removeItem('lohni-device-id') }
 })
+
+test('le mode Quiz avec un fichier prévient au lieu de l’abandonner en silence', async () => {
+  api.chapters.mockResolvedValue([])
+  const host = document.createElement('div'); document.body.append(host)
+  const root = createRoot(host)
+  const router = createMemoryRouter([{ path: '/tutor', element: <Landing /> }, { path: '/quiz', element: <p>Quiz ouvert</p> }], { initialEntries: ['/tutor'] })
+  try {
+    await act(async () => root.render(<RouterProvider router={router} />))
+    await act(async () => required(host.querySelector<HTMLButtonElement>('[aria-label="Mode : Discussion"]')).click())
+    await act(async () => required([...host.querySelectorAll<HTMLButtonElement>('[role=menuitemradio]')].find(item => item.textContent === 'Quiz')).click())
+    const input = required(host.querySelector<HTMLInputElement>('input[type=file]'))
+    Object.defineProperty(input, 'files', { value: [new File(['x'], 'cours.pdf')], configurable: true })
+    await act(async () => { input.dispatchEvent(new Event('change', { bubbles: true })) })
+    await act(async () => required(host.querySelector<HTMLButtonElement>('button[aria-label="Envoyer"]')).click())
+    expect(host.textContent).not.toContain('Quiz ouvert')
+    expect(required(host.querySelector('[role=alert]')).textContent).toContain('Le quiz ne lit pas les fichiers')
+    await act(async () => required([...host.querySelectorAll('button')].find(item => item.textContent === 'Retirer le fichier')).click())
+    expect(host.querySelector('[role=alert]')).toBeNull()
+  } finally { act(() => root.unmount()); router.dispose(); host.remove() }
+})

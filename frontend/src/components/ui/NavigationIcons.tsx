@@ -119,3 +119,7 @@ export function TrendingDownIcon({ className = svgProps.className }: { className
 export function AlertIcon({ className = svgProps.className }: { className?: string } = {}) {
   return <svg aria-hidden="true" viewBox={svgProps.viewBox} className={inlineClassName(className)}><g fill="none" {...strokeProps}><path d="m21.73 18l-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3M12 9v4m0 4h.01"/></g></svg>
 }
+
+export function CameraIcon({ className = svgProps.className }: { className?: string } = {}) {
+  return <svg aria-hidden="true" viewBox={svgProps.viewBox} className={inlineClassName(className)}><g fill="none" {...strokeProps}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></g></svg>
+}

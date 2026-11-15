@@ -61,16 +61,18 @@ export default function Landing() {
   }, [showMode, showLength]);
   const [stagedFile, setStagedFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [quizFileNotice, setQuizFileNotice] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const onPickFile = () => fileRef.current?.click();
-  const onRemoveFile = () => setStagedFile(null);
+  const onRemoveFile = () => { setStagedFile(null); setQuizFileNotice(false); };
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
     setStagedFile(f);
+    setQuizFileNotice(false);
   };
   const onDropZoneDragOver = (e: React.DragEvent) => e.preventDefault();
   const onDropZoneDrop = (e: React.DragEvent) => {
@@ -85,6 +87,8 @@ export default function Landing() {
     if (!q && !stagedFile) return;
 
     if (mode === "Quiz" && override === undefined) {
+      // Le quiz part d'un sujet texte : il ne sait pas lire un fichier.
+      if (stagedFile) { setQuizFileNotice(true); return; }
       navigate(`/quiz?topic=${encodeURIComponent(q)}`, { state: { topic: q } });
       return;
     }
@@ -122,6 +126,7 @@ export default function Landing() {
             {showLength && <div id="menu-length" role="menu" className="absolute top-full right-0 z-20 mt-1 w-36 rounded-xl border border-border bg-surface p-1 shadow-lg">{(['Courte', 'Moyenne', 'Longue'] as const).map(opt => <button key={opt} type="button" role="menuitemradio" aria-checked={opt === responseLength} className="block min-h-11 w-full rounded-lg px-3 text-left hover:bg-tint" onClick={event => { setResponseLength(opt); setShowLength(false); event.currentTarget.closest<HTMLElement>('[data-dropdown]')?.querySelector<HTMLElement>('[aria-haspopup]')?.focus(); }}>{opt}</button>)}</div>}
           </fieldset>
         </PromptBox>
+        {quizFileNotice && mode === "Quiz" && stagedFile && <p role="alert" className="text-sm text-danger">Le quiz ne lit pas les fichiers : il part d’un sujet écrit. Retire le fichier ou passe en mode Discussion pour l’envoyer au Tuteur.</p>}
       </AdaptiveErrorBoundary>
       <section className="space-y-2"><h2 className="text-sm font-bold text-muted">Depuis tes cours</h2>
         {chaptersError ? <p className="text-sm text-muted" role="status">Tes cours sont temporairement indisponibles.</p> : chapters === null ? <p className="text-sm text-muted" role="status">Chargement de tes cours…</p> : chapters.length === 0 ? <p className="text-sm text-muted">Ajoute un chapitre pour obtenir des suggestions.</p> : chapters.slice(0, 2).map((chapter, index) => {
@@ -133,7 +138,7 @@ export default function Landing() {
       {profileError && <p role="status" className="text-sm text-muted">Tes matières sont temporairement indisponibles.</p>}
       {!profileLoaded && !profileError && <p role="status" className="text-sm text-muted">Chargement de tes matières…</p>}
       {subjects.length > 0 && <section className="space-y-2"><h2 className="text-sm font-bold text-muted">Tes matières</h2><div className="flex flex-wrap gap-2">{subjects.map(subject => <button key={subject} type="button" onClick={() => setPrompt(`Aide-moi en ${subject}`)} className="min-h-11 rounded-full border border-border bg-surface px-4 font-semibold">{subject}</button>)}</div></section>}
-      <details className="rounded-2xl border border-border bg-surface p-4" {...chatsDetails}><summary className="min-h-11 cursor-pointer font-semibold">Mes discussions</summary><ul className="space-y-3">{chats.map(chat => <li key={chat.id}><Link to={`/chat?chatId=${encodeURIComponent(chat.id)}`} className="flex min-h-11 items-center truncate font-semibold text-primary">{chat.title || 'Discussion sans titre'}</Link></li>)}</ul>{!chats.length && <p className="text-sm text-muted">Aucune discussion pour le moment.</p>}</details>
+      <details className="rounded-2xl border border-border bg-surface p-4" {...chatsDetails}><summary className="min-h-11 cursor-pointer font-semibold">Mes discussions</summary><ul className="space-y-3">{chats.map(chat => <li key={chat.id}><Link to={`/chat?chatId=${encodeURIComponent(chat.id)}`} className="flex min-h-11 items-center font-semibold text-primary"><span className="truncate">{chat.title || 'Discussion sans titre'}</span></Link></li>)}</ul>{!chats.length && <p className="text-sm text-muted">Aucune discussion pour le moment.</p>}</details>
       <input ref={fileRef} type="file" className="hidden" onChange={onFileChange} />
     </div>
   </main>;

@@ -1,6 +1,6 @@
 // biome-ignore-all lint/a11y/useSemanticElements: Le fieldset natif empêche le positionnement de la face de carte.
 // biome-ignore-all lint/a11y/noNoninteractiveTabindex: La carte doit recevoir les flèches et les touches de retournement.
-import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { memo, useCallback, useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react'
 import MarkdownView from '../Chat/MarkdownView'
 import { spring } from '../../lib/motion'
 
@@ -34,7 +34,6 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
   const stop = useRef<(() => void) | null>(null)
   const drag = useRef<{ id: number; origin: number; start: number; points: [number, number][]; moved: boolean } | null>(null)
   const sent = useRef(false)
-  const [hint, setHint] = useState(false)
 
   const apply = useCallback((value: number) => {
     x.current = value
@@ -88,7 +87,7 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
     drag.current = null
     if (sent.current) return // la sortie est lancée : ne pas la couper
     if (!d.moved) { if (x.current !== 0) animate(0, 0); return onToggle() }
-    if (!revealed || !enabled) { if (!revealed) setHint(true); animate(0, 0); return }
+    if (!revealed || !enabled) { animate(0, 0); return }
     // Vitesse réelle du doigt (px/s) ; un doigt immobile avant le lâcher ne garde pas une vitesse ancienne.
     const [t0, x0] = d.points[0]
     const [t1, x1] = d.points[d.points.length - 1]
@@ -132,12 +131,11 @@ export function SwipeCard({ question, answer, revealed, enabled, context, origin
         </div>
       </div>
       <p id="swipe-hint" className="py-3 text-center text-sm text-muted">
-        {!revealed ? 'Touche la carte pour voir la réponse' : hint ? 'Glisse la carte à gauche ou à droite' : <>← <b className="font-semibold text-foreground">Je ne savais pas</b> · <b className="font-semibold text-foreground">Je savais</b> →</>}
+        {revealed ? 'Glisse la carte à gauche ou à droite, ou touche un bouton' : 'Touche la carte pour voir la réponse'}
       </p>
-      {/* Sans geste : flèches du clavier ou ces boutons, masqués à l'écran mais lus et focalisables. */}
-      {revealed && <div className="sr-only focus-within:not-sr-only focus-within:mt-2 focus-within:grid focus-within:grid-cols-2 focus-within:gap-3">
-        <button type="button" disabled={!enabled} onClick={() => rate(false)} className="rounded-xl border border-border bg-surface px-2 py-3 text-foreground disabled:opacity-50">Je ne savais pas</button>
-        <button type="button" disabled={!enabled} onClick={() => rate(true)} className="rounded-xl bg-success px-2 py-3 font-semibold text-on-success disabled:opacity-50">Je savais</button>
+      {revealed && <div className="grid grid-cols-2 gap-3">
+        <button type="button" disabled={!enabled} onClick={() => rate(false)} className="rounded-xl border border-border bg-surface min-h-11 px-2 py-3 text-foreground disabled:opacity-50">Je ne savais pas</button>
+        <button type="button" disabled={!enabled} onClick={() => rate(true)} className="rounded-xl bg-success min-h-11 px-2 py-3 font-semibold text-on-success disabled:opacity-50">Je savais</button>
       </div>}
     </div>
   )

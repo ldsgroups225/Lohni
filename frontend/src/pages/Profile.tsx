@@ -8,6 +8,7 @@ import { AnimatedNumber } from '../components/ui/AnimatedNumber'
 import Mascotte from '../components/Mascotte/Mascotte'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { confirmDialog } from '../lib/confirm'
 import curriculum from '../data/curriculum-ci.json'
 import { REVISION_POLICY as policy } from '../../../backend/src/services/revision/policy'
 import { DEVICE_CHANGED, revisionAPI, type RevisionProfile, type RevisionProgress, type RevisionExam, type RevisionChapter, type RevisionSettings } from '../lib/api'
@@ -45,7 +46,7 @@ export default function Profile() {
   const available = entry ? (entry.series as Record<string, string[] | undefined>)[profile?.series ?? ''] ?? [] : []
   const input = 'w-full rounded-xl border border-border bg-surface p-3 text-foreground'
 
-  useRevisionRead(async () => {
+  const reload = useRevisionRead(async () => {
     const pending = profileSave
     if (pending) await pending.catch(() => {})
     const requestEdits = edits.current
@@ -112,6 +113,13 @@ export default function Profile() {
     finally { profileSave = null; saving.current = false; setBusy(false) }
   }
 
+  function retry() {
+    setError('')
+    setBusy(true)
+    setResourceVersion(value => value + 1)
+    reload().catch(cause => setError(cause instanceof Error ? cause.message : 'Impossible de charger ton profil.')).finally(() => setBusy(false))
+  }
+
   return <main className="loop-screen min-h-dvh px-4 pt-4 pb-36 md:pl-28">
     <div className="mx-auto max-w-xl space-y-4">
       {page ? <ScreenHeader back="/me" backLabel="Retour à Moi" title={({ profil: 'Mon profil', examens: 'Examens', matieres: 'Matières', 'emploi-du-temps': 'Emploi du temps', rythme: 'Rythme de révision' } as Record<string, string>)[page] ?? 'Moi'} /> : <header className="flex items-center gap-3">
@@ -122,7 +130,7 @@ export default function Profile() {
         {profile && <ButtonLink variant="secondary" to="/me/profil">Modifier</ButtonLink>}
       </header>}
       {busy && !profile && <PendingRead title="Mon parcours" label="On récupère ton parcours…" />}
-      {error && <div role="alert"><Mascotte humeur="désolée" taille={96} /><p>{error}</p></div>}
+      {error && <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} /><p>{error}</p><Button variant="secondary" disabled={busy} onClick={retry}>Réessayer</Button></div>}
       {!page && progress && <dl className="grid grid-cols-3 gap-2 text-sm">
         <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-3"><dt className="order-2 text-muted">XP</dt><dd className="order-1 text-2xl font-bold text-foreground"><AnimatedNumber value={progress.xp} /></dd></div>
         <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-surface p-3"><dt className="order-2 text-muted">de série</dt><dd className="order-1 text-2xl font-bold text-foreground"><AnimatedNumber value={progress.streak} /> j</dd></div>
@@ -161,7 +169,7 @@ export default function Profile() {
         {saved && <p role="status" className="text-foreground">Ton profil est enregistré.</p>}
       </form> : !profile && !busy && !error && <div className="space-y-3"><p>Crée ton profil pour suivre ton parcours.</p><ButtonLink to="/" className="w-full">Commencer mon parcours</ButtonLink></div>}
       {profile && page === 'examens' && <section className="space-y-4 rounded-2xl border border-border p-6">
-        {exams.map(item => <div key={item.id} className="space-y-2 border-b border-border pb-3"><p>{item.title} · {new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p><p>{item.subjects.join(', ')}</p><ExamButton id={item.id} date={item.date} /><div className="flex gap-3"><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={() => setExam(item)}>Modifier</Button><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={async () => { if (!window.confirm('Supprimer cet examen ?')) return; try { await revisionAPI.deleteExam(item.id); setExams(current => current.filter(value => value.id !== item.id)); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Suppression impossible.') } }}>Supprimer</Button></div></div>)}
+        {exams.map(item => <div key={item.id} className="space-y-2 border-b border-border pb-3"><p>{item.title} · {new Date(`${item.date}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p><p>{item.subjects.join(', ')}</p><ExamButton id={item.id} date={item.date} /><div className="flex gap-3"><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={() => setExam(item)}>Modifier</Button><Button className="!bg-surface !text-foreground border border-border" type="button" onClick={async () => { if (!await confirmDialog('Supprimer cet examen ? Il ne sera plus pris en compte dans ton plan.')) return; try { await revisionAPI.deleteExam(item.id); setExams(current => current.filter(value => value.id !== item.id)); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Suppression impossible.') } }}>Supprimer</Button></div></div>)}
         {!exam && <Button type="button" disabled={!examsLoaded || exams.length >= policy.maxExams} onClick={() => setExam({ title: '', date: '', subjects: [], chapterIds: [] })}>Ajouter un examen</Button>}
         {exam && <form className="space-y-4" onSubmit={async event => { event.preventDefault(); try { const value = await revisionAPI.saveExam(exam); setExams(current => [...current.filter(item => item.id !== value.id), value]); setExam(null); setError('') } catch (cause) { setError(cause instanceof Error ? cause.message : 'Enregistrement impossible.') } }}>
           <label className="block space-y-2">Intitulé<input className={input} required maxLength={policy.maxTitleChars} value={exam.title} onChange={event => setExam({ ...exam, title: event.target.value })} /></label>

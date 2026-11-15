@@ -89,7 +89,7 @@ export default function Courses() {
   const selected = chapters.find(chapter => chapter.id === selectedChapter)
   const selectedCard = selected?.cards.find(card => card.id === editing)
   if (selected) return <main className="loop-screen min-h-dvh px-4 pt-5 pb-36 md:pl-28"><div className="mx-auto max-w-2xl space-y-4">
-    <ScreenHeader back={() => selectedCard ? setEditing(null) : setSelectedChapter(null)} backLabel={selectedCard ? 'Annuler la modification' : 'Retour à Cours'} title={selectedCard ? 'Modifier la carte' : selected.title} subtitle={!selectedCard && `${selected.subject} · ${selected.cards.length} carte${selected.cards.length === 1 ? '' : 's'}`}>{!selectedCard && <MasteryBadge status={selected.status} />}</ScreenHeader>
+    <ScreenHeader back={() => selectedCard ? setEditing(null) : setSelectedChapter(null)} backLabel={selectedCard ? 'Annuler la modification' : 'Retour à Cours'} title={selectedCard ? 'Modifier la carte' : selected.title} fullTitle subtitle={!selectedCard && `${selected.subject} · ${selected.cards.length} carte${selected.cards.length === 1 ? '' : 's'}`}>{!selectedCard && <MasteryBadge status={selected.status} />}</ScreenHeader>
     {error && <p role="alert" className="text-danger">{error}</p>}
     {selectedCard ? <CardEditor key={selectedCard.id} card={selectedCard} busy={busy || stale} onCancel={() => setEditing(null)} onSave={value => void run(async () => { await revisionAPI.updateCard(selectedCard.id, value); setEditing(null); await load() })} onDelete={() => { void confirmDialog('Supprimer cette carte ? Elle ne sera plus proposée en révision.').then(ok => { if (ok) void run(async () => { await revisionAPI.deleteCard(selectedCard.id); setEditing(null); await load() }) }) }} /> : <>
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">{selected.cards.map(card => <button key={card.id} type="button" aria-label={`Modifier : ${card.question}`} disabled={busy || stale} onClick={() => setEditing(card.id)} className="flex min-h-[72px] w-full items-center gap-2 border-b border-border px-4 py-3 text-left last:border-b-0 disabled:opacity-50"><span className="min-w-0 flex-1"><span className="block font-bold"><MarkdownContent md={card.question} inline /></span><span className="block text-sm text-muted"><MarkdownContent md={card.answer} inline /></span></span><span aria-hidden="true" className="grid size-11 place-items-center text-xl text-muted">›</span></button>)}</div>
@@ -117,8 +117,8 @@ export default function Courses() {
           </Link>)}
         </div>
       </nav>
-      {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} />{error}
-        <Button variant="secondary" className="mt-3" disabled={busy} onClick={() => void run(load)}>Réessayer</Button>
+      {error && <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground"><Mascotte humeur="désolée" taille={96} /><p>{error}</p>
+        <Button variant="secondary" disabled={busy} onClick={() => void run(load)}>Réessayer</Button>
       </div>}
       {busy && chapters.length === 0 && <PendingRead title="Mes cours" label="On prépare tes cours…" />}
       {!busy && !error && chapters.length === 0 && <section className="space-y-3 rounded-2xl border border-border p-6">
@@ -133,7 +133,7 @@ export default function Courses() {
           <h2 className="text-sm font-semibold text-muted">{subject}</h2>
           {own.map((chapter, index) => <article key={chapter.id} style={{ animationDelay: listDelay(index) }} className={`${animateEntry ? 'motion-list ' : ''}space-y-1 rounded-2xl border border-border bg-surface p-4`}>
             <div className="flex items-start gap-2">
-              <h3 className="min-w-0 flex-1 break-words text-lg font-extrabold text-foreground">{chapter.title}</h3>
+              <h3 className="line-clamp-2 min-w-0 flex-1 [overflow-wrap:anywhere] text-lg font-extrabold text-foreground">{chapter.title}</h3>
               <MasteryBadge status={chapter.status} />
               <details className="relative">
                 <summary aria-label={`Options du chapitre ${chapter.title}`} className="course-summary grid size-11 cursor-pointer list-none place-items-center rounded-xl text-xl text-muted focus-visible:outline-2 focus-visible:outline-primary">⋮</summary>

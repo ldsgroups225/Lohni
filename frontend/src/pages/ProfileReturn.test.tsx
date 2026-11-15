@@ -10,7 +10,9 @@ import { revisionAPI as revisionDouble } from '../lib/api'
 import { revisionCacheDouble } from '../test/revisionApiDouble'
 Object.assign(revisionDouble, revisionCacheDouble)
 
-const api = vi.hoisted(() => ({ timetable: vi.fn(async () => []), readTimetablePhotos: vi.fn(), saveTimetable: vi.fn(), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn() }))
+const api = vi.hoisted(() => ({ timetable: vi.fn(async () => []), readTimetablePhotos: vi.fn(), saveTimetable: vi.fn(), exams: vi.fn(async () => []), chapters: vi.fn(async () => []), profile: vi.fn(), progress: vi.fn(), saveProfile: vi.fn(), settings: vi.fn(), saveSettings: vi.fn(), deleteExam: vi.fn() }))
+const confirmation = vi.hoisted(() => vi.fn())
+vi.mock('../lib/confirm', () => ({ confirmDialog: confirmation }))
 vi.mock('../lib/api', () => ({ revisionAPI: api, DEVICE_CHANGED: 'L’appareil a changé. Recharge la page avant de continuer.' }))
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 beforeEach(() => { vi.resetAllMocks() })
@@ -338,4 +340,38 @@ test('un échec de stockage du prénom signale que le profil est néanmoins enre
     expect(host.textContent).toContain('Ton profil est enregistré.')
     expect(host.textContent).toContain('Impossible d’enregistrer ton prénom sur cet appareil.')
   } finally { storage.mockRestore(); close() }
+})
+
+test('Moi propose Réessayer quand le profil ne charge pas', async () => {
+  api.profile.mockRejectedValueOnce(new Error('Réseau indisponible.'))
+  api.progress.mockImplementation(known('/progress', progress))
+  const { host, close } = await setup('profil-erreur', '/me')
+  try {
+    const alert = required(host.querySelector('[role=alert]'))
+    expect(alert.textContent).toContain('Réseau indisponible.')
+    api.profile.mockImplementation(known('/profile', profile))
+    await act(async () => required([...alert.querySelectorAll('button')].find(item => item.textContent === 'Réessayer')).click())
+    expect(host.querySelector('[role=alert]')).toBeNull()
+    expect(host.textContent).toContain('Mon organisation')
+  } finally { close() }
+})
+
+test('Moi demande confirmation avec la boîte de dialogue de l’app avant de supprimer un examen', async () => {
+  api.profile.mockImplementation(known('/profile', profile))
+  api.progress.mockImplementation(known('/progress', progress))
+  api.exams.mockResolvedValue([{ id: 'e1', title: 'Brevet', date: '2027-06-10', subjects: ['Mathématiques'], chapterIds: [] }])
+  api.deleteExam.mockResolvedValue(undefined)
+  const confirm = vi.spyOn(window, 'confirm')
+  const { host, close } = await setup('profil-examen', '/me/examens')
+  try {
+    const remove = required([...host.querySelectorAll('button')].find(item => item.textContent === 'Supprimer'))
+    confirmation.mockResolvedValueOnce(false)
+    await act(async () => remove.click())
+    expect(confirmation).toHaveBeenCalledWith('Supprimer cet examen ? Il ne sera plus pris en compte dans ton plan.')
+    expect(api.deleteExam).not.toHaveBeenCalled()
+    confirmation.mockResolvedValueOnce(true)
+    await act(async () => remove.click())
+    expect(api.deleteExam).toHaveBeenCalledWith('e1')
+    expect(confirm).not.toHaveBeenCalled()
+  } finally { close() }
 })

@@ -127,30 +127,28 @@ test('relâcher un glissement après une flèche du clavier ne coupe pas la sort
   expect(onSwipe).toHaveBeenCalledTimes(1)
 })
 
-test('sans geste : deux boutons masqués à l’écran mais présents une fois la réponse vue, qui font sortir la carte une seule fois', async () => {
+test('deux boutons visibles dès que la réponse est vue, d’au moins 44 px, qui font sortir la carte une seule fois', async () => {
   await render({ revealed: false })
   expect(host.querySelectorAll('button').length).toBe(0)
   await render({ revealed: true })
   const [no, yes] = [...host.querySelectorAll('button')] as HTMLButtonElement[]
   expect(no.textContent).toBe('Je ne savais pas'); expect(yes.textContent).toBe('Je savais')
-  expect(required(no.parentElement).className).toContain('sr-only') // pas d'espace pris à l'écran
+  expect(required(no.parentElement).className).not.toContain('sr-only')
+  expect(required(no.parentElement).className).toContain('grid-cols-2')
+  for (const b of [no, yes]) expect(b.className).toContain('min-h-11')
   act(() => yes.click()); act(() => no.click())
   expect(springs.length).toBe(1)
   act(() => springs[0].opts.onDone?.())
   expect(onSwipe).toHaveBeenCalledTimes(1); expect(onSwipe).toHaveBeenCalledWith(true)
 })
 
-test('l’indice suit l’état : question, glissement trop tôt, puis notation', async () => {
+test('l’indice suit l’état sans répéter les boutons', async () => {
   const hintText = () => host.querySelector('#swipe-hint')?.textContent
   await render({ revealed: false })
   expect(hintText()).toBe('Touche la carte pour voir la réponse')
-  drag(200, [[20, 100]], 300) // glisser avant la révélation
   await render({ revealed: true })
-  expect(hintText()).toBe('Glisse la carte à gauche ou à droite')
-  await act(async () => root.unmount()); root = createRoot(host)
-  await render({ revealed: true })
-  expect(hintText()).toBe('← Je ne savais pas · Je savais →')
-  expect([...host.querySelectorAll('#swipe-hint b')].map(b => b.textContent)).toEqual(['Je ne savais pas', 'Je savais'])
+  expect(hintText()).toBe('Glisse la carte à gauche ou à droite, ou touche un bouton')
+  expect(host.querySelectorAll('#swipe-hint b').length).toBe(0)
 })
 
 test('la réponse révélée conserve la question dans la carte', async () => {

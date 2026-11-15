@@ -250,8 +250,8 @@ export default function Revision() {
           {sync.error && <p>{sync.error}</p>}
           {sync.online && sync.pending > 0 && <Button variant="secondary" onClick={() => void syncRevisionAnswers()}>Réessayer l’envoi</Button>}
         </aside>}
-        {error && <div role="alert" className="rounded-xl border border-danger p-4 text-foreground">{!card && <Mascotte humeur="désolée" taille={96} />}{error}
-          <Button variant="secondary" className="mt-3" disabled={busy} onClick={() => void run(async () => {
+        {error && <div role="alert" className="space-y-3 rounded-xl border border-danger p-4 text-foreground">{!card && <Mascotte humeur="désolée" taille={96} />}<p>{error}</p>
+          <Button variant="secondary" disabled={busy} onClick={() => void run(async () => {
             const saved = await revisionAPI.profile()
             setProfile(saved)
             setSubject(current => saved?.subjects.includes(current) ? current : saved?.subjects[0] ?? '')

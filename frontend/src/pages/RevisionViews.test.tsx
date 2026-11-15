@@ -24,7 +24,7 @@ test('accueil : libellé de classe, maîtrise vide et accès aux cours sans prom
   state.values = [home, progress, false, '', '', 0]
   const html = render(<Home />)
   expect(html).toContain('Terminale C')
-  expect(html).toContain("Aucune carte n&#x27;est à réviser aujourd&#x27;hui.")
+  expect(html).toContain("Aucune carte n’est à réviser aujourd’hui.")
   expect(html).toContain('href="/courses"')
   expect(html).toContain('Voir mes cours')
   expect(html).not.toContain('Mathématiques')

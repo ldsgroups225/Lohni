@@ -1,4 +1,5 @@
 import { Button, ButtonLink } from '../components/ui/Button'
+import { CameraIcon, NoteIcon, PaperclipIcon } from '../components/ui/NavigationIcons'
 import { ScreenHeader } from '../components/ui/ScreenHeader'
 import { ErrorState, LoadingState } from '../components/ui/LoadingState'
 import { PendingRead } from '../components/ui/PendingRead'
@@ -101,9 +102,9 @@ export default function ImportCourse() {
       {profile && (!failedChapter || busy) && !error && !cancelled && <>
         {step === 'pick' && <section className="space-y-3">
           <p className="text-muted">Choisis comment ajouter ton cours. Lohni en fait des cartes à réviser.</p>
-          <button type="button" className={pickClass} onClick={() => chooseFile('photo')}><span aria-hidden="true" className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-2xl">📷</span><span><strong className="block text-lg">Prendre en photo</strong><span className="text-sm text-muted">Ton cahier ou ton livre</span></span></button>
-          <button type="button" className={pickClass} onClick={() => chooseFile('file')}><span aria-hidden="true" className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-2xl">▤</span><span><strong className="block text-lg">Choisir un fichier</strong><span className="text-sm text-muted">PDF, Word ou image</span></span></button>
-          <button type="button" className={pickClass} onClick={() => { setMode('text'); setStep('confirm') }}><span aria-hidden="true" className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-2xl">☰</span><span><strong className="block text-lg">Coller du texte</strong><span className="text-sm text-muted">Depuis un site ou un message</span></span></button>
+          <button type="button" className={pickClass} onClick={() => chooseFile('photo')}><span aria-hidden="true" className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><CameraIcon className="size-7" /></span><span><strong className="block text-lg">Prendre en photo</strong><span className="text-sm text-muted">Ton cahier ou ton livre</span></span></button>
+          <button type="button" className={pickClass} onClick={() => chooseFile('file')}><span aria-hidden="true" className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><PaperclipIcon className="size-7" /></span><span><strong className="block text-lg">Choisir un fichier</strong><span className="text-sm text-muted">PDF, Word ou image</span></span></button>
+          <button type="button" className={pickClass} onClick={() => { setMode('text'); setStep('confirm') }}><span aria-hidden="true" className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><NoteIcon className="size-7" /></span><span><strong className="block text-lg">Coller du texte</strong><span className="text-sm text-muted">Depuis un site ou un message</span></span></button>
           <input ref={fileInput} type="file" className="hidden" tabIndex={-1} onChange={event => { const selected = event.target.files?.[0]; if (!selected) return; setFile(selected); setTitle(selected.name.replace(/\.[^.]+$/, '')); const match = profile.subjects.find(name => selected.name.toLocaleLowerCase('fr').includes(name.toLocaleLowerCase('fr'))); setSuggested(match ?? ''); if (match) setSubject(match); setStep('confirm'); event.target.value = '' }} />
           <p className="text-sm text-muted">Fichiers : {revisionPolicy.maxUploadMB} Mo maximum · Texte : {revisionPolicy.maxTextChars.toLocaleString('fr-FR')} caractères maximum.</p>
         </section>}
